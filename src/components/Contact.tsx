@@ -1,7 +1,6 @@
-import { motion } from "framer-motion";
-import { useInView } from "framer-motion";
+import { motion, useInView } from "framer-motion";
 import { useRef, useState } from "react";
-import { Send, Mail, Phone, MapPin, ArrowRight } from "lucide-react";
+import { Send, Mail, MapPin, ArrowRight, Sparkles, Rocket, Calendar } from "lucide-react";
 
 export function Contact() {
   const headerRef = useRef(null);
@@ -15,14 +14,28 @@ export function Contact() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle form submission
     console.log("Form submitted:", formState);
   };
 
   return (
     <section id="contacto" className="py-24 lg:py-32 relative overflow-hidden">
-      {/* Background glow */}
-      <div className="absolute inset-0 bg-glow opacity-30" />
+      {/* Rich background */}
+      <div className="absolute inset-0 bg-mesh" />
+      <div className="absolute inset-0 bg-glow opacity-40" />
+      
+      {/* Floating elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <motion.div
+          animate={{ y: [-20, 20, -20], rotate: [0, 10, 0] }}
+          transition={{ duration: 10, repeat: Infinity }}
+          className="absolute top-20 right-[20%] w-20 h-20 bg-coral/20 rounded-3xl blur-sm"
+        />
+        <motion.div
+          animate={{ y: [20, -20, 20], rotate: [0, -15, 0] }}
+          transition={{ duration: 8, repeat: Infinity }}
+          className="absolute bottom-40 left-[10%] w-16 h-16 bg-magenta/20 rounded-2xl blur-sm"
+        />
+      </div>
 
       <div className="container mx-auto px-6 relative z-10">
         {/* Section Header */}
@@ -31,168 +44,174 @@ export function Contact() {
           initial={{ opacity: 0, y: 30 }}
           animate={isHeaderInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6 }}
-          className="max-w-3xl mx-auto text-center mb-16"
+          className="max-w-4xl mx-auto text-center mb-16"
         >
-          <span className="text-coral text-sm font-medium uppercase tracking-wider mb-4 block">
-            Contacto
-          </span>
-          <h2 className="font-display text-4xl md:text-5xl font-bold text-foreground mb-6">
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={isHeaderInView ? { scale: 1 } : {}}
+            transition={{ delay: 0.2, type: "spring" }}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-coral text-primary-foreground text-sm font-bold mb-6"
+          >
+            <Rocket className="w-4 h-4" />
+            Let's Create
+          </motion.div>
+          
+          <h2 className="font-display text-4xl md:text-6xl font-bold text-foreground mb-6">
             ¿Listo para{" "}
-            <span className="text-gradient">transformar tu marca?</span>
+            <span className="text-gradient-sunset">transformar tu marca?</span>
           </h2>
-          <p className="text-muted-foreground text-lg">
-            Cuéntanos sobre tu proyecto y te responderemos en menos de 24 horas
-            con una propuesta personalizada.
+          <p className="text-xl text-muted-foreground">
+            Cuéntanos tu visión y hagamos magia juntos. Respondemos en menos de 24 horas.
           </p>
         </motion.div>
 
-        <div className="grid lg:grid-cols-2 gap-12 max-w-6xl mx-auto">
-          {/* Contact Form */}
+        <div className="grid lg:grid-cols-5 gap-12 max-w-6xl mx-auto">
+          {/* Contact Form - Takes 3 columns */}
           <motion.div
             initial={{ opacity: 0, x: -30 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
+            className="lg:col-span-3"
           >
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid sm:grid-cols-2 gap-6">
+            <div className="bg-card rounded-3xl p-8 lg:p-10 border border-border">
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="grid sm:grid-cols-2 gap-6">
+                  <div>
+                    <label htmlFor="name" className="block text-sm font-semibold text-foreground mb-2">
+                      Nombre *
+                    </label>
+                    <input
+                      type="text"
+                      id="name"
+                      value={formState.name}
+                      onChange={(e) => setFormState({ ...formState, name: e.target.value })}
+                      className="w-full bg-secondary border-2 border-border rounded-xl px-4 py-3.5 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-coral transition-colors"
+                      placeholder="Tu nombre"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="email" className="block text-sm font-semibold text-foreground mb-2">
+                      Email *
+                    </label>
+                    <input
+                      type="email"
+                      id="email"
+                      value={formState.email}
+                      onChange={(e) => setFormState({ ...formState, email: e.target.value })}
+                      className="w-full bg-secondary border-2 border-border rounded-xl px-4 py-3.5 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-coral transition-colors"
+                      placeholder="tu@email.com"
+                      required
+                    />
+                  </div>
+                </div>
+
                 <div>
-                  <label
-                    htmlFor="name"
-                    className="block text-sm font-medium text-foreground mb-2"
-                  >
-                    Nombre
+                  <label htmlFor="company" className="block text-sm font-semibold text-foreground mb-2">
+                    Empresa / Marca
                   </label>
                   <input
                     type="text"
-                    id="name"
-                    value={formState.name}
-                    onChange={(e) =>
-                      setFormState({ ...formState, name: e.target.value })
-                    }
-                    className="w-full bg-card border border-border rounded-xl px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-coral/50 focus:border-coral transition-all"
-                    placeholder="Tu nombre"
-                    required
+                    id="company"
+                    value={formState.company}
+                    onChange={(e) => setFormState({ ...formState, company: e.target.value })}
+                    className="w-full bg-secondary border-2 border-border rounded-xl px-4 py-3.5 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-coral transition-colors"
+                    placeholder="Nombre de tu empresa o marca"
                   />
                 </div>
+
                 <div>
-                  <label
-                    htmlFor="email"
-                    className="block text-sm font-medium text-foreground mb-2"
-                  >
-                    Email
+                  <label htmlFor="message" className="block text-sm font-semibold text-foreground mb-2">
+                    ¿Cómo podemos ayudarte? *
                   </label>
-                  <input
-                    type="email"
-                    id="email"
-                    value={formState.email}
-                    onChange={(e) =>
-                      setFormState({ ...formState, email: e.target.value })
-                    }
-                    className="w-full bg-card border border-border rounded-xl px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-coral/50 focus:border-coral transition-all"
-                    placeholder="tu@email.com"
+                  <textarea
+                    id="message"
+                    value={formState.message}
+                    onChange={(e) => setFormState({ ...formState, message: e.target.value })}
+                    rows={5}
+                    className="w-full bg-secondary border-2 border-border rounded-xl px-4 py-3.5 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-coral transition-colors resize-none"
+                    placeholder="Cuéntanos sobre tu proyecto, tus objetivos, tus sueños más locos..."
                     required
                   />
                 </div>
-              </div>
 
-              <div>
-                <label
-                  htmlFor="company"
-                  className="block text-sm font-medium text-foreground mb-2"
+                <button
+                  type="submit"
+                  className="w-full bg-gradient-coral text-primary-foreground px-8 py-4 rounded-xl font-bold text-lg hover:shadow-glow transition-all duration-300 flex items-center justify-center gap-3 group"
                 >
-                  Empresa (opcional)
-                </label>
-                <input
-                  type="text"
-                  id="company"
-                  value={formState.company}
-                  onChange={(e) =>
-                    setFormState({ ...formState, company: e.target.value })
-                  }
-                  className="w-full bg-card border border-border rounded-xl px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-coral/50 focus:border-coral transition-all"
-                  placeholder="Nombre de tu empresa"
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="message"
-                  className="block text-sm font-medium text-foreground mb-2"
-                >
-                  Mensaje
-                </label>
-                <textarea
-                  id="message"
-                  value={formState.message}
-                  onChange={(e) =>
-                    setFormState({ ...formState, message: e.target.value })
-                  }
-                  rows={5}
-                  className="w-full bg-card border border-border rounded-xl px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-coral/50 focus:border-coral transition-all resize-none"
-                  placeholder="Cuéntanos sobre tu proyecto, tus objetivos y cómo podemos ayudarte..."
-                  required
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="w-full bg-gradient-coral text-primary-foreground px-8 py-4 rounded-xl font-semibold text-lg hover:opacity-90 transition-all flex items-center justify-center gap-2 group"
-              >
-                Enviar mensaje
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </button>
-            </form>
+                  <Send className="w-5 h-5 group-hover:rotate-12 transition-transform" />
+                  Enviar mensaje
+                  <Sparkles className="w-5 h-5" />
+                </button>
+              </form>
+            </div>
           </motion.div>
 
-          {/* Contact Info */}
+          {/* Contact Info - Takes 2 columns */}
           <motion.div
             initial={{ opacity: 0, x: 30 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
-            className="space-y-8"
+            className="lg:col-span-2 space-y-6"
           >
-            {/* Info Cards */}
-            <div className="bg-card rounded-2xl p-8 border border-border">
-              <h3 className="font-display text-xl font-bold text-foreground mb-6">
-                Información de contacto
+            {/* Quick Contact */}
+            <div className="bg-card rounded-3xl p-6 border border-border">
+              <h3 className="font-display text-lg font-bold text-foreground mb-4">
+                Contacto directo
               </h3>
               <div className="space-y-4">
                 <a
                   href="mailto:hola@kimedia.mx"
-                  className="flex items-center gap-4 text-muted-foreground hover:text-coral transition-colors group"
+                  className="flex items-center gap-4 p-3 rounded-xl bg-secondary hover:bg-coral/10 transition-colors group"
                 >
-                  <div className="w-10 h-10 rounded-lg bg-coral/10 flex items-center justify-center group-hover:bg-coral/20 transition-colors">
+                  <div className="w-10 h-10 rounded-lg bg-coral/10 flex items-center justify-center">
                     <Mail className="w-5 h-5 text-coral" />
                   </div>
-                  <span>hola@kimedia.mx</span>
+                  <span className="text-foreground group-hover:text-coral transition-colors font-medium">
+                    hola@kimedia.mx
+                  </span>
                 </a>
-                <div className="flex items-center gap-4 text-muted-foreground">
-                  <div className="w-10 h-10 rounded-lg bg-coral/10 flex items-center justify-center">
-                    <MapPin className="w-5 h-5 text-coral" />
+                <div className="flex items-center gap-4 p-3 rounded-xl bg-secondary">
+                  <div className="w-10 h-10 rounded-lg bg-magenta/10 flex items-center justify-center">
+                    <MapPin className="w-5 h-5 text-magenta" />
                   </div>
-                  <span>Ciudad de México, México</span>
+                  <span className="text-muted-foreground">Ciudad de México</span>
                 </div>
               </div>
             </div>
 
-            {/* CTA Card */}
-            <div className="bg-gradient-coral rounded-2xl p-8 text-primary-foreground">
-              <h3 className="font-display text-xl font-bold mb-3">
-                ¿Prefieres una llamada?
-              </h3>
-              <p className="opacity-90 mb-6">
-                Agenda una videollamada de 30 minutos sin compromiso para 
-                discutir tu proyecto y cómo podemos ayudarte.
+            {/* Schedule Call CTA */}
+            <div className="bg-gradient-sunset rounded-3xl p-6 text-primary-foreground overflow-hidden relative">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
+              
+              <div className="relative z-10">
+                <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center mb-4">
+                  <Calendar className="w-6 h-6" />
+                </div>
+                <h3 className="font-display text-xl font-bold mb-2">
+                  ¿Prefieres una llamada?
+                </h3>
+                <p className="opacity-90 mb-6 text-sm">
+                  Agenda 30 minutos sin compromiso para platicar sobre tu proyecto.
+                </p>
+                <a
+                  href="#"
+                  className="inline-flex items-center gap-2 bg-background text-foreground px-5 py-3 rounded-xl font-bold hover:bg-foreground hover:text-background transition-colors text-sm"
+                >
+                  Agendar llamada
+                  <ArrowRight className="w-4 h-4" />
+                </a>
+              </div>
+            </div>
+
+            {/* Fun fact */}
+            <div className="bg-card rounded-3xl p-6 border border-border text-center">
+              <div className="text-4xl mb-3">🚀</div>
+              <p className="text-sm text-muted-foreground">
+                <span className="text-foreground font-semibold">Fun fact:</span> Respondemos el 90% de los mensajes en menos de 4 horas.
               </p>
-              <a
-                href="#"
-                className="inline-flex items-center gap-2 bg-background text-foreground px-6 py-3 rounded-xl font-semibold hover:bg-foreground hover:text-background transition-colors"
-              >
-                Agendar llamada
-                <ArrowRight className="w-4 h-4" />
-              </a>
             </div>
           </motion.div>
         </div>
