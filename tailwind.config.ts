@@ -28,6 +28,10 @@ export default {
           light: "hsl(var(--coral-light))",
           dark: "hsl(var(--coral-dark))",
         },
+        electric: "hsl(var(--electric))",
+        cyan: "hsl(var(--cyan))",
+        magenta: "hsl(var(--magenta))",
+        lime: "hsl(var(--lime))",
         "surface-elevated": "hsl(var(--surface-elevated))",
         "surface-overlay": "hsl(var(--surface-overlay))",
         primary: {
