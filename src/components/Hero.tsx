@@ -1,5 +1,44 @@
 import { motion } from "framer-motion";
-import { ArrowDown, Sparkles, Zap, Play } from "lucide-react";
+import { ArrowDown, Zap, TrendingUp, Users, Eye, MessageCircle, ShieldAlert, BarChart3 } from "lucide-react";
+
+const digitalFacts = [
+  {
+    icon: Eye,
+    stat: "93%",
+    fact: "de consumidores leen reseñas online antes de comprar",
+    color: "coral"
+  },
+  {
+    icon: ShieldAlert,
+    stat: "1 crisis",
+    fact: "mal manejada puede destruir años de reputación en horas",
+    color: "magenta"
+  },
+  {
+    icon: TrendingUp,
+    stat: "70%",
+    fact: "de las decisiones de compra inician en redes sociales",
+    color: "electric"
+  },
+  {
+    icon: Users,
+    stat: "4.9B",
+    fact: "personas activas en redes sociales en el mundo",
+    color: "cyan"
+  },
+  {
+    icon: MessageCircle,
+    stat: "64%",
+    fact: "esperan respuesta de marcas en menos de 24 hrs",
+    color: "lime"
+  },
+  {
+    icon: BarChart3,
+    stat: "3x",
+    fact: "más conversiones con estrategia digital vs. sin ella",
+    color: "coral"
+  }
+];
 
 export function Hero() {
   return (
@@ -65,141 +104,117 @@ export function Hero() {
           transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
           className="absolute top-[60%] left-[20%] w-8 h-8 bg-cyan rounded-full"
         />
-
-        {/* Decorative lines */}
-        <svg className="absolute top-0 left-0 w-full h-full opacity-20" viewBox="0 0 1000 1000">
-          <motion.path
-            d="M0,500 Q250,300 500,500 T1000,500"
-            fill="none"
-            stroke="url(#gradient1)"
-            strokeWidth="1"
-            initial={{ pathLength: 0 }}
-            animate={{ pathLength: 1 }}
-            transition={{ duration: 3, repeat: Infinity, repeatType: "reverse" }}
-          />
-          <defs>
-            <linearGradient id="gradient1" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="hsl(15, 95%, 55%)" />
-              <stop offset="100%" stopColor="hsl(320, 90%, 55%)" />
-            </linearGradient>
-          </defs>
-        </svg>
       </div>
 
       <div className="container mx-auto px-6 pt-32 pb-20 relative z-10">
         <div className="max-w-6xl mx-auto">
-          {/* Tagline with icon */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="flex justify-center mb-8"
-          >
-            <span className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-coral text-primary-foreground text-sm font-bold tracking-wider uppercase shadow-glow">
-              <Sparkles className="w-4 h-4" />
-              To be known
-              <Sparkles className="w-4 h-4" />
-            </span>
-          </motion.div>
-
-          {/* Main headline - More dramatic */}
-          <div className="text-center mb-8">
-            <motion.h1
-              initial={{ opacity: 0, y: 40 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7, delay: 0.1 }}
-              className="font-display text-6xl md:text-8xl lg:text-9xl font-bold leading-[0.9] tracking-tight"
-            >
-              <span className="text-foreground">Creamos</span>
-            </motion.h1>
-            
-            <motion.h1
-              initial={{ opacity: 0, y: 40 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7, delay: 0.2 }}
-              className="font-display text-6xl md:text-8xl lg:text-9xl font-bold leading-[0.9] tracking-tight my-2"
-            >
-              <span className="text-gradient-sunset animate-gradient bg-gradient-to-r from-coral via-magenta to-coral bg-[length:200%_auto]">
-                Conectamos
-              </span>
-            </motion.h1>
-            
-            <motion.h1
-              initial={{ opacity: 0, y: 40 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7, delay: 0.3 }}
-              className="font-display text-6xl md:text-8xl lg:text-9xl font-bold leading-[0.9] tracking-tight"
-            >
-              <span className="text-foreground">Convertimos</span>
-            </motion.h1>
-          </div>
-
-          {/* Subtitle - More punchy */}
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
-            className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto mb-12 text-center leading-relaxed"
-          >
-            Agencia digital que{" "}
-            <span className="text-coral font-semibold">transforma datos en historias</span>,{" "}
-            historias en estrategias, y estrategias en{" "}
-            <span className="text-electric font-semibold">resultados que impactan</span>.
-          </motion.p>
-
-          {/* CTA Buttons - More creative */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.5 }}
-            className="flex flex-col sm:flex-row gap-4 justify-center items-center"
-          >
-            <a
-              href="#metodologia"
-              className="group relative bg-gradient-coral text-primary-foreground px-10 py-5 rounded-2xl font-bold text-lg overflow-hidden shadow-glow-lg hover:shadow-glow transition-all duration-300"
-            >
-              <span className="relative z-10 flex items-center gap-2">
-                <Zap className="w-5 h-5" />
-                Descubre nuestra magia
-              </span>
-              <div className="absolute inset-0 bg-gradient-sunset opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-            </a>
-            
-            <a
-              href="#contacto"
-              className="group flex items-center gap-3 border-2 border-border text-foreground px-10 py-5 rounded-2xl font-bold text-lg hover:border-coral hover:bg-coral/5 transition-all duration-300"
-            >
-              <Play className="w-5 h-5 text-coral" />
-              Ver showreel
-            </a>
-          </motion.div>
-
-          {/* Stats bar */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.7 }}
-            className="mt-20 grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto"
-          >
-            {[
-              { number: "50+", label: "Proyectos creativos" },
-              { number: "10M+", label: "Alcance mensual" },
-              { number: "300%", label: "ROI promedio" },
-              { number: "6", label: "Creativos expertos" },
-            ].map((stat, i) => (
+          {/* Main Content - Two columns on desktop */}
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center mb-16">
+            {/* Left column - Main message */}
+            <div>
               <motion.div
-                key={stat.label}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.8 + i * 0.1 }}
-                className="text-center p-4 rounded-2xl bg-card/50 border border-border/50 hover:border-coral/30 transition-colors"
+                transition={{ duration: 0.6 }}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-coral text-primary-foreground text-sm font-bold tracking-wider uppercase mb-6"
               >
-                <div className="font-display text-3xl md:text-4xl font-bold text-gradient mb-1">
-                  {stat.number}
-                </div>
-                <div className="text-sm text-muted-foreground">{stat.label}</div>
+                <Zap className="w-4 h-4" />
+                Agencia Digital
               </motion.div>
-            ))}
+
+              <motion.h1
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.7, delay: 0.1 }}
+                className="font-display text-4xl md:text-5xl lg:text-6xl font-bold leading-[1.1] tracking-tight mb-6"
+              >
+                <span className="text-foreground">Tu reputación digital </span>
+                <span className="text-gradient-sunset">es tu activo más valioso</span>
+              </motion.h1>
+
+              <motion.p
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+                className="text-lg md:text-xl text-muted-foreground mb-8 leading-relaxed"
+              >
+                Analizamos, diseñamos y ejecutamos estrategias digitales que 
+                <span className="text-coral font-medium"> protegen tu marca</span>, 
+                <span className="text-electric font-medium"> conectan con tu audiencia</span> y 
+                <span className="text-magenta font-medium"> generan resultados medibles</span>.
+              </motion.p>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.3 }}
+                className="flex flex-col sm:flex-row gap-4"
+              >
+                <a
+                  href="#metodologia"
+                  className="group relative bg-gradient-coral text-primary-foreground px-8 py-4 rounded-2xl font-bold text-lg overflow-hidden shadow-glow-lg hover:shadow-glow transition-all duration-300 text-center"
+                >
+                  <span className="relative z-10 flex items-center justify-center gap-2">
+                    <Zap className="w-5 h-5" />
+                    Conoce nuestra metodología
+                  </span>
+                  <div className="absolute inset-0 bg-gradient-sunset opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                </a>
+                
+                <a
+                  href="#contacto"
+                  className="group flex items-center justify-center gap-3 border-2 border-border text-foreground px-8 py-4 rounded-2xl font-bold text-lg hover:border-coral hover:bg-coral/5 transition-all duration-300"
+                >
+                  Hablemos de tu proyecto
+                </a>
+              </motion.div>
+            </div>
+
+            {/* Right column - Animated facts */}
+            <motion.div
+              initial={{ opacity: 0, x: 30 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8, delay: 0.4 }}
+              className="relative"
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-coral/10 via-transparent to-magenta/10 rounded-3xl blur-3xl" />
+              
+              <div className="relative grid grid-cols-2 gap-4">
+                {digitalFacts.map((fact, index) => (
+                  <motion.div
+                    key={fact.stat}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.5 + index * 0.1 }}
+                    whileHover={{ scale: 1.02, y: -4 }}
+                    className={`p-4 rounded-2xl bg-card/80 border border-border/50 hover:border-${fact.color}/40 transition-all duration-300 backdrop-blur-sm group`}
+                  >
+                    <div className={`w-10 h-10 rounded-xl bg-${fact.color}/10 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform`}>
+                      <fact.icon className={`w-5 h-5 text-${fact.color}`} />
+                    </div>
+                    <div className={`font-display text-2xl font-bold text-${fact.color} mb-1`}>
+                      {fact.stat}
+                    </div>
+                    <p className="text-xs text-muted-foreground leading-snug">
+                      {fact.fact}
+                    </p>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          </div>
+
+          {/* Bottom tagline */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 1 }}
+            className="text-center"
+          >
+            <p className="text-muted-foreground text-sm md:text-base">
+              En un mundo donde <span className="text-foreground font-medium">todo se mide</span>, 
+              nosotros te ayudamos a <span className="text-coral font-medium">destacar</span>.
+            </p>
           </motion.div>
         </div>
 
