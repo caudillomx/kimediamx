@@ -197,7 +197,7 @@ export function Contact() {
                   Escríbenos directo y te respondemos en menos de 4 horas.
                 </p>
                 <a
-                  href="https://wa.me/525555555555"
+                  href="https://wa.me/5255735008486"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 bg-background text-foreground px-5 py-3 rounded-xl font-bold hover:bg-foreground hover:text-background transition-colors text-sm"
