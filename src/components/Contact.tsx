@@ -1,6 +1,6 @@
 import { motion, useInView } from "framer-motion";
 import { useRef, useState } from "react";
-import { Send, Mail, MapPin, ArrowRight, Sparkles, Rocket, Calendar } from "lucide-react";
+import { Send, Mail, MapPin, ArrowRight, Sparkles, Rocket } from "lucide-react";
 
 export function Contact() {
   const headerRef = useRef(null);
@@ -182,25 +182,27 @@ export function Contact() {
               </div>
             </div>
 
-            {/* Schedule Call CTA */}
+            {/* WhatsApp CTA */}
             <div className="bg-gradient-sunset rounded-3xl p-6 text-primary-foreground overflow-hidden relative">
               <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
               
               <div className="relative z-10">
                 <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center mb-4">
-                  <Calendar className="w-6 h-6" />
+                  <Send className="w-6 h-6" />
                 </div>
                 <h3 className="font-display text-xl font-bold mb-2">
-                  ¿Prefieres una llamada?
+                  ¿Prefieres WhatsApp?
                 </h3>
                 <p className="opacity-90 mb-6 text-sm">
-                  Agenda 30 minutos sin compromiso para platicar sobre tu proyecto.
+                  Escríbenos directo y te respondemos en menos de 4 horas.
                 </p>
                 <a
-                  href="#"
+                  href="https://wa.me/525555555555"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 bg-background text-foreground px-5 py-3 rounded-xl font-bold hover:bg-foreground hover:text-background transition-colors text-sm"
                 >
-                  Agendar llamada
+                  Enviar mensaje
                   <ArrowRight className="w-4 h-4" />
                 </a>
               </div>
