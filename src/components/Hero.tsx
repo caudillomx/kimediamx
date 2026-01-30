@@ -1,46 +1,214 @@
-import { motion } from "framer-motion";
-import { ArrowDown, Zap, TrendingUp, Users, Eye, MessageCircle, ShieldAlert, BarChart3 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useState, useEffect } from "react";
+import { ArrowDown, Zap } from "lucide-react";
 
 const digitalFacts = [
   {
-    icon: Eye,
     stat: "93%",
     fact: "de consumidores leen reseñas online antes de comprar",
-    color: "coral"
+    color: "coral",
+    illustration: (
+      <svg viewBox="0 0 120 120" className="w-full h-full">
+        <circle cx="60" cy="60" r="45" fill="none" stroke="currentColor" strokeWidth="2" opacity="0.2" />
+        <circle cx="60" cy="60" r="30" fill="none" stroke="currentColor" strokeWidth="2" opacity="0.3" />
+        <circle cx="60" cy="60" r="15" fill="currentColor" opacity="0.4" />
+        <motion.circle 
+          cx="60" cy="60" r="8" 
+          fill="currentColor"
+          animate={{ scale: [1, 1.2, 1] }}
+          transition={{ duration: 2, repeat: Infinity }}
+        />
+        <motion.g animate={{ rotate: 360 }} transition={{ duration: 20, repeat: Infinity, ease: "linear" }}>
+          <circle cx="60" cy="10" r="3" fill="currentColor" opacity="0.6" />
+          <circle cx="100" cy="40" r="2" fill="currentColor" opacity="0.4" />
+          <circle cx="95" cy="90" r="2.5" fill="currentColor" opacity="0.5" />
+          <circle cx="25" cy="85" r="2" fill="currentColor" opacity="0.4" />
+          <circle cx="20" cy="35" r="3" fill="currentColor" opacity="0.6" />
+        </motion.g>
+      </svg>
+    )
   },
   {
-    icon: ShieldAlert,
     stat: "1 crisis",
     fact: "mal manejada puede destruir años de reputación en horas",
-    color: "magenta"
+    color: "magenta",
+    illustration: (
+      <svg viewBox="0 0 120 120" className="w-full h-full">
+        <motion.path 
+          d="M60 15 L95 35 L95 65 C95 85 60 105 60 105 C60 105 25 85 25 65 L25 35 Z"
+          fill="none" 
+          stroke="currentColor" 
+          strokeWidth="3"
+          initial={{ pathLength: 0 }}
+          animate={{ pathLength: 1 }}
+          transition={{ duration: 2, repeat: Infinity, repeatType: "reverse" }}
+        />
+        <motion.text 
+          x="60" y="68" 
+          textAnchor="middle" 
+          fontSize="30" 
+          fill="currentColor"
+          animate={{ opacity: [0.5, 1, 0.5] }}
+          transition={{ duration: 1.5, repeat: Infinity }}
+        >
+          !
+        </motion.text>
+      </svg>
+    )
   },
   {
-    icon: TrendingUp,
     stat: "70%",
     fact: "de las decisiones de compra inician en redes sociales",
-    color: "electric"
+    color: "electric",
+    illustration: (
+      <svg viewBox="0 0 120 120" className="w-full h-full">
+        <motion.path 
+          d="M15 90 L40 60 L60 75 L85 30 L105 45"
+          fill="none" 
+          stroke="currentColor" 
+          strokeWidth="4"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          initial={{ pathLength: 0 }}
+          animate={{ pathLength: 1 }}
+          transition={{ duration: 1.5, repeat: Infinity, repeatType: "reverse" }}
+        />
+        <motion.circle 
+          cx="105" cy="45" r="8" 
+          fill="currentColor"
+          animate={{ scale: [1, 1.3, 1] }}
+          transition={{ duration: 1, repeat: Infinity }}
+        />
+        <circle cx="15" cy="90" r="4" fill="currentColor" opacity="0.6" />
+        <circle cx="40" cy="60" r="4" fill="currentColor" opacity="0.6" />
+        <circle cx="60" cy="75" r="4" fill="currentColor" opacity="0.6" />
+        <circle cx="85" cy="30" r="4" fill="currentColor" opacity="0.6" />
+      </svg>
+    )
   },
   {
-    icon: Users,
     stat: "4.9B",
     fact: "personas activas en redes sociales en el mundo",
-    color: "cyan"
+    color: "cyan",
+    illustration: (
+      <svg viewBox="0 0 120 120" className="w-full h-full">
+        <circle cx="60" cy="40" r="12" fill="currentColor" opacity="0.8" />
+        <path d="M40 75 Q40 55 60 55 Q80 55 80 75" fill="currentColor" opacity="0.6" />
+        <motion.g animate={{ opacity: [0.3, 0.7, 0.3] }} transition={{ duration: 2, repeat: Infinity, delay: 0 }}>
+          <circle cx="25" cy="35" r="8" fill="currentColor" opacity="0.5" />
+          <line x1="35" y1="40" x2="48" y2="42" stroke="currentColor" strokeWidth="2" opacity="0.3" />
+        </motion.g>
+        <motion.g animate={{ opacity: [0.3, 0.7, 0.3] }} transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}>
+          <circle cx="95" cy="35" r="8" fill="currentColor" opacity="0.5" />
+          <line x1="85" y1="40" x2="72" y2="42" stroke="currentColor" strokeWidth="2" opacity="0.3" />
+        </motion.g>
+        <motion.g animate={{ opacity: [0.3, 0.7, 0.3] }} transition={{ duration: 2, repeat: Infinity, delay: 1 }}>
+          <circle cx="30" cy="95" r="8" fill="currentColor" opacity="0.5" />
+          <line x1="38" y1="90" x2="50" y2="78" stroke="currentColor" strokeWidth="2" opacity="0.3" />
+        </motion.g>
+        <motion.g animate={{ opacity: [0.3, 0.7, 0.3] }} transition={{ duration: 2, repeat: Infinity, delay: 1.5 }}>
+          <circle cx="90" cy="95" r="8" fill="currentColor" opacity="0.5" />
+          <line x1="82" y1="90" x2="70" y2="78" stroke="currentColor" strokeWidth="2" opacity="0.3" />
+        </motion.g>
+      </svg>
+    )
   },
   {
-    icon: MessageCircle,
     stat: "64%",
     fact: "esperan respuesta de marcas en menos de 24 hrs",
-    color: "lime"
+    color: "lime",
+    illustration: (
+      <svg viewBox="0 0 120 120" className="w-full h-full">
+        <motion.path 
+          d="M20 50 C20 30 40 15 60 15 C80 15 100 30 100 50 C100 70 80 85 60 85 L45 85 L30 100 L35 85 C25 80 20 65 20 50"
+          fill="none" 
+          stroke="currentColor" 
+          strokeWidth="3"
+          initial={{ pathLength: 0 }}
+          animate={{ pathLength: 1 }}
+          transition={{ duration: 2 }}
+        />
+        <motion.g animate={{ opacity: [0, 1, 0] }} transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 0.5 }}>
+          <circle cx="45" cy="50" r="4" fill="currentColor" />
+          <circle cx="60" cy="50" r="4" fill="currentColor" />
+          <circle cx="75" cy="50" r="4" fill="currentColor" />
+        </motion.g>
+      </svg>
+    )
   },
   {
-    icon: BarChart3,
     stat: "3x",
     fact: "más conversiones con estrategia digital vs. sin ella",
-    color: "coral"
+    color: "coral",
+    illustration: (
+      <svg viewBox="0 0 120 120" className="w-full h-full">
+        <motion.rect 
+          x="20" y="70" width="20" height="35" rx="4"
+          fill="currentColor" opacity="0.4"
+          initial={{ scaleY: 0 }}
+          animate={{ scaleY: 1 }}
+          transition={{ duration: 0.5, delay: 0 }}
+          style={{ originY: 1 }}
+        />
+        <motion.rect 
+          x="50" y="45" width="20" height="60" rx="4"
+          fill="currentColor" opacity="0.6"
+          initial={{ scaleY: 0 }}
+          animate={{ scaleY: 1 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+          style={{ originY: 1 }}
+        />
+        <motion.rect 
+          x="80" y="20" width="20" height="85" rx="4"
+          fill="currentColor" opacity="0.9"
+          initial={{ scaleY: 0 }}
+          animate={{ scaleY: 1 }}
+          transition={{ duration: 0.5, delay: 0.4 }}
+          style={{ originY: 1 }}
+        />
+        <motion.path 
+          d="M25 65 L60 40 L90 15"
+          fill="none" 
+          stroke="currentColor" 
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeDasharray="5,5"
+          animate={{ strokeDashoffset: [0, -20] }}
+          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+        />
+      </svg>
+    )
   }
 ];
 
+const colorClasses: Record<string, string> = {
+  coral: "text-coral",
+  magenta: "text-magenta", 
+  electric: "text-electric",
+  cyan: "text-cyan",
+  lime: "text-lime"
+};
+
+const bgColorClasses: Record<string, string> = {
+  coral: "bg-coral",
+  magenta: "bg-magenta", 
+  electric: "bg-electric",
+  cyan: "bg-cyan",
+  lime: "bg-lime"
+};
+
 export function Hero() {
+  const [currentFact, setCurrentFact] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentFact((prev) => (prev + 1) % digitalFacts.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const fact = digitalFacts[currentFact];
+
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden noise">
       {/* Rich mesh gradient background */}
@@ -48,7 +216,6 @@ export function Hero() {
       
       {/* Animated floating elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {/* Large rotating circles */}
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ duration: 60, repeat: Infinity, ease: "linear" }}
@@ -68,41 +235,16 @@ export function Hero() {
           <div className="absolute inset-12 rounded-full border border-coral/10" />
         </motion.div>
 
-        {/* Floating accent shapes */}
         <motion.div
-          animate={{ 
-            y: [-20, 20, -20],
-            rotate: [0, 10, 0]
-          }}
+          animate={{ y: [-20, 20, -20], rotate: [0, 10, 0] }}
           transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
           className="absolute top-[15%] right-[15%] w-24 h-24 bg-gradient-coral rounded-3xl opacity-80 blur-sm"
         />
         
         <motion.div
-          animate={{ 
-            y: [20, -20, 20],
-            rotate: [0, -15, 0]
-          }}
+          animate={{ y: [20, -20, 20], rotate: [0, -15, 0] }}
           transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
           className="absolute bottom-[25%] left-[10%] w-16 h-16 bg-gradient-sunset rounded-2xl opacity-60 blur-sm"
-        />
-
-        <motion.div
-          animate={{ 
-            y: [-15, 25, -15],
-            x: [-10, 10, -10]
-          }}
-          transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute top-[40%] right-[8%] w-12 h-12 bg-electric rounded-xl opacity-50 blur-sm"
-        />
-
-        <motion.div
-          animate={{ 
-            scale: [1, 1.2, 1],
-            opacity: [0.3, 0.6, 0.3]
-          }}
-          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute top-[60%] left-[20%] w-8 h-8 bg-cyan rounded-full"
         />
       </div>
 
@@ -170,7 +312,7 @@ export function Hero() {
               </motion.div>
             </div>
 
-            {/* Right column - Animated facts */}
+            {/* Right column - Single rotating fact with illustration */}
             <motion.div
               initial={{ opacity: 0, x: 30 }}
               animate={{ opacity: 1, x: 0 }}
@@ -179,27 +321,55 @@ export function Hero() {
             >
               <div className="absolute inset-0 bg-gradient-to-br from-coral/10 via-transparent to-magenta/10 rounded-3xl blur-3xl" />
               
-              <div className="relative grid grid-cols-2 gap-4">
-                {digitalFacts.map((fact, index) => (
+              <div className="relative bg-card/60 backdrop-blur-xl rounded-3xl border border-border/50 p-8 md:p-10 overflow-hidden min-h-[380px] flex flex-col">
+                {/* Progress dots */}
+                <div className="flex gap-2 mb-6">
+                  {digitalFacts.map((f, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setCurrentFact(index)}
+                      className={`h-1.5 rounded-full transition-all duration-300 ${
+                        index === currentFact 
+                          ? `w-8 ${bgColorClasses[f.color]}` 
+                          : 'w-1.5 bg-muted-foreground/30 hover:bg-muted-foreground/50'
+                      }`}
+                    />
+                  ))}
+                </div>
+
+                <AnimatePresence mode="wait">
                   <motion.div
-                    key={fact.stat}
+                    key={currentFact}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.5 + index * 0.1 }}
-                    whileHover={{ scale: 1.02, y: -4 }}
-                    className={`p-4 rounded-2xl bg-card/80 border border-border/50 hover:border-${fact.color}/40 transition-all duration-300 backdrop-blur-sm group`}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.5 }}
+                    className="flex-1 flex flex-col"
                   >
-                    <div className={`w-10 h-10 rounded-xl bg-${fact.color}/10 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform`}>
-                      <fact.icon className={`w-5 h-5 text-${fact.color}`} />
+                    {/* Illustration */}
+                    <div className={`w-28 h-28 md:w-36 md:h-36 mx-auto mb-6 ${colorClasses[fact.color]}`}>
+                      {fact.illustration}
                     </div>
-                    <div className={`font-display text-2xl font-bold text-${fact.color} mb-1`}>
+
+                    {/* Stat */}
+                    <div className={`font-display text-5xl md:text-6xl font-bold text-center mb-3 ${colorClasses[fact.color]}`}>
                       {fact.stat}
                     </div>
-                    <p className="text-xs text-muted-foreground leading-snug">
+
+                    {/* Fact text */}
+                    <p className="text-lg md:text-xl text-center text-muted-foreground leading-relaxed">
                       {fact.fact}
                     </p>
                   </motion.div>
-                ))}
+                </AnimatePresence>
+
+                {/* Decorative corner glow */}
+                <motion.div 
+                  key={`glow-${currentFact}`}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 0.3 }}
+                  className={`absolute -top-10 -right-10 w-32 h-32 rounded-full ${bgColorClasses[fact.color]} blur-2xl`}
+                />
               </div>
             </motion.div>
           </div>
