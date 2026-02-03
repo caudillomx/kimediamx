@@ -28,9 +28,9 @@ const guides = [
 
 export function GuidesCTA() {
   return (
-    <section id="guias" className="py-24 relative overflow-hidden">
-      {/* Background */}
-      <div className="absolute inset-0 bg-gradient-to-b from-background via-secondary/20 to-background" />
+    <section id="guias" className="py-24 relative overflow-hidden bg-[hsl(var(--surface-light))]">
+      {/* Light Background */}
+      <div className="absolute inset-0 bg-gradient-to-b from-[hsl(var(--surface-light))] via-[hsl(240_10%_94%)] to-[hsl(var(--surface-light))]" />
       
       <div className="container mx-auto px-4 relative z-10">
         <motion.div
@@ -46,11 +46,11 @@ export function GuidesCTA() {
           </div>
           
           <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
-            <span className="text-foreground">Guías de </span>
+            <span className="text-[hsl(var(--surface-light-foreground))]">Guías de </span>
             <span className="text-gradient-electric">Redes Sociales</span>
           </h2>
           
-          <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
+          <p className="text-lg md:text-xl text-[hsl(240_10%_40%)] max-w-2xl mx-auto">
             Descarga nuestras guías completas con estrategias, plantillas y ejemplos reales para dominar las redes sociales.
           </p>
         </motion.div>
@@ -65,9 +65,9 @@ export function GuidesCTA() {
               transition={{ duration: 0.5, delay: index * 0.15 }}
             >
               <Link to={guide.href} className="block group">
-                <div className="relative p-8 rounded-2xl bg-card border border-border hover:border-electric/50 transition-all duration-300 h-full overflow-hidden">
+                <div className="relative p-8 rounded-2xl bg-[hsl(var(--background))] border border-[hsl(240_8%_30%)] hover:border-electric/50 transition-all duration-300 h-full overflow-hidden">
                   {/* Gradient overlay on hover */}
-                  <div className={`absolute inset-0 bg-gradient-to-br ${guide.gradient} opacity-0 group-hover:opacity-5 transition-opacity duration-300`} />
+                  <div className={`absolute inset-0 bg-gradient-to-br ${guide.gradient} opacity-0 group-hover:opacity-10 transition-opacity duration-300`} />
                   
                   {/* Icon */}
                   <div className={`w-16 h-16 rounded-xl bg-gradient-to-br ${guide.gradient} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300`}>
@@ -76,7 +76,7 @@ export function GuidesCTA() {
                   
                   {/* Content */}
                   <div className="relative z-10">
-                    <p className="text-sm text-muted-foreground mb-2">{guide.subtitle}</p>
+                    <p className="text-sm text-[hsl(240_10%_60%)] mb-2">{guide.subtitle}</p>
                     <h3 className="text-2xl font-bold text-foreground mb-3 group-hover:text-electric transition-colors">
                       {guide.title}
                     </h3>

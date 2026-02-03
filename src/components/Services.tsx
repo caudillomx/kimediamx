@@ -393,7 +393,7 @@ function ServiceCard({
       transition={{ duration: 0.5, delay: index * 0.1 }}
       className="group h-full"
     >
-      <div className="relative bg-card rounded-3xl p-8 border border-border h-full overflow-hidden transition-all duration-500 hover:border-coral/50 hover:shadow-glow/20">
+      <div className="relative bg-[hsl(var(--background))] rounded-3xl p-8 border border-[hsl(240_8%_30%)] h-full overflow-hidden transition-all duration-500 hover:border-coral/50 hover:shadow-glow/20">
         {/* Gradient line top */}
         <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${colors.gradient} transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left`} />
         
@@ -443,9 +443,9 @@ export function Services() {
 
   return (
     <>
-      <section id="servicios" className="py-24 lg:py-32 relative">
-        {/* Background gradient */}
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-secondary/30 to-transparent" />
+      <section id="servicios" className="py-24 lg:py-32 relative bg-[hsl(var(--surface-light))]">
+        {/* Light background for visual break */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[hsl(var(--surface-light))] via-[hsl(240_10%_92%)] to-[hsl(var(--surface-light))]" />
         
         <div className="container mx-auto px-6 relative z-10">
           {/* Section Header */}
@@ -456,14 +456,14 @@ export function Services() {
             transition={{ duration: 0.6 }}
             className="max-w-4xl mx-auto text-center mb-16"
           >
-            <span className="inline-block px-4 py-2 rounded-full bg-electric/10 border border-electric/30 text-electric text-sm font-bold mb-6">
+            <span className="inline-block px-4 py-2 rounded-full bg-electric/20 border border-electric/40 text-electric text-sm font-bold mb-6">
               🚀 Servicios
             </span>
-            <h2 className="font-display text-4xl md:text-6xl font-bold text-foreground mb-6">
+            <h2 className="font-display text-4xl md:text-6xl font-bold text-[hsl(var(--surface-light-foreground))] mb-6">
               Todo lo que necesitas para{" "}
               <span className="text-gradient-electric">destacar</span>
             </h2>
-            <p className="text-xl text-muted-foreground">
+            <p className="text-xl text-[hsl(240_10%_40%)]">
               Haz clic en cualquier servicio para descubrir cómo puede ayudar a tu marca.
             </p>
           </motion.div>
@@ -488,8 +488,8 @@ export function Services() {
             transition={{ delay: 0.3 }}
             className="text-center mt-20"
           >
-            <div className="inline-block p-8 rounded-3xl bg-gradient-to-r from-coral/10 via-magenta/10 to-cyan/10 border border-border">
-              <p className="text-lg text-foreground mb-6 font-medium">
+            <div className="inline-block p-8 rounded-3xl bg-gradient-to-r from-coral/20 via-magenta/20 to-cyan/20 border border-coral/30">
+              <p className="text-lg text-[hsl(var(--surface-light-foreground))] mb-6 font-medium">
                 ¿Buscas una solución a medida para tu marca?
               </p>
               <a

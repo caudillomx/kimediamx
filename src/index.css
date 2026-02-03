@@ -49,6 +49,10 @@
     --magenta: 320 90% 55%;
     --lime: 85 90% 50%;
     
+    /* Light surfaces for visual breaks */
+    --surface-light: 240 10% 96%;
+    --surface-light-foreground: 240 10% 10%;
+    
     --surface-elevated: 240 10% 10%;
     --surface-overlay: 240 10% 12%;
     
