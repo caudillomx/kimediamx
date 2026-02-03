@@ -95,11 +95,27 @@ const recommendations = {
   },
 };
 
+// HTML escape utility to prevent XSS/injection in email content
+function escapeHtml(text: string): string {
+  const map: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  };
+  return text.replace(/[&<>"']/g, (m) => map[m]);
+}
+
 function generateEmailHtml(data: QuizResultRequest): string {
   const quizName = data.quizType === "personal_brand" ? "Marca Personal" : "PyME";
   const title = resultTitles[data.quizType][data.resultLevel];
   const description = resultDescriptions[data.quizType][data.resultLevel];
   const recs = recommendations[data.quizType][data.resultLevel];
+  
+  // Sanitize user-provided data
+  const safeName = escapeHtml(data.name.split(" ")[0]);
+  const safeCompanyName = data.companyName ? escapeHtml(data.companyName) : '';
 
   return `
 <!DOCTYPE html>
@@ -126,7 +142,7 @@ function generateEmailHtml(data: QuizResultRequest): string {
           <!-- Greeting -->
           <tr>
             <td style="padding: 40px 30px 20px;">
-              <h2 style="margin: 0; color: #fafafa; font-size: 24px;">¡Hola, ${data.name.split(" ")[0]}!</h2>
+              <h2 style="margin: 0; color: #fafafa; font-size: 24px;">¡Hola, ${safeName}!</h2>
               <p style="margin: 15px 0 0; color: #a1a1aa; font-size: 16px; line-height: 1.6;">
                 Gracias por completar tu diagnóstico. Aquí están tus resultados personalizados.
               </p>
