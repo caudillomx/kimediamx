@@ -67,8 +67,24 @@ export default function QuizPyme() {
 
       if (error) throw error;
 
-      // TODO: Call edge function to send email
-      // await supabase.functions.invoke("send-quiz-results", { ... });
+      // Send email with results
+      const { error: emailError } = await supabase.functions.invoke("send-quiz-results", {
+        body: {
+          email: data.email,
+          name: data.name,
+          quizType: "pyme",
+          resultLevel: calculatedResult.level,
+          score: calculatedResult.score,
+          maxScore: totalQuestions * 3,
+          percentage: calculatedResult.percentage,
+          companyName: data.companyName,
+        },
+      });
+
+      if (emailError) {
+        console.error("Error sending email:", emailError);
+        // Don't throw - still show results even if email fails
+      }
 
       setState("results");
       toast.success("¡Diagnóstico completado! Revisa tu correo para ver el análisis completo.");
