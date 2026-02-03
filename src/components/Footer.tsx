@@ -1,6 +1,7 @@
 import { Instagram, Facebook, Heart, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
-
+import { Link } from "react-router-dom";
+import kimediaLogo from "@/assets/kimedia-logo.png";
 // TikTok icon (not available in lucide-react)
 const TikTokIcon = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
@@ -24,12 +25,13 @@ export function Footer() {
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
           {/* Brand */}
           <div className="lg:col-span-2">
-            <a href="#" className="flex items-center gap-3 mb-6 group">
-              <div className="w-12 h-12 bg-gradient-coral rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                <span className="font-display font-bold text-primary-foreground text-2xl">Ki</span>
-              </div>
-              <span className="font-display font-bold text-2xl text-foreground">media</span>
-            </a>
+            <Link to="/" className="flex items-center mb-6 group">
+              <img 
+                src={kimediaLogo}
+                alt="KiMedia"
+                className="h-10 w-auto group-hover:scale-105 transition-transform"
+              />
+            </Link>
             <p className="text-muted-foreground mb-6 max-w-sm leading-relaxed">
               Agencia digital creativa especializada en análisis, estrategia, 
               performance marketing y producción audiovisual.
