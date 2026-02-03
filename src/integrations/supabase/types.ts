@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      guide_registrations: {
+        Row: {
+          company_name: string | null
+          created_at: string
+          email: string
+          guide_type: string
+          id: string
+          name: string
+          phone: string | null
+        }
+        Insert: {
+          company_name?: string | null
+          created_at?: string
+          email: string
+          guide_type: string
+          id?: string
+          name: string
+          phone?: string | null
+        }
+        Update: {
+          company_name?: string | null
+          created_at?: string
+          email?: string
+          guide_type?: string
+          id?: string
+          name?: string
+          phone?: string | null
+        }
+        Relationships: []
+      }
       quiz_submissions: {
         Row: {
           answers: Json
