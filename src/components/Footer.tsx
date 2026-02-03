@@ -108,9 +108,17 @@ export function Footer() {
 
         {/* Bottom */}
         <div className="border-t border-border pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-muted-foreground text-sm">
-            © {new Date().getFullYear()} KiMedia. Todos los derechos reservados.
-          </p>
+          <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4">
+            <p className="text-muted-foreground text-sm">
+              © {new Date().getFullYear()} KiMedia. Todos los derechos reservados.
+            </p>
+            <a 
+              href="/aviso-de-privacidad" 
+              className="text-muted-foreground text-sm hover:text-coral transition-colors"
+            >
+              Aviso de Privacidad
+            </a>
+          </div>
           <p className="text-muted-foreground text-sm flex items-center gap-2">
             Hecho con <Heart className="w-4 h-4 text-coral fill-coral" /> en CDMX
             <span className="text-coral font-bold">• To be known 🚀</span>
