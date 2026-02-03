@@ -28,10 +28,11 @@ const quizzes = [
 
 export function DiagnosticCTA() {
   return (
-    <section id="diagnostico" className="py-24 relative overflow-hidden bg-[hsl(var(--surface-light))]">
-      {/* Light background effects */}
-      <div className="absolute inset-0 bg-gradient-to-b from-[hsl(var(--surface-light))] to-[hsl(240_10%_94%)]" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-radial from-coral/15 to-transparent rounded-full blur-3xl" />
+    <section id="diagnostico" className="py-24 relative overflow-hidden">
+      {/* Warm mesh gradient background */}
+      <div className="absolute inset-0 bg-[hsl(var(--surface-warm))]" />
+      <div className="absolute inset-0" style={{ background: 'var(--gradient-mesh-light)' }} />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-radial from-coral/10 to-transparent rounded-full blur-3xl" />
       
       <div className="container mx-auto px-4 relative z-10">
         <motion.div
@@ -47,12 +48,12 @@ export function DiagnosticCTA() {
           </div>
           
           <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
-            <span className="text-[hsl(var(--surface-light-foreground))]">¿Dónde estás en tu </span>
+            <span className="text-[hsl(var(--surface-warm-foreground))]">¿Dónde estás en tu </span>
             <span className="text-gradient">presencia digital</span>
-            <span className="text-[hsl(var(--surface-light-foreground))]">?</span>
+            <span className="text-[hsl(var(--surface-warm-foreground))]">?</span>
           </h2>
           
-          <p className="text-lg md:text-xl text-[hsl(240_10%_40%)] max-w-2xl mx-auto">
+          <p className="text-lg md:text-xl text-[hsl(240_10%_35%)] max-w-2xl mx-auto">
             Haz tu propio diagnóstico y recibe un análisis personalizado con recomendaciones específicas para tu situación.
           </p>
         </motion.div>
@@ -78,7 +79,7 @@ export function DiagnosticCTA() {
                   
                   {/* Content */}
                   <div className="relative z-10">
-                    <p className="text-sm text-[hsl(240_10%_60%)] mb-2">{quiz.subtitle}</p>
+                    <p className="text-sm text-muted-foreground mb-2">{quiz.subtitle}</p>
                     <h3 className="text-2xl font-bold text-foreground mb-3 group-hover:text-coral transition-colors">
                       {quiz.title}
                     </h3>

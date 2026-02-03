@@ -443,9 +443,10 @@ export function Services() {
 
   return (
     <>
-      <section id="servicios" className="py-24 lg:py-32 relative bg-[hsl(var(--surface-light))]">
-        {/* Light background for visual break */}
-        <div className="absolute inset-0 bg-gradient-to-b from-[hsl(var(--surface-light))] via-[hsl(240_10%_92%)] to-[hsl(var(--surface-light))]" />
+      <section id="servicios" className="py-24 lg:py-32 relative overflow-hidden">
+        {/* Warm mesh gradient background */}
+        <div className="absolute inset-0 bg-[hsl(var(--surface-warm))]" />
+        <div className="absolute inset-0" style={{ background: 'var(--gradient-mesh-light)' }} />
         
         <div className="container mx-auto px-6 relative z-10">
           {/* Section Header */}
@@ -459,11 +460,11 @@ export function Services() {
             <span className="inline-block px-4 py-2 rounded-full bg-electric/20 border border-electric/40 text-electric text-sm font-bold mb-6">
               🚀 Servicios
             </span>
-            <h2 className="font-display text-4xl md:text-6xl font-bold text-[hsl(var(--surface-light-foreground))] mb-6">
+            <h2 className="font-display text-4xl md:text-6xl font-bold text-[hsl(var(--surface-warm-foreground))] mb-6">
               Todo lo que necesitas para{" "}
               <span className="text-gradient-electric">destacar</span>
             </h2>
-            <p className="text-xl text-[hsl(240_10%_40%)]">
+            <p className="text-xl text-[hsl(240_10%_35%)]">
               Haz clic en cualquier servicio para descubrir cómo puede ayudar a tu marca.
             </p>
           </motion.div>
@@ -488,8 +489,8 @@ export function Services() {
             transition={{ delay: 0.3 }}
             className="text-center mt-20"
           >
-            <div className="inline-block p-8 rounded-3xl bg-gradient-to-r from-coral/20 via-magenta/20 to-cyan/20 border border-coral/30">
-              <p className="text-lg text-[hsl(var(--surface-light-foreground))] mb-6 font-medium">
+            <div className="inline-block p-8 rounded-3xl bg-[hsl(var(--background))] border border-[hsl(240_8%_25%)]">
+              <p className="text-lg text-foreground mb-6 font-medium">
                 ¿Buscas una solución a medida para tu marca?
               </p>
               <a
