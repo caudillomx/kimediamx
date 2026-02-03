@@ -148,11 +148,11 @@ const PrivacyPolicy = () => {
                   </p>
                   <div className="flex flex-col gap-3">
                     <a 
-                      href="mailto:hola@kimediamx.com" 
+                      href="mailto:hola@kimedia.mx" 
                       className="inline-flex items-center gap-2 text-coral hover:text-coral/80 transition-colors"
                     >
                       <Mail className="w-5 h-5" />
-                      hola@kimediamx.com
+                      hola@kimedia.mx
                     </a>
                     <span className="inline-flex items-center gap-2 text-muted-foreground">
                       <MapPin className="w-5 h-5" />
