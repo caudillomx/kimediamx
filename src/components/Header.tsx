@@ -1,17 +1,20 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X, Sparkles } from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
 
 const navLinks = [
-  { href: "#metodologia", label: "Metodología" },
-  { href: "#servicios", label: "Servicios" },
-  { href: "#equipo", label: "Equipo" },
-  { href: "#contacto", label: "Contacto" },
+  { href: "metodologia", label: "Metodología" },
+  { href: "servicios", label: "Servicios" },
+  { href: "equipo", label: "Equipo" },
+  { href: "contacto", label: "Contacto" },
 ];
 
 export function Header() {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const location = useLocation();
+  const isHomePage = location.pathname === "/";
 
   useEffect(() => {
     const handleScroll = () => {
@@ -20,6 +23,10 @@ export function Header() {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  const getNavHref = (sectionId: string) => {
+    return isHomePage ? `#${sectionId}` : `/#${sectionId}`;
+  };
 
   return (
     <header 
@@ -30,7 +37,7 @@ export function Header() {
       <div className="container mx-auto px-6">
         <nav className="flex items-center justify-between">
           {/* Logo */}
-          <a href="#" className="flex items-center gap-2 group">
+          <Link to="/" className="flex items-center gap-2 group">
             <motion.div 
               whileHover={{ rotate: 10, scale: 1.05 }}
               className="w-10 h-10 bg-gradient-coral rounded-xl flex items-center justify-center shadow-glow/50"
@@ -38,14 +45,14 @@ export function Header() {
               <span className="font-display font-bold text-primary-foreground text-lg">Ki</span>
             </motion.div>
             <span className="font-display font-bold text-xl text-foreground">media</span>
-          </a>
+          </Link>
 
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-8">
             {navLinks.map((link) => (
               <a
                 key={link.href}
-                href={link.href}
+                href={getNavHref(link.href)}
                 className="relative text-muted-foreground hover:text-foreground transition-colors duration-300 font-medium text-sm group"
               >
                 {link.label}
@@ -53,7 +60,7 @@ export function Header() {
               </a>
             ))}
             <a
-              href="#contacto"
+              href={getNavHref("contacto")}
               className="group flex items-center gap-2 bg-gradient-coral text-primary-foreground px-6 py-2.5 rounded-xl font-bold text-sm hover:shadow-glow transition-all duration-300"
             >
               <Sparkles className="w-4 h-4" />
@@ -85,7 +92,7 @@ export function Header() {
               {navLinks.map((link, i) => (
                 <motion.a
                   key={link.href}
-                  href={link.href}
+                  href={getNavHref(link.href)}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: i * 0.1 }}
@@ -96,7 +103,7 @@ export function Header() {
                 </motion.a>
               ))}
               <motion.a
-                href="#contacto"
+                href={getNavHref("contacto")}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.4 }}
