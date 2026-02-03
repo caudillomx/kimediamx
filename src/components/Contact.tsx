@@ -18,22 +18,22 @@ export function Contact() {
   };
 
   return (
-    <section id="contacto" className="py-24 lg:py-32 relative overflow-hidden bg-[hsl(var(--surface-light))]">
-      {/* Light background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-[hsl(var(--surface-light))] via-[hsl(240_10%_92%)] to-[hsl(var(--surface-light))]" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_hsl(15_95%_55%_/_0.08),_transparent_60%)]" />
+    <section id="contacto" className="py-24 lg:py-32 relative overflow-hidden">
+      {/* Rich background - dark */}
+      <div className="absolute inset-0 bg-mesh" />
+      <div className="absolute inset-0 bg-glow opacity-40" />
       
       {/* Floating elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <motion.div
           animate={{ y: [-20, 20, -20], rotate: [0, 10, 0] }}
           transition={{ duration: 10, repeat: Infinity }}
-          className="absolute top-20 right-[20%] w-20 h-20 bg-coral/30 rounded-3xl blur-sm"
+          className="absolute top-20 right-[20%] w-20 h-20 bg-coral/20 rounded-3xl blur-sm"
         />
         <motion.div
           animate={{ y: [20, -20, 20], rotate: [0, -15, 0] }}
           transition={{ duration: 8, repeat: Infinity }}
-          className="absolute bottom-40 left-[10%] w-16 h-16 bg-magenta/30 rounded-2xl blur-sm"
+          className="absolute bottom-40 left-[10%] w-16 h-16 bg-magenta/20 rounded-2xl blur-sm"
         />
       </div>
 
@@ -74,7 +74,7 @@ export function Contact() {
             transition={{ duration: 0.6 }}
             className="lg:col-span-3"
           >
-            <div className="bg-[hsl(var(--background))] rounded-3xl p-8 lg:p-10 border border-[hsl(240_8%_30%)]">
+            <div className="bg-card rounded-3xl p-8 lg:p-10 border border-border">
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid sm:grid-cols-2 gap-6">
                   <div>
@@ -157,7 +157,7 @@ export function Contact() {
             className="lg:col-span-2 space-y-6"
           >
             {/* Quick Contact */}
-            <div className="bg-[hsl(var(--background))] rounded-3xl p-6 border border-[hsl(240_8%_30%)]">
+            <div className="bg-card rounded-3xl p-6 border border-border">
               <h3 className="font-display text-lg font-bold text-foreground mb-4">
                 Contacto directo
               </h3>
@@ -209,7 +209,7 @@ export function Contact() {
             </div>
 
             {/* Fun fact */}
-            <div className="bg-[hsl(var(--background))] rounded-3xl p-6 border border-[hsl(240_8%_30%)] text-center">
+            <div className="bg-card rounded-3xl p-6 border border-border text-center">
               <div className="text-4xl mb-3">🚀</div>
               <p className="text-sm text-muted-foreground">
                 <span className="text-foreground font-semibold">Fun fact:</span> Respondemos el 90% de los mensajes en menos de 4 horas.

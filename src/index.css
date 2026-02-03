@@ -49,9 +49,13 @@
     --magenta: 320 90% 55%;
     --lime: 85 90% 50%;
     
-    /* Light surfaces for visual breaks */
-    --surface-light: 240 10% 96%;
-    --surface-light-foreground: 240 10% 10%;
+    /* Warm light surfaces for visual breaks */
+    --surface-warm: 15 40% 96%;
+    --surface-warm-foreground: 240 10% 15%;
+    --gradient-mesh-light: radial-gradient(at 20% 30%, hsl(15 95% 55% / 0.12) 0px, transparent 50%),
+                           radial-gradient(at 80% 20%, hsl(320 90% 55% / 0.08) 0px, transparent 50%),
+                           radial-gradient(at 60% 70%, hsl(45 100% 55% / 0.06) 0px, transparent 50%),
+                           radial-gradient(at 10% 80%, hsl(320 90% 55% / 0.06) 0px, transparent 50%);
     
     --surface-elevated: 240 10% 10%;
     --surface-overlay: 240 10% 12%;
