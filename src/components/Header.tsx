@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X, Sparkles } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
-
+import kimediaLogo from "@/assets/kimedia-logo.png";
 const navLinks = [
   { href: "metodologia", label: "Metodología" },
   { href: "servicios", label: "Servicios" },
@@ -37,14 +37,13 @@ export function Header() {
       <div className="container mx-auto px-6">
         <nav className="flex items-center justify-between">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2 group">
-            <motion.div 
-              whileHover={{ rotate: 10, scale: 1.05 }}
-              className="w-10 h-10 bg-gradient-coral rounded-xl flex items-center justify-center shadow-glow/50"
-            >
-              <span className="font-display font-bold text-primary-foreground text-lg">Ki</span>
-            </motion.div>
-            <span className="font-display font-bold text-xl text-foreground">media</span>
+          <Link to="/" className="flex items-center group">
+            <motion.img 
+              src={kimediaLogo}
+              alt="KiMedia"
+              whileHover={{ scale: 1.05 }}
+              className="h-8 md:h-10 w-auto"
+            />
           </Link>
 
           {/* Desktop Nav */}
