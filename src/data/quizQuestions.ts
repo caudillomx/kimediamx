@@ -49,12 +49,12 @@ export const personalBrandQuestions: QuizQuestion[] = [
   },
   {
     id: "pb4",
-    question: "¿Cómo calificas tu presencia en LinkedIn?",
+    question: "¿Cómo calificas tu presencia en redes sociales profesionales?",
     options: [
-      { text: "No tengo LinkedIn o está abandonado", score: 0 },
-      { text: "Tengo perfil pero no lo uso activamente", score: 1 },
-      { text: "Publico ocasionalmente y tengo red pequeña", score: 2 },
-      { text: "Tengo perfil optimizado, publico seguido y genero engagement", score: 3 },
+      { text: "No tengo perfiles profesionales o están abandonados", score: 0 },
+      { text: "Tengo perfiles pero no los uso activamente", score: 1 },
+      { text: "Publico ocasionalmente y tengo una red pequeña", score: 2 },
+      { text: "Tengo perfiles optimizados, publico seguido y genero engagement", score: 3 },
     ],
   },
   {
