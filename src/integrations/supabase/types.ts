@@ -104,11 +104,13 @@ export type Database = {
       participants: {
         Row: {
           access_code_used: string
+          approx_followers: string | null
           bio_hybrid: string | null
           bio_institutional: string | null
           bio_text: string | null
           cause: string | null
           cause_custom: string | null
+          comm_budget: string | null
           consent_email: boolean
           consent_whatsapp: boolean
           conviction: string | null
@@ -116,6 +118,8 @@ export type Database = {
           diagnostic_level: string | null
           diagnostic_score: number | null
           full_name: string
+          goal_90_days: string | null
+          has_comm_team: boolean | null
           id: string
           institutional_card: string | null
           institutional_post_published: boolean
@@ -123,6 +127,7 @@ export type Database = {
           institutional_post_type: string | null
           institutional_role: string | null
           kit_downloaded: boolean
+          main_channel: string | null
           org_causes: string[] | null
           organization: string | null
           political_message: string | null
@@ -130,10 +135,12 @@ export type Database = {
           post_text: string | null
           post_type: string | null
           profile_token: string | null
+          publication_frequency: string | null
           quarterly_topics: string[] | null
           responsibility_level: string | null
           role_title: string
           route_activated: boolean
+          self_perception: string | null
           sensitive_topics: string[] | null
           show_on_map: boolean
           social_handle: string
@@ -148,11 +155,13 @@ export type Database = {
         }
         Insert: {
           access_code_used: string
+          approx_followers?: string | null
           bio_hybrid?: string | null
           bio_institutional?: string | null
           bio_text?: string | null
           cause?: string | null
           cause_custom?: string | null
+          comm_budget?: string | null
           consent_email?: boolean
           consent_whatsapp?: boolean
           conviction?: string | null
@@ -160,6 +169,8 @@ export type Database = {
           diagnostic_level?: string | null
           diagnostic_score?: number | null
           full_name: string
+          goal_90_days?: string | null
+          has_comm_team?: boolean | null
           id?: string
           institutional_card?: string | null
           institutional_post_published?: boolean
@@ -167,6 +178,7 @@ export type Database = {
           institutional_post_type?: string | null
           institutional_role?: string | null
           kit_downloaded?: boolean
+          main_channel?: string | null
           org_causes?: string[] | null
           organization?: string | null
           political_message?: string | null
@@ -174,10 +186,12 @@ export type Database = {
           post_text?: string | null
           post_type?: string | null
           profile_token?: string | null
+          publication_frequency?: string | null
           quarterly_topics?: string[] | null
           responsibility_level?: string | null
           role_title: string
           route_activated?: boolean
+          self_perception?: string | null
           sensitive_topics?: string[] | null
           show_on_map?: boolean
           social_handle: string
@@ -192,11 +206,13 @@ export type Database = {
         }
         Update: {
           access_code_used?: string
+          approx_followers?: string | null
           bio_hybrid?: string | null
           bio_institutional?: string | null
           bio_text?: string | null
           cause?: string | null
           cause_custom?: string | null
+          comm_budget?: string | null
           consent_email?: boolean
           consent_whatsapp?: boolean
           conviction?: string | null
@@ -204,6 +220,8 @@ export type Database = {
           diagnostic_level?: string | null
           diagnostic_score?: number | null
           full_name?: string
+          goal_90_days?: string | null
+          has_comm_team?: boolean | null
           id?: string
           institutional_card?: string | null
           institutional_post_published?: boolean
@@ -211,6 +229,7 @@ export type Database = {
           institutional_post_type?: string | null
           institutional_role?: string | null
           kit_downloaded?: boolean
+          main_channel?: string | null
           org_causes?: string[] | null
           organization?: string | null
           political_message?: string | null
@@ -218,10 +237,12 @@ export type Database = {
           post_text?: string | null
           post_type?: string | null
           profile_token?: string | null
+          publication_frequency?: string | null
           quarterly_topics?: string[] | null
           responsibility_level?: string | null
           role_title?: string
           route_activated?: boolean
+          self_perception?: string | null
           sensitive_topics?: string[] | null
           show_on_map?: boolean
           social_handle?: string

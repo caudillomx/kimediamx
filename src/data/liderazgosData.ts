@@ -8,6 +8,53 @@ export const mexicanStates = [
   "Yucatán", "Zacatecas",
 ];
 
+export const followerRanges = [
+  "Menos de 500",
+  "500 – 2,000",
+  "2,000 – 10,000",
+  "10,000 – 50,000",
+  "Más de 50,000",
+];
+
+export const channelOptions = [
+  { value: "facebook", label: "Facebook" },
+  { value: "instagram", label: "Instagram" },
+  { value: "tiktok", label: "TikTok" },
+  { value: "x", label: "X (Twitter)" },
+  { value: "youtube", label: "YouTube" },
+  { value: "ninguno", label: "No uso redes activamente" },
+];
+
+export const frequencyOptions = [
+  { value: "nunca", label: "Nunca o casi nunca" },
+  { value: "mensual", label: "Unas pocas veces al mes" },
+  { value: "semanal", label: "1-3 veces por semana" },
+  { value: "diario", label: "Casi todos los días" },
+];
+
+export const perceptionOptions = [
+  "Cercana y accesible",
+  "Seria y profesional",
+  "Comprometida con causas sociales",
+  "Poco visible o desconocida",
+  "Polémica o polarizante",
+];
+
+export const goalOptions = [
+  "Aumentar mi visibilidad como lideresa",
+  "Posicionarme en una causa específica",
+  "Prepararme para una candidatura o reelección",
+  "Fortalecer la comunicación de mi organización",
+  "Construir comunidad y red de apoyo",
+];
+
+export const budgetOptions = [
+  { value: "ninguno", label: "Sin presupuesto" },
+  { value: "basico", label: "Básico (diseño/fotos)" },
+  { value: "medio", label: "Medio (equipo parcial)" },
+  { value: "completo", label: "Completo (equipo dedicado)" },
+];
+
 export const diagnosticQuestions = [
   {
     id: 1,
@@ -61,6 +108,42 @@ export const diagnosticQuestions = [
       { label: "Solo comparto eventos", value: 0 },
       { label: "A veces informo acciones", value: 1 },
       { label: "Mi contenido es estratégico", value: 2 },
+    ],
+  },
+  {
+    id: 7,
+    question: "¿Tienes una estrategia o calendario de contenidos?",
+    options: [
+      { label: "No, publico cuando se me ocurre", value: 0 },
+      { label: "Tengo ideas pero sin calendario", value: 1 },
+      { label: "Sí, planifico mis publicaciones", value: 2 },
+    ],
+  },
+  {
+    id: 8,
+    question: "¿Tu comunicación diferencia tu voz personal de la institucional?",
+    options: [
+      { label: "Mezclo todo sin distinción", value: 0 },
+      { label: "A veces separo temas", value: 1 },
+      { label: "Sí, tengo líneas claras para cada voz", value: 2 },
+    ],
+  },
+  {
+    id: 9,
+    question: "¿Mides el impacto de lo que publicas? (likes, comentarios, alcance)",
+    options: [
+      { label: "Nunca reviso estadísticas", value: 0 },
+      { label: "A veces veo los likes", value: 1 },
+      { label: "Sí, analizo métricas regularmente", value: 2 },
+    ],
+  },
+  {
+    id: 10,
+    question: "¿Te han buscado medios, organizaciones o ciudadanos por tu presencia digital?",
+    options: [
+      { label: "Nunca", value: 0 },
+      { label: "Alguna vez", value: 1 },
+      { label: "Sí, con frecuencia", value: 2 },
     ],
   },
 ];
@@ -190,7 +273,7 @@ export const route30DaysContent = [
 ];
 
 export function getDiagnosticLevel(score: number): { level: string; color: string; label: string; message: string } {
-  if (score <= 4) {
+  if (score <= 6) {
     return {
       level: "rojo",
       color: "bg-red-500",
@@ -198,7 +281,7 @@ export function getDiagnosticLevel(score: number): { level: string; color: strin
       message: "Tu presencia digital está en fase inicial. ¡Hoy es el día perfecto para activarla! Sigue adelante con este proceso.",
     };
   }
-  if (score <= 8) {
+  if (score <= 13) {
     return {
       level: "amarillo",
       color: "bg-yellow-500",
