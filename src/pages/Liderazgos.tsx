@@ -17,6 +17,11 @@ import { toast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
 import kimediaLogo from "@/assets/kimedia-logo.png";
 import { generateSpokespersonGuide } from "@/data/liderazgosData";
+import { LIDERAZGO_BADGES } from "@/data/gamificationData";
+import { useKitGamification } from "@/hooks/useKitGamification";
+import { XPBar } from "@/components/kit-gamification/XPBar";
+import { BadgeUnlock } from "@/components/kit-gamification/BadgeUnlock";
+import { BadgeCollection } from "@/components/kit-gamification/BadgeCollection";
 
 type Step =
   | "code" | "welcome" | "diagnostic" | "message"
@@ -60,6 +65,7 @@ export default function Liderazgos() {
     sensitiveTopics: string[];
     guide: ReturnType<typeof generateSpokespersonGuide>;
   } | null>(null);
+  const gamification = useKitGamification(LIDERAZGO_BADGES);
 
   const progress = (stepOrder.indexOf(step) / (stepOrder.length - 1)) * 100;
 
@@ -92,6 +98,7 @@ export default function Liderazgos() {
     } catch {
       toast({ title: "Error guardando datos", variant: "destructive" });
     }
+    gamification.completeStep("welcome");
     setStep("diagnostic");
   };
 
@@ -108,6 +115,7 @@ export default function Liderazgos() {
         })
         .eq("id", participantId);
     }
+    gamification.completeStep("diagnostic");
     setStep("message");
   };
 
@@ -119,6 +127,7 @@ export default function Liderazgos() {
         .update({ cause, conviction, target_population: population, territory, political_message: message })
         .eq("id", participantId);
     }
+    gamification.completeStep("message");
     setStep("institutional");
   };
 
@@ -138,6 +147,7 @@ export default function Liderazgos() {
         })
         .eq("id", participantId);
     }
+    gamification.completeStep("institutional");
     setStep("spokesperson");
   };
 
@@ -155,6 +165,7 @@ export default function Liderazgos() {
         })
         .eq("id", participantId);
     }
+    gamification.completeStep("spokesperson");
     setStep("bio");
   };
 
@@ -166,6 +177,7 @@ export default function Liderazgos() {
         bio_hybrid: bioHybrid,
       }).eq("id", participantId);
     }
+    gamification.completeStep("bio");
     setStep("post");
   };
 
@@ -176,6 +188,7 @@ export default function Liderazgos() {
         .update({ post_type: postType, post_text: postText, post_published: published })
         .eq("id", participantId);
     }
+    gamification.completeStep("post");
     setStep("institutional_post");
   };
 
@@ -190,10 +203,12 @@ export default function Liderazgos() {
         })
         .eq("id", participantId);
     }
+    gamification.completeStep("institutional_post");
     setStep("closing");
   };
 
   const handleClosing = () => {
+    gamification.completeStep("closing");
     setStep("kit");
   };
 
@@ -203,36 +218,27 @@ export default function Liderazgos() {
 
   return (
     <div className="min-h-screen bg-background bg-mesh relative">
-      {/* Top bar */}
       <div className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <Link to="/" className="flex items-center">
             <img src={kimediaLogo} alt="KiMedia" className="h-6 w-auto" />
           </Link>
-          <span className="text-xs text-muted-foreground font-medium">Liderazgos Digitales</span>
+          <XPBar totalXP={gamification.totalXP} xpGained={gamification.xpGained} />
+          <BadgeCollection allBadges={LIDERAZGO_BADGES} unlockedBadges={gamification.unlockedBadges} />
         </div>
         <Progress value={progress} className="h-1 rounded-none" />
       </div>
 
-      {/* Content */}
       <div className="pt-20 pb-12 px-4 min-h-screen flex items-center">
         <div className="w-full">
           <AnimatePresence mode="wait">
             {step === "welcome" && <WelcomeStep key="welcome" onNext={handleWelcome} />}
             {step === "diagnostic" && <DiagnosticStep key="diagnostic" onNext={handleDiagnostic} />}
             {step === "message" && participantInfo && (
-              <MessageBuilderStep
-                key="message"
-                participantState={participantInfo.state}
-                onNext={handleMessage}
-              />
+              <MessageBuilderStep key="message" participantState={participantInfo.state} onNext={handleMessage} />
             )}
             {step === "institutional" && participantInfo && (
-              <InstitutionalIdentityStep
-                key="institutional"
-                participantState={participantInfo.state}
-                onNext={handleInstitutional}
-              />
+              <InstitutionalIdentityStep key="institutional" participantState={participantInfo.state} onNext={handleInstitutional} />
             )}
             {step === "spokesperson" && (
               <SpokespersonStep key="spokesperson" onNext={handleSpokesperson} />
@@ -290,12 +296,14 @@ export default function Liderazgos() {
                 participantId={participantId}
                 profileToken={profileToken}
                 name={participantInfo.fullName}
-                onActivateRoute={() => {}}
+                onActivateRoute={() => { gamification.completeStep("kit"); }}
               />
             )}
           </AnimatePresence>
         </div>
       </div>
+
+      <BadgeUnlock badge={gamification.latestBadge} onDismiss={gamification.dismissBadge} />
     </div>
   );
 }

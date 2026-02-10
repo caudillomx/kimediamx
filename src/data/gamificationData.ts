@@ -7,6 +7,12 @@ export const STEP_XP: Record<string, number> = {
   bio: 130,
   post: 160,
   closing: 200,
+  // Liderazgos-specific
+  message: 140,
+  institutional: 150,
+  spokesperson: 160,
+  institutional_post: 150,
+  kit: 100,
 };
 
 // Level thresholds
@@ -75,4 +81,17 @@ export const PYME_BADGES: Badge[] = [
   { id: "narrator", name: "Narrador", emoji: "📝", description: "Creaste la descripción de tu empresa", unlocksAtStep: "bio" },
   { id: "publisher", name: "Publicista", emoji: "📣", description: "Creaste tu primer post empresarial", unlocksAtStep: "post" },
   { id: "master", name: "Maestro PyME", emoji: "👑", description: "Completaste tu Kit Digital PyME", unlocksAtStep: "closing" },
+];
+
+export const LIDERAZGO_BADGES: Badge[] = [
+  { id: "access", name: "Acceso VIP", emoji: "🔑", description: "Ingresaste con código de acceso", unlocksAtStep: "welcome" },
+  { id: "analyst", name: "Analista", emoji: "🔍", description: "Completaste el diagnóstico", unlocksAtStep: "diagnostic" },
+  { id: "messenger", name: "Mensajero", emoji: "📢", description: "Construiste tu mensaje político", unlocksAtStep: "message" },
+  { id: "institution", name: "Institucional", emoji: "🏛️", description: "Definiste tu identidad institucional", unlocksAtStep: "institutional" },
+  { id: "spokesperson", name: "Vocero", emoji: "🎙️", description: "Completaste tu guía de vocería", unlocksAtStep: "spokesperson" },
+  { id: "biographer", name: "Biógrafo", emoji: "✍️", description: "Creaste tus bios profesionales", unlocksAtStep: "bio" },
+  { id: "creator", name: "Creador", emoji: "🎨", description: "Publicaste tu post personal", unlocksAtStep: "post" },
+  { id: "strategist", name: "Estratega", emoji: "♟️", description: "Creaste tu post institucional", unlocksAtStep: "institutional_post" },
+  { id: "leader", name: "Líder Digital", emoji: "🏆", description: "Completaste tu perfil de liderazgo", unlocksAtStep: "closing" },
+  { id: "equipped", name: "Equipado", emoji: "🚀", description: "Recibiste tu kit completo", unlocksAtStep: "kit" },
 ];
