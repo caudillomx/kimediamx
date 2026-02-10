@@ -1,11 +1,13 @@
 import { motion } from "framer-motion";
-import { Heart, MessageCircle, Share2, Eye, TrendingUp, ArrowRight, Lightbulb } from "lucide-react";
+import { TrendingUp, ArrowRight, Lightbulb } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { platformIcons, platformNames, type SimChallenge, type SimMetrics } from "@/data/simulatorData";
+import { PlatformFeed } from "./PlatformFeed";
+import { type SimChallenge, type SimMetrics, platformIcons, platformNames } from "@/data/simulatorData";
 
 interface Props {
   challenge: SimChallenge;
   userPost: string;
+  visualDescription?: string;
   metrics: SimMetrics;
   round: number;
   totalRounds: number;
@@ -13,7 +15,7 @@ interface Props {
   isLast: boolean;
 }
 
-export function FeedResult({ challenge, userPost, metrics, round, totalRounds, onNext, isLast }: Props) {
+export function FeedResult({ challenge, userPost, visualDescription, metrics, round, totalRounds, onNext, isLast }: Props) {
   const engagementColor =
     metrics.engagement >= 65
       ? "text-green-400"
@@ -46,49 +48,14 @@ export function FeedResult({ challenge, userPost, metrics, round, totalRounds, o
         </span>
       </div>
 
-      {/* Simulated post card */}
-      <div className="bg-card rounded-2xl border border-border overflow-hidden mb-4">
-        {/* Post header */}
-        <div className="p-4 flex items-center gap-3 border-b border-border">
-          <div className="w-10 h-10 rounded-full bg-gradient-sunset flex items-center justify-center text-primary-foreground text-sm font-bold">
-            TÚ
-          </div>
-          <div>
-            <p className="text-foreground text-sm font-bold">Tu Marca</p>
-            <p className="text-muted-foreground text-[10px]">Publicado hace 2h · {platformNames[challenge.platform]}</p>
-          </div>
-        </div>
-
-        {/* Post content */}
-        <div className="p-4">
-          <p className="text-foreground text-sm leading-relaxed whitespace-pre-wrap">{userPost}</p>
-        </div>
-
-        {/* Simulated metrics */}
-        <div className="px-4 pb-4">
-          <div className="grid grid-cols-4 gap-2">
-            {[
-              { icon: <Heart className="w-4 h-4" />, value: metrics.likes, label: "Likes" },
-              { icon: <MessageCircle className="w-4 h-4" />, value: metrics.comments, label: "Comentarios" },
-              { icon: <Share2 className="w-4 h-4" />, value: metrics.shares, label: "Compartidos" },
-              { icon: <Eye className="w-4 h-4" />, value: metrics.reach, label: "Alcance" },
-            ].map((m) => (
-              <motion.div
-                key={m.label}
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ type: "spring", stiffness: 200 }}
-                className="text-center"
-              >
-                <div className="flex justify-center text-muted-foreground mb-1">{m.icon}</div>
-                <p className="text-foreground font-bold text-sm">
-                  {m.value >= 1000 ? `${(m.value / 1000).toFixed(1)}k` : m.value}
-                </p>
-                <p className="text-muted-foreground text-[9px]">{m.label}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
+      {/* Platform-specific feed mockup */}
+      <div className="mb-4">
+        <PlatformFeed
+          platform={challenge.platform}
+          userPost={userPost}
+          visualDescription={visualDescription}
+          metrics={metrics}
+        />
       </div>
 
       {/* Engagement score */}
@@ -109,6 +76,21 @@ export function FeedResult({ challenge, userPost, metrics, round, totalRounds, o
         </div>
         <p className="text-muted-foreground text-xs leading-relaxed">{metrics.feedback}</p>
       </motion.div>
+
+      {/* Visual feedback */}
+      {metrics.visualFeedback && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4 }}
+          className="bg-card rounded-xl p-4 border border-magenta/20 mb-4"
+        >
+          <p className="text-foreground text-xs font-bold mb-1.5 flex items-center gap-2">
+            🎨 Feedback visual:
+          </p>
+          <p className="text-muted-foreground text-xs leading-relaxed">{metrics.visualFeedback}</p>
+        </motion.div>
+      )}
 
       {/* Suggestions */}
       {metrics.suggestions?.length > 0 && (

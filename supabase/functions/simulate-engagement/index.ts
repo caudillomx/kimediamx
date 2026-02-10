@@ -9,7 +9,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { post, scenario, objective, platform, mode } = await req.json();
+    const { post, scenario, objective, platform, mode, visualDescription, userProfile } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
@@ -20,6 +20,19 @@ serve(async (req) => {
       });
     }
 
+    const profileContext = userProfile
+      ? `\nPERFIL DEL USUARIO:
+- Industria/Profesión: ${userProfile.industry || "No especificada"}
+- Audiencia objetivo: ${userProfile.audience || "No especificada"}
+- Tono de marca: ${userProfile.tone || "No especificado"}
+- Nivel de experiencia: ${userProfile.experience || "beginner"}`
+      : "";
+
+    const visualBlock = visualDescription
+      ? `\nDESCRIPCIÓN VISUAL del usuario: "${visualDescription}"
+Evalúa la coherencia entre el copy y la imagen/video descrito. ¿Es congruente? ¿Refuerza el mensaje? Incluye tu evaluación visual en el campo "visualFeedback".`
+      : "";
+
     const systemPrompt = `Eres un analista experto de redes sociales y branding digital en Latinoamérica. 
 Tu trabajo es evaluar posts de redes sociales y simular métricas de engagement realistas.
 
@@ -27,7 +40,7 @@ CONTEXTO:
 - Plataforma: ${platform}
 - Modo: ${mode === "personal" ? "Marca Personal" : "PyME / Empresa"}
 - Escenario: ${scenario}
-- Objetivo: ${objective}
+- Objetivo: ${objective}${profileContext}${visualBlock}
 
 INSTRUCCIONES:
 Evalúa el post del usuario y devuelve un JSON con exactamente esta estructura (sin markdown, sin backticks, solo JSON puro):
@@ -37,9 +50,9 @@ Evalúa el post del usuario y devuelve un JSON con exactamente esta estructura (
   "shares": <número entre 0 y 80>,
   "reach": <número entre 200 y 15000>,
   "engagement": <número entre 10 y 95, qué tan bueno es el post>,
-  "feedback": "<2-3 oraciones de feedback constructivo en español explicando por qué el post tendría ese engagement>",
+  "feedback": "<2-3 oraciones de feedback constructivo en español, personalizado al perfil del usuario si está disponible>",
   "suggestions": ["<sugerencia 1 corta>", "<sugerencia 2 corta>", "<sugerencia 3 corta>"],
-  "tone": "<positive si engagement >= 65, neutral si >= 40, negative si < 40>"
+  "tone": "<positive si engagement >= 65, neutral si >= 40, negative si < 40>"${visualDescription ? ',\n  "visualFeedback": "<1-2 oraciones evaluando la coherencia entre el copy y la imagen/video descrito>"' : ""}
 }
 
 CRITERIOS DE EVALUACIÓN:
@@ -50,6 +63,8 @@ CRITERIOS DE EVALUACIÓN:
 - Alineación con el objetivo del escenario
 - Evitar contenido genérico o demasiado "vendedor"
 - Un post vacío o de una sola palabra debe recibir engagement muy bajo (10-20)
+${userProfile?.experience === "advanced" ? "- Sé más exigente: un usuario avanzado debe recibir feedback más detallado y estricto." : ""}
+${userProfile?.experience === "beginner" ? "- Sé constructivo y alentador: el usuario es principiante. Da tips prácticos específicos." : ""}
 
 Sé estricto pero justo. Un post mediocre debería tener 30-50 de engagement, uno bueno 60-80, uno excelente 80+.`;
 
@@ -92,14 +107,12 @@ Sé estricto pero justo. Un post mediocre debería tener 30-50 de engagement, un
     const data = await response.json();
     const raw = data.choices?.[0]?.message?.content?.trim() || "";
 
-    // Parse JSON from response, handling potential markdown wrapping
     let metrics;
     try {
       const jsonStr = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
       metrics = JSON.parse(jsonStr);
     } catch {
       console.error("Failed to parse AI response:", raw);
-      // Fallback metrics
       metrics = {
         likes: 45,
         comments: 5,
