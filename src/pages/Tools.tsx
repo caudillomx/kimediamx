@@ -15,6 +15,7 @@ const Tools = () => {
   const [mode, setMode] = useState<Mode>("review");
   const [result, setResult] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedClient, setSelectedClient] = useState("");
 
   const handleSubmit = async (text: string, copyType: string) => {
     setIsLoading(true);
@@ -27,7 +28,12 @@ const Tools = () => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ text, mode, copyType }),
+        body: JSON.stringify({
+          text,
+          mode,
+          copyType,
+          clientName: selectedClient || undefined,
+        }),
       });
 
       if (!resp.ok || !resp.body) {
@@ -138,7 +144,10 @@ const Tools = () => {
 
           {/* Sidebar */}
           <div className="lg:col-span-1">
-            <GuidelinesPanel />
+            <GuidelinesPanel
+              selectedClient={selectedClient}
+              onClientChange={setSelectedClient}
+            />
           </div>
         </div>
       </div>
