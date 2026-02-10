@@ -19,6 +19,7 @@ import KitPyme from "./pages/KitPyme";
 import Membership from "./pages/Membership";
 import BrandTrivia from "./pages/BrandTrivia";
 import SocialSimulator from "./pages/SocialSimulator";
+import BrandPuzzle from "./pages/BrandPuzzle";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -46,6 +47,7 @@ const App = () => (
           <Route path="/membresia" element={<Membership />} />
           <Route path="/trivia" element={<BrandTrivia />} />
           <Route path="/simulador" element={<SocialSimulator />} />
+          <Route path="/arcade" element={<BrandPuzzle />} />
           <Route path="/admin/liderazgos" element={<AdminLiderazgos />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
