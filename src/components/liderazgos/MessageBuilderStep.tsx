@@ -126,7 +126,7 @@ export function MessageBuilderStep({ participantState, onNext }: MessageBuilderS
               {convictions.map((c) => (
                 <div key={c} className="flex items-center space-x-3 bg-card rounded-xl p-4 border border-border">
                   <RadioGroupItem value={c} id={`conv-${c}`} />
-                  <Label htmlFor={`conv-${c}`} className="text-sm cursor-pointer flex-1 capitalize">{c}</Label>
+                  <Label htmlFor={`conv-${c}`} className="text-sm cursor-pointer flex-1">{c}</Label>
                 </div>
               ))}
             </RadioGroup>
