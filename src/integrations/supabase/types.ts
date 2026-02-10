@@ -71,6 +71,96 @@ export type Database = {
         }
         Relationships: []
       }
+      brand_kit_profiles: {
+        Row: {
+          approx_followers: string | null
+          bio_text: string | null
+          brand_tone: string | null
+          consent_email: boolean
+          consent_whatsapp: boolean
+          created_at: string
+          diagnostic_level: string | null
+          diagnostic_score: number | null
+          differentiator: string | null
+          email: string
+          full_name: string
+          goal_90_days: string | null
+          has_website: boolean | null
+          id: string
+          industry: string | null
+          main_channel: string | null
+          post_published: boolean
+          post_text: string | null
+          post_type: string | null
+          profession: string
+          profile_token: string | null
+          publication_frequency: string | null
+          self_perception: string | null
+          social_handle: string
+          target_audience: string | null
+          updated_at: string
+          value_proposition: string | null
+        }
+        Insert: {
+          approx_followers?: string | null
+          bio_text?: string | null
+          brand_tone?: string | null
+          consent_email?: boolean
+          consent_whatsapp?: boolean
+          created_at?: string
+          diagnostic_level?: string | null
+          diagnostic_score?: number | null
+          differentiator?: string | null
+          email: string
+          full_name: string
+          goal_90_days?: string | null
+          has_website?: boolean | null
+          id?: string
+          industry?: string | null
+          main_channel?: string | null
+          post_published?: boolean
+          post_text?: string | null
+          post_type?: string | null
+          profession: string
+          profile_token?: string | null
+          publication_frequency?: string | null
+          self_perception?: string | null
+          social_handle: string
+          target_audience?: string | null
+          updated_at?: string
+          value_proposition?: string | null
+        }
+        Update: {
+          approx_followers?: string | null
+          bio_text?: string | null
+          brand_tone?: string | null
+          consent_email?: boolean
+          consent_whatsapp?: boolean
+          created_at?: string
+          diagnostic_level?: string | null
+          diagnostic_score?: number | null
+          differentiator?: string | null
+          email?: string
+          full_name?: string
+          goal_90_days?: string | null
+          has_website?: boolean | null
+          id?: string
+          industry?: string | null
+          main_channel?: string | null
+          post_published?: boolean
+          post_text?: string | null
+          post_type?: string | null
+          profession?: string
+          profile_token?: string | null
+          publication_frequency?: string | null
+          self_perception?: string | null
+          social_handle?: string
+          target_audience?: string | null
+          updated_at?: string
+          value_proposition?: string | null
+        }
+        Relationships: []
+      }
       guide_registrations: {
         Row: {
           company_name: string | null
