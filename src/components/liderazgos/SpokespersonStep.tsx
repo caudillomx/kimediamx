@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Mic, ArrowRight, Plus, X, Sparkles, Loader2 } from "lucide-react";
+import { Mic, ArrowRight, Plus, X, Sparkles, Loader2, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { spokespersonTones, generateSpokespersonGuide } from "@/data/liderazgosData";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -59,6 +60,14 @@ export function SpokespersonStep({ onNext }: SpokespersonStepProps) {
     onNext({ phrase, tone, quarterlyTopics: validTopics, sensitiveTopics: validSensitive, guide });
   };
 
+  const fadeUp = {
+    hidden: { opacity: 0, y: 12 },
+    visible: (i: number) => ({
+      opacity: 1, y: 0,
+      transition: { delay: i * 0.06, duration: 0.4 },
+    }),
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, x: 40 }}
@@ -67,101 +76,120 @@ export function SpokespersonStep({ onNext }: SpokespersonStepProps) {
       className="w-full max-w-lg mx-auto"
     >
       <div className="text-center mb-6">
-        <div className="w-14 h-14 rounded-2xl bg-secondary flex items-center justify-center mx-auto mb-4">
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ type: "spring", stiffness: 200, delay: 0.1 }}
+          className="w-14 h-14 rounded-2xl bg-secondary flex items-center justify-center mx-auto mb-4"
+        >
           <Mic className="w-7 h-7 text-coral" />
-        </div>
+        </motion.div>
         <h2 className="font-display text-xl md:text-2xl font-bold text-foreground mb-1">
           Mensaje institucional y vocería
         </h2>
         <p className="text-muted-foreground text-sm">Define tu estrategia de comunicación</p>
       </div>
 
-      <div className="space-y-4">
-        <div>
-          <Label className="text-sm text-muted-foreground">Frase eje institucional</Label>
-          <Input
-            value={phrase}
-            onChange={(e) => setPhrase(e.target.value)}
-            placeholder="Ej: Gobernar es servir con transparencia"
-            className="bg-card border-border mt-1"
-            maxLength={150}
-          />
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleEnhance}
-            disabled={enhancing || !phrase.trim()}
-            className="text-coral text-xs mt-1"
-          >
-            {enhancing ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Sparkles className="w-3 h-3 mr-1" />}
-            Mejorar con IA
-          </Button>
-        </div>
+      <TooltipProvider delayDuration={300}>
+        <div className="space-y-4">
+          <motion.div custom={0} variants={fadeUp} initial="hidden" animate="visible">
+            <Label className="text-sm text-muted-foreground flex items-center gap-1">
+              Frase eje institucional
+              <Tooltip>
+                <TooltipTrigger asChild><HelpCircle className="w-3.5 h-3.5 cursor-help" /></TooltipTrigger>
+                <TooltipContent><p className="max-w-[200px] text-xs">Una frase corta que resuma tu visión institucional. Será tu eje de comunicación.</p></TooltipContent>
+              </Tooltip>
+            </Label>
+            <Input
+              value={phrase}
+              onChange={(e) => setPhrase(e.target.value)}
+              placeholder="Ej: Gobernar es servir con transparencia"
+              className="bg-card border-border mt-1"
+              maxLength={150}
+            />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleEnhance}
+              disabled={enhancing || !phrase.trim()}
+              className="text-coral text-xs mt-1"
+            >
+              {enhancing ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Sparkles className="w-3 h-3 mr-1" />}
+              Mejorar con IA
+            </Button>
+          </motion.div>
 
-        <div>
-          <Label className="text-sm text-muted-foreground">Tono predominante</Label>
-          <div className="grid grid-cols-2 gap-2 mt-1">
-            {spokespersonTones.map((t) => (
-              <button
-                key={t.value}
-                onClick={() => setTone(t.value)}
-                className={`rounded-xl p-3 text-left transition-all border ${
-                  tone === t.value
-                    ? "border-coral bg-coral/10 text-coral"
-                    : "border-border bg-card text-muted-foreground hover:border-coral/30"
-                }`}
-              >
-                <span className="block text-sm font-bold">{t.label}</span>
-                <span className="block text-[10px] mt-0.5">{t.desc}</span>
-              </button>
-            ))}
-          </div>
-        </div>
+          <motion.div custom={1} variants={fadeUp} initial="hidden" animate="visible">
+            <Label className="text-sm text-muted-foreground">Tono predominante</Label>
+            <div className="grid grid-cols-2 gap-2 mt-1">
+              {spokespersonTones.map((t) => (
+                <button
+                  key={t.value}
+                  onClick={() => setTone(t.value)}
+                  className={`rounded-xl p-3 text-left transition-all border ${
+                    tone === t.value
+                      ? "border-coral bg-coral/10 text-coral"
+                      : "border-border bg-card text-muted-foreground hover:border-coral/30"
+                  }`}
+                >
+                  <span className="block text-sm font-bold">{t.label}</span>
+                  <span className="block text-[10px] mt-0.5">{t.desc}</span>
+                </button>
+              ))}
+            </div>
+          </motion.div>
 
-        <div>
-          <Label className="text-sm text-muted-foreground">Temas prioritarios del trimestre</Label>
-          <div className="space-y-2 mt-1">
-            {topics.map((t, i) => (
-              <div key={i} className="flex gap-2">
-                <Input value={t} onChange={(e) => updateArr(topics, i, e.target.value, setTopics)}
-                  placeholder={`Tema ${i + 1}`} className="bg-card border-border flex-1" maxLength={80} />
-                {topics.length > 1 && (
-                  <Button variant="ghost" size="icon" onClick={() => removeArr(topics, i, setTopics)} className="shrink-0">
-                    <X className="w-4 h-4" />
-                  </Button>
-                )}
-              </div>
-            ))}
-            {topics.length < 5 && (
-              <Button variant="ghost" size="sm" onClick={addTopic} className="text-coral text-xs">
-                <Plus className="w-3 h-3 mr-1" /> Agregar tema
-              </Button>
-            )}
-          </div>
-        </div>
+          <motion.div custom={2} variants={fadeUp} initial="hidden" animate="visible">
+            <Label className="text-sm text-muted-foreground flex items-center gap-1">
+              Temas prioritarios del trimestre
+              <Tooltip>
+                <TooltipTrigger asChild><HelpCircle className="w-3.5 h-3.5 cursor-help" /></TooltipTrigger>
+                <TooltipContent><p className="max-w-[200px] text-xs">Los temas sobre los que comunicarás activamente en los próximos 3 meses. Puedes agregar hasta 5.</p></TooltipContent>
+              </Tooltip>
+            </Label>
+            <div className="space-y-2 mt-1">
+              {topics.map((t, i) => (
+                <div key={i} className="flex gap-2">
+                  <Input value={t} onChange={(e) => updateArr(topics, i, e.target.value, setTopics)}
+                    placeholder={`Tema ${i + 1}`} className="bg-card border-border flex-1" maxLength={80} />
+                  {topics.length > 1 && (
+                    <Button variant="ghost" size="icon" onClick={() => removeArr(topics, i, setTopics)} className="shrink-0">
+                      <X className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
+              ))}
+              {topics.length < 5 && (
+                <Button variant="ghost" size="sm" onClick={addTopic} className="text-coral text-xs">
+                  <Plus className="w-3 h-3 mr-1" /> Agregar tema
+                </Button>
+              )}
+            </div>
+          </motion.div>
 
-        <div>
-          <Label className="text-sm text-muted-foreground">Temas sensibles a evitar (opcional)</Label>
-          <div className="space-y-2 mt-1">
-            {sensitive.map((s, i) => (
-              <div key={i} className="flex gap-2">
-                <Input value={s} onChange={(e) => updateArr(sensitive, i, e.target.value, setSensitive)}
-                  placeholder={`Tema sensible ${i + 1}`} className="bg-card border-border flex-1" maxLength={80} />
-                {sensitive.length > 1 && (
-                  <Button variant="ghost" size="icon" onClick={() => removeArr(sensitive, i, setSensitive)} className="shrink-0">
-                    <X className="w-4 h-4" />
-                  </Button>
-                )}
-              </div>
-            ))}
-            {sensitive.length < 5 && (
-              <Button variant="ghost" size="sm" onClick={addSensitive} className="text-muted-foreground text-xs">
-                <Plus className="w-3 h-3 mr-1" /> Agregar tema sensible
-              </Button>
-            )}
-          </div>
+          <motion.div custom={3} variants={fadeUp} initial="hidden" animate="visible">
+            <Label className="text-sm text-muted-foreground">Temas sensibles a evitar (opcional)</Label>
+            <div className="space-y-2 mt-1">
+              {sensitive.map((s, i) => (
+                <div key={i} className="flex gap-2">
+                  <Input value={s} onChange={(e) => updateArr(sensitive, i, e.target.value, setSensitive)}
+                    placeholder={`Tema sensible ${i + 1}`} className="bg-card border-border flex-1" maxLength={80} />
+                  {sensitive.length > 1 && (
+                    <Button variant="ghost" size="icon" onClick={() => removeArr(sensitive, i, setSensitive)} className="shrink-0">
+                      <X className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
+              ))}
+              {sensitive.length < 5 && (
+                <Button variant="ghost" size="sm" onClick={addSensitive} className="text-muted-foreground text-xs">
+                  <Plus className="w-3 h-3 mr-1" /> Agregar tema sensible
+                </Button>
+              )}
+            </div>
+          </motion.div>
         </div>
-      </div>
+      </TooltipProvider>
 
       <Button
         onClick={handleSubmit}

@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import kimediaLogo from "@/assets/kimedia-logo.png";
 
 interface AccessCodeScreenProps {
   onValidCode: (code: string) => void;
@@ -40,16 +41,33 @@ export function AccessCodeScreen({ onValidCode }: AccessCodeScreenProps) {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-4">
+    <div className="min-h-screen bg-background bg-mesh flex items-center justify-center px-4 relative overflow-hidden">
+      {/* Ambient glow */}
+      <div className="absolute inset-0 bg-glow pointer-events-none" />
+
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md"
+        transition={{ duration: 0.6 }}
+        className="w-full max-w-md relative z-10"
       >
         <div className="text-center mb-8">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-coral flex items-center justify-center mx-auto mb-6">
+          <motion.img
+            src={kimediaLogo}
+            alt="KiMedia"
+            className="h-8 w-auto mx-auto mb-6 opacity-60"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.6 }}
+            transition={{ delay: 0.3 }}
+          />
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: "spring", stiffness: 200, delay: 0.2 }}
+            className="w-16 h-16 rounded-2xl bg-gradient-coral flex items-center justify-center mx-auto mb-6 shadow-glow"
+          >
             <ShieldCheck className="w-8 h-8 text-primary-foreground" />
-          </div>
+          </motion.div>
           <h1 className="font-display text-2xl font-bold text-foreground mb-2">
             Plataforma de Liderazgos
           </h1>

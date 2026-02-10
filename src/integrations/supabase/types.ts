@@ -109,6 +109,8 @@ export type Database = {
           bio_text: string | null
           cause: string | null
           cause_custom: string | null
+          consent_email: boolean
+          consent_whatsapp: boolean
           conviction: string | null
           created_at: string
           diagnostic_level: string | null
@@ -151,6 +153,8 @@ export type Database = {
           bio_text?: string | null
           cause?: string | null
           cause_custom?: string | null
+          consent_email?: boolean
+          consent_whatsapp?: boolean
           conviction?: string | null
           created_at?: string
           diagnostic_level?: string | null
@@ -193,6 +197,8 @@ export type Database = {
           bio_text?: string | null
           cause?: string | null
           cause_custom?: string | null
+          consent_email?: boolean
+          consent_whatsapp?: boolean
           conviction?: string | null
           created_at?: string
           diagnostic_level?: string | null
