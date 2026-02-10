@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Star, MapPin, AtSign, Heart } from "lucide-react";
+import { Star, MapPin, AtSign, Heart, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 
@@ -8,9 +8,10 @@ interface ClosingStepProps {
   state: string;
   cause: string;
   socialHandle: string;
+  onNext: () => void;
 }
 
-export function ClosingStep({ name, state, cause, socialHandle }: ClosingStepProps) {
+export function ClosingStep({ name, state, cause, socialHandle, onNext }: ClosingStepProps) {
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
@@ -53,14 +54,15 @@ export function ClosingStep({ name, state, cause, socialHandle }: ClosingStepPro
       </div>
 
       <div className="space-y-3">
+        <Button
+          onClick={onNext}
+          className="w-full bg-gradient-coral hover:opacity-90 text-primary-foreground font-bold py-6"
+        >
+          Recibir mi kit <ArrowRight className="w-4 h-4 ml-2" />
+        </Button>
         <Link to="/liderazgos/mapa">
-          <Button className="w-full bg-gradient-coral hover:opacity-90 text-primary-foreground font-bold py-6">
-            Ver mapa completo en KiMedia
-          </Button>
-        </Link>
-        <Link to="/">
           <Button variant="outline" className="w-full border-border text-muted-foreground">
-            Volver al inicio
+            Ver mapa completo en KiMedia
           </Button>
         </Link>
       </div>

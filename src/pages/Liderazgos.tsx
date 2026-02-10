@@ -1,27 +1,41 @@
 import { useState } from "react";
 import { AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
 import { AccessCodeScreen } from "@/components/liderazgos/AccessCodeScreen";
 import { WelcomeStep, type ParticipantInfo } from "@/components/liderazgos/WelcomeStep";
 import { DiagnosticStep } from "@/components/liderazgos/DiagnosticStep";
 import { MessageBuilderStep } from "@/components/liderazgos/MessageBuilderStep";
+import { InstitutionalIdentityStep } from "@/components/liderazgos/InstitutionalIdentityStep";
+import { SpokespersonStep } from "@/components/liderazgos/SpokespersonStep";
 import { BioGeneratorStep } from "@/components/liderazgos/BioGeneratorStep";
 import { PostGeneratorStep } from "@/components/liderazgos/PostGeneratorStep";
+import { InstitutionalPostStep } from "@/components/liderazgos/InstitutionalPostStep";
 import { ClosingStep } from "@/components/liderazgos/ClosingStep";
+import { KitDeliveryStep } from "@/components/liderazgos/KitDeliveryStep";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
 import kimediaLogo from "@/assets/kimedia-logo.png";
+import { generateSpokespersonGuide } from "@/data/liderazgosData";
 
-type Step = "code" | "welcome" | "diagnostic" | "message" | "bio" | "post" | "closing";
+type Step =
+  | "code" | "welcome" | "diagnostic" | "message"
+  | "institutional" | "spokesperson"
+  | "bio" | "post" | "institutional_post"
+  | "closing" | "kit";
 
-const stepOrder: Step[] = ["code", "welcome", "diagnostic", "message", "bio", "post", "closing"];
+const stepOrder: Step[] = [
+  "code", "welcome", "diagnostic", "message",
+  "institutional", "spokesperson",
+  "bio", "post", "institutional_post",
+  "closing", "kit",
+];
 
 export default function Liderazgos() {
   const [step, setStep] = useState<Step>("code");
   const [accessCode, setAccessCode] = useState("");
   const [participantId, setParticipantId] = useState<string | null>(null);
+  const [profileToken, setProfileToken] = useState<string>("");
   const [participantInfo, setParticipantInfo] = useState<ParticipantInfo | null>(null);
   const [messageData, setMessageData] = useState<{
     cause: string;
@@ -29,6 +43,21 @@ export default function Liderazgos() {
     population: string[];
     territory: string;
     message: string;
+  } | null>(null);
+  const [institutionalData, setInstitutionalData] = useState<{
+    institutionalRole: string;
+    responsibilityLevel: string;
+    organization: string;
+    orgCauses: string[];
+    strategicAudience: string;
+    institutionalCard: string;
+  } | null>(null);
+  const [spokespersonData, setSpokespersonData] = useState<{
+    phrase: string;
+    tone: string;
+    quarterlyTopics: string[];
+    sensitiveTopics: string[];
+    guide: ReturnType<typeof generateSpokespersonGuide>;
   } | null>(null);
 
   const progress = (stepOrder.indexOf(step) / (stepOrder.length - 1)) * 100;
@@ -50,11 +79,12 @@ export default function Liderazgos() {
           social_handle: info.socialHandle,
           access_code_used: accessCode,
         })
-        .select("id")
+        .select("id, profile_token")
         .single();
 
       if (error) throw error;
       setParticipantId(data.id);
+      setProfileToken(data.profile_token || "");
     } catch {
       toast({ title: "Error guardando datos", variant: "destructive" });
     }
@@ -76,21 +106,54 @@ export default function Liderazgos() {
     if (participantId) {
       await supabase
         .from("participants")
+        .update({ cause, conviction, target_population: population, territory, political_message: message })
+        .eq("id", participantId);
+    }
+    setStep("institutional");
+  };
+
+  const handleInstitutional = async (data: typeof institutionalData) => {
+    setInstitutionalData(data);
+    if (participantId && data) {
+      await supabase
+        .from("participants")
         .update({
-          cause,
-          conviction,
-          target_population: population,
-          territory,
-          political_message: message,
+          institutional_role: data.institutionalRole,
+          responsibility_level: data.responsibilityLevel,
+          organization: data.organization,
+          org_causes: data.orgCauses,
+          strategic_audience: data.strategicAudience,
+          institutional_card: data.institutionalCard,
+        })
+        .eq("id", participantId);
+    }
+    setStep("spokesperson");
+  };
+
+  const handleSpokesperson = async (data: typeof spokespersonData) => {
+    setSpokespersonData(data);
+    if (participantId && data) {
+      await supabase
+        .from("participants")
+        .update({
+          spokesperson_phrase: data.phrase,
+          spokesperson_tone: data.tone,
+          quarterly_topics: data.quarterlyTopics,
+          sensitive_topics: data.sensitiveTopics,
+          spokesperson_guide: data.guide as any,
         })
         .eq("id", participantId);
     }
     setStep("bio");
   };
 
-  const handleBio = async (bio: string) => {
+  const handleBio = async (bioPersonal: string, bioInstitutional: string, bioHybrid: string) => {
     if (participantId) {
-      await supabase.from("participants").update({ bio_text: bio }).eq("id", participantId);
+      await supabase.from("participants").update({
+        bio_text: bioPersonal,
+        bio_institutional: bioInstitutional,
+        bio_hybrid: bioHybrid,
+      }).eq("id", participantId);
     }
     setStep("post");
   };
@@ -102,7 +165,25 @@ export default function Liderazgos() {
         .update({ post_type: postType, post_text: postText, post_published: published })
         .eq("id", participantId);
     }
+    setStep("institutional_post");
+  };
+
+  const handleInstitutionalPost = async (postType: string, postText: string, published: boolean) => {
+    if (participantId) {
+      await supabase
+        .from("participants")
+        .update({
+          institutional_post_type: postType,
+          institutional_post_text: postText,
+          institutional_post_published: published,
+        })
+        .eq("id", participantId);
+    }
     setStep("closing");
+  };
+
+  const handleClosing = () => {
+    setStep("kit");
   };
 
   if (step === "code") {
@@ -135,6 +216,16 @@ export default function Liderazgos() {
                 onNext={handleMessage}
               />
             )}
+            {step === "institutional" && participantInfo && (
+              <InstitutionalIdentityStep
+                key="institutional"
+                participantState={participantInfo.state}
+                onNext={handleInstitutional}
+              />
+            )}
+            {step === "spokesperson" && (
+              <SpokespersonStep key="spokesperson" onNext={handleSpokesperson} />
+            )}
             {step === "bio" && participantInfo && messageData && (
               <BioGeneratorStep
                 key="bio"
@@ -143,6 +234,10 @@ export default function Liderazgos() {
                 state={participantInfo.state}
                 cause={messageData.cause}
                 message={messageData.message}
+                institutionalRole={institutionalData?.institutionalRole}
+                organization={institutionalData?.organization}
+                orgCauses={institutionalData?.orgCauses}
+                audience={institutionalData?.strategicAudience}
                 onNext={handleBio}
               />
             )}
@@ -155,6 +250,18 @@ export default function Liderazgos() {
                 onNext={handlePost}
               />
             )}
+            {step === "institutional_post" && messageData && institutionalData && (
+              <InstitutionalPostStep
+                key="institutional_post"
+                cause={messageData.cause}
+                organization={institutionalData.organization}
+                audience={institutionalData.strategicAudience}
+                territory={messageData.territory}
+                role={institutionalData.institutionalRole}
+                orgCauses={institutionalData.orgCauses}
+                onNext={handleInstitutionalPost}
+              />
+            )}
             {step === "closing" && participantInfo && messageData && (
               <ClosingStep
                 key="closing"
@@ -162,6 +269,16 @@ export default function Liderazgos() {
                 state={participantInfo.state}
                 cause={messageData.cause}
                 socialHandle={participantInfo.socialHandle}
+                onNext={handleClosing}
+              />
+            )}
+            {step === "kit" && participantId && participantInfo && (
+              <KitDeliveryStep
+                key="kit"
+                participantId={participantId}
+                profileToken={profileToken}
+                name={participantInfo.fullName}
+                onActivateRoute={() => {}}
               />
             )}
           </AnimatePresence>

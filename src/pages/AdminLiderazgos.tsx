@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import {
-  Users, Key, Download, Eye, EyeOff, LogOut, Plus, Search,
-  Filter, Trash2, ChevronDown
+  Users, Key, Download, LogOut, Plus, Search,
+  Settings, Globe
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,6 +33,11 @@ interface Participant {
   show_on_map: boolean;
   access_code_used: string;
   created_at: string;
+  organization: string | null;
+  institutional_role: string | null;
+  kit_downloaded: boolean;
+  route_activated: boolean;
+  institutional_post_published: boolean;
 }
 
 interface AccessCode {
@@ -61,6 +66,9 @@ export default function AdminLiderazgos() {
   const [newExpiry, setNewExpiry] = useState("");
   const [newDesc, setNewDesc] = useState("");
 
+  // Settings
+  const [communityLink, setCommunityLink] = useState("");
+
   const checkAuth = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (session) {
@@ -77,12 +85,14 @@ export default function AdminLiderazgos() {
   }, [checkAuth]);
 
   const fetchData = useCallback(async () => {
-    const [{ data: p }, { data: c }] = await Promise.all([
+    const [{ data: p }, { data: c }, { data: s }] = await Promise.all([
       supabase.from("participants").select("*").order("created_at", { ascending: false }),
       supabase.from("access_codes").select("*").order("created_at", { ascending: false }),
+      supabase.from("app_settings").select("*").eq("key", "community_link").single(),
     ]);
     setParticipants(p || []);
     setCodes(c || []);
+    if (s?.value) setCommunityLink(s.value);
   }, []);
 
   useEffect(() => {
@@ -127,13 +137,32 @@ export default function AdminLiderazgos() {
     setCodes((prev) => prev.map((c) => (c.id === id ? { ...c, is_active: !current } : c)));
   };
 
+  const handleSaveCommunityLink = async () => {
+    const { error } = await supabase
+      .from("app_settings")
+      .update({ value: communityLink, updated_at: new Date().toISOString() })
+      .eq("key", "community_link");
+    if (error) {
+      toast({ title: "Error guardando", variant: "destructive" });
+    } else {
+      toast({ title: "Link de comunidad actualizado" });
+    }
+  };
+
   const exportCSV = () => {
-    const headers = ["Nombre", "Estado", "Cargo", "Red Social", "Score", "Nivel", "Causa", "Mensaje", "Publicado", "Fecha"];
+    const headers = [
+      "Nombre", "Estado", "Cargo", "Red Social", "Score", "Nivel", "Causa",
+      "Organización", "Cargo Institucional", "Post Publicado", "Post Inst. Publicado",
+      "Kit Descargado", "Ruta Activada", "Fecha",
+    ];
     const rows = filteredParticipants.map((p) => [
       p.full_name, p.state, p.role_title, p.social_handle,
       p.diagnostic_score ?? "", p.diagnostic_level ?? "", p.cause ?? "",
-      (p.political_message ?? "").replace(/\n/g, " "),
+      p.organization ?? "", p.institutional_role ?? "",
       p.post_published ? "Sí" : "No",
+      p.institutional_post_published ? "Sí" : "No",
+      p.kit_downloaded ? "Sí" : "No",
+      p.route_activated ? "Sí" : "No",
       new Date(p.created_at).toLocaleDateString("es-MX"),
     ]);
 
@@ -183,6 +212,9 @@ export default function AdminLiderazgos() {
             </TabsTrigger>
             <TabsTrigger value="codes" className="flex items-center gap-2">
               <Key className="w-4 h-4" /> Códigos ({codes.length})
+            </TabsTrigger>
+            <TabsTrigger value="settings" className="flex items-center gap-2">
+              <Settings className="w-4 h-4" /> Ajustes
             </TabsTrigger>
           </TabsList>
 
@@ -246,11 +278,21 @@ export default function AdminLiderazgos() {
                       <p className="text-muted-foreground text-xs">
                         {p.state} · {p.role_title} · {p.social_handle} · Score: {p.diagnostic_score ?? "—"}
                       </p>
-                      {p.cause && <p className="text-muted-foreground text-xs mt-1">Causa: {p.cause}</p>}
-                      <p className="text-muted-foreground text-[10px] mt-1">
-                        {new Date(p.created_at).toLocaleDateString("es-MX")} · Código: {p.access_code_used}
-                        {p.post_published && " · ✅ Publicado"}
-                      </p>
+                      {p.organization && (
+                        <p className="text-muted-foreground text-xs mt-0.5">
+                          🏛️ {p.institutional_role} · {p.organization}
+                        </p>
+                      )}
+                      {p.cause && <p className="text-muted-foreground text-xs mt-0.5">Causa: {p.cause}</p>}
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        <span className="text-[10px] text-muted-foreground">
+                          {new Date(p.created_at).toLocaleDateString("es-MX")} · {p.access_code_used}
+                        </span>
+                        {p.post_published && <span className="text-[10px] bg-green-500/10 text-green-400 px-1.5 py-0.5 rounded">Post ✓</span>}
+                        {p.institutional_post_published && <span className="text-[10px] bg-green-500/10 text-green-400 px-1.5 py-0.5 rounded">Inst ✓</span>}
+                        {p.kit_downloaded && <span className="text-[10px] bg-coral/10 text-coral px-1.5 py-0.5 rounded">Kit ✓</span>}
+                        {p.route_activated && <span className="text-[10px] bg-coral/10 text-coral px-1.5 py-0.5 rounded">Ruta ✓</span>}
+                      </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <span className="text-[10px] text-muted-foreground">Mapa</span>
@@ -343,6 +385,28 @@ export default function AdminLiderazgos() {
                   No hay códigos creados. Crea el primero arriba.
                 </p>
               )}
+            </div>
+          </TabsContent>
+
+          {/* SETTINGS TAB */}
+          <TabsContent value="settings">
+            <div className="bg-card rounded-xl p-6 border border-border space-y-4">
+              <h3 className="font-display font-bold text-foreground text-sm flex items-center gap-2">
+                <Globe className="w-4 h-4 text-coral" /> Link de comunidad cerrada
+              </h3>
+              <p className="text-muted-foreground text-xs">
+                Este link se mostrará a participantes que hayan completado el proceso y generado su kit.
+              </p>
+              <Input
+                value={communityLink}
+                onChange={(e) => setCommunityLink(e.target.value)}
+                placeholder="https://chat.whatsapp.com/... o https://circle.so/..."
+                className="bg-background border-border"
+                maxLength={500}
+              />
+              <Button onClick={handleSaveCommunityLink} className="bg-gradient-coral hover:opacity-90 text-primary-foreground font-bold">
+                Guardar link
+              </Button>
             </div>
           </TabsContent>
         </Tabs>

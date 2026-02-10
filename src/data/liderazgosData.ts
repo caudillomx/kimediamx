@@ -91,6 +91,27 @@ export const populations = [
   "adultas mayores",
 ];
 
+export const responsibilityLevels = [
+  { value: "municipal", label: "Municipal" },
+  { value: "estatal", label: "Estatal" },
+  { value: "nacional", label: "Nacional" },
+];
+
+export const spokespersonTones = [
+  { value: "cercano", label: "Cercano", desc: "Lenguaje cotidiano y empático" },
+  { value: "tecnico", label: "Técnico", desc: "Datos, cifras y precisión" },
+  { value: "combativo", label: "Combativo", desc: "Firme y directo" },
+  { value: "esperanzador", label: "Esperanzador", desc: "Optimista y motivador" },
+];
+
+export const institutionalPostTypes = [
+  { value: "rendicion", label: "Rendición de cuentas", desc: "Transparencia de gestión" },
+  { value: "convocatoria", label: "Convocatoria ciudadana", desc: "Llama a la acción" },
+  { value: "posicionamiento", label: "Posicionamiento político", desc: "Marca tu postura" },
+  { value: "coyuntura", label: "Respuesta ante coyuntura", desc: "Reacciona al momento" },
+  { value: "logro", label: "Logro de gestión", desc: "Muestra resultados" },
+];
+
 export const postTemplates = {
   territorio: {
     hook: "Mi territorio me necesita y yo respondo.",
@@ -108,6 +129,65 @@ export const postTemplates = {
     cta: "¿Y tú, ya activaste tu liderazgo digital? Te comparto cómo empezar. 💬",
   },
 };
+
+export const institutionalPostTemplates: Record<string, { hook: string; body: string; cta: string }> = {
+  rendicion: {
+    hook: "Rendir cuentas no es una opción, es una obligación.",
+    body: "Desde {organization}, hemos trabajado en {causes} para {audience} en {territory}. Los resultados hablan: transparencia y compromiso real.",
+    cta: "¿Quieres conocer más sobre nuestra gestión? Te comparto los detalles. 📋",
+  },
+  convocatoria: {
+    hook: "Tu participación transforma {territory}.",
+    body: "Desde {organization} abrimos espacios para que {audience} se sumen a la conversación sobre {causes}. Porque las decisiones que nos afectan deben incluirnos.",
+    cta: "¿Te sumas? Comparte esta convocatoria y hagamos comunidad. 🤝",
+  },
+  posicionamiento: {
+    hook: "Hay temas que exigen una postura clara.",
+    body: "{causes} no puede seguir esperando. Desde {organization}, afirmamos nuestro compromiso con {audience} en {territory}. La política debe servir a la gente.",
+    cta: "Si compartes esta visión, sígueme. Juntas somos más fuertes. 💪",
+  },
+  coyuntura: {
+    hook: "Ante lo que pasa, no podemos quedarnos en silencio.",
+    body: "Como {role} en {organization}, mi responsabilidad es responder. {causes} necesita atención urgente para proteger a {audience} en {territory}.",
+    cta: "¿Qué opinas? Cuéntame en los comentarios. 👇",
+  },
+  logro: {
+    hook: "Los hechos hablan más que las promesas.",
+    body: "Desde {organization} logramos avances concretos en {causes} para {audience} en {territory}. Esto es lo que se puede hacer cuando hay voluntad política real.",
+    cta: "Comparte este logro para que más personas sepan que sí se puede. ✅",
+  },
+};
+
+export const route30DaysContent = [
+  {
+    week: 1,
+    title: "Historia personal política",
+    subtitle: "Conecta con tu audiencia desde lo personal",
+    guide: "Esta semana comparte tu historia: ¿por qué decidiste participar en la vida pública? ¿Qué momento te marcó? Las personas conectan con historias reales, no con discursos.",
+    postExample: "Hace [tiempo] tomé una decisión que cambió mi vida: involucrarme en [causa]. No fue fácil, pero cada día me confirma que [convicción]. Hoy te cuento por qué. 🧵👇",
+  },
+  {
+    week: 2,
+    title: "Profundización en causa",
+    subtitle: "Posiciónate como referente en tu tema",
+    guide: "Comparte datos, reflexiones o propuestas sobre tu causa principal. Demuestra conocimiento y compromiso. Usa cifras cuando sea posible.",
+    postExample: "¿Sabías que [dato sobre causa]? Desde [territorio] trabajamos para cambiar esta realidad. Aquí te comparto 3 acciones concretas que estamos impulsando. 📊",
+  },
+  {
+    week: 3,
+    title: "Acción concreta en territorio",
+    subtitle: "Muestra lo que haces, no solo lo que dices",
+    guide: "Documenta una acción real: una visita, una reunión, un evento. Las fotos y videos de terreno generan más confianza que cualquier texto.",
+    postExample: "Hoy estuve en [lugar] escuchando a [población]. Sus necesidades son claras: [necesidad]. Desde [organización] nos comprometemos a [acción]. 📍",
+  },
+  {
+    week: 4,
+    title: "Convocatoria ciudadana",
+    subtitle: "Invita a la acción colectiva",
+    guide: "Cierra el mes invitando a tu comunidad a sumarse. Puede ser a un evento, a una causa o simplemente a seguirte para más contenido con propósito.",
+    postExample: "Este mes di los primeros pasos para llevar mi liderazgo al mundo digital. Pero esto no se hace solo/a. ¿Te sumas a construir un [territorio] más [adjetivo]? 🤝",
+  },
+];
 
 export function getDiagnosticLevel(score: number): { level: string; color: string; label: string; message: string } {
   if (score <= 4) {
@@ -146,6 +226,46 @@ export function generateBio(name: string, role: string, state: string, cause: st
   return `${name}\n${role} | ${state}\nEnfocada en ${cause.toLowerCase()}\n${shortMsg}\n📩 Contacto`;
 }
 
+export function generateInstitutionalBio(name: string, instRole: string, organization: string, orgCauses: string[], audience: string): string {
+  const causesText = orgCauses.length > 1
+    ? orgCauses.slice(0, -1).join(", ") + " y " + orgCauses[orgCauses.length - 1]
+    : orgCauses[0] || "";
+  return `${name}\n${instRole} en ${organization}\nImpulsando: ${causesText.toLowerCase()}\nPor ${audience.toLowerCase()}\n🏛️ Servicio público con propósito`;
+}
+
+export function generateHybridBio(name: string, role: string, instRole: string, organization: string, cause: string, state: string): string {
+  return `${name}\n${role} | ${instRole} en ${organization}\n${state} · Enfocada en ${cause.toLowerCase()}\nLiderazgo con convicción y servicio público\n📩 Contacto`;
+}
+
+export function generateInstitutionalCard(organization: string, causes: string[], audience: string, territory: string): string {
+  const causesText = causes.length > 1
+    ? causes.slice(0, -1).join(", ") + " y " + causes[causes.length - 1]
+    : causes[0] || "";
+  return `Desde mi responsabilidad en ${organization}, trabajo para impulsar ${causesText.toLowerCase()} en beneficio de ${audience.toLowerCase()} en ${territory}.`;
+}
+
+export function generateSpokespersonGuide(phrase: string, tone: string, topics: string[], sensitive: string[]) {
+  const toneMap: Record<string, string[]> = {
+    cercano: ["empatía", "escucha", "comunidad", "compromiso", "cercanía"],
+    tecnico: ["evidencia", "resultados", "indicadores", "gestión", "eficiencia"],
+    combativo: ["justicia", "transformación", "dignidad", "exigencia", "firmeza"],
+    esperanzador: ["futuro", "posibilidad", "cambio", "esperanza", "construcción"],
+  };
+  const keywords = toneMap[tone] || toneMap.cercano;
+  const narratives = [
+    `Desde la perspectiva de ${tone === "cercano" ? "cercanía" : tone === "tecnico" ? "los datos" : tone === "combativo" ? "la exigencia" : "la esperanza"}: enfatizar logros concretos y compromisos medibles.`,
+    `Narrativa territorial: vincular siempre el mensaje con el impacto local y las personas beneficiadas.`,
+    `Narrativa de causa: posicionar los temas prioritarios como urgentes y con soluciones claras.`,
+  ];
+  const consistency = [
+    "Mantener coherencia entre mensaje personal e institucional.",
+    "Usar las palabras clave en al menos 3 de cada 5 publicaciones.",
+    `Evitar temas sensibles: ${sensitive.length > 0 ? sensitive.join(", ") : "ninguno definido"}.`,
+    "Revisar tono antes de publicar: ¿suena como mi marca política?",
+  ];
+  return { phrase, keywords, narratives, consistency, topics };
+}
+
 export function generatePost(type: keyof typeof postTemplates, cause: string, population: string[], territory: string): string {
   const template = postTemplates[type];
   const pop = population.length > 1
@@ -157,4 +277,27 @@ export function generatePost(type: keyof typeof postTemplates, cause: string, po
     .replace(/{cause}/g, cause.toLowerCase())
     .replace(/{territory}/g, territory)
     .replace(/{population}/g, pop);
+}
+
+export function generateInstitutionalPost(
+  type: string,
+  cause: string,
+  organization: string,
+  audience: string,
+  territory: string,
+  role: string,
+  orgCauses: string[]
+): string {
+  const template = institutionalPostTemplates[type] || institutionalPostTemplates.rendicion;
+  const causesText = orgCauses.length > 0
+    ? orgCauses.slice(0, 2).join(" y ").toLowerCase()
+    : cause.toLowerCase();
+
+  const text = `${template.hook}\n\n${template.body}\n\n${template.cta}`;
+  return text
+    .replace(/{causes}/g, causesText)
+    .replace(/{territory}/g, territory)
+    .replace(/{audience}/g, audience.toLowerCase())
+    .replace(/{organization}/g, organization)
+    .replace(/{role}/g, role);
 }

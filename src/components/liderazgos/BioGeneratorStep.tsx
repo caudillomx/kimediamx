@@ -2,7 +2,8 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { UserCircle, Copy, ArrowRight, Sparkles, Loader2, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { generateBio } from "@/data/liderazgosData";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { generateBio, generateInstitutionalBio, generateHybridBio } from "@/data/liderazgosData";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
@@ -12,17 +13,43 @@ interface BioGeneratorStepProps {
   state: string;
   cause: string;
   message: string;
-  onNext: (bio: string) => void;
+  institutionalRole?: string;
+  organization?: string;
+  orgCauses?: string[];
+  audience?: string;
+  onNext: (bioPersonal: string, bioInstitutional: string, bioHybrid: string) => void;
 }
 
-export function BioGeneratorStep({ name, role, state, cause, message, onNext }: BioGeneratorStepProps) {
-  const [bio, setBio] = useState(generateBio(name, role, state, cause, message));
+export function BioGeneratorStep({
+  name, role, state, cause, message,
+  institutionalRole, organization, orgCauses, audience,
+  onNext,
+}: BioGeneratorStepProps) {
+  const [bioPersonal, setBioPersonal] = useState(generateBio(name, role, state, cause, message));
+  const [bioInst, setBioInst] = useState(
+    institutionalRole && organization && orgCauses && audience
+      ? generateInstitutionalBio(name, institutionalRole, organization, orgCauses, audience)
+      : ""
+  );
+  const [bioHybrid, setBioHybrid] = useState(
+    institutionalRole && organization
+      ? generateHybridBio(name, role, institutionalRole, organization, cause, state)
+      : ""
+  );
   const [enhancing, setEnhancing] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("personal");
+
+  const currentBio = activeTab === "personal" ? bioPersonal : activeTab === "institutional" ? bioInst : bioHybrid;
+  const setCurrentBio = (val: string) => {
+    if (activeTab === "personal") setBioPersonal(val);
+    else if (activeTab === "institutional") setBioInst(val);
+    else setBioHybrid(val);
+  };
 
   const handleCopy = async (platform: string) => {
-    let text = bio;
-    if (platform === "x") text = bio.substring(0, 160);
+    let text = currentBio;
+    if (platform === "x") text = currentBio.substring(0, 160);
     await navigator.clipboard.writeText(text);
     setCopied(platform);
     setTimeout(() => setCopied(null), 2000);
@@ -33,10 +60,10 @@ export function BioGeneratorStep({ name, role, state, cause, message, onNext }: 
     setEnhancing(true);
     try {
       const { data, error } = await supabase.functions.invoke("enhance-text", {
-        body: { text: bio, type: "bio" },
+        body: { text: currentBio, type: activeTab === "institutional" ? "institutional_bio" : "bio" },
       });
       if (error) throw error;
-      if (data?.enhanced) setBio(data.enhanced);
+      if (data?.enhanced) setCurrentBio(data.enhanced);
     } catch {
       toast({ title: "No se pudo mejorar el texto", variant: "destructive" });
     } finally {
@@ -56,15 +83,23 @@ export function BioGeneratorStep({ name, role, state, cause, message, onNext }: 
           <UserCircle className="w-7 h-7 text-coral" />
         </div>
         <h2 className="font-display text-xl md:text-2xl font-bold text-foreground mb-1">
-          Tu bio optimizada
+          Tus bios optimizadas
         </h2>
-        <p className="text-muted-foreground text-sm">Edítala y cópiala para tus redes</p>
+        <p className="text-muted-foreground text-sm">3 versiones listas para copiar</p>
       </div>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-4">
+        <TabsList className="w-full">
+          <TabsTrigger value="personal" className="flex-1 text-xs">Personal</TabsTrigger>
+          {bioInst && <TabsTrigger value="institutional" className="flex-1 text-xs">Institucional</TabsTrigger>}
+          {bioHybrid && <TabsTrigger value="hybrid" className="flex-1 text-xs">Híbrida ⭐</TabsTrigger>}
+        </TabsList>
+      </Tabs>
 
       <div className="bg-card rounded-2xl p-6 border border-border mb-4">
         <textarea
-          value={bio}
-          onChange={(e) => setBio(e.target.value)}
+          value={currentBio}
+          onChange={(e) => setCurrentBio(e.target.value)}
           rows={6}
           className="w-full bg-transparent text-foreground text-sm resize-none focus:outline-none leading-relaxed whitespace-pre-wrap"
           maxLength={300}
@@ -100,7 +135,7 @@ export function BioGeneratorStep({ name, role, state, cause, message, onNext }: 
       </div>
 
       <Button
-        onClick={() => onNext(bio)}
+        onClick={() => onNext(bioPersonal, bioInst, bioHybrid)}
         className="w-full bg-gradient-coral hover:opacity-90 text-primary-foreground font-bold py-6"
       >
         Crear mi primer post <ArrowRight className="w-4 h-4 ml-2" />

@@ -22,8 +22,11 @@ serve(async (req) => {
 
     const prompts: Record<string, string> = {
       bio: `Eres un estratega de comunicación política en México. Mejora esta bio para redes sociales de una lideresa política. Hazla más poderosa, clara y profesional. Mantén la estructura y los datos, pero mejora la redacción. Máximo 160 caracteres. Devuelve SOLO el texto mejorado, sin explicaciones ni comillas.`,
+      institutional_bio: `Eres un estratega de comunicación institucional en México. Mejora esta bio institucional para redes sociales de una servidora pública. Hazla más profesional, clara y con tono institucional. Mantén los datos pero mejora la redacción. Máximo 160 caracteres. Devuelve SOLO el texto mejorado.`,
       post: `Eres un estratega de comunicación política en México. Mejora este post político para redes sociales. Hazlo más impactante, emocional y con un llamado a la acción claro. Mantén el mensaje central pero mejora la redacción. Máximo 280 caracteres. Devuelve SOLO el texto mejorado, sin explicaciones ni comillas.`,
+      institutional_post: `Eres un estratega de comunicación institucional en México. Mejora este post institucional para redes sociales. Hazlo más profesional, informativo y con tono de servicio público. Mantén el mensaje central pero mejora la redacción. Máximo 280 caracteres. Devuelve SOLO el texto mejorado.`,
       message: `Eres un estratega de comunicación política en México. Mejora este mensaje político central. Hazlo más inspirador, claro y memorable. Mantén la esencia pero mejora la redacción. Máximo 200 caracteres. Devuelve SOLO el texto mejorado, sin explicaciones ni comillas.`,
+      spokesperson: `Eres un estratega de comunicación política en México. Mejora esta frase eje institucional. Hazla más potente, memorable y alineada con comunicación de gobierno. Máximo 100 caracteres. Devuelve SOLO la frase mejorada, sin explicaciones ni comillas.`,
     };
 
     const systemPrompt = prompts[type] || prompts.message;

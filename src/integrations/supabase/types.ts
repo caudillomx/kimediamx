@@ -50,6 +50,27 @@ export type Database = {
         }
         Relationships: []
       }
+      app_settings: {
+        Row: {
+          id: string
+          key: string
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          id?: string
+          key: string
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          id?: string
+          key?: string
+          updated_at?: string
+          value?: string
+        }
+        Relationships: []
+      }
       guide_registrations: {
         Row: {
           company_name: string | null
@@ -83,6 +104,8 @@ export type Database = {
       participants: {
         Row: {
           access_code_used: string
+          bio_hybrid: string | null
+          bio_institutional: string | null
           bio_text: string | null
           cause: string | null
           cause_custom: string | null
@@ -92,20 +115,39 @@ export type Database = {
           diagnostic_score: number | null
           full_name: string
           id: string
+          institutional_card: string | null
+          institutional_post_published: boolean
+          institutional_post_text: string | null
+          institutional_post_type: string | null
+          institutional_role: string | null
+          kit_downloaded: boolean
+          org_causes: string[] | null
+          organization: string | null
           political_message: string | null
           post_published: boolean
           post_text: string | null
           post_type: string | null
+          profile_token: string | null
+          quarterly_topics: string[] | null
+          responsibility_level: string | null
           role_title: string
+          route_activated: boolean
+          sensitive_topics: string[] | null
           show_on_map: boolean
           social_handle: string
+          spokesperson_guide: Json | null
+          spokesperson_phrase: string | null
+          spokesperson_tone: string | null
           state: string
+          strategic_audience: string | null
           target_population: string[] | null
           territory: string | null
           updated_at: string
         }
         Insert: {
           access_code_used: string
+          bio_hybrid?: string | null
+          bio_institutional?: string | null
           bio_text?: string | null
           cause?: string | null
           cause_custom?: string | null
@@ -115,20 +157,39 @@ export type Database = {
           diagnostic_score?: number | null
           full_name: string
           id?: string
+          institutional_card?: string | null
+          institutional_post_published?: boolean
+          institutional_post_text?: string | null
+          institutional_post_type?: string | null
+          institutional_role?: string | null
+          kit_downloaded?: boolean
+          org_causes?: string[] | null
+          organization?: string | null
           political_message?: string | null
           post_published?: boolean
           post_text?: string | null
           post_type?: string | null
+          profile_token?: string | null
+          quarterly_topics?: string[] | null
+          responsibility_level?: string | null
           role_title: string
+          route_activated?: boolean
+          sensitive_topics?: string[] | null
           show_on_map?: boolean
           social_handle: string
+          spokesperson_guide?: Json | null
+          spokesperson_phrase?: string | null
+          spokesperson_tone?: string | null
           state: string
+          strategic_audience?: string | null
           target_population?: string[] | null
           territory?: string | null
           updated_at?: string
         }
         Update: {
           access_code_used?: string
+          bio_hybrid?: string | null
+          bio_institutional?: string | null
           bio_text?: string | null
           cause?: string | null
           cause_custom?: string | null
@@ -138,14 +199,31 @@ export type Database = {
           diagnostic_score?: number | null
           full_name?: string
           id?: string
+          institutional_card?: string | null
+          institutional_post_published?: boolean
+          institutional_post_text?: string | null
+          institutional_post_type?: string | null
+          institutional_role?: string | null
+          kit_downloaded?: boolean
+          org_causes?: string[] | null
+          organization?: string | null
           political_message?: string | null
           post_published?: boolean
           post_text?: string | null
           post_type?: string | null
+          profile_token?: string | null
+          quarterly_topics?: string[] | null
+          responsibility_level?: string | null
           role_title?: string
+          route_activated?: boolean
+          sensitive_topics?: string[] | null
           show_on_map?: boolean
           social_handle?: string
+          spokesperson_guide?: Json | null
+          spokesperson_phrase?: string | null
+          spokesperson_tone?: string | null
           state?: string
+          strategic_audience?: string | null
           target_population?: string[] | null
           territory?: string | null
           updated_at?: string
@@ -193,6 +271,44 @@ export type Database = {
           total_score?: number
         }
         Relationships: []
+      }
+      route_progress: {
+        Row: {
+          completed: boolean
+          completed_at: string | null
+          created_at: string
+          id: string
+          participant_id: string
+          post_text: string | null
+          week_number: number
+        }
+        Insert: {
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          participant_id: string
+          post_text?: string | null
+          week_number: number
+        }
+        Update: {
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          participant_id?: string
+          post_text?: string | null
+          week_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "route_progress_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "participants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
