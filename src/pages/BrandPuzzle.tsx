@@ -40,8 +40,8 @@ export default function BrandPuzzle() {
         </div>
       </div>
 
-      <div className="pt-20 pb-12 px-4 min-h-screen flex items-center">
-        <div className="w-full">
+      <div className="pt-16 pb-8 px-4 min-h-screen flex items-start justify-center">
+        <div className="w-full mt-4">
           <AnimatePresence mode="wait">
             {phase === "intro" && <PuzzleIntro key="intro" onStart={() => setPhase("playing")} />}
             {phase === "playing" && <PuzzleGame key="game" onFinish={handleFinish} />}

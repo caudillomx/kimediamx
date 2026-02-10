@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Clock, CheckCircle2, XCircle, ArrowRight, Zap, Flame } from "lucide-react";
+import { Clock, CheckCircle2, XCircle, ArrowRight, Flame, ArrowDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { type PuzzleLevel, type PuzzlePiece, PUZZLE_CATEGORIES, calculatePuzzleScore } from "@/data/puzzleData";
 
@@ -26,7 +26,6 @@ export function PuzzleBoard({ level, onComplete }: Props) {
   const [isFinished, setIsFinished] = useState(false);
   const [results, setResults] = useState<{ correct: number; total: number; score: number } | null>(null);
   const [combo, setCombo] = useState(0);
-  const [lastPlacedSlot, setLastPlacedSlot] = useState<string | null>(null);
   const [shakeSlot, setShakeSlot] = useState<string | null>(null);
   const [flashCorrect, setFlashCorrect] = useState<string | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -43,7 +42,6 @@ export function PuzzleBoard({ level, onComplete }: Props) {
     setResults(null);
     setCombo(0);
     setSelectedPiece(null);
-    setLastPlacedSlot(null);
   }, [level]);
 
   // Timer
@@ -81,21 +79,16 @@ export function PuzzleBoard({ level, onComplete }: Props) {
     if (allFilled) finishLevel();
   }, [placements, isFinished, level.slots, finishLevel]);
 
-  // Select a piece (tap/click)
+  // Select a piece
   const handleSelectPiece = (piece: PuzzlePiece) => {
     if (isFinished) return;
-    if (selectedPiece?.id === piece.id) {
-      setSelectedPiece(null);
-    } else {
-      setSelectedPiece(piece);
-    }
+    setSelectedPiece(selectedPiece?.id === piece.id ? null : piece);
   };
 
   // Place selected piece into a slot
   const handleSlotTap = (slotId: string) => {
     if (isFinished) return;
 
-    // If slot has a piece, remove it
     const existing = placements[slotId];
     if (existing && !selectedPiece) {
       setPlacements((prev) => ({ ...prev, [slotId]: null }));
@@ -103,18 +96,14 @@ export function PuzzleBoard({ level, onComplete }: Props) {
       return;
     }
 
-    // If we have a selected piece, place it
     if (selectedPiece) {
       const newPlacements = { ...placements };
-
-      // Remove from any existing slot
       Object.keys(newPlacements).forEach((key) => {
         if (newPlacements[key]?.id === selectedPiece.id) {
           newPlacements[key] = null;
         }
       });
 
-      // If slot had something, return it to available
       if (existing) {
         setAvailablePieces((prev) => [...prev.filter(p => p.id !== selectedPiece.id), existing]);
       } else {
@@ -124,7 +113,6 @@ export function PuzzleBoard({ level, onComplete }: Props) {
       newPlacements[slotId] = selectedPiece;
       setPlacements(newPlacements);
 
-      // Check if correct category for feedback
       const slot = level.slots.find(s => s.id === slotId);
       if (slot && selectedPiece.category === slot.category) {
         setCombo(c => c + 1);
@@ -136,21 +124,7 @@ export function PuzzleBoard({ level, onComplete }: Props) {
         setTimeout(() => setShakeSlot(null), 500);
       }
 
-      setLastPlacedSlot(slotId);
       setSelectedPiece(null);
-    }
-  };
-
-  // Quick place: if no piece selected, find first empty slot for clicked piece
-  const handleQuickPlace = (piece: PuzzlePiece) => {
-    if (isFinished) return;
-    const emptySlot = level.slots.find((s) => !placements[s.id]);
-    if (emptySlot) {
-      setSelectedPiece(piece);
-      // Immediately trigger slot tap
-      setTimeout(() => {
-        handleSlotTap(emptySlot.id);
-      }, 0);
     }
   };
 
@@ -173,7 +147,6 @@ export function PuzzleBoard({ level, onComplete }: Props) {
       .find(p => p.id === pieceId);
     if (piece) {
       setSelectedPiece(piece);
-      // Use a microtask to ensure selectedPiece is set
       queueMicrotask(() => handleSlotTap(slotId));
     }
   };
@@ -182,7 +155,6 @@ export function PuzzleBoard({ level, onComplete }: Props) {
   const isUrgent = timeLeft <= 5;
   const isWarning = timeLeft <= 10 && !isUrgent;
   const filledCount = Object.values(placements).filter(Boolean).length;
-  const progress = (filledCount / level.slots.length) * 100;
 
   return (
     <motion.div
@@ -191,36 +163,52 @@ export function PuzzleBoard({ level, onComplete }: Props) {
       exit={{ opacity: 0, scale: 0.95 }}
       className="w-full max-w-2xl mx-auto"
     >
-      {/* Header with level info */}
-      <div className="flex items-center justify-between mb-3">
-        <div>
-          <p className="text-xs text-coral font-bold uppercase tracking-wider flex items-center gap-1">
-            <Zap className="w-3 h-3" /> Nivel {level.id} de 4
-          </p>
-          <h2 className="font-display text-lg font-bold text-foreground">
-            {level.emoji} {level.name}
-          </h2>
+      {/* Compact header: level + timer in one row */}
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <span className="text-xl">{level.emoji}</span>
+          <div>
+            <p className="text-[10px] text-coral font-bold uppercase tracking-wider">
+              Nivel {level.id}/4
+            </p>
+            <h2 className="font-display text-sm font-bold text-foreground leading-tight">
+              {level.name}
+            </h2>
+          </div>
         </div>
 
-        {/* Animated timer */}
-        <motion.div
-          className={`flex items-center gap-2 font-mono text-2xl font-bold rounded-xl px-3 py-1.5 ${
-            isUrgent
-              ? "bg-destructive/20 text-destructive"
-              : isWarning
-              ? "bg-amber-500/20 text-amber-400"
-              : "bg-secondary text-foreground"
-          }`}
-          animate={isUrgent ? { scale: [1, 1.08, 1] } : {}}
-          transition={isUrgent ? { duration: 0.5, repeat: Infinity } : {}}
-        >
-          <Clock className={`w-5 h-5 ${isUrgent ? "animate-spin" : ""}`} />
-          <span>{timeLeft}</span>
-        </motion.div>
+        <div className="flex items-center gap-3">
+          {combo >= 2 && (
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-gradient-coral text-primary-foreground"
+            >
+              <Flame className="w-3 h-3" /> x{combo}
+            </motion.div>
+          )}
+          <span className="text-[10px] text-muted-foreground font-mono">
+            {filledCount}/{level.slots.length}
+          </span>
+          <motion.div
+            className={`flex items-center gap-1.5 font-mono text-lg font-bold rounded-lg px-2.5 py-1 ${
+              isUrgent
+                ? "bg-destructive/20 text-destructive"
+                : isWarning
+                ? "bg-amber-500/20 text-amber-400"
+                : "bg-secondary text-foreground"
+            }`}
+            animate={isUrgent ? { scale: [1, 1.08, 1] } : {}}
+            transition={isUrgent ? { duration: 0.5, repeat: Infinity } : {}}
+          >
+            <Clock className={`w-4 h-4 ${isUrgent ? "animate-spin" : ""}`} />
+            <span>{timeLeft}s</span>
+          </motion.div>
+        </div>
       </div>
 
-      {/* Timer progress bar */}
-      <div className="h-2 bg-secondary rounded-full mb-2 overflow-hidden relative">
+      {/* Timer bar */}
+      <div className="h-1.5 bg-secondary rounded-full mb-3 overflow-hidden relative">
         <motion.div
           className={`h-full rounded-full transition-colors duration-300 ${
             isUrgent ? "bg-destructive" : isWarning ? "bg-amber-500" : "bg-gradient-coral"
@@ -228,136 +216,20 @@ export function PuzzleBoard({ level, onComplete }: Props) {
           animate={{ width: `${timerPercent}%` }}
           transition={{ duration: 0.3 }}
         />
-        {isUrgent && (
-          <motion.div
-            className="absolute inset-0 bg-destructive/30 rounded-full"
-            animate={{ opacity: [0, 0.5, 0] }}
-            transition={{ duration: 0.8, repeat: Infinity }}
-          />
-        )}
       </div>
 
-      {/* Progress + combo */}
-      <div className="flex items-center justify-between mb-4">
-        <p className="text-xs text-muted-foreground">
-          {level.description}
-        </p>
-        <div className="flex items-center gap-2">
-          {combo >= 2 && (
-            <motion.div
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full bg-gradient-coral text-primary-foreground"
-            >
-              <Flame className="w-3 h-3" /> x{combo}
-            </motion.div>
-          )}
-          <span className="text-xs text-muted-foreground font-mono">
-            {filledCount}/{level.slots.length}
-          </span>
-        </div>
-      </div>
-
-      {/* Instruction banner */}
-      {!isFinished && filledCount === 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0 }}
-          className="bg-coral/10 border border-coral/20 rounded-xl px-4 py-2.5 mb-4 text-center"
-        >
-          <p className="text-xs text-coral font-medium">
-            👆 Toca una pieza abajo, luego toca el espacio donde va. ¡También puedes arrastrarlas!
-          </p>
-        </motion.div>
-      )}
-
-      {/* Slots grid */}
-      <div className="grid gap-2 mb-6">
-        {level.slots.map((slot, i) => {
-          const placed = placements[slot.id];
-          const isCorrect = placed && placed.id === level.pieces[i].id;
-          const isCategoryMatch = placed && placed.category === slot.category;
-          const isShaking = shakeSlot === slot.id;
-          const isFlashing = flashCorrect === slot.id;
-
-          return (
-            <motion.div
-              key={slot.id}
-              onClick={() => handleSlotTap(slot.id)}
-              onDragOver={handleDragOver}
-              onDrop={(e) => handleDrop(e, slot.id)}
-              className={`border-2 border-dashed rounded-xl p-3 flex items-center gap-3 transition-all min-h-[60px] cursor-pointer select-none ${
-                placed
-                  ? isFinished
-                    ? isCorrect
-                      ? "border-green-500/60 bg-green-500/10"
-                      : isCategoryMatch
-                      ? "border-amber-500/60 bg-amber-500/10"
-                      : "border-destructive/50 bg-destructive/10"
-                    : "border-coral/40 bg-coral/5"
-                  : selectedPiece
-                  ? "border-coral/50 bg-coral/5 hover:bg-coral/10 hover:border-coral/70"
-                  : "border-border hover:border-muted-foreground/30 hover:bg-secondary/50"
-              }`}
-              animate={
-                isShaking
-                  ? { x: [0, -6, 6, -4, 4, 0] }
-                  : isFlashing
-                  ? { scale: [1, 1.03, 1] }
-                  : {}
-              }
-              transition={{ duration: 0.4 }}
-              layout
-            >
-              <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center text-sm shrink-0">
-                {placed ? placed.emoji : <span className="text-muted-foreground/50">{i + 1}</span>}
-              </div>
-              {placed ? (
-                <>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-foreground truncate">{placed.label}</p>
-                    <p className="text-xs text-muted-foreground truncate">{placed.description}</p>
-                  </div>
-                  {isFinished && (
-                    isCorrect ? (
-                      <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}>
-                        <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0" />
-                      </motion.div>
-                    ) : (
-                      <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}>
-                        <XCircle className="w-5 h-5 text-destructive shrink-0" />
-                      </motion.div>
-                    )
-                  )}
-                  {isFlashing && (
-                    <motion.div
-                      initial={{ scale: 0.5, opacity: 1 }}
-                      animate={{ scale: 2, opacity: 0 }}
-                      className="absolute right-2 text-lg"
-                    >
-                      ✨
-                    </motion.div>
-                  )}
-                </>
-              ) : (
-                <div className="flex-1 min-w-0 flex items-center justify-between">
-                  <p className="text-xs text-muted-foreground italic">{slot.hint}</p>
-                  <CategoryBadge category={slot.category} />
-                </div>
-              )}
-            </motion.div>
-          );
-        })}
-      </div>
-
-      {/* Available pieces */}
+      {/* ===== PIECES FIRST (top) ===== */}
       {!isFinished && (
-        <div>
-          <p className="text-xs text-muted-foreground mb-2 font-bold uppercase tracking-wider">
-            🧩 Piezas disponibles ({availablePieces.length})
-          </p>
-          <div className="flex flex-wrap gap-2">
+        <div className="mb-3">
+          <div className="flex items-center justify-between mb-1.5">
+            <p className="text-[10px] text-coral font-bold uppercase tracking-wider">
+              ① Elige una pieza
+            </p>
+            <p className="text-[10px] text-muted-foreground">
+              {availablePieces.length} disponibles
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
             <AnimatePresence mode="popLayout">
               {availablePieces.map((piece) => {
                 const isSelected = selectedPiece?.id === piece.id;
@@ -367,27 +239,25 @@ export function PuzzleBoard({ level, onComplete }: Props) {
                     draggable
                     onDragStart={(e: any) => handleDragStart(e, piece)}
                     onClick={() => handleSelectPiece(piece)}
-                    onDoubleClick={() => handleQuickPlace(piece)}
-                    initial={{ opacity: 0, scale: 0.5, y: 20 }}
+                    initial={{ opacity: 0, scale: 0.5 }}
                     animate={{
                       opacity: 1,
-                      scale: isSelected ? 1.08 : 1,
-                      y: 0,
+                      scale: isSelected ? 1.05 : 1,
                     }}
-                    exit={{ opacity: 0, scale: 0.5, y: -20 }}
-                    whileHover={{ scale: 1.05, y: -2 }}
+                    exit={{ opacity: 0, scale: 0.5 }}
+                    whileHover={{ scale: 1.03 }}
                     whileTap={{ scale: 0.95 }}
-                    className={`flex items-center gap-2 rounded-xl px-3 py-2.5 cursor-grab active:cursor-grabbing transition-colors select-none ${
+                    className={`flex items-center gap-1.5 rounded-lg px-2.5 py-2 cursor-grab active:cursor-grabbing transition-all select-none text-left ${
                       isSelected
                         ? "bg-coral/20 border-2 border-coral shadow-glow ring-2 ring-coral/30"
                         : "bg-card border border-border hover:border-coral/40"
                     }`}
                     layout
                   >
-                    <span className="text-lg">{piece.emoji}</span>
-                    <div className="text-left">
-                      <span className="text-xs font-bold text-foreground block leading-tight">{piece.label}</span>
-                      <span className="text-[10px] text-muted-foreground">{piece.description}</span>
+                    <span className="text-base">{piece.emoji}</span>
+                    <div>
+                      <span className="text-[11px] font-bold text-foreground block leading-tight">{piece.label}</span>
+                      <span className="text-[9px] text-muted-foreground leading-tight">{piece.description}</span>
                     </div>
                   </motion.button>
                 );
@@ -398,35 +268,139 @@ export function PuzzleBoard({ level, onComplete }: Props) {
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="text-sm text-coral font-medium text-center py-4"
+              className="text-xs text-coral font-medium text-center py-2"
             >
-              🎯 ¡Todas las piezas colocadas! Evaluando...
+              🎯 ¡Todas colocadas! Evaluando...
             </motion.p>
           )}
         </div>
       )}
 
+      {/* Arrow indicator when piece is selected */}
+      {!isFinished && selectedPiece && (
+        <motion.div
+          initial={{ opacity: 0, y: -5 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center justify-center gap-2 mb-2"
+        >
+          <ArrowDown className="w-4 h-4 text-coral animate-bounce" />
+          <p className="text-xs text-coral font-bold">
+            Ahora toca un espacio abajo para colocar "{selectedPiece.label}"
+          </p>
+          <ArrowDown className="w-4 h-4 text-coral animate-bounce" />
+        </motion.div>
+      )}
+
+      {/* Instruction when no piece selected */}
+      {!isFinished && !selectedPiece && filledCount === 0 && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-center mb-2"
+        >
+          <p className="text-[11px] text-muted-foreground">
+            👆 Toca una pieza arriba para seleccionarla, luego colócala en su espacio abajo
+          </p>
+        </motion.div>
+      )}
+
+      {/* ===== SLOTS (bottom) ===== */}
+      <div className="mb-2">
+        {!isFinished && (
+          <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider mb-1.5">
+            ② Colócala en su lugar
+          </p>
+        )}
+        <div className="grid gap-1.5">
+          {level.slots.map((slot, i) => {
+            const placed = placements[slot.id];
+            const isCorrect = placed && placed.id === level.pieces[i].id;
+            const isCategoryMatch = placed && placed.category === slot.category;
+            const isShaking = shakeSlot === slot.id;
+            const isFlashing = flashCorrect === slot.id;
+
+            return (
+              <motion.div
+                key={slot.id}
+                onClick={() => handleSlotTap(slot.id)}
+                onDragOver={handleDragOver}
+                onDrop={(e) => handleDrop(e, slot.id)}
+                className={`border-2 border-dashed rounded-xl px-3 py-2.5 flex items-center gap-2.5 transition-all min-h-[48px] cursor-pointer select-none ${
+                  placed
+                    ? isFinished
+                      ? isCorrect
+                        ? "border-green-500/60 bg-green-500/10"
+                        : isCategoryMatch
+                        ? "border-amber-500/60 bg-amber-500/10"
+                        : "border-destructive/50 bg-destructive/10"
+                      : "border-coral/40 bg-coral/5"
+                    : selectedPiece
+                    ? "border-coral/50 bg-coral/5 hover:bg-coral/10 hover:border-coral/70 animate-pulse"
+                    : "border-border hover:border-muted-foreground/30 hover:bg-secondary/50"
+                }`}
+                animate={
+                  isShaking
+                    ? { x: [0, -6, 6, -4, 4, 0] }
+                    : isFlashing
+                    ? { scale: [1, 1.03, 1] }
+                    : {}
+                }
+                transition={{ duration: 0.4 }}
+                layout
+              >
+                <div className="w-7 h-7 rounded-lg bg-secondary flex items-center justify-center text-sm shrink-0">
+                  {placed ? placed.emoji : <span className="text-muted-foreground/50 text-xs">{i + 1}</span>}
+                </div>
+                {placed ? (
+                  <>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold text-foreground truncate">{placed.label}</p>
+                      <p className="text-[10px] text-muted-foreground truncate">{placed.description}</p>
+                    </div>
+                    {isFinished && (
+                      isCorrect ? (
+                        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}>
+                          <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
+                        </motion.div>
+                      ) : (
+                        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}>
+                          <XCircle className="w-4 h-4 text-destructive shrink-0" />
+                        </motion.div>
+                      )
+                    )}
+                  </>
+                ) : (
+                  <div className="flex-1 min-w-0 flex items-center justify-between gap-2">
+                    <p className="text-[11px] text-muted-foreground italic truncate">{slot.hint}</p>
+                    <CategoryBadge category={slot.category} />
+                  </div>
+                )}
+              </motion.div>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Results */}
       {isFinished && results && (
         <motion.div
-          initial={{ opacity: 0, y: 30, scale: 0.9 }}
+          initial={{ opacity: 0, y: 20, scale: 0.9 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ type: "spring", damping: 15 }}
-          className="mt-6 text-center"
+          className="mt-4 text-center"
         >
-          <div className="bg-card border border-border rounded-2xl p-6 mb-4 relative overflow-hidden">
-            {/* Background glow */}
+          <div className="bg-card border border-border rounded-2xl p-5 mb-3 relative overflow-hidden">
             <div className="absolute inset-0 bg-glow opacity-30" />
             <div className="relative">
               <motion.p
-                className="text-4xl font-bold text-foreground mb-1"
+                className="text-3xl font-bold text-foreground mb-1"
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ type: "spring", delay: 0.2 }}
               >
-                {results.score} <span className="text-lg text-muted-foreground">pts</span>
+                {results.score} <span className="text-sm text-muted-foreground">pts</span>
               </motion.p>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 ✅ {results.correct}/{results.total} piezas · ⏱️ {Math.max(0, timeLeft)}s restantes
               </p>
               {results.score >= 70 && (
@@ -434,7 +408,7 @@ export function PuzzleBoard({ level, onComplete }: Props) {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.5 }}
-                  className="text-xs text-coral font-bold mt-2"
+                  className="text-xs text-coral font-bold mt-1"
                 >
                   🔥 ¡Excelente nivel!
                 </motion.p>
@@ -443,7 +417,7 @@ export function PuzzleBoard({ level, onComplete }: Props) {
           </div>
           <Button
             onClick={() => onComplete(results.score, results.correct, results.total, Math.max(0, timeLeft))}
-            className="w-full bg-gradient-coral hover:opacity-90 text-primary-foreground font-bold py-5 text-base"
+            className="w-full bg-gradient-coral hover:opacity-90 text-primary-foreground font-bold py-4 text-sm"
           >
             {level.id < 4 ? (
               <>Siguiente nivel <ArrowRight className="w-4 h-4 ml-2" /></>
