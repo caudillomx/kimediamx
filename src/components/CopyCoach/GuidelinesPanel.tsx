@@ -16,10 +16,6 @@ interface Client {
   tone: string;
 }
 
-interface ClientDetails {
-  [key: string]: string;
-}
-
 interface GuidelinesPanelProps {
   selectedClient: string;
   onClientChange: (client: string) => void;
@@ -38,7 +34,6 @@ const GuidelinesPanel = ({ selectedClient, onClientChange }: GuidelinesPanelProp
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [notionConnected, setNotionConnected] = useState(false);
-  const [clientDetails, setClientDetails] = useState<ClientDetails | null>(null);
 
   const fetchData = async (client?: string) => {
     setLoading(true);
@@ -57,7 +52,6 @@ const GuidelinesPanel = ({ selectedClient, onClientChange }: GuidelinesPanelProp
         setGuidelines(data.guidelines || []);
         setClients(data.clients || []);
         setNotionConnected(data.guidelines?.length > 0);
-        setClientDetails(data.clientDetails || null);
       }
     } catch (e) {
       console.error("Failed to fetch guidelines:", e);
@@ -134,21 +128,6 @@ const GuidelinesPanel = ({ selectedClient, onClientChange }: GuidelinesPanelProp
         {notionConnected ? "Sincronizado con Notion" : "Guidelines locales"}
       </div>
 
-      {/* Client-specific details */}
-      {clientDetails && selectedClient && (
-        <div className="flex flex-col gap-2">
-          <span className="text-xs font-semibold text-primary uppercase tracking-wide">
-            Perfil: {selectedClient}
-          </span>
-          {Object.entries(clientDetails).map(([label, value]) => (
-            <div key={label} className="p-2.5 rounded-lg bg-primary/5 border border-primary/20">
-              <p className="text-[10px] font-bold uppercase text-primary mb-0.5">{label}</p>
-              <p className="text-xs text-foreground/80 leading-relaxed">{value}</p>
-            </div>
-          ))}
-        </div>
-      )}
-
       {/* Guidelines */}
       {loading ? (
         <div className="flex items-center justify-center py-8">
@@ -157,7 +136,7 @@ const GuidelinesPanel = ({ selectedClient, onClientChange }: GuidelinesPanelProp
       ) : (
         <div className="flex flex-col gap-3">
           <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-            Reglas generales
+            {selectedClient ? `Reglas para ${selectedClient}` : "Reglas generales"}
           </span>
           {displayGuidelines.map((item, i) => (
             <div key={i} className="p-3 rounded-lg bg-muted/50 border border-border">
