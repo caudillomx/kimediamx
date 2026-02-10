@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      access_codes: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string | null
+          current_uses: number
+          description: string | null
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          max_uses: number
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by?: string | null
+          current_uses?: number
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          max_uses?: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          current_uses?: number
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          max_uses?: number
+        }
+        Relationships: []
+      }
       guide_registrations: {
         Row: {
           company_name: string | null
@@ -41,6 +77,78 @@ export type Database = {
           id?: string
           name?: string
           phone?: string | null
+        }
+        Relationships: []
+      }
+      participants: {
+        Row: {
+          access_code_used: string
+          bio_text: string | null
+          cause: string | null
+          cause_custom: string | null
+          conviction: string | null
+          created_at: string
+          diagnostic_level: string | null
+          diagnostic_score: number | null
+          full_name: string
+          id: string
+          political_message: string | null
+          post_published: boolean
+          post_text: string | null
+          post_type: string | null
+          role_title: string
+          show_on_map: boolean
+          social_handle: string
+          state: string
+          target_population: string[] | null
+          territory: string | null
+          updated_at: string
+        }
+        Insert: {
+          access_code_used: string
+          bio_text?: string | null
+          cause?: string | null
+          cause_custom?: string | null
+          conviction?: string | null
+          created_at?: string
+          diagnostic_level?: string | null
+          diagnostic_score?: number | null
+          full_name: string
+          id?: string
+          political_message?: string | null
+          post_published?: boolean
+          post_text?: string | null
+          post_type?: string | null
+          role_title: string
+          show_on_map?: boolean
+          social_handle: string
+          state: string
+          target_population?: string[] | null
+          territory?: string | null
+          updated_at?: string
+        }
+        Update: {
+          access_code_used?: string
+          bio_text?: string | null
+          cause?: string | null
+          cause_custom?: string | null
+          conviction?: string | null
+          created_at?: string
+          diagnostic_level?: string | null
+          diagnostic_score?: number | null
+          full_name?: string
+          id?: string
+          political_message?: string | null
+          post_published?: boolean
+          post_text?: string | null
+          post_type?: string | null
+          role_title?: string
+          show_on_map?: boolean
+          social_handle?: string
+          state?: string
+          target_population?: string[] | null
+          territory?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
@@ -86,15 +194,40 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      increment_code_usage: { Args: { code_text: string }; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -221,6 +354,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+    },
   },
 } as const
