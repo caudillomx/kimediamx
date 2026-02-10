@@ -3,6 +3,7 @@ import { useParams, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Shield, Briefcase, Lightbulb, AtSign, FileText, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { ContentGrid } from "@/components/brand-kit/ContentGrid";
 import kimediaLogo from "@/assets/kimedia-logo.png";
 
 export default function BrandKitProfile() {
@@ -108,6 +109,16 @@ export default function BrandKitProfile() {
               <p className="text-foreground text-sm whitespace-pre-wrap">{profile.post_text}</p>
             </div>
           </Section>
+        )}
+
+        {/* Content Grid */}
+        {profile && (
+          <ContentGrid
+            profileId={id!}
+            profileToken={token!}
+            initialGrid={profile.content_grid as any}
+            onGridGenerated={(grid) => setProfile({ ...profile, content_grid: grid })}
+          />
         )}
 
         {/* Social */}

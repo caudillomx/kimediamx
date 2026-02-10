@@ -78,6 +78,7 @@ export type Database = {
           brand_tone: string | null
           consent_email: boolean
           consent_whatsapp: boolean
+          content_grid: Json | null
           created_at: string
           diagnostic_level: string | null
           diagnostic_score: number | null
@@ -107,6 +108,7 @@ export type Database = {
           brand_tone?: string | null
           consent_email?: boolean
           consent_whatsapp?: boolean
+          content_grid?: Json | null
           created_at?: string
           diagnostic_level?: string | null
           diagnostic_score?: number | null
@@ -136,6 +138,7 @@ export type Database = {
           brand_tone?: string | null
           consent_email?: boolean
           consent_whatsapp?: boolean
+          content_grid?: Json | null
           created_at?: string
           diagnostic_level?: string | null
           diagnostic_score?: number | null
