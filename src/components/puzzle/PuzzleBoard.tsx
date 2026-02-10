@@ -1,45 +1,65 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Clock, CheckCircle2, XCircle, ArrowRight } from "lucide-react";
+import { Clock, CheckCircle2, XCircle, ArrowRight, Zap, Flame } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { type PuzzleLevel, type PuzzlePiece, calculatePuzzleScore } from "@/data/puzzleData";
+import { type PuzzleLevel, type PuzzlePiece, PUZZLE_CATEGORIES, calculatePuzzleScore } from "@/data/puzzleData";
 
 interface Props {
   level: PuzzleLevel;
   onComplete: (score: number, correct: number, total: number, timeRemaining: number) => void;
 }
 
+function CategoryBadge({ category }: { category: PuzzlePiece["category"] }) {
+  const cat = PUZZLE_CATEGORIES[category];
+  return (
+    <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-secondary text-muted-foreground">
+      {cat.emoji} {cat.label}
+    </span>
+  );
+}
+
 export function PuzzleBoard({ level, onComplete }: Props) {
-  const [shuffledPieces, setShuffledPieces] = useState<PuzzlePiece[]>([]);
+  const [availablePieces, setAvailablePieces] = useState<PuzzlePiece[]>([]);
   const [placements, setPlacements] = useState<Record<string, PuzzlePiece | null>>({});
-  const [draggedPiece, setDraggedPiece] = useState<PuzzlePiece | null>(null);
+  const [selectedPiece, setSelectedPiece] = useState<PuzzlePiece | null>(null);
   const [timeLeft, setTimeLeft] = useState(level.timeLimit);
   const [isFinished, setIsFinished] = useState(false);
   const [results, setResults] = useState<{ correct: number; total: number; score: number } | null>(null);
+  const [combo, setCombo] = useState(0);
+  const [lastPlacedSlot, setLastPlacedSlot] = useState<string | null>(null);
+  const [shakeSlot, setShakeSlot] = useState<string | null>(null);
+  const [flashCorrect, setFlashCorrect] = useState<string | null>(null);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Initialize level
   useEffect(() => {
     const shuffled = [...level.pieces].sort(() => Math.random() - 0.5);
-    setShuffledPieces(shuffled);
+    setAvailablePieces(shuffled);
     const initial: Record<string, PuzzlePiece | null> = {};
     level.slots.forEach((s) => (initial[s.id] = null));
     setPlacements(initial);
     setTimeLeft(level.timeLimit);
     setIsFinished(false);
     setResults(null);
+    setCombo(0);
+    setSelectedPiece(null);
+    setLastPlacedSlot(null);
   }, [level]);
 
+  // Timer
   useEffect(() => {
     if (isFinished) return;
     if (timeLeft <= 0) {
       finishLevel();
       return;
     }
-    const timer = setInterval(() => setTimeLeft((t) => t - 1), 1000);
-    return () => clearInterval(timer);
+    timerRef.current = setInterval(() => setTimeLeft((t) => t - 1), 1000);
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [timeLeft, isFinished]);
 
   const finishLevel = useCallback(() => {
     setIsFinished(true);
+    if (timerRef.current) clearInterval(timerRef.current);
     let correct = 0;
     level.slots.forEach((slot, i) => {
       const placed = placements[slot.id];
@@ -54,63 +74,115 @@ export function PuzzleBoard({ level, onComplete }: Props) {
     setResults({ correct: roundedCorrect, total: level.slots.length, score });
   }, [level, placements, timeLeft]);
 
-  // Check if all slots filled
+  // Check all slots filled
   useEffect(() => {
     if (isFinished) return;
     const allFilled = level.slots.every((s) => placements[s.id] !== null);
     if (allFilled) finishLevel();
   }, [placements, isFinished, level.slots, finishLevel]);
 
-  const handleDragStart = (piece: PuzzlePiece) => {
-    setDraggedPiece(piece);
-  };
-
-  const handleDrop = (slotId: string) => {
-    if (!draggedPiece || isFinished) return;
-    // Remove from previous slot if any
-    const newPlacements = { ...placements };
-    Object.keys(newPlacements).forEach((key) => {
-      if (newPlacements[key]?.id === draggedPiece.id) {
-        newPlacements[key] = null;
-      }
-    });
-    // If slot already has a piece, put it back
-    const existing = newPlacements[slotId];
-    newPlacements[slotId] = draggedPiece;
-    setPlacements(newPlacements);
-
-    // Update available pieces
-    setShuffledPieces((prev) => {
-      let updated = prev.filter((p) => p.id !== draggedPiece.id);
-      if (existing) updated = [...updated, existing];
-      return updated;
-    });
-    setDraggedPiece(null);
-  };
-
-  const handlePieceClick = (piece: PuzzlePiece) => {
+  // Select a piece (tap/click)
+  const handleSelectPiece = (piece: PuzzlePiece) => {
     if (isFinished) return;
-    // Find first empty slot
-    const emptySlot = level.slots.find((s) => !placements[s.id]);
-    if (emptySlot) {
-      const newPlacements = { ...placements };
-      newPlacements[emptySlot.id] = piece;
-      setPlacements(newPlacements);
-      setShuffledPieces((prev) => prev.filter((p) => p.id !== piece.id));
+    if (selectedPiece?.id === piece.id) {
+      setSelectedPiece(null);
+    } else {
+      setSelectedPiece(piece);
     }
   };
 
-  const handleSlotClick = (slotId: string) => {
+  // Place selected piece into a slot
+  const handleSlotTap = (slotId: string) => {
     if (isFinished) return;
-    const piece = placements[slotId];
-    if (piece) {
+
+    // If slot has a piece, remove it
+    const existing = placements[slotId];
+    if (existing && !selectedPiece) {
       setPlacements((prev) => ({ ...prev, [slotId]: null }));
-      setShuffledPieces((prev) => [...prev, piece]);
+      setAvailablePieces((prev) => [...prev, existing]);
+      return;
+    }
+
+    // If we have a selected piece, place it
+    if (selectedPiece) {
+      const newPlacements = { ...placements };
+
+      // Remove from any existing slot
+      Object.keys(newPlacements).forEach((key) => {
+        if (newPlacements[key]?.id === selectedPiece.id) {
+          newPlacements[key] = null;
+        }
+      });
+
+      // If slot had something, return it to available
+      if (existing) {
+        setAvailablePieces((prev) => [...prev.filter(p => p.id !== selectedPiece.id), existing]);
+      } else {
+        setAvailablePieces((prev) => prev.filter(p => p.id !== selectedPiece.id));
+      }
+
+      newPlacements[slotId] = selectedPiece;
+      setPlacements(newPlacements);
+
+      // Check if correct category for feedback
+      const slot = level.slots.find(s => s.id === slotId);
+      if (slot && selectedPiece.category === slot.category) {
+        setCombo(c => c + 1);
+        setFlashCorrect(slotId);
+        setTimeout(() => setFlashCorrect(null), 600);
+      } else {
+        setCombo(0);
+        setShakeSlot(slotId);
+        setTimeout(() => setShakeSlot(null), 500);
+      }
+
+      setLastPlacedSlot(slotId);
+      setSelectedPiece(null);
+    }
+  };
+
+  // Quick place: if no piece selected, find first empty slot for clicked piece
+  const handleQuickPlace = (piece: PuzzlePiece) => {
+    if (isFinished) return;
+    const emptySlot = level.slots.find((s) => !placements[s.id]);
+    if (emptySlot) {
+      setSelectedPiece(piece);
+      // Immediately trigger slot tap
+      setTimeout(() => {
+        handleSlotTap(emptySlot.id);
+      }, 0);
+    }
+  };
+
+  // HTML5 drag and drop
+  const handleDragStart = (e: React.DragEvent, piece: PuzzlePiece) => {
+    setSelectedPiece(piece);
+    e.dataTransfer.setData("text/plain", piece.id);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  };
+
+  const handleDrop = (e: React.DragEvent, slotId: string) => {
+    e.preventDefault();
+    const pieceId = e.dataTransfer.getData("text/plain");
+    const piece = [...availablePieces, ...Object.values(placements).filter(Boolean) as PuzzlePiece[]]
+      .find(p => p.id === pieceId);
+    if (piece) {
+      setSelectedPiece(piece);
+      // Use a microtask to ensure selectedPiece is set
+      queueMicrotask(() => handleSlotTap(slotId));
     }
   };
 
   const timerPercent = (timeLeft / level.timeLimit) * 100;
-  const timerColor = timeLeft <= 5 ? "text-red-500" : timeLeft <= 10 ? "text-amber-500" : "text-foreground";
+  const isUrgent = timeLeft <= 5;
+  const isWarning = timeLeft <= 10 && !isUrgent;
+  const filledCount = Object.values(placements).filter(Boolean).length;
+  const progress = (filledCount / level.slots.length) * 100;
 
   return (
     <motion.div
@@ -119,68 +191,160 @@ export function PuzzleBoard({ level, onComplete }: Props) {
       exit={{ opacity: 0, scale: 0.95 }}
       className="w-full max-w-2xl mx-auto"
     >
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      {/* Header with level info */}
+      <div className="flex items-center justify-between mb-3">
         <div>
-          <p className="text-xs text-coral font-bold uppercase tracking-wider">Nivel {level.id}</p>
+          <p className="text-xs text-coral font-bold uppercase tracking-wider flex items-center gap-1">
+            <Zap className="w-3 h-3" /> Nivel {level.id} de 4
+          </p>
           <h2 className="font-display text-lg font-bold text-foreground">
             {level.emoji} {level.name}
           </h2>
         </div>
-        <div className={`flex items-center gap-2 ${timerColor} font-mono text-xl font-bold`}>
-          <Clock className="w-5 h-5" />
-          {timeLeft}s
+
+        {/* Animated timer */}
+        <motion.div
+          className={`flex items-center gap-2 font-mono text-2xl font-bold rounded-xl px-3 py-1.5 ${
+            isUrgent
+              ? "bg-destructive/20 text-destructive"
+              : isWarning
+              ? "bg-amber-500/20 text-amber-400"
+              : "bg-secondary text-foreground"
+          }`}
+          animate={isUrgent ? { scale: [1, 1.08, 1] } : {}}
+          transition={isUrgent ? { duration: 0.5, repeat: Infinity } : {}}
+        >
+          <Clock className={`w-5 h-5 ${isUrgent ? "animate-spin" : ""}`} />
+          <span>{timeLeft}</span>
+        </motion.div>
+      </div>
+
+      {/* Timer progress bar */}
+      <div className="h-2 bg-secondary rounded-full mb-2 overflow-hidden relative">
+        <motion.div
+          className={`h-full rounded-full transition-colors duration-300 ${
+            isUrgent ? "bg-destructive" : isWarning ? "bg-amber-500" : "bg-gradient-coral"
+          }`}
+          animate={{ width: `${timerPercent}%` }}
+          transition={{ duration: 0.3 }}
+        />
+        {isUrgent && (
+          <motion.div
+            className="absolute inset-0 bg-destructive/30 rounded-full"
+            animate={{ opacity: [0, 0.5, 0] }}
+            transition={{ duration: 0.8, repeat: Infinity }}
+          />
+        )}
+      </div>
+
+      {/* Progress + combo */}
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-xs text-muted-foreground">
+          {level.description}
+        </p>
+        <div className="flex items-center gap-2">
+          {combo >= 2 && (
+            <motion.div
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full bg-gradient-coral text-primary-foreground"
+            >
+              <Flame className="w-3 h-3" /> x{combo}
+            </motion.div>
+          )}
+          <span className="text-xs text-muted-foreground font-mono">
+            {filledCount}/{level.slots.length}
+          </span>
         </div>
       </div>
 
-      {/* Timer bar */}
-      <div className="h-1.5 bg-secondary rounded-full mb-6 overflow-hidden">
+      {/* Instruction banner */}
+      {!isFinished && filledCount === 0 && (
         <motion.div
-          className={`h-full rounded-full ${timeLeft <= 5 ? "bg-red-500" : timeLeft <= 10 ? "bg-amber-500" : "bg-gradient-coral"}`}
-          animate={{ width: `${timerPercent}%` }}
-          transition={{ duration: 0.5 }}
-        />
-      </div>
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0 }}
+          className="bg-coral/10 border border-coral/20 rounded-xl px-4 py-2.5 mb-4 text-center"
+        >
+          <p className="text-xs text-coral font-medium">
+            👆 Toca una pieza abajo, luego toca el espacio donde va. ¡También puedes arrastrarlas!
+          </p>
+        </motion.div>
+      )}
 
-      <p className="text-sm text-muted-foreground text-center mb-4">{level.description}</p>
-
-      {/* Slots */}
+      {/* Slots grid */}
       <div className="grid gap-2 mb-6">
         {level.slots.map((slot, i) => {
           const placed = placements[slot.id];
           const isCorrect = placed && placed.id === level.pieces[i].id;
+          const isCategoryMatch = placed && placed.category === slot.category;
+          const isShaking = shakeSlot === slot.id;
+          const isFlashing = flashCorrect === slot.id;
+
           return (
             <motion.div
               key={slot.id}
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={() => handleDrop(slot.id)}
-              onClick={() => handleSlotClick(slot.id)}
-              className={`border-2 border-dashed rounded-xl p-3 flex items-center gap-3 transition-all min-h-[56px] cursor-pointer ${
+              onClick={() => handleSlotTap(slot.id)}
+              onDragOver={handleDragOver}
+              onDrop={(e) => handleDrop(e, slot.id)}
+              className={`border-2 border-dashed rounded-xl p-3 flex items-center gap-3 transition-all min-h-[60px] cursor-pointer select-none ${
                 placed
                   ? isFinished
                     ? isCorrect
-                      ? "border-green-500/50 bg-green-500/10"
-                      : "border-red-500/50 bg-red-500/10"
+                      ? "border-green-500/60 bg-green-500/10"
+                      : isCategoryMatch
+                      ? "border-amber-500/60 bg-amber-500/10"
+                      : "border-destructive/50 bg-destructive/10"
                     : "border-coral/40 bg-coral/5"
-                  : "border-border hover:border-coral/30 hover:bg-secondary/50"
+                  : selectedPiece
+                  ? "border-coral/50 bg-coral/5 hover:bg-coral/10 hover:border-coral/70"
+                  : "border-border hover:border-muted-foreground/30 hover:bg-secondary/50"
               }`}
+              animate={
+                isShaking
+                  ? { x: [0, -6, 6, -4, 4, 0] }
+                  : isFlashing
+                  ? { scale: [1, 1.03, 1] }
+                  : {}
+              }
+              transition={{ duration: 0.4 }}
               layout
             >
+              <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center text-sm shrink-0">
+                {placed ? placed.emoji : <span className="text-muted-foreground/50">{i + 1}</span>}
+              </div>
               {placed ? (
                 <>
-                  <span className="text-xl">{placed.emoji}</span>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold text-foreground truncate">{placed.label}</p>
                     <p className="text-xs text-muted-foreground truncate">{placed.description}</p>
                   </div>
                   {isFinished && (
-                    isCorrect
-                      ? <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0" />
-                      : <XCircle className="w-5 h-5 text-red-500 shrink-0" />
+                    isCorrect ? (
+                      <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}>
+                        <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0" />
+                      </motion.div>
+                    ) : (
+                      <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}>
+                        <XCircle className="w-5 h-5 text-destructive shrink-0" />
+                      </motion.div>
+                    )
+                  )}
+                  {isFlashing && (
+                    <motion.div
+                      initial={{ scale: 0.5, opacity: 1 }}
+                      animate={{ scale: 2, opacity: 0 }}
+                      className="absolute right-2 text-lg"
+                    >
+                      ✨
+                    </motion.div>
                   )}
                 </>
               ) : (
-                <p className="text-xs text-muted-foreground italic flex-1">{slot.hint}</p>
+                <div className="flex-1 min-w-0 flex items-center justify-between">
+                  <p className="text-xs text-muted-foreground italic">{slot.hint}</p>
+                  <CategoryBadge category={slot.category} />
+                </div>
               )}
             </motion.div>
           );
@@ -191,50 +355,101 @@ export function PuzzleBoard({ level, onComplete }: Props) {
       {!isFinished && (
         <div>
           <p className="text-xs text-muted-foreground mb-2 font-bold uppercase tracking-wider">
-            Piezas disponibles ({shuffledPieces.length})
+            🧩 Piezas disponibles ({availablePieces.length})
           </p>
           <div className="flex flex-wrap gap-2">
-            <AnimatePresence>
-              {shuffledPieces.map((piece) => (
-                <motion.div
-                  key={piece.id}
-                  draggable
-                  onDragStart={() => handleDragStart(piece)}
-                  onClick={() => handlePieceClick(piece)}
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="bg-card border border-border rounded-xl px-3 py-2 cursor-grab active:cursor-grabbing flex items-center gap-2 hover:border-coral/40 transition-colors"
-                >
-                  <span className="text-lg">{piece.emoji}</span>
-                  <span className="text-xs font-bold text-foreground">{piece.label}</span>
-                </motion.div>
-              ))}
+            <AnimatePresence mode="popLayout">
+              {availablePieces.map((piece) => {
+                const isSelected = selectedPiece?.id === piece.id;
+                return (
+                  <motion.button
+                    key={piece.id}
+                    draggable
+                    onDragStart={(e: any) => handleDragStart(e, piece)}
+                    onClick={() => handleSelectPiece(piece)}
+                    onDoubleClick={() => handleQuickPlace(piece)}
+                    initial={{ opacity: 0, scale: 0.5, y: 20 }}
+                    animate={{
+                      opacity: 1,
+                      scale: isSelected ? 1.08 : 1,
+                      y: 0,
+                    }}
+                    exit={{ opacity: 0, scale: 0.5, y: -20 }}
+                    whileHover={{ scale: 1.05, y: -2 }}
+                    whileTap={{ scale: 0.95 }}
+                    className={`flex items-center gap-2 rounded-xl px-3 py-2.5 cursor-grab active:cursor-grabbing transition-colors select-none ${
+                      isSelected
+                        ? "bg-coral/20 border-2 border-coral shadow-glow ring-2 ring-coral/30"
+                        : "bg-card border border-border hover:border-coral/40"
+                    }`}
+                    layout
+                  >
+                    <span className="text-lg">{piece.emoji}</span>
+                    <div className="text-left">
+                      <span className="text-xs font-bold text-foreground block leading-tight">{piece.label}</span>
+                      <span className="text-[10px] text-muted-foreground">{piece.description}</span>
+                    </div>
+                  </motion.button>
+                );
+              })}
             </AnimatePresence>
           </div>
+          {availablePieces.length === 0 && (
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="text-sm text-coral font-medium text-center py-4"
+            >
+              🎯 ¡Todas las piezas colocadas! Evaluando...
+            </motion.p>
+          )}
         </div>
       )}
 
       {/* Results */}
       {isFinished && results && (
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0, y: 30, scale: 0.9 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ type: "spring", damping: 15 }}
           className="mt-6 text-center"
         >
-          <div className="bg-card border border-border rounded-2xl p-5 mb-4">
-            <p className="text-3xl font-bold text-foreground mb-1">{results.score} pts</p>
-            <p className="text-sm text-muted-foreground">
-              {results.correct}/{results.total} piezas correctas · {Math.max(0, timeLeft)}s restantes
-            </p>
+          <div className="bg-card border border-border rounded-2xl p-6 mb-4 relative overflow-hidden">
+            {/* Background glow */}
+            <div className="absolute inset-0 bg-glow opacity-30" />
+            <div className="relative">
+              <motion.p
+                className="text-4xl font-bold text-foreground mb-1"
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: "spring", delay: 0.2 }}
+              >
+                {results.score} <span className="text-lg text-muted-foreground">pts</span>
+              </motion.p>
+              <p className="text-sm text-muted-foreground">
+                ✅ {results.correct}/{results.total} piezas · ⏱️ {Math.max(0, timeLeft)}s restantes
+              </p>
+              {results.score >= 70 && (
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.5 }}
+                  className="text-xs text-coral font-bold mt-2"
+                >
+                  🔥 ¡Excelente nivel!
+                </motion.p>
+              )}
+            </div>
           </div>
           <Button
             onClick={() => onComplete(results.score, results.correct, results.total, Math.max(0, timeLeft))}
-            className="w-full bg-gradient-coral hover:opacity-90 text-primary-foreground font-bold py-5"
+            className="w-full bg-gradient-coral hover:opacity-90 text-primary-foreground font-bold py-5 text-base"
           >
-            {level.id < 4 ? "Siguiente nivel" : "Ver resultados"} <ArrowRight className="w-4 h-4 ml-2" />
+            {level.id < 4 ? (
+              <>Siguiente nivel <ArrowRight className="w-4 h-4 ml-2" /></>
+            ) : (
+              <>🏆 Ver resultados finales</>
+            )}
           </Button>
         </motion.div>
       )}
