@@ -1,1 +1,7 @@
 project_id = "sfezlilyqbtusynakgwp"
+
+[functions.send-quiz-results]
+verify_jwt = false
+
+[functions.enhance-text]
+verify_jwt = false
