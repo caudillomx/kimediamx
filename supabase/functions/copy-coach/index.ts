@@ -6,16 +6,243 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const SYSTEM_PROMPT_REVIEW = `Eres el Copy Coach interno de KiMedia, una agencia digital mexicana. Tu trabajo es analizar copy y dar feedback accionable.
+const NOTION_API = "https://api.notion.com/v1";
+const NOTION_VERSION = "2022-06-28";
 
-GUIDELINES DE MARCA KIMEDIA:
+// Database IDs from the setup
+const TONO_DB_ID = "30360b3f-7897-8158-9a8d-c617ab002313";
+const CLIENTES_DB_ID = "30360b3f-7897-816b-ac6e-e6b9496e6d2a";
+const HISTORIAL_DB_ID = "30360b3f-7897-8166-9ccf-e90f4ce46aaa";
+
+async function fetchNotionGuidelines(notionKey: string, copyType?: string): Promise<string> {
+  const headers = {
+    Authorization: `Bearer ${notionKey}`,
+    "Content-Type": "application/json",
+    "Notion-Version": NOTION_VERSION,
+  };
+
+  // Fetch tone rules
+  const filterBody: Record<string, unknown> = {};
+  if (copyType) {
+    const typeMap: Record<string, string> = {
+      social: "Redes Sociales",
+      email: "Email",
+      ad: "Ads",
+      blog: "Blog",
+    };
+    const notionType = typeMap[copyType] || copyType;
+    filterBody.filter = {
+      or: [
+        { property: "Aplica a", multi_select: { contains: "General" } },
+        { property: "Aplica a", multi_select: { contains: notionType } },
+      ],
+    };
+  }
+
+  const tonoResp = await fetch(`${NOTION_API}/databases/${TONO_DB_ID}/query`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(filterBody),
+  });
+
+  let guidelinesText = "GUIDELINES DE MARCA KIMEDIA (desde Notion):\n";
+
+  if (tonoResp.ok) {
+    const tonoData = await tonoResp.json();
+    for (const page of tonoData.results) {
+      const props = page.properties;
+      const regla = props["Regla"]?.title?.[0]?.plain_text || "";
+      const categoria = props["Categoría"]?.select?.name || "";
+      const descripcion = props["Descripción"]?.rich_text?.[0]?.plain_text || "";
+      const ejemplo = props["Ejemplo"]?.rich_text?.[0]?.plain_text || "";
+
+      guidelinesText += `\n- [${categoria}] ${regla}: ${descripcion}`;
+      if (ejemplo) guidelinesText += ` Ejemplo: "${ejemplo}"`;
+    }
+  } else {
+    console.error("Failed to fetch tone rules:", await tonoResp.text());
+    guidelinesText += "\n- Tono: Profesional pero cercano. Nunca frío ni corporativo.";
+    guidelinesText += "\n- Estructura: Hook → Problema → Solución → CTA";
+    guidelinesText += "\n- Evitar superlativos vacíos y jerga técnica excesiva.";
+  }
+
+  return guidelinesText;
+}
+
+async function fetchClientGuidelines(notionKey: string, clientName?: string): Promise<string> {
+  if (!clientName) return "";
+
+  const headers = {
+    Authorization: `Bearer ${notionKey}`,
+    "Content-Type": "application/json",
+    "Notion-Version": NOTION_VERSION,
+  };
+
+  const resp = await fetch(`${NOTION_API}/databases/${CLIENTES_DB_ID}/query`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      filter: {
+        and: [
+          { property: "Nombre", title: { contains: clientName } },
+          { property: "Activo", checkbox: { equals: true } },
+        ],
+      },
+    }),
+  });
+
+  if (!resp.ok) return "";
+  const data = await resp.json();
+  if (!data.results?.length) return "";
+
+  const client = data.results[0].properties;
+  let text = "\n\nGUIDELINES ESPECÍFICOS DEL CLIENTE:";
+  const fields = ["Industria", "Audiencia", "Palabras clave", "Palabras prohibidas", "Diferenciadores", "Objetivos"];
+
+  for (const field of fields) {
+    const val = client[field]?.rich_text?.[0]?.plain_text;
+    if (val) text += `\n- ${field}: ${val}`;
+  }
+
+  const tono = client["Tono"]?.select?.name;
+  if (tono) text += `\n- Tono del cliente: ${tono}`;
+
+  return text;
+}
+
+async function saveToHistory(
+  notionKey: string,
+  data: { copyType: string; mode: string; originalText: string; result: string; clientName?: string }
+) {
+  try {
+    const headers = {
+      Authorization: `Bearer ${notionKey}`,
+      "Content-Type": "application/json",
+      "Notion-Version": NOTION_VERSION,
+    };
+
+    const typeMap: Record<string, string> = {
+      social: "Redes Sociales",
+      email: "Email",
+      ad: "Ads",
+      blog: "Blog",
+    };
+
+    // Truncate to 2000 chars (Notion limit for rich_text)
+    const truncate = (s: string) => (s.length > 2000 ? s.slice(0, 1997) + "..." : s);
+
+    await fetch(`${NOTION_API}/pages`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        parent: { database_id: HISTORIAL_DB_ID },
+        properties: {
+          "Título": { title: [{ text: { content: `${data.mode === "review" ? "Revisión" : "Generación"} - ${typeMap[data.copyType] || data.copyType}` } }] },
+          "Cliente": { rich_text: [{ text: { content: data.clientName || "General" } }] },
+          "Tipo": { select: { name: typeMap[data.copyType] || "Redes Sociales" } },
+          "Modo": { select: { name: data.mode === "review" ? "Revisión" : "Generación" } },
+          "Copy Original": { rich_text: [{ text: { content: truncate(data.originalText) } }] },
+          "Resultado IA": { rich_text: [{ text: { content: truncate(data.result) } }] },
+          "Fecha": { date: { start: new Date().toISOString().split("T")[0] } },
+        },
+      }),
+    });
+  } catch (e) {
+    console.error("Failed to save to history:", e);
+  }
+}
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const { text, mode, copyType, clientName, action } = await req.json();
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+
+    const NOTION_API_KEY = Deno.env.get("NOTION_API_KEY");
+
+    // Action: fetch guidelines for the UI panel
+    if (action === "fetch-guidelines") {
+      if (!NOTION_API_KEY) {
+        return new Response(JSON.stringify({ guidelines: [], clients: [] }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const notionHeaders = {
+        Authorization: `Bearer ${NOTION_API_KEY}`,
+        "Content-Type": "application/json",
+        "Notion-Version": NOTION_VERSION,
+      };
+
+      // Fetch tone rules
+      const tonoResp = await fetch(`${NOTION_API}/databases/${TONO_DB_ID}/query`, {
+        method: "POST",
+        headers: notionHeaders,
+        body: JSON.stringify({}),
+      });
+
+      const guidelines: Array<{ title: string; description: string; category: string; example: string }> = [];
+      if (tonoResp.ok) {
+        const tonoData = await tonoResp.json();
+        for (const page of tonoData.results) {
+          const props = page.properties;
+          guidelines.push({
+            title: props["Regla"]?.title?.[0]?.plain_text || "",
+            description: props["Descripción"]?.rich_text?.[0]?.plain_text || "",
+            category: props["Categoría"]?.select?.name || "",
+            example: props["Ejemplo"]?.rich_text?.[0]?.plain_text || "",
+          });
+        }
+      }
+
+      // Fetch active clients
+      const clientsResp = await fetch(`${NOTION_API}/databases/${CLIENTES_DB_ID}/query`, {
+        method: "POST",
+        headers: notionHeaders,
+        body: JSON.stringify({ filter: { property: "Activo", checkbox: { equals: true } } }),
+      });
+
+      const clients: Array<{ name: string; industry: string; tone: string }> = [];
+      if (clientsResp.ok) {
+        const clientsData = await clientsResp.json();
+        for (const page of clientsData.results) {
+          const props = page.properties;
+          clients.push({
+            name: props["Nombre"]?.title?.[0]?.plain_text || "",
+            industry: props["Industria"]?.rich_text?.[0]?.plain_text || "",
+            tone: props["Tono"]?.select?.name || "",
+          });
+        }
+      }
+
+      return new Response(JSON.stringify({ guidelines, clients }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Main copy coach flow
+    const notionGuidelines = NOTION_API_KEY
+      ? await fetchNotionGuidelines(NOTION_API_KEY, copyType)
+      : `GUIDELINES DE MARCA KIMEDIA:
 - Tono: Profesional pero cercano. Nunca frío ni corporativo.
 - Pilares: Reputación digital, estrategia basada en datos, resultados medibles.
 - Estructura ideal: Hook → Problema → Solución → CTA
 - Frases cortas y directas. Máximo 3 líneas por párrafo.
-- Evitar: superlativos vacíos ("el mejor", "líder"), promesas sin respaldo, jerga técnica excesiva.
-- Usar datos cuando sea posible (ej: "93% de consumidores leen reseñas").
-- CTAs específicos y orientados a acción.
+- Evitar: superlativos vacíos, promesas sin respaldo, jerga técnica excesiva.
+- Usar datos cuando sea posible.
+- CTAs específicos y orientados a acción.`;
+
+    const clientGuidelines = NOTION_API_KEY && clientName
+      ? await fetchClientGuidelines(NOTION_API_KEY, clientName)
+      : "";
+
+    const basePromptReview = `Eres el Copy Coach interno de KiMedia, una agencia digital mexicana. Tu trabajo es analizar copy y dar feedback accionable.
+
+${notionGuidelines}${clientGuidelines}
 
 FORMATO DE RESPUESTA:
 Responde en español con markdown. Incluye:
@@ -26,15 +253,9 @@ Responde en español con markdown. Incluye:
 
 Sé directo, específico y da ejemplos de reescritura cuando sea posible.`;
 
-const SYSTEM_PROMPT_GENERATE = `Eres el Copy Coach interno de KiMedia, una agencia digital mexicana. Tu trabajo es generar copy alineado con la marca.
+    const basePromptGenerate = `Eres el Copy Coach interno de KiMedia, una agencia digital mexicana. Tu trabajo es generar copy alineado con la marca.
 
-GUIDELINES DE MARCA KIMEDIA:
-- Tono: Profesional pero cercano. Nunca frío ni corporativo.
-- Pilares: Reputación digital, estrategia basada en datos, resultados medibles.
-- Estructura ideal: Hook → Problema → Solución → CTA
-- Frases cortas y directas. Máximo 3 líneas por párrafo.
-- Usar datos cuando sea posible (ej: "93% de consumidores leen reseñas").
-- CTAs específicos y orientados a acción.
+${notionGuidelines}${clientGuidelines}
 
 FORMATO DE RESPUESTA:
 Responde en español con markdown. Genera:
@@ -45,17 +266,7 @@ Responde en español con markdown. Genera:
 
 Adapta el tono y extensión al tipo de copy solicitado.`;
 
-serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
-
-  try {
-    const { text, mode, copyType } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
-
-    const systemPrompt = mode === "review" ? SYSTEM_PROMPT_REVIEW : SYSTEM_PROMPT_GENERATE;
+    const systemPrompt = mode === "review" ? basePromptReview : basePromptGenerate;
     const userMessage =
       mode === "review"
         ? `Analiza este copy para ${copyType}:\n\n${text}`
@@ -98,6 +309,18 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "AI gateway error" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Save to history in background (non-blocking)
+    if (NOTION_API_KEY) {
+      // We can't easily save streamed result, but we save the input
+      saveToHistory(NOTION_API_KEY, {
+        copyType,
+        mode,
+        originalText: text,
+        result: "(streaming - ver resultado en la app)",
+        clientName,
       });
     }
 

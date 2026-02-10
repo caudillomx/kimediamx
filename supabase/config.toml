@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.copy-coach]
 verify_jwt = false
+
+[functions.notion-setup]
+verify_jwt = false
