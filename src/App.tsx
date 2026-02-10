@@ -18,6 +18,7 @@ import BrandKitProfile from "./pages/BrandKitProfile";
 import KitPyme from "./pages/KitPyme";
 import Membership from "./pages/Membership";
 import BrandTrivia from "./pages/BrandTrivia";
+import SocialSimulator from "./pages/SocialSimulator";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -44,6 +45,7 @@ const App = () => (
           <Route path="/kit/pyme/perfil/:id" element={<BrandKitProfile />} />
           <Route path="/membresia" element={<Membership />} />
           <Route path="/trivia" element={<BrandTrivia />} />
+          <Route path="/simulador" element={<SocialSimulator />} />
           <Route path="/admin/liderazgos" element={<AdminLiderazgos />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
