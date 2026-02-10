@@ -15,6 +15,8 @@ import AdminLiderazgos from "./pages/AdminLiderazgos";
 import ParticipantProfile from "./pages/ParticipantProfile";
 import KitMarcaPersonal from "./pages/KitMarcaPersonal";
 import BrandKitProfile from "./pages/BrandKitProfile";
+import KitPyme from "./pages/KitPyme";
+import Membership from "./pages/Membership";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -37,6 +39,9 @@ const App = () => (
           <Route path="/liderazgos/perfil/:id" element={<ParticipantProfile />} />
           <Route path="/kit/marca-personal" element={<KitMarcaPersonal />} />
           <Route path="/kit/marca-personal/perfil/:id" element={<BrandKitProfile />} />
+          <Route path="/kit/pyme" element={<KitPyme />} />
+          <Route path="/kit/pyme/perfil/:id" element={<BrandKitProfile />} />
+          <Route path="/membresia" element={<Membership />} />
           <Route path="/admin/liderazgos" element={<AdminLiderazgos />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

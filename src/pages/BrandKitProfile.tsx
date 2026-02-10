@@ -12,6 +12,7 @@ export default function BrandKitProfile() {
   const token = searchParams.get("token");
 
   const [profile, setProfile] = useState<any>(null);
+  const isPyme = window.location.pathname.includes("/kit/pyme/");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -48,7 +49,7 @@ export default function BrandKitProfile() {
       <div className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <img src={kimediaLogo} alt="KiMedia" className="h-6 w-auto" />
-          <span className="text-xs text-muted-foreground">Mi Kit de Marca Personal</span>
+          <span className="text-xs text-muted-foreground">{isPyme ? "Kit Digital PyME" : "Mi Kit de Marca Personal"}</span>
         </div>
       </div>
 

@@ -76,6 +76,9 @@ export type Database = {
           approx_followers: string | null
           bio_text: string | null
           brand_tone: string | null
+          company_name: string | null
+          company_size: string | null
+          competitors: string | null
           consent_email: boolean
           consent_whatsapp: boolean
           content_grid: Json | null
@@ -89,7 +92,9 @@ export type Database = {
           has_website: boolean | null
           id: string
           industry: string | null
+          kit_type: string
           main_channel: string | null
+          market_position: string | null
           post_published: boolean
           post_text: string | null
           post_type: string | null
@@ -101,11 +106,15 @@ export type Database = {
           target_audience: string | null
           updated_at: string
           value_proposition: string | null
+          years_in_business: string | null
         }
         Insert: {
           approx_followers?: string | null
           bio_text?: string | null
           brand_tone?: string | null
+          company_name?: string | null
+          company_size?: string | null
+          competitors?: string | null
           consent_email?: boolean
           consent_whatsapp?: boolean
           content_grid?: Json | null
@@ -119,7 +128,9 @@ export type Database = {
           has_website?: boolean | null
           id?: string
           industry?: string | null
+          kit_type?: string
           main_channel?: string | null
+          market_position?: string | null
           post_published?: boolean
           post_text?: string | null
           post_type?: string | null
@@ -131,11 +142,15 @@ export type Database = {
           target_audience?: string | null
           updated_at?: string
           value_proposition?: string | null
+          years_in_business?: string | null
         }
         Update: {
           approx_followers?: string | null
           bio_text?: string | null
           brand_tone?: string | null
+          company_name?: string | null
+          company_size?: string | null
+          competitors?: string | null
           consent_email?: boolean
           consent_whatsapp?: boolean
           content_grid?: Json | null
@@ -149,7 +164,9 @@ export type Database = {
           has_website?: boolean | null
           id?: string
           industry?: string | null
+          kit_type?: string
           main_channel?: string | null
+          market_position?: string | null
           post_published?: boolean
           post_text?: string | null
           post_type?: string | null
@@ -161,6 +178,7 @@ export type Database = {
           target_audience?: string | null
           updated_at?: string
           value_proposition?: string | null
+          years_in_business?: string | null
         }
         Relationships: []
       }
