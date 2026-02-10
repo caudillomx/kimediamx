@@ -207,45 +207,65 @@ serve(async (req) => {
       });
 
       const clients: Array<{ name: string; industry: string; tone: string }> = [];
-      let clientDetails: Record<string, string> | null = null;
+      let contextualizedGuidelines = guidelines;
 
       if (clientsResp.ok) {
         const clientsData = await clientsResp.json();
         for (const page of clientsData.results) {
           const props = page.properties;
           const name = props["Nombre"]?.title?.[0]?.plain_text || "";
-          clients.push({
-            name,
-            industry: props["Industria"]?.rich_text?.[0]?.plain_text || "",
-            tone: props["Tono"]?.select?.name || "",
-          });
+          const industry = props["Industria"]?.rich_text?.[0]?.plain_text || "";
+          const tone = props["Tono"]?.select?.name || "";
+          clients.push({ name, industry, tone });
 
-          // If this is the selected client, extract all details
+          // If selected client, build contextualized guidelines
           if (clientName && name.toLowerCase().includes(clientName.toLowerCase())) {
-            clientDetails = {};
-            const fieldMap: Record<string, string> = {
-              "Industria": "Industria",
-              "Audiencia": "Audiencia",
-              "Tono": "Tono",
-              "Palabras clave": "Palabras clave",
-              "Palabras prohibidas": "Palabras prohibidas",
-              "Diferenciadores": "Diferenciadores",
-              "Objetivos": "Objetivos",
-            };
-            for (const [notionField, label] of Object.entries(fieldMap)) {
-              if (notionField === "Tono") {
-                const val = props[notionField]?.select?.name;
-                if (val) clientDetails[label] = val;
-              } else {
-                const val = props[notionField]?.rich_text?.[0]?.plain_text;
-                if (val) clientDetails[label] = val;
-              }
-            }
+            const audience = props["Audiencia"]?.rich_text?.[0]?.plain_text || "";
+            const keywords = props["Palabras clave"]?.rich_text?.[0]?.plain_text || "";
+            const forbidden = props["Palabras prohibidas"]?.rich_text?.[0]?.plain_text || "";
+            const differentiators = props["Diferenciadores"]?.rich_text?.[0]?.plain_text || "";
+            const objectives = props["Objetivos"]?.rich_text?.[0]?.plain_text || "";
+
+            // Build client-specific guidelines that replace the generic ones
+            contextualizedGuidelines = [
+              {
+                title: `Tono: ${tone || "Sin definir"}`,
+                description: `Para ${name}, usar tono ${tone?.toLowerCase() || "profesional"}. Audiencia principal: ${audience || "general"}.`,
+                category: "Tono",
+                example: "",
+              },
+              {
+                title: "Palabras clave obligatorias",
+                description: keywords || "Sin palabras clave definidas.",
+                category: "Datos",
+                example: "",
+              },
+              {
+                title: "Palabras y enfoques prohibidos",
+                description: forbidden || "Sin restricciones específicas.",
+                category: "Prohibido",
+                example: "",
+              },
+              {
+                title: "Diferenciadores estratégicos",
+                description: differentiators || "Sin diferenciadores definidos.",
+                category: "Estructura",
+                example: `Usar estos puntos como eje narrativo del copy.`,
+              },
+              {
+                title: "Objetivos de comunicación",
+                description: objectives || "Sin objetivos definidos.",
+                category: "CTA",
+                example: `Alinear cada CTA con estos objetivos.`,
+              },
+              // Keep the generic structural rules too
+              ...guidelines.filter(g => g.category === "Estructura" || g.category === "CTA"),
+            ];
           }
         }
       }
 
-      return new Response(JSON.stringify({ guidelines, clients, clientDetails }), {
+      return new Response(JSON.stringify({ guidelines: contextualizedGuidelines, clients }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
