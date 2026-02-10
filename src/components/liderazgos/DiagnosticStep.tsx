@@ -1,25 +1,32 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Activity, ArrowRight, HelpCircle } from "lucide-react";
+import { Activity, ArrowRight, HelpCircle, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { diagnosticQuestions, getDiagnosticLevel } from "@/data/liderazgosData";
+import { diagnosticQuestions, getDiagnosticLevel, frequencyOptions, perceptionOptions, goalOptions } from "@/data/liderazgosData";
 
 interface DiagnosticStepProps {
-  onNext: (score: number, level: string) => void;
+  onNext: (score: number, level: string, extras: { frequency: string; perception: string; goal: string }) => void;
 }
 
 export function DiagnosticStep({ onNext }: DiagnosticStepProps) {
   const [answers, setAnswers] = useState<Record<number, number>>({});
+  const [frequency, setFrequency] = useState("");
+  const [perception, setPerception] = useState("");
+  const [goal, setGoal] = useState("");
   const [showResult, setShowResult] = useState(false);
 
   const allAnswered = diagnosticQuestions.every((q) => answers[q.id] !== undefined);
+  const allExtras = frequency && perception && goal;
+  const canProceed = allAnswered && allExtras;
   const totalScore = Object.values(answers).reduce((sum, v) => sum + v, 0);
   const result = getDiagnosticLevel(totalScore);
-  const progress = (Object.keys(answers).length / diagnosticQuestions.length) * 100;
+  const totalFields = diagnosticQuestions.length + 3;
+  const filledFields = Object.keys(answers).length + (frequency ? 1 : 0) + (perception ? 1 : 0) + (goal ? 1 : 0);
+  const progress = (filledFields / totalFields) * 100;
 
   const handleShowResult = () => setShowResult(true);
 
@@ -67,7 +74,7 @@ export function DiagnosticStep({ onNext }: DiagnosticStepProps) {
                 key={q.id}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.05 }}
+                transition={{ delay: idx * 0.04 }}
                 className="bg-card rounded-xl p-4 border border-border"
               >
                 <p className="text-foreground font-medium text-sm mb-3">
@@ -89,11 +96,78 @@ export function DiagnosticStep({ onNext }: DiagnosticStepProps) {
                 </RadioGroup>
               </motion.div>
             ))}
+
+            {/* Extra context questions */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: diagnosticQuestions.length * 0.04 }}
+              className="bg-card rounded-xl p-4 border border-coral/20"
+            >
+              <p className="text-foreground font-medium text-sm mb-3 flex items-center gap-2">
+                <Target className="w-4 h-4 text-coral" />
+                ¿Con qué frecuencia publicas contenido?
+              </p>
+              <RadioGroup value={frequency} onValueChange={setFrequency} className="space-y-2">
+                {frequencyOptions.map((opt) => (
+                  <div key={opt.value} className="flex items-center space-x-3">
+                    <RadioGroupItem value={opt.value} id={`freq-${opt.value}`} />
+                    <Label htmlFor={`freq-${opt.value}`} className="text-sm text-muted-foreground cursor-pointer">
+                      {opt.label}
+                    </Label>
+                  </div>
+                ))}
+              </RadioGroup>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: (diagnosticQuestions.length + 1) * 0.04 }}
+              className="bg-card rounded-xl p-4 border border-coral/20"
+            >
+              <p className="text-foreground font-medium text-sm mb-3 flex items-center gap-2">
+                <Target className="w-4 h-4 text-coral" />
+                ¿Cómo crees que te percibe tu audiencia hoy?
+              </p>
+              <RadioGroup value={perception} onValueChange={setPerception} className="space-y-2">
+                {perceptionOptions.map((opt) => (
+                  <div key={opt} className="flex items-center space-x-3">
+                    <RadioGroupItem value={opt} id={`perc-${opt}`} />
+                    <Label htmlFor={`perc-${opt}`} className="text-sm text-muted-foreground cursor-pointer">
+                      {opt}
+                    </Label>
+                  </div>
+                ))}
+              </RadioGroup>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: (diagnosticQuestions.length + 2) * 0.04 }}
+              className="bg-card rounded-xl p-4 border border-coral/20"
+            >
+              <p className="text-foreground font-medium text-sm mb-3 flex items-center gap-2">
+                <Target className="w-4 h-4 text-coral" />
+                ¿Cuál es tu objetivo principal en los próximos 90 días?
+              </p>
+              <RadioGroup value={goal} onValueChange={setGoal} className="space-y-2">
+                {goalOptions.map((opt) => (
+                  <div key={opt} className="flex items-center space-x-3">
+                    <RadioGroupItem value={opt} id={`goal-${opt}`} />
+                    <Label htmlFor={`goal-${opt}`} className="text-sm text-muted-foreground cursor-pointer">
+                      {opt}
+                    </Label>
+                  </div>
+                ))}
+              </RadioGroup>
+            </motion.div>
           </div>
 
           <Button
             onClick={handleShowResult}
-            disabled={!allAnswered}
+            disabled={!canProceed}
             className="w-full bg-gradient-coral hover:opacity-90 text-primary-foreground font-bold py-6 mt-6"
           >
             Ver mi resultado
@@ -119,7 +193,7 @@ export function DiagnosticStep({ onNext }: DiagnosticStepProps) {
           </div>
 
           <Button
-            onClick={() => onNext(totalScore, result.level)}
+            onClick={() => onNext(totalScore, result.level, { frequency, perception, goal })}
             className="w-full bg-gradient-coral hover:opacity-90 text-primary-foreground font-bold py-6"
           >
             Construir mi mensaje <ArrowRight className="w-4 h-4 ml-2" />

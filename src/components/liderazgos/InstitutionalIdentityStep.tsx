@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Building2, ArrowRight, Plus, X, HelpCircle } from "lucide-react";
+import { Building2, ArrowRight, Plus, X, HelpCircle, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { responsibilityLevels, generateInstitutionalCard } from "@/data/liderazgosData";
+import { responsibilityLevels, generateInstitutionalCard, budgetOptions } from "@/data/liderazgosData";
 
 interface InstitutionalIdentityStepProps {
   participantState: string;
@@ -17,6 +17,7 @@ interface InstitutionalIdentityStepProps {
     orgCauses: string[];
     strategicAudience: string;
     institutionalCard: string;
+    commBudget: string;
   }) => void;
 }
 
@@ -26,6 +27,7 @@ export function InstitutionalIdentityStep({ participantState, onNext }: Institut
   const [organization, setOrganization] = useState("");
   const [orgCauses, setOrgCauses] = useState<string[]>([""]);
   const [audience, setAudience] = useState("");
+  const [budget, setBudget] = useState("");
 
   const addCause = () => {
     if (orgCauses.length < 3) setOrgCauses([...orgCauses, ""]);
@@ -42,7 +44,7 @@ export function InstitutionalIdentityStep({ participantState, onNext }: Institut
   };
 
   const validCauses = orgCauses.filter((c) => c.trim());
-  const canSubmit = instRole.trim() && level && organization.trim() && validCauses.length > 0 && audience.trim();
+  const canSubmit = instRole.trim() && level && organization.trim() && validCauses.length > 0 && audience.trim() && budget;
 
   const handleSubmit = () => {
     const card = generateInstitutionalCard(organization, validCauses, audience, participantState);
@@ -53,6 +55,7 @@ export function InstitutionalIdentityStep({ participantState, onNext }: Institut
       orgCauses: validCauses,
       strategicAudience: audience,
       institutionalCard: card,
+      commBudget: budget,
     });
   };
 
@@ -176,6 +179,33 @@ export function InstitutionalIdentityStep({ participantState, onNext }: Institut
               className="bg-card border-border mt-1"
               maxLength={100}
             />
+          </motion.div>
+
+          <motion.div custom={5} variants={fadeUp} initial="hidden" animate="visible">
+            <Label className="text-sm text-muted-foreground flex items-center gap-1">
+              <Wallet className="w-3.5 h-3.5 text-coral" />
+              Presupuesto para comunicación
+              <Tooltip>
+                <TooltipTrigger asChild><HelpCircle className="w-3.5 h-3.5 cursor-help" /></TooltipTrigger>
+                <TooltipContent><p className="max-w-[200px] text-xs">Nos ayuda a calibrar las recomendaciones a tus recursos reales</p></TooltipContent>
+              </Tooltip>
+            </Label>
+            <div className="grid grid-cols-2 gap-2 mt-1">
+              {budgetOptions.map((b) => (
+                <button
+                  key={b.value}
+                  type="button"
+                  onClick={() => setBudget(b.value)}
+                  className={`rounded-xl px-3 py-2.5 text-xs font-medium transition-all border ${
+                    budget === b.value
+                      ? "border-coral bg-coral/10 text-coral"
+                      : "border-border bg-card text-muted-foreground hover:border-coral/30"
+                  }`}
+                >
+                  {b.label}
+                </button>
+              ))}
+            </div>
           </motion.div>
         </div>
       </TooltipProvider>

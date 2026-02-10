@@ -51,6 +51,7 @@ export default function Liderazgos() {
     orgCauses: string[];
     strategicAudience: string;
     institutionalCard: string;
+    commBudget: string;
   } | null>(null);
   const [spokespersonData, setSpokespersonData] = useState<{
     phrase: string;
@@ -78,6 +79,9 @@ export default function Liderazgos() {
           role_title: info.roleTitle,
           social_handle: info.socialHandle,
           access_code_used: accessCode,
+          approx_followers: info.approxFollowers,
+          main_channel: info.mainChannel,
+          has_comm_team: info.hasCommTeam,
         })
         .select("id, profile_token")
         .single();
@@ -91,11 +95,17 @@ export default function Liderazgos() {
     setStep("diagnostic");
   };
 
-  const handleDiagnostic = async (score: number, level: string) => {
+  const handleDiagnostic = async (score: number, level: string, extras: { frequency: string; perception: string; goal: string }) => {
     if (participantId) {
       await supabase
         .from("participants")
-        .update({ diagnostic_score: score, diagnostic_level: level })
+        .update({
+          diagnostic_score: score,
+          diagnostic_level: level,
+          publication_frequency: extras.frequency,
+          self_perception: extras.perception,
+          goal_90_days: extras.goal,
+        })
         .eq("id", participantId);
     }
     setStep("message");
@@ -124,6 +134,7 @@ export default function Liderazgos() {
           org_causes: data.orgCauses,
           strategic_audience: data.strategicAudience,
           institutional_card: data.institutionalCard,
+          comm_budget: data.commBudget,
         })
         .eq("id", participantId);
     }
