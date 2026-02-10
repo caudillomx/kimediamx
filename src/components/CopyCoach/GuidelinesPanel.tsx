@@ -16,6 +16,10 @@ interface Client {
   tone: string;
 }
 
+interface ClientDetails {
+  [key: string]: string;
+}
+
 interface GuidelinesPanelProps {
   selectedClient: string;
   onClientChange: (client: string) => void;
@@ -34,8 +38,9 @@ const GuidelinesPanel = ({ selectedClient, onClientChange }: GuidelinesPanelProp
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [notionConnected, setNotionConnected] = useState(false);
+  const [clientDetails, setClientDetails] = useState<ClientDetails | null>(null);
 
-  const fetchData = async () => {
+  const fetchData = async (client?: string) => {
     setLoading(true);
     try {
       const resp = await fetch(CHAT_URL, {
@@ -44,7 +49,7 @@ const GuidelinesPanel = ({ selectedClient, onClientChange }: GuidelinesPanelProp
           "Content-Type": "application/json",
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ action: "fetch-guidelines" }),
+        body: JSON.stringify({ action: "fetch-guidelines", clientName: client || selectedClient || undefined }),
       });
 
       if (resp.ok) {
@@ -52,6 +57,7 @@ const GuidelinesPanel = ({ selectedClient, onClientChange }: GuidelinesPanelProp
         setGuidelines(data.guidelines || []);
         setClients(data.clients || []);
         setNotionConnected(data.guidelines?.length > 0);
+        setClientDetails(data.clientDetails || null);
       }
     } catch (e) {
       console.error("Failed to fetch guidelines:", e);
@@ -82,7 +88,7 @@ const GuidelinesPanel = ({ selectedClient, onClientChange }: GuidelinesPanelProp
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={fetchData}
+            onClick={() => fetchData()}
             className="p-1 rounded text-muted-foreground hover:text-primary transition-colors"
             title="Refrescar"
           >
@@ -106,7 +112,10 @@ const GuidelinesPanel = ({ selectedClient, onClientChange }: GuidelinesPanelProp
           <label className="text-xs text-muted-foreground mb-1 block">Cliente</label>
           <select
             value={selectedClient}
-            onChange={(e) => onClientChange(e.target.value)}
+            onChange={(e) => {
+              onClientChange(e.target.value);
+              fetchData(e.target.value);
+            }}
             className="w-full px-3 py-2 rounded-lg bg-muted border border-border text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-primary/50"
           >
             <option value="">General (KiMedia)</option>
@@ -125,6 +134,21 @@ const GuidelinesPanel = ({ selectedClient, onClientChange }: GuidelinesPanelProp
         {notionConnected ? "Sincronizado con Notion" : "Guidelines locales"}
       </div>
 
+      {/* Client-specific details */}
+      {clientDetails && selectedClient && (
+        <div className="flex flex-col gap-2">
+          <span className="text-xs font-semibold text-primary uppercase tracking-wide">
+            Perfil: {selectedClient}
+          </span>
+          {Object.entries(clientDetails).map(([label, value]) => (
+            <div key={label} className="p-2.5 rounded-lg bg-primary/5 border border-primary/20">
+              <p className="text-[10px] font-bold uppercase text-primary mb-0.5">{label}</p>
+              <p className="text-xs text-foreground/80 leading-relaxed">{value}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Guidelines */}
       {loading ? (
         <div className="flex items-center justify-center py-8">
@@ -132,6 +156,9 @@ const GuidelinesPanel = ({ selectedClient, onClientChange }: GuidelinesPanelProp
         </div>
       ) : (
         <div className="flex flex-col gap-3">
+          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+            Reglas generales
+          </span>
           {displayGuidelines.map((item, i) => (
             <div key={i} className="p-3 rounded-lg bg-muted/50 border border-border">
               <div className="flex items-center gap-2 mb-1">
