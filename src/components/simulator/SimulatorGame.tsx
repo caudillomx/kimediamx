@@ -4,29 +4,32 @@ import { PostComposer } from "./PostComposer";
 import { FeedResult } from "./FeedResult";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import type { SimChallenge, SimMetrics, SimRoundResult } from "@/data/simulatorData";
+import type { SimChallenge, SimMetrics, SimRoundResult, SimUserProfile } from "@/data/simulatorData";
 
 interface Props {
   challenges: SimChallenge[];
+  userProfile: SimUserProfile;
   onEnd: (results: SimRoundResult[]) => void;
 }
 
 type SubPhase = "compose" | "result";
 
-export function SimulatorGame({ challenges, onEnd }: Props) {
+export function SimulatorGame({ challenges, userProfile, onEnd }: Props) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [subPhase, setSubPhase] = useState<SubPhase>("compose");
   const [isLoading, setIsLoading] = useState(false);
   const [currentMetrics, setCurrentMetrics] = useState<SimMetrics | null>(null);
   const [currentPost, setCurrentPost] = useState("");
+  const [currentVisualDesc, setCurrentVisualDesc] = useState<string | undefined>();
   const [results, setResults] = useState<SimRoundResult[]>([]);
 
   const challenge = challenges[currentIndex];
 
   const handleSubmit = useCallback(
-    async (post: string) => {
+    async (post: string, visualDescription?: string) => {
       setIsLoading(true);
       setCurrentPost(post);
+      setCurrentVisualDesc(visualDescription);
 
       try {
         const { data, error } = await supabase.functions.invoke("simulate-engagement", {
@@ -36,6 +39,8 @@ export function SimulatorGame({ challenges, onEnd }: Props) {
             objective: challenge.objective,
             platform: challenge.platform,
             mode: challenge.mode,
+            visualDescription,
+            userProfile,
           },
         });
 
@@ -51,7 +56,6 @@ export function SimulatorGame({ challenges, onEnd }: Props) {
           description: "Hubo un problema con el análisis. Usando métricas de respaldo.",
           variant: "destructive",
         });
-        // Fallback
         const fallback: SimMetrics = {
           likes: Math.floor(Math.random() * 200) + 30,
           comments: Math.floor(Math.random() * 30) + 3,
@@ -68,7 +72,7 @@ export function SimulatorGame({ challenges, onEnd }: Props) {
         setIsLoading(false);
       }
     },
-    [challenge]
+    [challenge, userProfile]
   );
 
   const handleNext = useCallback(() => {
@@ -77,6 +81,7 @@ export function SimulatorGame({ challenges, onEnd }: Props) {
     const roundResult: SimRoundResult = {
       challenge,
       userPost: currentPost,
+      visualDescription: currentVisualDesc,
       metrics: currentMetrics,
     };
 
@@ -90,8 +95,9 @@ export function SimulatorGame({ challenges, onEnd }: Props) {
       setSubPhase("compose");
       setCurrentMetrics(null);
       setCurrentPost("");
+      setCurrentVisualDesc(undefined);
     }
-  }, [currentMetrics, challenge, currentPost, results, currentIndex, challenges.length, onEnd]);
+  }, [currentMetrics, challenge, currentPost, currentVisualDesc, results, currentIndex, challenges.length, onEnd]);
 
   return (
     <AnimatePresence mode="wait">
@@ -110,6 +116,7 @@ export function SimulatorGame({ challenges, onEnd }: Props) {
           key={`result-${currentIndex}`}
           challenge={challenge}
           userPost={currentPost}
+          visualDescription={currentVisualDesc}
           metrics={currentMetrics}
           round={currentIndex + 1}
           totalRounds={challenges.length}

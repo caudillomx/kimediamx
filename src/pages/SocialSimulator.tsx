@@ -11,21 +11,31 @@ import {
   type SimMode,
   type SimChallenge,
   type SimRoundResult,
+  type SimUserProfile,
 } from "@/data/simulatorData";
 import kimediaLogo from "@/assets/kimedia-logo.png";
 
 type Phase = "intro" | "playing" | "result";
+
+const ROUNDS_PER_SESSION = 5;
 
 export default function SocialSimulator() {
   const [phase, setPhase] = useState<Phase>("intro");
   const [mode, setMode] = useState<SimMode>("personal");
   const [challenges, setChallenges] = useState<SimChallenge[]>([]);
   const [results, setResults] = useState<SimRoundResult[]>([]);
+  const [userProfile, setUserProfile] = useState<SimUserProfile>({
+    industry: "",
+    audience: "",
+    tone: "",
+    experience: "beginner",
+  });
 
-  const handleStart = (selectedMode: SimMode) => {
+  const handleStart = (selectedMode: SimMode, profile: SimUserProfile) => {
     setMode(selectedMode);
+    setUserProfile(profile);
     const pool = selectedMode === "personal" ? personalChallenges : pymeChallenges;
-    setChallenges(shuffleChallenges(pool));
+    setChallenges(shuffleChallenges(pool).slice(0, ROUNDS_PER_SESSION));
     setPhase("playing");
   };
 
@@ -55,7 +65,7 @@ export default function SocialSimulator() {
           <AnimatePresence mode="wait">
             {phase === "intro" && <SimulatorIntro key="intro" onStart={handleStart} />}
             {phase === "playing" && (
-              <SimulatorGame key="playing" challenges={challenges} onEnd={handleGameEnd} />
+              <SimulatorGame key="playing" challenges={challenges} userProfile={userProfile} onEnd={handleGameEnd} />
             )}
             {phase === "result" && (
               <SimulatorResult key="result" results={results} mode={mode} onReplay={handleReplay} />

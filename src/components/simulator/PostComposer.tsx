@@ -1,24 +1,26 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Send, Lightbulb, Loader2 } from "lucide-react";
+import { Send, Lightbulb, Loader2, Image } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { platformIcons, platformNames, type SimChallenge } from "@/data/simulatorData";
+import { platformIcons, platformNames, isVisualPlatform, type SimChallenge } from "@/data/simulatorData";
 
 interface Props {
   challenge: SimChallenge;
   round: number;
   totalRounds: number;
   isLoading: boolean;
-  onSubmit: (post: string) => void;
+  onSubmit: (post: string, visualDescription?: string) => void;
 }
 
 export function PostComposer({ challenge, round, totalRounds, isLoading, onSubmit }: Props) {
   const [post, setPost] = useState("");
+  const [visualDesc, setVisualDesc] = useState("");
   const [showTips, setShowTips] = useState(false);
 
   const maxChars = challenge.platform === "twitter" ? 280 : 2200;
   const charPct = (post.length / maxChars) * 100;
+  const needsVisual = isVisualPlatform(challenge.platform);
 
   return (
     <motion.div
@@ -85,12 +87,45 @@ export function PostComposer({ challenge, round, totalRounds, isLoading, onSubmi
         </motion.div>
       )}
 
+      {/* Visual description for IG/TikTok */}
+      {needsVisual && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: "auto" }}
+          className="mb-3"
+        >
+          <div className="flex items-center gap-2 mb-1.5">
+            <Image className="w-3.5 h-3.5 text-magenta" />
+            <span className="text-foreground text-xs font-bold">
+              {challenge.platform === "tiktok" ? "Describe tu video" : "Describe tu imagen"}
+            </span>
+            <span className="text-muted-foreground text-[10px]">(La IA evaluará coherencia copy+visual)</span>
+          </div>
+          <Textarea
+            value={visualDesc}
+            onChange={(e) => setVisualDesc(e.target.value.slice(0, 300))}
+            placeholder={
+              challenge.platform === "tiktok"
+                ? "Ej: Video de 15s mostrando mi escritorio mientras trabajo, con zoom a la pantalla..."
+                : "Ej: Foto mía en la oficina con laptop, sonriendo, fondo minimalista..."
+            }
+            className="min-h-[70px] bg-card border-border text-foreground text-sm resize-none focus:border-magenta/50"
+            disabled={isLoading}
+          />
+          <span className="text-muted-foreground text-[10px]">{visualDesc.length}/300</span>
+        </motion.div>
+      )}
+
       {/* Post composer */}
       <div className="relative mb-2">
         <Textarea
           value={post}
           onChange={(e) => setPost(e.target.value.slice(0, maxChars))}
-          placeholder="Escribe tu publicación aquí..."
+          placeholder={
+            challenge.platform === "tiktok"
+              ? "Escribe el caption/guion de tu video..."
+              : "Escribe tu publicación aquí..."
+          }
           className="min-h-[140px] bg-card border-border text-foreground text-sm resize-none focus:border-coral/50"
           disabled={isLoading}
         />
@@ -102,7 +137,7 @@ export function PostComposer({ challenge, round, totalRounds, isLoading, onSubmi
       </div>
 
       <Button
-        onClick={() => onSubmit(post)}
+        onClick={() => onSubmit(post, needsVisual ? visualDesc || undefined : undefined)}
         disabled={post.trim().length < 5 || isLoading}
         className="w-full bg-gradient-sunset hover:opacity-90 text-primary-foreground font-bold py-5"
       >
