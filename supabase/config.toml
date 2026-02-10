@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.generate-content-grid]
 verify_jwt = false
+
+[functions.copy-coach]
+verify_jwt = false
