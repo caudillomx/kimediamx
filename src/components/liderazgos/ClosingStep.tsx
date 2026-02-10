@@ -117,11 +117,6 @@ export function ClosingStep({ participantId, name, state, cause, socialHandle, o
         >
           Recibir mi kit <ArrowRight className="w-4 h-4 ml-2" />
         </Button>
-        <Link to="/liderazgos/mapa">
-          <Button variant="outline" className="w-full border-border text-muted-foreground">
-            Ver mapa completo en KiMedia
-          </Button>
-        </Link>
       </div>
     </motion.div>
   );
