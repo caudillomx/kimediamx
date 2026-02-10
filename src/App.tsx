@@ -10,7 +10,7 @@ import GuidePersonalBrand from "./pages/GuidePersonalBrand";
 import GuidePyme from "./pages/GuidePyme";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Liderazgos from "./pages/Liderazgos";
-import LiderazgosMap from "./pages/LiderazgosMap";
+
 import AdminLiderazgos from "./pages/AdminLiderazgos";
 import ParticipantProfile from "./pages/ParticipantProfile";
 import NotFound from "./pages/NotFound";
@@ -31,7 +31,7 @@ const App = () => (
           <Route path="/guias/pyme" element={<GuidePyme />} />
           <Route path="/aviso-de-privacidad" element={<PrivacyPolicy />} />
           <Route path="/liderazgos" element={<Liderazgos />} />
-          <Route path="/liderazgos/mapa" element={<LiderazgosMap />} />
+          
           <Route path="/liderazgos/perfil/:id" element={<ParticipantProfile />} />
           <Route path="/admin/liderazgos" element={<AdminLiderazgos />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
