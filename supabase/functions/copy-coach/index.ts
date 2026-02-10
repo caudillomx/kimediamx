@@ -167,7 +167,7 @@ serve(async (req) => {
     // Action: fetch guidelines for the UI panel
     if (action === "fetch-guidelines") {
       if (!NOTION_API_KEY) {
-        return new Response(JSON.stringify({ guidelines: [], clients: [] }), {
+        return new Response(JSON.stringify({ guidelines: [], clients: [], clientDetails: null }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
@@ -207,19 +207,45 @@ serve(async (req) => {
       });
 
       const clients: Array<{ name: string; industry: string; tone: string }> = [];
+      let clientDetails: Record<string, string> | null = null;
+
       if (clientsResp.ok) {
         const clientsData = await clientsResp.json();
         for (const page of clientsData.results) {
           const props = page.properties;
+          const name = props["Nombre"]?.title?.[0]?.plain_text || "";
           clients.push({
-            name: props["Nombre"]?.title?.[0]?.plain_text || "",
+            name,
             industry: props["Industria"]?.rich_text?.[0]?.plain_text || "",
             tone: props["Tono"]?.select?.name || "",
           });
+
+          // If this is the selected client, extract all details
+          if (clientName && name.toLowerCase().includes(clientName.toLowerCase())) {
+            clientDetails = {};
+            const fieldMap: Record<string, string> = {
+              "Industria": "Industria",
+              "Audiencia": "Audiencia",
+              "Tono": "Tono",
+              "Palabras clave": "Palabras clave",
+              "Palabras prohibidas": "Palabras prohibidas",
+              "Diferenciadores": "Diferenciadores",
+              "Objetivos": "Objetivos",
+            };
+            for (const [notionField, label] of Object.entries(fieldMap)) {
+              if (notionField === "Tono") {
+                const val = props[notionField]?.select?.name;
+                if (val) clientDetails[label] = val;
+              } else {
+                const val = props[notionField]?.rich_text?.[0]?.plain_text;
+                if (val) clientDetails[label] = val;
+              }
+            }
+          }
         }
       }
 
-      return new Response(JSON.stringify({ guidelines, clients }), {
+      return new Response(JSON.stringify({ guidelines, clients, clientDetails }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
