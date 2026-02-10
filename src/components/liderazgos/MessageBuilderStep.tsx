@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageSquare, ArrowRight, ArrowLeft, Sparkles, Loader2 } from "lucide-react";
+import { MessageSquare, ArrowRight, ArrowLeft, Sparkles, Loader2, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { causes, convictions, populations, generateMessage } from "@/data/liderazgosData";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -28,10 +29,10 @@ export function MessageBuilderStep({ participantState, onNext }: MessageBuilderS
   const finalCause = cause === "Otro" ? causeCustom : cause;
 
   const steps = [
-    { title: "Causa principal", subtitle: "¿Qué tema te mueve?" },
-    { title: "Convicción", subtitle: "¿Por qué luchas?" },
-    { title: "Población", subtitle: "¿Para quién trabajas?" },
-    { title: "Tu mensaje", subtitle: "Revisa y personaliza" },
+    { title: "Causa principal", subtitle: "¿Qué tema te mueve?", hint: "Elige la causa que más te representa. Si no encuentras la tuya, selecciona 'Otro'." },
+    { title: "Convicción", subtitle: "¿Por qué luchas?", hint: "Selecciona la frase que mejor refleje tu motivación personal." },
+    { title: "Población", subtitle: "¿Para quién trabajas?", hint: "Puedes seleccionar más de una opción. Estas son las personas a las que diriges tu mensaje." },
+    { title: "Tu mensaje", subtitle: "Revisa y personaliza", hint: "Edita el texto generado. Puedes mejorarlo con IA o escribir el tuyo desde cero." },
   ];
 
   const canAdvance = () => {
@@ -76,21 +77,39 @@ export function MessageBuilderStep({ participantState, onNext }: MessageBuilderS
       className="w-full max-w-lg mx-auto"
     >
       <div className="text-center mb-6">
-        <div className="w-14 h-14 rounded-2xl bg-secondary flex items-center justify-center mx-auto mb-4">
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ type: "spring", stiffness: 200, delay: 0.1 }}
+          className="w-14 h-14 rounded-2xl bg-secondary flex items-center justify-center mx-auto mb-4"
+        >
           <MessageSquare className="w-7 h-7 text-coral" />
-        </div>
+        </motion.div>
         <h2 className="font-display text-xl md:text-2xl font-bold text-foreground mb-1">
           Constructor de mensaje
         </h2>
-        <p className="text-muted-foreground text-sm">Paso {wizardStep + 1} de 4 — {steps[wizardStep].subtitle}</p>
+        <TooltipProvider delayDuration={300}>
+          <p className="text-muted-foreground text-sm flex items-center justify-center gap-1">
+            Paso {wizardStep + 1} de 4 — {steps[wizardStep].subtitle}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <HelpCircle className="w-3.5 h-3.5 cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="max-w-[220px] text-xs">{steps[wizardStep].hint}</p>
+              </TooltipContent>
+            </Tooltip>
+          </p>
+        </TooltipProvider>
       </div>
 
       {/* Progress dots */}
       <div className="flex gap-2 justify-center mb-6">
         {steps.map((_, i) => (
-          <div
+          <motion.div
             key={i}
-            className={`h-2 rounded-full transition-all ${
+            layout
+            className={`h-2 rounded-full transition-colors ${
               i === wizardStep ? "w-8 bg-coral" : i < wizardStep ? "w-2 bg-coral/50" : "w-2 bg-border"
             }`}
           />
@@ -99,45 +118,65 @@ export function MessageBuilderStep({ participantState, onNext }: MessageBuilderS
 
       <AnimatePresence mode="wait">
         {wizardStep === 0 && (
-          <motion.div key="cause" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+          <motion.div key="cause" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
             <RadioGroup value={cause} onValueChange={setCause} className="space-y-2">
-              {[...causes, "Otro"].map((c) => (
-                <div key={c} className="flex items-center space-x-3 bg-card rounded-xl p-4 border border-border">
+              {[...causes, "Otro"].map((c, i) => (
+                <motion.div
+                  key={c}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.04 }}
+                  className="flex items-center space-x-3 bg-card rounded-xl p-4 border border-border hover:border-coral/30 transition-colors"
+                >
                   <RadioGroupItem value={c} id={`cause-${c}`} />
                   <Label htmlFor={`cause-${c}`} className="text-sm cursor-pointer flex-1">{c}</Label>
-                </div>
+                </motion.div>
               ))}
             </RadioGroup>
             {cause === "Otro" && (
-              <Input
-                value={causeCustom}
-                onChange={(e) => setCauseCustom(e.target.value)}
-                placeholder="Escribe tu causa..."
-                className="mt-3 bg-card border-border"
-                maxLength={100}
-              />
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}>
+                <Input
+                  value={causeCustom}
+                  onChange={(e) => setCauseCustom(e.target.value)}
+                  placeholder="Escribe tu causa..."
+                  className="mt-3 bg-card border-border"
+                  maxLength={100}
+                />
+              </motion.div>
             )}
           </motion.div>
         )}
 
         {wizardStep === 1 && (
-          <motion.div key="conviction" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+          <motion.div key="conviction" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
             <RadioGroup value={conviction} onValueChange={setConviction} className="space-y-2">
-              {convictions.map((c) => (
-                <div key={c} className="flex items-center space-x-3 bg-card rounded-xl p-4 border border-border">
+              {convictions.map((c, i) => (
+                <motion.div
+                  key={c}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.04 }}
+                  className="flex items-center space-x-3 bg-card rounded-xl p-4 border border-border hover:border-coral/30 transition-colors"
+                >
                   <RadioGroupItem value={c} id={`conv-${c}`} />
                   <Label htmlFor={`conv-${c}`} className="text-sm cursor-pointer flex-1">{c}</Label>
-                </div>
+                </motion.div>
               ))}
             </RadioGroup>
           </motion.div>
         )}
 
         {wizardStep === 2 && (
-          <motion.div key="population" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-4">
+          <motion.div key="population" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-4">
             <div className="space-y-2">
-              {populations.map((p) => (
-                <div key={p} className="flex items-center space-x-3 bg-card rounded-xl p-4 border border-border">
+              {populations.map((p, i) => (
+                <motion.div
+                  key={p}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.04 }}
+                  className="flex items-center space-x-3 bg-card rounded-xl p-4 border border-border hover:border-coral/30 transition-colors"
+                >
                   <Checkbox
                     id={`pop-${p}`}
                     checked={selectedPop.includes(p)}
@@ -145,8 +184,8 @@ export function MessageBuilderStep({ participantState, onNext }: MessageBuilderS
                       setSelectedPop(checked ? [...selectedPop, p] : selectedPop.filter((x) => x !== p))
                     }
                   />
-                  <Label htmlFor={`pop-${p}`} className="text-sm cursor-pointer flex-1 capitalize">{p}</Label>
-                </div>
+                  <Label htmlFor={`pop-${p}`} className="text-sm cursor-pointer flex-1">{p}</Label>
+                </motion.div>
               ))}
             </div>
             <div className="space-y-2">
@@ -162,7 +201,7 @@ export function MessageBuilderStep({ participantState, onNext }: MessageBuilderS
         )}
 
         {wizardStep === 3 && (
-          <motion.div key="preview" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-4">
+          <motion.div key="preview" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-4">
             <div className="bg-card rounded-2xl p-6 border border-border">
               <textarea
                 value={message}

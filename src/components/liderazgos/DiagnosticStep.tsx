@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Activity, ArrowRight } from "lucide-react";
+import { Activity, ArrowRight, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { diagnosticQuestions, getDiagnosticLevel } from "@/data/liderazgosData";
 
 interface DiagnosticStepProps {
@@ -30,13 +31,30 @@ export function DiagnosticStep({ onNext }: DiagnosticStepProps) {
       className="w-full max-w-lg mx-auto"
     >
       <div className="text-center mb-6">
-        <div className="w-14 h-14 rounded-2xl bg-secondary flex items-center justify-center mx-auto mb-4">
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ type: "spring", stiffness: 200, delay: 0.1 }}
+          className="w-14 h-14 rounded-2xl bg-secondary flex items-center justify-center mx-auto mb-4"
+        >
           <Activity className="w-7 h-7 text-coral" />
-        </div>
+        </motion.div>
         <h2 className="font-display text-xl md:text-2xl font-bold text-foreground mb-1">
           Diagnóstico de visibilidad
         </h2>
-        <p className="text-muted-foreground text-sm">Responde honestamente para obtener tu nivel</p>
+        <TooltipProvider delayDuration={300}>
+          <p className="text-muted-foreground text-sm flex items-center justify-center gap-1">
+            Responde honestamente para obtener tu nivel
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <HelpCircle className="w-3.5 h-3.5 cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="max-w-[220px] text-xs">Selecciona la opción que mejor describe tu situación actual. No hay respuestas correctas ni incorrectas.</p>
+              </TooltipContent>
+            </Tooltip>
+          </p>
+        </TooltipProvider>
       </div>
 
       <Progress value={progress} className="mb-6 h-2" />
@@ -88,9 +106,14 @@ export function DiagnosticStep({ onNext }: DiagnosticStepProps) {
           className="text-center"
         >
           <div className="bg-card rounded-2xl p-8 border border-border mb-6">
-            <div className={`w-20 h-20 rounded-full ${result.color} mx-auto mb-4 flex items-center justify-center`}>
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: "spring", stiffness: 200, delay: 0.2 }}
+              className={`w-20 h-20 rounded-full ${result.color} mx-auto mb-4 flex items-center justify-center`}
+            >
               <span className="text-white font-display font-bold text-2xl">{totalScore}</span>
-            </div>
+            </motion.div>
             <h3 className="font-display text-lg font-bold text-foreground mb-1">{result.label}</h3>
             <p className="text-muted-foreground text-sm leading-relaxed">{result.message}</p>
           </div>
