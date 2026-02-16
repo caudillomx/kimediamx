@@ -37,7 +37,7 @@ export const presentationSlides: SlideData[] = [
   {
     id: 2,
     layout: "text-image",
-    title: "Reconocimiento de su labor actual",
+    title: "Lo que hoy se hace bien",
     content: {
       points: [
         { icon: "HandHelping", title: "Gestión y acompañamiento", description: "Su trabajo de gestión y acompañamiento es el pilar fundamental que sostiene a su comunidad." },

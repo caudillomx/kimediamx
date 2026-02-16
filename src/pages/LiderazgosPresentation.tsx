@@ -1,15 +1,34 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
 import {
-  ChevronLeft, ChevronRight, Maximize, Minimize,
+  ChevronLeft, ChevronRight, Maximize, Minimize, Download,
   HandHelping, Wrench, Megaphone, Search, Smartphone, Clock,
   EyeOff, MapPin, UserX, UserCheck, History, MessageCircle,
   Camera, Landmark, Users, Network, ShieldCheck, Play,
-  UserCircle, Route, Handshake, X,
+  UserCircle, Route, Handshake,
 } from "lucide-react";
 import { presentationSlides, type SlideData } from "@/data/presentationSlides";
 import kimediaLogo from "@/assets/kimedia-logo.png";
+
+// Slide illustrations
+import slideCommunity from "@/assets/slides/slide-community.jpg";
+import slideSmartphone from "@/assets/slides/slide-smartphone.jpg";
+import slideSocial from "@/assets/slides/slide-social.jpg";
+import slideVisual from "@/assets/slides/slide-visual.jpg";
+import slideDigitalSpace from "@/assets/slides/slide-digital-space.jpg";
+import slideFound from "@/assets/slides/slide-found.jpg";
+import slideMyths from "@/assets/slides/slide-myths.jpg";
+
+const slideImages: Record<number, string> = {
+  2: slideCommunity,
+  4: slideSmartphone,
+  8: slideSocial,
+  9: slideVisual,
+  11: slideMyths,
+  12: slideDigitalSpace,
+  13: slideFound,
+};
 
 const iconMap: Record<string, React.ElementType> = {
   HandHelping, Wrench, Megaphone, Search, Smartphone, Clock,
@@ -25,6 +44,8 @@ function SlideIcon({ name, className }: { name: string; className?: string }) {
 
 function SlideRenderer({ slide }: { slide: SlideData }) {
   const { layout, content } = slide;
+  const image = slideImages[slide.id];
+  const hasImage = !!image && layout === "text-image";
 
   return (
     <div className="w-full h-full flex flex-col p-8 md:p-12 lg:p-16 overflow-hidden">
@@ -48,49 +69,62 @@ function SlideRenderer({ slide }: { slide: SlideData }) {
       </div>
 
       {/* Content area */}
-      <div className="flex-1 min-h-0 flex flex-col justify-center gap-6">
-        {content.intro && (
-          <p className="text-lg md:text-2xl text-muted-foreground leading-relaxed max-w-4xl">
-            {content.intro}
-          </p>
-        )}
+      <div className={`flex-1 min-h-0 flex ${hasImage ? "flex-col md:flex-row gap-8" : "flex-col"} justify-center gap-6`}>
+        <div className={`flex flex-col justify-center gap-6 ${hasImage ? "md:w-3/5" : ""}`}>
+          {content.intro && (
+            <p className="text-lg md:text-2xl text-muted-foreground leading-relaxed max-w-4xl">
+              {content.intro}
+            </p>
+          )}
 
-        {/* Before/After */}
-        {content.beforeAfter && (
-          <div className="space-y-4">
-            <div className="flex items-center gap-6 p-5 rounded-xl bg-secondary/50 border border-border/50">
-              <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground w-16">
-                {content.beforeAfter.before.label}
-              </span>
-              <span className="text-lg md:text-xl font-semibold text-foreground">
-                {content.beforeAfter.before.text}
-              </span>
-            </div>
-            <div className="flex items-center gap-6 p-5 rounded-xl bg-gradient-coral text-primary-foreground">
-              <span className="text-xs font-bold uppercase tracking-widest opacity-70 w-16">
-                {content.beforeAfter.after.label}
-              </span>
-              <span className="text-lg md:text-xl font-semibold">
-                {content.beforeAfter.after.text}
-              </span>
-            </div>
-          </div>
-        )}
-
-        {/* Points list */}
-        {content.points && (
-          <div className="space-y-5">
-            {content.points.map((p, i) => (
-              <div key={i} className="flex items-start gap-5">
-                <div className="shrink-0 w-12 h-12 rounded-lg bg-secondary flex items-center justify-center text-primary">
-                  <SlideIcon name={p.icon} className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-lg md:text-xl font-bold text-foreground mb-1">{p.title}</h3>
-                  <p className="text-muted-foreground text-base md:text-lg leading-relaxed">{p.description}</p>
-                </div>
+          {/* Before/After */}
+          {content.beforeAfter && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-6 p-5 rounded-xl bg-secondary/50 border border-border/50">
+                <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground w-16">
+                  {content.beforeAfter.before.label}
+                </span>
+                <span className="text-lg md:text-xl font-semibold text-foreground">
+                  {content.beforeAfter.before.text}
+                </span>
               </div>
-            ))}
+              <div className="flex items-center gap-6 p-5 rounded-xl bg-gradient-coral text-primary-foreground">
+                <span className="text-xs font-bold uppercase tracking-widest opacity-70 w-16">
+                  {content.beforeAfter.after.label}
+                </span>
+                <span className="text-lg md:text-xl font-semibold">
+                  {content.beforeAfter.after.text}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Points list */}
+          {content.points && (
+            <div className="space-y-5">
+              {content.points.map((p, i) => (
+                <div key={i} className="flex items-start gap-5">
+                  <div className="shrink-0 w-12 h-12 rounded-lg bg-secondary flex items-center justify-center text-primary">
+                    <SlideIcon name={p.icon} className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg md:text-xl font-bold text-foreground mb-1">{p.title}</h3>
+                    <p className="text-muted-foreground text-base md:text-lg leading-relaxed">{p.description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Image panel for text-image layout */}
+        {hasImage && (
+          <div className="hidden md:flex md:w-2/5 items-center justify-center">
+            <div className="relative w-full aspect-square max-w-sm rounded-2xl overflow-hidden shadow-2xl">
+              <img src={image} alt="" className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-t from-background/60 via-transparent to-transparent" />
+              <div className="absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/10" />
+            </div>
           </div>
         )}
 
@@ -204,7 +238,9 @@ function SlideRenderer({ slide }: { slide: SlideData }) {
 export default function LiderazgosPresentation() {
   const [current, setCurrent] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const total = presentationSlides.length;
+  const slideAreaRef = useRef<HTMLDivElement>(null);
 
   const next = useCallback(() => setCurrent((c) => Math.min(c + 1, total - 1)), [total]);
   const prev = useCallback(() => setCurrent((c) => Math.max(c - 1, 0)), []);
@@ -234,6 +270,102 @@ export default function LiderazgosPresentation() {
     return () => document.removeEventListener("fullscreenchange", handler);
   }, []);
 
+  const handleExportPDF = async () => {
+    setIsExporting(true);
+    try {
+      const html2pdf = (await import("html2pdf.js")).default;
+      
+      // Create a temporary container with all slides
+      const container = document.createElement("div");
+      container.style.width = "1280px";
+      container.style.position = "absolute";
+      container.style.left = "-9999px";
+      container.style.top = "0";
+      document.body.appendChild(container);
+
+      for (let i = 0; i < total; i++) {
+        const slideDiv = document.createElement("div");
+        slideDiv.style.width = "1280px";
+        slideDiv.style.height = "720px";
+        slideDiv.style.background = "#0a0a0f";
+        slideDiv.style.color = "#ffffff";
+        slideDiv.style.padding = "48px";
+        slideDiv.style.boxSizing = "border-box";
+        slideDiv.style.fontFamily = "'Space Grotesk', 'Inter', sans-serif";
+        slideDiv.style.pageBreakAfter = "always";
+        slideDiv.style.position = "relative";
+        slideDiv.style.overflow = "hidden";
+
+        const slide = presentationSlides[i];
+        let html = "";
+
+        if (slide.subtitle) {
+          html += `<div style="font-size:12px;text-transform:uppercase;letter-spacing:4px;color:#888;margin-bottom:8px;font-weight:700">${slide.subtitle}</div>`;
+        }
+        html += `<h1 style="font-size:36px;font-weight:800;margin:0 0 8px;line-height:1.1">${slide.title}</h1>`;
+        if (slide.titleAccent) {
+          html += `<h1 style="font-size:36px;font-weight:300;font-style:italic;margin:0 0 12px;background:linear-gradient(135deg,#FF6B4A,#E91E84);-webkit-background-clip:text;-webkit-text-fill-color:transparent">${slide.titleAccent}</h1>`;
+        }
+        html += `<div style="width:60px;height:3px;background:linear-gradient(135deg,#FF6B4A,#E91E84);margin-bottom:24px"></div>`;
+
+        if (slide.content.intro) {
+          html += `<p style="font-size:18px;color:#aaa;line-height:1.6;max-width:800px;margin-bottom:20px">${slide.content.intro}</p>`;
+        }
+
+        if (slide.content.points) {
+          slide.content.points.forEach(p => {
+            html += `<div style="margin-bottom:16px"><h3 style="font-size:18px;font-weight:700;margin:0 0 4px">${p.title}</h3><p style="font-size:15px;color:#aaa;margin:0;line-height:1.5">${p.description}</p></div>`;
+          });
+        }
+
+        if (slide.content.columns) {
+          html += `<div style="display:flex;gap:16px;margin-top:12px">`;
+          slide.content.columns.forEach(col => {
+            html += `<div style="flex:1;padding:20px;background:rgba(255,255,255,0.05);border-radius:12px;border:1px solid rgba(255,255,255,0.1)">`;
+            html += `<h3 style="font-size:16px;font-weight:700;margin:0 0 8px">${col.title}</h3>`;
+            if (col.description) html += `<p style="font-size:14px;color:#aaa;margin:0;line-height:1.5">${col.description}</p>`;
+            if (col.items) {
+              col.items.forEach(item => {
+                html += `<p style="font-size:14px;color:#aaa;margin:6px 0;line-height:1.4">• ${item}</p>`;
+              });
+            }
+            html += `</div>`;
+          });
+          html += `</div>`;
+        }
+
+        if (slide.content.callout) {
+          html += `<div style="margin-top:auto;padding:20px;background:linear-gradient(135deg,#FF6B4A,#E91E84);border-radius:12px;position:absolute;bottom:48px;left:48px;right:48px"><p style="font-size:16px;font-style:italic;margin:0;color:#fff">${slide.content.callout}</p></div>`;
+        }
+
+        if (slide.footer) {
+          html += `<div style="position:absolute;bottom:16px;left:48px;font-size:12px;color:#666">${slide.footer}</div>`;
+        }
+
+        slideDiv.innerHTML = html;
+        container.appendChild(slideDiv);
+      }
+
+      await html2pdf()
+        .set({
+          margin: 0,
+          filename: "Presentacion-Taller-Liderazgo-Digital.pdf",
+          image: { type: "jpeg", quality: 0.95 },
+          html2canvas: { scale: 2, backgroundColor: "#0a0a0f", width: 1280, height: 720 },
+          jsPDF: { unit: "px", format: [1280, 720], orientation: "landscape", hotfixes: ["px_scaling"] },
+          pagebreak: { mode: "css" },
+        })
+        .from(container)
+        .save();
+
+      document.body.removeChild(container);
+    } catch (err) {
+      console.error("PDF export failed:", err);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <div className={`min-h-screen bg-background flex flex-col ${isFullscreen ? "fixed inset-0 z-[9999]" : ""}`}>
       {/* Top bar */}
@@ -246,6 +378,14 @@ export default function LiderazgosPresentation() {
             </span>
           </Link>
           <div className="flex items-center gap-4">
+            <button
+              onClick={handleExportPDF}
+              disabled={isExporting}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-secondary transition-colors disabled:opacity-50"
+            >
+              <Download className="w-4 h-4" />
+              <span className="hidden md:inline">{isExporting ? "Exportando..." : "PDF"}</span>
+            </button>
             <span className="text-sm text-muted-foreground font-mono">
               {current + 1} / {total}
             </span>
@@ -257,7 +397,7 @@ export default function LiderazgosPresentation() {
       )}
 
       {/* Slide area */}
-      <div className="flex-1 relative overflow-hidden bg-background">
+      <div ref={slideAreaRef} className="flex-1 relative overflow-hidden bg-background">
         {/* Progress bar */}
         <div className="absolute top-0 left-0 right-0 h-1 bg-secondary z-10">
           <motion.div
