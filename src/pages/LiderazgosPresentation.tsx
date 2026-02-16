@@ -48,9 +48,16 @@ function SlideRenderer({ slide }: { slide: SlideData }) {
   const hasImage = !!image && layout === "text-image";
 
   return (
-    <div className="w-full h-full flex flex-col p-8 md:p-12 lg:p-16 overflow-hidden">
+    <div className="w-full h-full flex flex-col overflow-hidden">
+      {/* Slide brand bar */}
+      <div className="shrink-0 flex items-center gap-3 px-8 md:px-12 lg:px-16 pt-6 pb-2">
+        <img src={kimediaLogo} alt="KiMedia" className="h-5 w-auto opacity-60" />
+        <span className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground/50 font-bold">
+          Taller de Presencia Digital
+        </span>
+      </div>
       {/* Header */}
-      <div className="mb-6 md:mb-10 shrink-0">
+      <div className="mb-6 md:mb-8 shrink-0 px-8 md:px-12 lg:px-16">
         {slide.subtitle && (
           <span className="text-xs md:text-sm uppercase tracking-[0.3em] font-bold text-muted-foreground mb-2 block">
             {slide.subtitle}
@@ -69,7 +76,7 @@ function SlideRenderer({ slide }: { slide: SlideData }) {
       </div>
 
       {/* Content area */}
-      <div className={`flex-1 min-h-0 flex ${hasImage ? "flex-col md:flex-row gap-8" : "flex-col"} justify-center gap-6`}>
+      <div className={`flex-1 min-h-0 flex ${hasImage ? "flex-col md:flex-row gap-8" : "flex-col"} justify-center gap-6 px-8 md:px-12 lg:px-16`}>
         <div className={`flex flex-col justify-center gap-6 ${hasImage ? "md:w-3/5" : ""}`}>
           {content.intro && (
             <p className="text-lg md:text-2xl text-muted-foreground leading-relaxed max-w-4xl">
@@ -224,7 +231,7 @@ function SlideRenderer({ slide }: { slide: SlideData }) {
 
       {/* Footer */}
       {(slide.footer || slide.footerRight) && (
-        <div className="shrink-0 mt-6 pt-4 border-t border-border/50 flex justify-between items-center text-sm text-muted-foreground">
+        <div className="shrink-0 mt-6 pt-4 border-t border-border/50 flex justify-between items-center text-sm text-muted-foreground px-8 md:px-12 lg:px-16 pb-6">
           <span className="max-w-[70%]">{slide.footer}</span>
           {slide.footerRight && (
             <span className="font-bold uppercase tracking-widest text-xs">{slide.footerRight}</span>
@@ -277,6 +284,9 @@ export default function LiderazgosPresentation() {
     const el = document.createElement("div");
     el.style.cssText = `width:1280px;height:720px;background:#0a0a0f;color:#fff;padding:48px;box-sizing:border-box;font-family:'Space Grotesk','Inter',system-ui,sans-serif;position:relative;overflow:hidden;display:flex;flex-direction:column;`;
 
+    // Brand bar for PDF
+    const brandBarHTML = `<div style="display:flex;align-items:center;gap:10px;padding-bottom:8px;flex-shrink:0"><img src="${kimediaLogo}" style="height:16px;opacity:0.6" crossorigin="anonymous" /><span style="font-size:9px;text-transform:uppercase;letter-spacing:3px;color:rgba(255,255,255,0.35);font-weight:700">Taller de Presencia Digital</span></div>`;
+
     let headerHTML = "";
     if (slide.subtitle) headerHTML += `<div style="font-size:11px;text-transform:uppercase;letter-spacing:4px;color:#999;margin-bottom:8px;font-weight:700">${slide.subtitle}</div>`;
     headerHTML += `<div style="font-size:40px;font-weight:800;line-height:1.1;margin-bottom:4px;color:#fff">${slide.title}</div>`;
@@ -328,7 +338,7 @@ export default function LiderazgosPresentation() {
       contentInner = `<div style="display:flex;gap:24px;flex:1;min-height:0"><div style="flex:3;display:flex;flex-direction:column;justify-content:center;gap:8px">${bodyHTML}</div><div style="flex:2;display:flex;align-items:center;justify-content:center"><img src="${image}" style="width:100%;max-width:320px;border-radius:16px;object-fit:cover;aspect-ratio:1" crossorigin="anonymous" /></div></div>`;
     }
     const mainContent = hasImage ? contentInner : `<div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:8px;min-height:0">${bodyHTML}</div>`;
-    el.innerHTML = `<div style="flex-shrink:0">${headerHTML}</div>${mainContent}${calloutHTML}${footerHTML}`;
+    el.innerHTML = `${brandBarHTML}<div style="flex-shrink:0">${headerHTML}</div>${mainContent}${calloutHTML}${footerHTML}`;
     return el;
   };
 
