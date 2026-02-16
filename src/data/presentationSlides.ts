@@ -191,7 +191,7 @@ export const presentationSlides: SlideData[] = [
       intro: "La presencia digital efectiva no depende de la sofisticación tecnológica, sino de la claridad del mensaje y la disponibilidad para ayudar.",
       points: [
         { icon: "UserX", title: "No es ser \"Influencer\"", description: "Se trata de ser encontrable y útil, no de buscar fama personal o \"likes\" masivos." },
-        { icon: "Wrench", title: "No requiere expertiz técnica", description: "Las herramientas actuales son intuitivas. Lo importante es el contenido de valor que ya generan." },
+        { icon: "Wrench", title: "No requiere experiencia técnica", description: "Las herramientas actuales son intuitivas. Lo importante es el contenido de valor que ya generan." },
         { icon: "Camera", title: "No exige estética perfecta", description: "La autenticidad y la información veraz superan a la edición profesional en el liderazgo social." },
       ],
     },
