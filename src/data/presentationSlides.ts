@@ -32,7 +32,7 @@ export const presentationSlides: SlideData[] = [
       callout: "Comunicar para llegar a más mujeres.",
     },
     footer: "16 de febrero de 2026",
-    footerRight: "Secretaría de Promoción Política",
+    footerRight: "Secretaría de Promoción Política de la Mujer",
   },
   {
     id: 2,
