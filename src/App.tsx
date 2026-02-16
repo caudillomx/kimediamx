@@ -10,6 +10,7 @@ import GuidePersonalBrand from "./pages/GuidePersonalBrand";
 import GuidePyme from "./pages/GuidePyme";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Liderazgos from "./pages/Liderazgos";
+import LiderazgosPresentation from "./pages/LiderazgosPresentation";
 
 import AdminLiderazgos from "./pages/AdminLiderazgos";
 import ParticipantProfile from "./pages/ParticipantProfile";
@@ -39,6 +40,7 @@ const App = () => (
           <Route path="/guias/pyme" element={<GuidePyme />} />
           <Route path="/aviso-de-privacidad" element={<PrivacyPolicy />} />
           <Route path="/liderazgos" element={<Liderazgos />} />
+          <Route path="/liderazgos/presentacion" element={<LiderazgosPresentation />} />
           
           <Route path="/liderazgos/perfil/:id" element={<ParticipantProfile />} />
           <Route path="/kit/marca-personal" element={<KitMarcaPersonal />} />
