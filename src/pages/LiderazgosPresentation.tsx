@@ -272,30 +272,21 @@ export default function LiderazgosPresentation() {
 
   const handleExportPDF = async () => {
     setIsExporting(true);
-    const savedSlide = current;
     try {
       const html2pdf = (await import("html2pdf.js")).default;
-      const { jsPDF } = await import("html2pdf.js").then(() => (window as any).jspdf || { jsPDF: null });
 
-      // We'll render each slide into a hidden container and capture with html2canvas
-      const html2canvas = (await import("html2pdf.js")).default;
-      
-      // Create off-screen container that mirrors the slide area
-      const container = document.createElement("div");
-      container.style.position = "fixed";
-      container.style.left = "-9999px";
-      container.style.top = "0";
-      container.style.width = "1280px";
-      container.style.height = "720px";
-      document.body.appendChild(container);
-
-      // Build all slides as separate pages in one element
+      // Build all slides as individual page divs
       const pagesContainer = document.createElement("div");
+      pagesContainer.style.cssText = "width:1280px;";
       
       for (let i = 0; i < total; i++) {
         const slide = presentationSlides[i];
         const page = document.createElement("div");
-        page.style.cssText = `width:1280px;height:720px;background:#0a0a0f;color:#fff;padding:48px;box-sizing:border-box;font-family:'Space Grotesk','Inter',system-ui,sans-serif;position:relative;overflow:hidden;page-break-after:always;display:flex;flex-direction:column;`;
+        // Use explicit height, NO page-break-after (html2pdf handles it via format size)
+        page.style.cssText = `width:1280px;height:720px;background:#0a0a0f;color:#fff;padding:48px;box-sizing:border-box;font-family:'Space Grotesk','Inter',system-ui,sans-serif;position:relative;overflow:hidden;display:flex;flex-direction:column;`;
+
+        const image = slideImages[slide.id];
+        const hasImage = !!image && slide.layout === "text-image";
 
         let headerHTML = "";
         if (slide.subtitle) {
@@ -310,7 +301,7 @@ export default function LiderazgosPresentation() {
         let bodyHTML = "";
         
         if (slide.content.intro) {
-          bodyHTML += `<p style="font-size:17px;color:#aaa;line-height:1.6;max-width:800px;margin:0 0 20px">${slide.content.intro}</p>`;
+          bodyHTML += `<p style="font-size:17px;color:#aaa;line-height:1.6;max-width:${hasImage ? '600' : '800'}px;margin:0 0 20px">${slide.content.intro}</p>`;
         }
 
         if (slide.content.beforeAfter) {
@@ -376,30 +367,49 @@ export default function LiderazgosPresentation() {
           footerHTML += `</div>`;
         }
 
-        page.innerHTML = `<div style="flex-shrink:0">${headerHTML}</div><div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:8px;min-height:0">${bodyHTML}</div>${calloutHTML}${footerHTML}`;
+        // Build content area - with image panel if applicable
+        let contentInner = bodyHTML;
+        if (hasImage) {
+          contentInner = `<div style="display:flex;gap:24px;flex:1;min-height:0">
+            <div style="flex:3;display:flex;flex-direction:column;justify-content:center;gap:8px">${bodyHTML}</div>
+            <div style="flex:2;display:flex;align-items:center;justify-content:center">
+              <img src="${image}" style="width:100%;max-width:320px;border-radius:16px;object-fit:cover;aspect-ratio:1" crossorigin="anonymous" />
+            </div>
+          </div>`;
+        }
+
+        const mainContent = hasImage ? contentInner : `<div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:8px;min-height:0">${bodyHTML}</div>`;
+
+        page.innerHTML = `<div style="flex-shrink:0">${headerHTML}</div>${mainContent}${calloutHTML}${footerHTML}`;
         pagesContainer.appendChild(page);
       }
 
-      container.appendChild(pagesContainer);
+      // Temporarily add to DOM for rendering
+      pagesContainer.style.position = "fixed";
+      pagesContainer.style.left = "-9999px";
+      pagesContainer.style.top = "0";
+      document.body.appendChild(pagesContainer);
+
+      // Small delay to let images load
+      await new Promise(r => setTimeout(r, 500));
 
       await html2pdf()
         .set({
           margin: 0,
           filename: "Presentacion-Taller-Liderazgo-Digital.pdf",
-          image: { type: "jpeg", quality: 0.98 },
-          html2canvas: { scale: 2, backgroundColor: "#0a0a0f", useCORS: true, width: 1280 },
+          image: { type: "jpeg", quality: 0.95 },
+          html2canvas: { scale: 2, backgroundColor: "#0a0a0f", useCORS: true, width: 1280, height: 720 },
           jsPDF: { unit: "px", format: [1280, 720], orientation: "landscape", hotfixes: ["px_scaling"] },
-          pagebreak: { mode: ["css", "legacy"], avoid: "none" },
+          pagebreak: { mode: ["css"], before: ".pdf-page-break" },
         })
         .from(pagesContainer)
         .save();
 
-      document.body.removeChild(container);
+      document.body.removeChild(pagesContainer);
     } catch (err) {
       console.error("PDF export failed:", err);
     } finally {
       setIsExporting(false);
-      setCurrent(savedSlide);
     }
   };
 
