@@ -270,142 +270,112 @@ export default function LiderazgosPresentation() {
     return () => document.removeEventListener("fullscreenchange", handler);
   }, []);
 
+  const buildSlideHTML = (slide: SlideData) => {
+    const image = slideImages[slide.id];
+    const hasImage = !!image && slide.layout === "text-image";
+
+    const el = document.createElement("div");
+    el.style.cssText = `width:1280px;height:720px;background:#0a0a0f;color:#fff;padding:48px;box-sizing:border-box;font-family:'Space Grotesk','Inter',system-ui,sans-serif;position:relative;overflow:hidden;display:flex;flex-direction:column;`;
+
+    let headerHTML = "";
+    if (slide.subtitle) headerHTML += `<div style="font-size:11px;text-transform:uppercase;letter-spacing:4px;color:#999;margin-bottom:8px;font-weight:700">${slide.subtitle}</div>`;
+    headerHTML += `<div style="font-size:40px;font-weight:800;line-height:1.1;margin-bottom:4px;color:#fff">${slide.title}</div>`;
+    if (slide.titleAccent) headerHTML += `<div style="font-size:40px;font-weight:300;font-style:italic;color:#FF6B4A;margin-bottom:4px">${slide.titleAccent}</div>`;
+    headerHTML += `<div style="width:60px;height:3px;background:linear-gradient(135deg,#FF6B4A,#E91E84);margin:12px 0 24px"></div>`;
+
+    let bodyHTML = "";
+    if (slide.content.intro) bodyHTML += `<p style="font-size:17px;color:#aaa;line-height:1.6;max-width:${hasImage ? '600' : '800'}px;margin:0 0 20px">${slide.content.intro}</p>`;
+    if (slide.content.beforeAfter) {
+      bodyHTML += `<div style="margin-bottom:16px"><div style="display:flex;align-items:center;gap:16px;padding:16px 20px;border-radius:10px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);margin-bottom:10px"><span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:3px;color:#888;width:50px">${slide.content.beforeAfter.before.label}</span><span style="font-size:18px;font-weight:600">${slide.content.beforeAfter.before.text}</span></div><div style="display:flex;align-items:center;gap:16px;padding:16px 20px;border-radius:10px;background:linear-gradient(135deg,#FF6B4A,#E91E84)"><span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:3px;opacity:0.7;width:50px">${slide.content.beforeAfter.after.label}</span><span style="font-size:18px;font-weight:600">${slide.content.beforeAfter.after.text}</span></div></div>`;
+    }
+    if (slide.content.points) {
+      slide.content.points.forEach(p => {
+        bodyHTML += `<div style="display:flex;gap:14px;margin-bottom:14px;align-items:flex-start"><div style="width:36px;height:36px;border-radius:8px;background:rgba(255,107,74,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#FF6B4A;font-size:14px">●</div><div><div style="font-size:17px;font-weight:700;margin-bottom:2px">${p.title}</div><div style="font-size:14px;color:#aaa;line-height:1.5">${p.description}</div></div></div>`;
+      });
+    }
+    if (slide.content.columns) {
+      bodyHTML += `<div style="display:flex;gap:14px;margin-top:8px">`;
+      slide.content.columns.forEach(col => {
+        const isDark = col.dark;
+        const bg = isDark ? "linear-gradient(135deg,#FF6B4A,#E91E84)" : "rgba(255,255,255,0.04)";
+        const border = isDark ? "none" : "1px solid rgba(255,255,255,0.1)";
+        const opacity = col.dimmed ? "0.5" : "1";
+        bodyHTML += `<div style="flex:1;padding:18px;border-radius:12px;background:${bg};border:${border};opacity:${opacity}">`;
+        bodyHTML += `<div style="font-size:15px;font-weight:700;margin-bottom:8px;text-transform:uppercase;letter-spacing:1px">${col.title}</div>`;
+        if (col.description) bodyHTML += `<div style="font-size:13px;color:${isDark ? 'rgba(255,255,255,0.85)' : '#aaa'};line-height:1.5">${col.description}</div>`;
+        if (col.items) col.items.forEach(item => { bodyHTML += `<div style="font-size:13px;color:${isDark ? 'rgba(255,255,255,0.85)' : '#aaa'};margin:6px 0;line-height:1.4">${isDark ? '✓' : '✗'} ${item}</div>`; });
+        if (col.footerNote) bodyHTML += `<div style="font-size:11px;font-style:italic;opacity:0.6;border-top:1px solid rgba(255,255,255,0.2);padding-top:10px;margin-top:10px">${col.footerNote}</div>`;
+        bodyHTML += `</div>`;
+      });
+      bodyHTML += `</div>`;
+    }
+    if (slide.content.searchQuery) {
+      bodyHTML += `<div style="display:flex;justify-content:center;margin-bottom:16px"><div style="max-width:600px;width:100%;padding:14px 24px;border-radius:999px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;gap:10px"><span style="color:#888;font-size:16px">🔍</span><span style="color:#888;font-size:16px;font-style:italic">${slide.content.searchQuery}</span></div></div>`;
+      if (slide.content.searchCaption) bodyHTML += `<div style="text-align:center;font-size:12px;color:#888;text-transform:uppercase;letter-spacing:2px;margin-bottom:16px">${slide.content.searchCaption}</div>`;
+    }
+    if (slide.content.message) bodyHTML += `<p style="font-size:22px;color:#aaa;line-height:1.6;max-width:700px;margin:0 0 20px">${slide.content.message}</p>`;
+
+    let calloutHTML = "";
+    if (slide.content.callout) calloutHTML = `<div style="margin-top:auto;padding:18px 24px;background:linear-gradient(135deg,#FF6B4A,#E91E84);border-radius:12px"><p style="font-size:15px;font-style:italic;margin:0;color:#fff;line-height:1.5">${slide.content.callout}</p></div>`;
+
+    let footerHTML = "";
+    if (slide.footer || slide.footerRight) {
+      footerHTML = `<div style="margin-top:auto;padding-top:12px;border-top:1px solid rgba(255,255,255,0.1);display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#666"><span style="max-width:70%">${slide.footer || ""}</span>${slide.footerRight ? `<span style="font-weight:700;text-transform:uppercase;letter-spacing:3px;font-size:10px">${slide.footerRight}</span>` : ""}</div>`;
+    }
+
+    let contentInner = bodyHTML;
+    if (hasImage) {
+      contentInner = `<div style="display:flex;gap:24px;flex:1;min-height:0"><div style="flex:3;display:flex;flex-direction:column;justify-content:center;gap:8px">${bodyHTML}</div><div style="flex:2;display:flex;align-items:center;justify-content:center"><img src="${image}" style="width:100%;max-width:320px;border-radius:16px;object-fit:cover;aspect-ratio:1" crossorigin="anonymous" /></div></div>`;
+    }
+    const mainContent = hasImage ? contentInner : `<div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:8px;min-height:0">${bodyHTML}</div>`;
+    el.innerHTML = `<div style="flex-shrink:0">${headerHTML}</div>${mainContent}${calloutHTML}${footerHTML}`;
+    return el;
+  };
+
   const handleExportPDF = async () => {
     setIsExporting(true);
     try {
       const html2pdf = (await import("html2pdf.js")).default;
 
-      // Build all slides as individual page divs
-      const pagesContainer = document.createElement("div");
-      pagesContainer.style.cssText = "width:1280px;";
-      
-      for (let i = 0; i < total; i++) {
-        const slide = presentationSlides[i];
-        const page = document.createElement("div");
-        // Use explicit height, NO page-break-after (html2pdf handles it via format size)
-        page.style.cssText = `width:1280px;height:720px;background:#0a0a0f;color:#fff;padding:48px;box-sizing:border-box;font-family:'Space Grotesk','Inter',system-ui,sans-serif;position:relative;overflow:hidden;display:flex;flex-direction:column;`;
+      // Hidden wrapper for rendering
+      const wrapper = document.createElement("div");
+      wrapper.style.cssText = "position:fixed;left:-9999px;top:0;";
+      document.body.appendChild(wrapper);
 
-        const image = slideImages[slide.id];
-        const hasImage = !!image && slide.layout === "text-image";
+      // Build all slide elements
+      const slideEls = presentationSlides.map(s => {
+        const el = buildSlideHTML(s);
+        wrapper.appendChild(el);
+        return el;
+      });
 
-        let headerHTML = "";
-        if (slide.subtitle) {
-          headerHTML += `<div style="font-size:11px;text-transform:uppercase;letter-spacing:4px;color:#999;margin-bottom:8px;font-weight:700">${slide.subtitle}</div>`;
-        }
-        headerHTML += `<div style="font-size:40px;font-weight:800;line-height:1.1;margin-bottom:4px;color:#fff">${slide.title}</div>`;
-        if (slide.titleAccent) {
-          headerHTML += `<div style="font-size:40px;font-weight:300;font-style:italic;color:#FF6B4A;margin-bottom:4px">${slide.titleAccent}</div>`;
-        }
-        headerHTML += `<div style="width:60px;height:3px;background:linear-gradient(135deg,#FF6B4A,#E91E84);margin:12px 0 24px"></div>`;
+      // Wait for images to load
+      await new Promise(r => setTimeout(r, 800));
 
-        let bodyHTML = "";
-        
-        if (slide.content.intro) {
-          bodyHTML += `<p style="font-size:17px;color:#aaa;line-height:1.6;max-width:${hasImage ? '600' : '800'}px;margin:0 0 20px">${slide.content.intro}</p>`;
-        }
+      const opt = {
+        margin: 0,
+        image: { type: "jpeg", quality: 0.95 },
+        html2canvas: { scale: 2, backgroundColor: "#0a0a0f", useCORS: true },
+        jsPDF: { unit: "px", format: [1280, 720], orientation: "landscape" as const, hotfixes: ["px_scaling"] },
+      };
 
-        if (slide.content.beforeAfter) {
-          bodyHTML += `<div style="margin-bottom:16px">`;
-          bodyHTML += `<div style="display:flex;align-items:center;gap:16px;padding:16px 20px;border-radius:10px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);margin-bottom:10px"><span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:3px;color:#888;width:50px">${slide.content.beforeAfter.before.label}</span><span style="font-size:18px;font-weight:600">${slide.content.beforeAfter.before.text}</span></div>`;
-          bodyHTML += `<div style="display:flex;align-items:center;gap:16px;padding:16px 20px;border-radius:10px;background:linear-gradient(135deg,#FF6B4A,#E91E84)"><span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:3px;opacity:0.7;width:50px">${slide.content.beforeAfter.after.label}</span><span style="font-size:18px;font-weight:600">${slide.content.beforeAfter.after.text}</span></div>`;
-          bodyHTML += `</div>`;
-        }
+      // Chain: render first slide, then addPage + render for each subsequent slide
+      let worker = html2pdf().set(opt).from(slideEls[0]).toPdf();
 
-        if (slide.content.points) {
-          slide.content.points.forEach(p => {
-            bodyHTML += `<div style="display:flex;gap:14px;margin-bottom:14px;align-items:flex-start">`;
-            bodyHTML += `<div style="width:36px;height:36px;border-radius:8px;background:rgba(255,107,74,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#FF6B4A;font-size:14px">●</div>`;
-            bodyHTML += `<div><div style="font-size:17px;font-weight:700;margin-bottom:2px">${p.title}</div><div style="font-size:14px;color:#aaa;line-height:1.5">${p.description}</div></div>`;
-            bodyHTML += `</div>`;
-          });
-        }
-
-        if (slide.content.columns) {
-          bodyHTML += `<div style="display:flex;gap:14px;margin-top:8px">`;
-          slide.content.columns.forEach(col => {
-            const isDark = col.dark;
-            const bg = isDark ? "linear-gradient(135deg,#FF6B4A,#E91E84)" : "rgba(255,255,255,0.04)";
-            const border = isDark ? "none" : "1px solid rgba(255,255,255,0.1)";
-            const opacity = col.dimmed ? "0.5" : "1";
-            bodyHTML += `<div style="flex:1;padding:18px;border-radius:12px;background:${bg};border:${border};opacity:${opacity}">`;
-            bodyHTML += `<div style="font-size:15px;font-weight:700;margin-bottom:8px;text-transform:uppercase;letter-spacing:1px">${col.title}</div>`;
-            if (col.description) bodyHTML += `<div style="font-size:13px;color:${isDark ? 'rgba(255,255,255,0.85)' : '#aaa'};line-height:1.5">${col.description}</div>`;
-            if (col.items) {
-              col.items.forEach(item => {
-                bodyHTML += `<div style="font-size:13px;color:${isDark ? 'rgba(255,255,255,0.85)' : '#aaa'};margin:6px 0;line-height:1.4">${isDark ? '✓' : '✗'} ${item}</div>`;
-              });
-            }
-            if (col.footerNote) {
-              bodyHTML += `<div style="font-size:11px;font-style:italic;opacity:0.6;border-top:1px solid rgba(255,255,255,0.2);padding-top:10px;margin-top:10px">${col.footerNote}</div>`;
-            }
-            bodyHTML += `</div>`;
-          });
-          bodyHTML += `</div>`;
-        }
-
-        if (slide.content.searchQuery) {
-          bodyHTML += `<div style="display:flex;justify-content:center;margin-bottom:16px"><div style="max-width:600px;width:100%;padding:14px 24px;border-radius:999px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;gap:10px"><span style="color:#888;font-size:16px">🔍</span><span style="color:#888;font-size:16px;font-style:italic">${slide.content.searchQuery}</span></div></div>`;
-          if (slide.content.searchCaption) {
-            bodyHTML += `<div style="text-align:center;font-size:12px;color:#888;text-transform:uppercase;letter-spacing:2px;margin-bottom:16px">${slide.content.searchCaption}</div>`;
-          }
-        }
-
-        if (slide.content.message) {
-          bodyHTML += `<p style="font-size:22px;color:#aaa;line-height:1.6;max-width:700px;margin:0 0 20px">${slide.content.message}</p>`;
-        }
-
-        let calloutHTML = "";
-        if (slide.content.callout) {
-          calloutHTML = `<div style="margin-top:auto;padding:18px 24px;background:linear-gradient(135deg,#FF6B4A,#E91E84);border-radius:12px"><p style="font-size:15px;font-style:italic;margin:0;color:#fff;line-height:1.5">${slide.content.callout}</p></div>`;
-        }
-
-        let footerHTML = "";
-        if (slide.footer || slide.footerRight) {
-          footerHTML = `<div style="margin-top:auto;padding-top:12px;border-top:1px solid rgba(255,255,255,0.1);display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#666">`;
-          footerHTML += `<span style="max-width:70%">${slide.footer || ""}</span>`;
-          if (slide.footerRight) footerHTML += `<span style="font-weight:700;text-transform:uppercase;letter-spacing:3px;font-size:10px">${slide.footerRight}</span>`;
-          footerHTML += `</div>`;
-        }
-
-        // Build content area - with image panel if applicable
-        let contentInner = bodyHTML;
-        if (hasImage) {
-          contentInner = `<div style="display:flex;gap:24px;flex:1;min-height:0">
-            <div style="flex:3;display:flex;flex-direction:column;justify-content:center;gap:8px">${bodyHTML}</div>
-            <div style="flex:2;display:flex;align-items:center;justify-content:center">
-              <img src="${image}" style="width:100%;max-width:320px;border-radius:16px;object-fit:cover;aspect-ratio:1" crossorigin="anonymous" />
-            </div>
-          </div>`;
-        }
-
-        const mainContent = hasImage ? contentInner : `<div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:8px;min-height:0">${bodyHTML}</div>`;
-
-        page.innerHTML = `<div style="flex-shrink:0">${headerHTML}</div>${mainContent}${calloutHTML}${footerHTML}`;
-        pagesContainer.appendChild(page);
+      for (let j = 1; j < slideEls.length; j++) {
+        worker = worker
+          .get("pdf")
+          .then((pdf: any) => { pdf.addPage([1280, 720], "landscape"); })
+          .from(slideEls[j])
+          .toContainer()
+          .toCanvas()
+          .toPdf();
       }
 
-      // Temporarily add to DOM for rendering
-      pagesContainer.style.position = "fixed";
-      pagesContainer.style.left = "-9999px";
-      pagesContainer.style.top = "0";
-      document.body.appendChild(pagesContainer);
+      await worker
+        .save("Presentacion-Taller-Liderazgo-Digital.pdf");
 
-      // Small delay to let images load
-      await new Promise(r => setTimeout(r, 500));
-
-      await html2pdf()
-        .set({
-          margin: 0,
-          filename: "Presentacion-Taller-Liderazgo-Digital.pdf",
-          image: { type: "jpeg", quality: 0.95 },
-          html2canvas: { scale: 2, backgroundColor: "#0a0a0f", useCORS: true, width: 1280, height: 720 },
-          jsPDF: { unit: "px", format: [1280, 720], orientation: "landscape", hotfixes: ["px_scaling"] },
-          pagebreak: { mode: ["css"], before: ".pdf-page-break" },
-        })
-        .from(pagesContainer)
-        .save();
-
-      document.body.removeChild(pagesContainer);
+      document.body.removeChild(wrapper);
     } catch (err) {
       console.error("PDF export failed:", err);
     } finally {
