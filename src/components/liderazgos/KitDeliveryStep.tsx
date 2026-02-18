@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Gift, Globe, Users, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { KitPDFGenerator } from "./KitPDFGenerator";
 
 interface KitDeliveryStepProps {
   participantId: string;
@@ -57,6 +58,8 @@ export function KitDeliveryStep({ participantId, profileToken, name, onActivateR
             <ExternalLink className="w-4 h-4 ml-2" />
           </Button>
         </a>
+
+        <KitPDFGenerator participantId={participantId} />
 
         {communityLink && (
           <a href={communityLink} target="_blank" rel="noopener noreferrer" className="block">
