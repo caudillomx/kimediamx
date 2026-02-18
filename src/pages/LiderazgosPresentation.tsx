@@ -345,77 +345,73 @@ export default function LiderazgosPresentation() {
   const handleExportPDF = async () => {
     setIsExporting(true);
     try {
-      const [{ default: html2pdf }, html2canvasMod] = await Promise.all([
-        import("html2pdf.js"),
-        import("html2pdf.js"),
-      ]);
+      const html2pdfModule = await import("html2pdf.js");
+      const html2pdf = html2pdfModule.default;
 
-      // We'll use jsPDF directly via html2pdf's bundled version
-      const { jsPDF } = (await import("html2pdf.js") as any).default?.Worker?.prototype || {};
-
-      // Hidden wrapper for rendering
+      // Create off-screen container
       const wrapper = document.createElement("div");
-      wrapper.style.cssText = "position:fixed;left:-9999px;top:0;";
+      wrapper.style.cssText = "position:fixed;left:-9999px;top:0;z-index:-1;";
       document.body.appendChild(wrapper);
 
-      // Build all slide elements
-      const slideEls = presentationSlides.map(s => {
-        const el = buildSlideHTML(s);
-        wrapper.appendChild(el);
-        return el;
+      // Build one single stacked container with CSS page breaks
+      const container = document.createElement("div");
+      container.style.cssText = "width:1280px;";
+
+      presentationSlides.forEach((slide, i) => {
+        const slideEl = buildSlideHTML(slide);
+        slideEl.style.position = "relative";
+        if (i < presentationSlides.length - 1) {
+          slideEl.style.pageBreakAfter = "always";
+        }
+        slideEl.style.pageBreakInside = "avoid";
+        container.appendChild(slideEl);
       });
 
-      // Wait for images to load
-      await new Promise(r => setTimeout(r, 1000));
+      wrapper.appendChild(container);
 
-      // Use html2canvas to render each slide, then compose into a single PDF
-      const html2canvas = (window as any).html2canvas || (await import("html2pdf.js")).default;
-
-      // Render first slide to get a PDF started
-      const opt = {
-        margin: 0,
-        image: { type: "jpeg", quality: 0.95 },
-        html2canvas: { scale: 2, backgroundColor: "#0a0a0f", useCORS: true },
-        jsPDF: { unit: "px", format: [1280, 720], orientation: "landscape" as const, hotfixes: ["px_scaling"] },
-      };
-
-      // Use a single-slide-at-a-time approach with sequential PDF generation
-      const worker = html2pdf().set(opt);
-
-      // Create a container that holds all slides stacked vertically with page breaks
-      const pdfContainer = document.createElement("div");
-      slideEls.forEach((el, i) => {
-        const page = document.createElement("div");
-        page.style.cssText = `width:1280px;height:720px;overflow:hidden;${i > 0 ? 'page-break-before:always;' : ''}`;
-        // Clone the content into the page wrapper
-        page.innerHTML = el.innerHTML;
-        // Copy background styles
-        page.style.background = "#0a0a0f";
-        page.style.color = "#fff";
-        page.style.padding = "48px";
-        page.style.boxSizing = "border-box";
-        page.style.fontFamily = "'Space Grotesk','Inter',system-ui,sans-serif";
-        page.style.display = "flex";
-        page.style.flexDirection = "column";
-        pdfContainer.appendChild(page);
-      });
-
-      wrapper.innerHTML = "";
-      wrapper.appendChild(pdfContainer);
-
-      // Wait for re-render
-      await new Promise(r => setTimeout(r, 500));
+      // Wait for all images to finish loading
+      const images = container.querySelectorAll("img");
+      await Promise.all(
+        Array.from(images).map(
+          (img) =>
+            new Promise<void>((resolve) => {
+              if (img.complete) return resolve();
+              img.onload = () => resolve();
+              img.onerror = () => resolve();
+            })
+        )
+      );
+      // Extra buffer for fonts
+      await new Promise((r) => setTimeout(r, 600));
 
       await html2pdf()
         .set({
           margin: 0,
-          image: { type: "jpeg", quality: 0.95 },
-          html2canvas: { scale: 2, backgroundColor: "#0a0a0f", useCORS: true },
-          jsPDF: { unit: "px", format: [1280, 720], orientation: "landscape" as const, hotfixes: ["px_scaling"] },
-          pagebreak: { mode: ["css"], avoid: [] },
+          filename: "Presentacion-Taller-Liderazgo-Digital.pdf",
+          image: { type: "jpeg", quality: 0.92 },
+          html2canvas: {
+            scale: 2,
+            backgroundColor: "#0a0a0f",
+            useCORS: true,
+            logging: false,
+            width: 1280,
+            windowWidth: 1280,
+          },
+          jsPDF: {
+            unit: "px",
+            format: [1280, 720],
+            orientation: "landscape" as const,
+            hotfixes: ["px_scaling"],
+          },
+          pagebreak: {
+            mode: ["css"],
+            before: [],
+            after: [],
+            avoid: [],
+          },
         })
-        .from(pdfContainer)
-        .save("Presentacion-Taller-Liderazgo-Digital.pdf");
+        .from(container)
+        .save();
 
       document.body.removeChild(wrapper);
     } catch (err) {
