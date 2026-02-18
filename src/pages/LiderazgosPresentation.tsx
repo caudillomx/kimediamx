@@ -51,19 +51,19 @@ function SlideRenderer({ slide }: { slide: SlideData }) {
     <div className="w-full h-full flex flex-col overflow-hidden">
       {/* Slide brand bar */}
       <div className="shrink-0 flex items-center gap-3 px-8 md:px-12 lg:px-16 pt-6 pb-2">
-        <img src={kimediaLogo} alt="KiMedia" className="h-5 w-auto opacity-60" />
-        <span className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground/50 font-bold">
+        <img src={kimediaLogo} alt="KiMedia" className="h-6 w-auto opacity-60" />
+        <span className="text-xs uppercase tracking-[0.25em] text-muted-foreground/50 font-bold">
           Taller de Presencia Digital
         </span>
       </div>
       {/* Header */}
-      <div className="mb-6 md:mb-8 shrink-0 px-8 md:px-12 lg:px-16">
+      <div className="mb-4 md:mb-6 shrink-0 px-8 md:px-12 lg:px-16">
         {slide.subtitle && (
-          <span className="text-xs md:text-sm uppercase tracking-[0.3em] font-bold text-muted-foreground mb-2 block">
+          <span className="text-sm md:text-base uppercase tracking-[0.3em] font-bold text-muted-foreground mb-2 block">
             {slide.subtitle}
           </span>
         )}
-        <h1 className="text-3xl md:text-5xl lg:text-6xl font-extrabold tracking-tight leading-tight">
+        <h1 className="text-4xl md:text-6xl lg:text-7xl font-extrabold tracking-tight leading-tight">
           <span className="text-foreground">{slide.title}</span>
           {slide.titleAccent && (
             <>
@@ -72,14 +72,14 @@ function SlideRenderer({ slide }: { slide: SlideData }) {
             </>
           )}
         </h1>
-        <div className="w-16 md:w-20 h-1 bg-gradient-coral mt-4" />
+        <div className="w-16 md:w-24 h-1 bg-gradient-coral mt-4" />
       </div>
 
       {/* Content area */}
       <div className={`flex-1 min-h-0 flex ${hasImage ? "flex-col md:flex-row gap-8" : "flex-col"} justify-center gap-6 px-8 md:px-12 lg:px-16`}>
         <div className={`flex flex-col justify-center gap-6 ${hasImage ? "md:w-3/5" : ""}`}>
           {content.intro && (
-            <p className="text-lg md:text-2xl text-muted-foreground leading-relaxed max-w-4xl">
+            <p className="text-xl md:text-3xl text-muted-foreground leading-relaxed max-w-4xl">
               {content.intro}
             </p>
           )}
@@ -88,18 +88,18 @@ function SlideRenderer({ slide }: { slide: SlideData }) {
           {content.beforeAfter && (
             <div className="space-y-4">
               <div className="flex items-center gap-6 p-5 rounded-xl bg-secondary/50 border border-border/50">
-                <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground w-16">
+                <span className="text-sm font-bold uppercase tracking-widest text-muted-foreground w-20">
                   {content.beforeAfter.before.label}
                 </span>
-                <span className="text-lg md:text-xl font-semibold text-foreground">
+                <span className="text-xl md:text-2xl font-semibold text-foreground">
                   {content.beforeAfter.before.text}
                 </span>
               </div>
               <div className="flex items-center gap-6 p-5 rounded-xl bg-gradient-coral text-primary-foreground">
-                <span className="text-xs font-bold uppercase tracking-widest opacity-70 w-16">
+                <span className="text-sm font-bold uppercase tracking-widest opacity-70 w-20">
                   {content.beforeAfter.after.label}
                 </span>
-                <span className="text-lg md:text-xl font-semibold">
+                <span className="text-xl md:text-2xl font-semibold">
                   {content.beforeAfter.after.text}
                 </span>
               </div>
@@ -111,12 +111,12 @@ function SlideRenderer({ slide }: { slide: SlideData }) {
             <div className="space-y-5">
               {content.points.map((p, i) => (
                 <div key={i} className="flex items-start gap-5">
-                  <div className="shrink-0 w-12 h-12 rounded-lg bg-secondary flex items-center justify-center text-primary">
-                    <SlideIcon name={p.icon} className="w-5 h-5" />
+                  <div className="shrink-0 w-14 h-14 rounded-lg bg-secondary flex items-center justify-center text-primary">
+                    <SlideIcon name={p.icon} className="w-6 h-6" />
                   </div>
                   <div>
-                    <h3 className="text-lg md:text-xl font-bold text-foreground mb-1">{p.title}</h3>
-                    <p className="text-muted-foreground text-base md:text-lg leading-relaxed">{p.description}</p>
+                    <h3 className="text-xl md:text-2xl font-bold text-foreground mb-1">{p.title}</h3>
+                    <p className="text-muted-foreground text-lg md:text-xl leading-relaxed">{p.description}</p>
                   </div>
                 </div>
               ))}
@@ -143,8 +143,8 @@ function SlideRenderer({ slide }: { slide: SlideData }) {
                 <div className="text-primary">
                   <SlideIcon name={col.icon} className="w-8 h-8" />
                 </div>
-                <h3 className="text-lg font-bold text-foreground">{col.title}</h3>
-                <p className="text-muted-foreground leading-relaxed">{col.description}</p>
+                <h3 className="text-xl font-bold text-foreground">{col.title}</h3>
+                <p className="text-muted-foreground text-lg leading-relaxed">{col.description}</p>
               </div>
             ))}
           </div>
@@ -164,13 +164,13 @@ function SlideRenderer({ slide }: { slide: SlideData }) {
               >
                 <div className="flex items-center gap-3">
                   <SlideIcon name={col.icon} className="w-7 h-7" />
-                  <h3 className="text-xl font-bold uppercase tracking-tight">{col.title}</h3>
+                  <h3 className="text-2xl font-bold uppercase tracking-tight">{col.title}</h3>
                 </div>
                 <ul className="space-y-4 flex-1">
                   {col.items?.map((item, j) => (
                     <li key={j} className="flex items-start gap-3">
                       <span className="mt-1">{col.dark ? "✓" : "✗"}</span>
-                      <p className="text-base md:text-lg">{item}</p>
+                      <p className="text-lg md:text-xl">{item}</p>
                     </li>
                   ))}
                 </ul>
@@ -190,9 +190,9 @@ function SlideRenderer({ slide }: { slide: SlideData }) {
             <div className="flex flex-col items-center gap-4">
               <div className="w-full max-w-2xl rounded-full bg-secondary/50 border border-border p-4 px-8 flex items-center gap-4">
                 <Search className="w-5 h-5 text-muted-foreground" />
-                <span className="text-lg text-muted-foreground italic">{content.searchQuery}</span>
+                <span className="text-xl text-muted-foreground italic">{content.searchQuery}</span>
               </div>
-              <p className="text-sm text-muted-foreground uppercase tracking-wide font-medium">
+              <p className="text-base text-muted-foreground uppercase tracking-wide font-medium">
                 {content.searchCaption}
               </p>
             </div>
@@ -202,9 +202,9 @@ function SlideRenderer({ slide }: { slide: SlideData }) {
                   <div key={i} className="flex flex-col gap-4 p-6 rounded-xl bg-secondary/30 border-l-4 border-primary">
                     <div className="flex items-center gap-3">
                       <SlideIcon name={col.icon} className="w-6 h-6 text-primary" />
-                      <h3 className="text-xl font-bold text-foreground">{col.title}</h3>
+                      <h3 className="text-2xl font-bold text-foreground">{col.title}</h3>
                     </div>
-                    <p className="text-muted-foreground text-lg leading-relaxed">{col.description}</p>
+                    <p className="text-muted-foreground text-xl leading-relaxed">{col.description}</p>
                   </div>
                 ))}
               </div>
@@ -214,7 +214,7 @@ function SlideRenderer({ slide }: { slide: SlideData }) {
 
         {/* Cover message */}
         {layout === "cover" && content.message && (
-          <p className="text-xl md:text-3xl text-muted-foreground max-w-3xl leading-relaxed">
+          <p className="text-2xl md:text-4xl text-muted-foreground max-w-3xl leading-relaxed">
             {content.message}
           </p>
         )}
@@ -222,7 +222,7 @@ function SlideRenderer({ slide }: { slide: SlideData }) {
         {/* Callout */}
         {content.callout && (
           <div className="mt-auto bg-gradient-coral text-primary-foreground p-6 md:p-8 rounded-xl shadow-glow">
-            <p className="text-lg md:text-xl font-medium leading-snug italic">
+            <p className="text-xl md:text-2xl font-medium leading-snug italic">
               {content.callout}
             </p>
           </div>
@@ -231,10 +231,10 @@ function SlideRenderer({ slide }: { slide: SlideData }) {
 
       {/* Footer */}
       {(slide.footer || slide.footerRight) && (
-        <div className="shrink-0 mt-6 pt-4 border-t border-border/50 flex justify-between items-center text-sm text-muted-foreground px-8 md:px-12 lg:px-16 pb-6">
+        <div className="shrink-0 mt-4 pt-4 border-t border-border/50 flex justify-between items-center text-base text-muted-foreground px-8 md:px-12 lg:px-16 pb-6">
           <span className="max-w-[70%]">{slide.footer}</span>
           {slide.footerRight && (
-            <span className="font-bold uppercase tracking-widest text-xs">{slide.footerRight}</span>
+            <span className="font-bold uppercase tracking-widest text-sm">{slide.footerRight}</span>
           )}
         </div>
       )}
@@ -285,22 +285,22 @@ export default function LiderazgosPresentation() {
     el.style.cssText = `width:1280px;height:720px;background:#0a0a0f;color:#fff;padding:48px;box-sizing:border-box;font-family:'Space Grotesk','Inter',system-ui,sans-serif;position:relative;overflow:hidden;display:flex;flex-direction:column;`;
 
     // Brand bar for PDF
-    const brandBarHTML = `<div style="display:flex;align-items:center;gap:10px;padding-bottom:8px;flex-shrink:0"><img src="${kimediaLogo}" style="height:16px;opacity:0.6" crossorigin="anonymous" /><span style="font-size:9px;text-transform:uppercase;letter-spacing:3px;color:rgba(255,255,255,0.35);font-weight:700">Taller de Presencia Digital</span></div>`;
+    const brandBarHTML = `<div style="display:flex;align-items:center;gap:10px;padding-bottom:8px;flex-shrink:0"><img src="${kimediaLogo}" style="height:18px;opacity:0.6" crossorigin="anonymous" /><span style="font-size:11px;text-transform:uppercase;letter-spacing:3px;color:rgba(255,255,255,0.35);font-weight:700">Taller de Presencia Digital</span></div>`;
 
     let headerHTML = "";
-    if (slide.subtitle) headerHTML += `<div style="font-size:11px;text-transform:uppercase;letter-spacing:4px;color:#999;margin-bottom:8px;font-weight:700">${slide.subtitle}</div>`;
-    headerHTML += `<div style="font-size:40px;font-weight:800;line-height:1.1;margin-bottom:4px;color:#fff">${slide.title}</div>`;
-    if (slide.titleAccent) headerHTML += `<div style="font-size:40px;font-weight:300;font-style:italic;color:#FF6B4A;margin-bottom:4px">${slide.titleAccent}</div>`;
-    headerHTML += `<div style="width:60px;height:3px;background:linear-gradient(135deg,#FF6B4A,#E91E84);margin:12px 0 24px"></div>`;
+    if (slide.subtitle) headerHTML += `<div style="font-size:14px;text-transform:uppercase;letter-spacing:4px;color:#999;margin-bottom:8px;font-weight:700">${slide.subtitle}</div>`;
+    headerHTML += `<div style="font-size:48px;font-weight:800;line-height:1.1;margin-bottom:4px;color:#fff">${slide.title}</div>`;
+    if (slide.titleAccent) headerHTML += `<div style="font-size:48px;font-weight:300;font-style:italic;color:#FF6B4A;margin-bottom:4px">${slide.titleAccent}</div>`;
+    headerHTML += `<div style="width:70px;height:3px;background:linear-gradient(135deg,#FF6B4A,#E91E84);margin:12px 0 20px"></div>`;
 
     let bodyHTML = "";
-    if (slide.content.intro) bodyHTML += `<p style="font-size:17px;color:#aaa;line-height:1.6;max-width:${hasImage ? '600' : '800'}px;margin:0 0 20px">${slide.content.intro}</p>`;
+    if (slide.content.intro) bodyHTML += `<p style="font-size:21px;color:#aaa;line-height:1.6;max-width:${hasImage ? '600' : '800'}px;margin:0 0 20px">${slide.content.intro}</p>`;
     if (slide.content.beforeAfter) {
-      bodyHTML += `<div style="margin-bottom:16px"><div style="display:flex;align-items:center;gap:16px;padding:16px 20px;border-radius:10px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);margin-bottom:10px"><span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:3px;color:#888;width:50px">${slide.content.beforeAfter.before.label}</span><span style="font-size:18px;font-weight:600">${slide.content.beforeAfter.before.text}</span></div><div style="display:flex;align-items:center;gap:16px;padding:16px 20px;border-radius:10px;background:linear-gradient(135deg,#FF6B4A,#E91E84)"><span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:3px;opacity:0.7;width:50px">${slide.content.beforeAfter.after.label}</span><span style="font-size:18px;font-weight:600">${slide.content.beforeAfter.after.text}</span></div></div>`;
+      bodyHTML += `<div style="margin-bottom:16px"><div style="display:flex;align-items:center;gap:16px;padding:16px 20px;border-radius:10px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);margin-bottom:10px"><span style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:3px;color:#888;width:60px">${slide.content.beforeAfter.before.label}</span><span style="font-size:22px;font-weight:600">${slide.content.beforeAfter.before.text}</span></div><div style="display:flex;align-items:center;gap:16px;padding:16px 20px;border-radius:10px;background:linear-gradient(135deg,#FF6B4A,#E91E84)"><span style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:3px;opacity:0.7;width:60px">${slide.content.beforeAfter.after.label}</span><span style="font-size:22px;font-weight:600">${slide.content.beforeAfter.after.text}</span></div></div>`;
     }
     if (slide.content.points) {
       slide.content.points.forEach(p => {
-        bodyHTML += `<div style="display:flex;gap:14px;margin-bottom:14px;align-items:flex-start"><div style="width:36px;height:36px;border-radius:8px;background:rgba(255,107,74,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#FF6B4A;font-size:14px">●</div><div><div style="font-size:17px;font-weight:700;margin-bottom:2px">${p.title}</div><div style="font-size:14px;color:#aaa;line-height:1.5">${p.description}</div></div></div>`;
+        bodyHTML += `<div style="display:flex;gap:14px;margin-bottom:14px;align-items:flex-start"><div style="width:40px;height:40px;border-radius:8px;background:rgba(255,107,74,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#FF6B4A;font-size:16px">●</div><div><div style="font-size:21px;font-weight:700;margin-bottom:2px">${p.title}</div><div style="font-size:17px;color:#aaa;line-height:1.5">${p.description}</div></div></div>`;
       });
     }
     if (slide.content.columns) {
@@ -311,26 +311,26 @@ export default function LiderazgosPresentation() {
         const border = isDark ? "none" : "1px solid rgba(255,255,255,0.1)";
         const opacity = col.dimmed ? "0.5" : "1";
         bodyHTML += `<div style="flex:1;padding:18px;border-radius:12px;background:${bg};border:${border};opacity:${opacity}">`;
-        bodyHTML += `<div style="font-size:15px;font-weight:700;margin-bottom:8px;text-transform:uppercase;letter-spacing:1px">${col.title}</div>`;
-        if (col.description) bodyHTML += `<div style="font-size:13px;color:${isDark ? 'rgba(255,255,255,0.85)' : '#aaa'};line-height:1.5">${col.description}</div>`;
-        if (col.items) col.items.forEach(item => { bodyHTML += `<div style="font-size:13px;color:${isDark ? 'rgba(255,255,255,0.85)' : '#aaa'};margin:6px 0;line-height:1.4">${isDark ? '✓' : '✗'} ${item}</div>`; });
-        if (col.footerNote) bodyHTML += `<div style="font-size:11px;font-style:italic;opacity:0.6;border-top:1px solid rgba(255,255,255,0.2);padding-top:10px;margin-top:10px">${col.footerNote}</div>`;
+        bodyHTML += `<div style="font-size:18px;font-weight:700;margin-bottom:8px;text-transform:uppercase;letter-spacing:1px">${col.title}</div>`;
+        if (col.description) bodyHTML += `<div style="font-size:16px;color:${isDark ? 'rgba(255,255,255,0.85)' : '#aaa'};line-height:1.5">${col.description}</div>`;
+        if (col.items) col.items.forEach(item => { bodyHTML += `<div style="font-size:16px;color:${isDark ? 'rgba(255,255,255,0.85)' : '#aaa'};margin:6px 0;line-height:1.4">${isDark ? '✓' : '✗'} ${item}</div>`; });
+        if (col.footerNote) bodyHTML += `<div style="font-size:13px;font-style:italic;opacity:0.6;border-top:1px solid rgba(255,255,255,0.2);padding-top:10px;margin-top:10px">${col.footerNote}</div>`;
         bodyHTML += `</div>`;
       });
       bodyHTML += `</div>`;
     }
     if (slide.content.searchQuery) {
-      bodyHTML += `<div style="display:flex;justify-content:center;margin-bottom:16px"><div style="max-width:600px;width:100%;padding:14px 24px;border-radius:999px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;gap:10px"><span style="color:#888;font-size:16px">🔍</span><span style="color:#888;font-size:16px;font-style:italic">${slide.content.searchQuery}</span></div></div>`;
-      if (slide.content.searchCaption) bodyHTML += `<div style="text-align:center;font-size:12px;color:#888;text-transform:uppercase;letter-spacing:2px;margin-bottom:16px">${slide.content.searchCaption}</div>`;
+      bodyHTML += `<div style="display:flex;justify-content:center;margin-bottom:16px"><div style="max-width:700px;width:100%;padding:14px 24px;border-radius:999px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;gap:10px"><span style="color:#888;font-size:20px">🔍</span><span style="color:#888;font-size:20px;font-style:italic">${slide.content.searchQuery}</span></div></div>`;
+      if (slide.content.searchCaption) bodyHTML += `<div style="text-align:center;font-size:14px;color:#888;text-transform:uppercase;letter-spacing:2px;margin-bottom:16px">${slide.content.searchCaption}</div>`;
     }
-    if (slide.content.message) bodyHTML += `<p style="font-size:22px;color:#aaa;line-height:1.6;max-width:700px;margin:0 0 20px">${slide.content.message}</p>`;
+    if (slide.content.message) bodyHTML += `<p style="font-size:28px;color:#aaa;line-height:1.6;max-width:700px;margin:0 0 20px">${slide.content.message}</p>`;
 
     let calloutHTML = "";
-    if (slide.content.callout) calloutHTML = `<div style="margin-top:auto;padding:18px 24px;background:linear-gradient(135deg,#FF6B4A,#E91E84);border-radius:12px"><p style="font-size:15px;font-style:italic;margin:0;color:#fff;line-height:1.5">${slide.content.callout}</p></div>`;
+    if (slide.content.callout) calloutHTML = `<div style="margin-top:auto;padding:18px 24px;background:linear-gradient(135deg,#FF6B4A,#E91E84);border-radius:12px"><p style="font-size:19px;font-style:italic;margin:0;color:#fff;line-height:1.5">${slide.content.callout}</p></div>`;
 
     let footerHTML = "";
     if (slide.footer || slide.footerRight) {
-      footerHTML = `<div style="margin-top:auto;padding-top:12px;border-top:1px solid rgba(255,255,255,0.1);display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#666"><span style="max-width:70%">${slide.footer || ""}</span>${slide.footerRight ? `<span style="font-weight:700;text-transform:uppercase;letter-spacing:3px;font-size:10px">${slide.footerRight}</span>` : ""}</div>`;
+      footerHTML = `<div style="margin-top:auto;padding-top:12px;border-top:1px solid rgba(255,255,255,0.1);display:flex;justify-content:space-between;align-items:center;font-size:14px;color:#666"><span style="max-width:70%">${slide.footer || ""}</span>${slide.footerRight ? `<span style="font-weight:700;text-transform:uppercase;letter-spacing:3px;font-size:13px">${slide.footerRight}</span>` : ""}</div>`;
     }
 
     let contentInner = bodyHTML;
