@@ -23,8 +23,16 @@ export function AccessCodeScreen({ onValidCode }: AccessCodeScreenProps) {
     setLoading(true);
     try {
       const { data, error } = await supabase.rpc("increment_code_usage", { code_text: trimmed });
+      const success = !error && data === true;
 
-      if (error || data === false) {
+      // Log every attempt (fire-and-forget so it never blocks the user)
+      supabase.from("access_logs").insert({
+        code_entered: trimmed,
+        success,
+        user_agent: navigator.userAgent?.slice(0, 300) ?? null,
+      }).then(() => {});
+
+      if (!success) {
         toast({
           title: "Código inválido",
           description: "Este acceso es exclusivo para participantes autorizadas. Si necesitas ingresar, solicita tu código al equipo organizador.",
@@ -34,6 +42,12 @@ export function AccessCodeScreen({ onValidCode }: AccessCodeScreenProps) {
         onValidCode(trimmed);
       }
     } catch {
+      // Still log failures
+      supabase.from("access_logs").insert({
+        code_entered: trimmed,
+        success: false,
+        user_agent: navigator.userAgent?.slice(0, 300) ?? null,
+      }).then(() => {});
       toast({ title: "Error de conexión", description: "Intenta de nuevo.", variant: "destructive" });
     } finally {
       setLoading(false);

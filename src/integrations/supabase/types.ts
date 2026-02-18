@@ -50,6 +50,33 @@ export type Database = {
         }
         Relationships: []
       }
+      access_logs: {
+        Row: {
+          code_entered: string
+          created_at: string
+          id: string
+          ip_hint: string | null
+          success: boolean
+          user_agent: string | null
+        }
+        Insert: {
+          code_entered: string
+          created_at?: string
+          id?: string
+          ip_hint?: string | null
+          success?: boolean
+          user_agent?: string | null
+        }
+        Update: {
+          code_entered?: string
+          created_at?: string
+          id?: string
+          ip_hint?: string | null
+          success?: boolean
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       app_settings: {
         Row: {
           id: string
