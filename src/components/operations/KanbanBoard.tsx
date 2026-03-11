@@ -141,12 +141,19 @@ function KanbanCard({
       )}
 
       <div className="relative z-10 space-y-2">
-        {/* Category + Priority */}
+        {/* Client + Category + Priority */}
         <div className="flex items-center justify-between">
-          <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-1">
-            <Tag className="w-3 h-3" />
-            {cat?.label || item.category}
-          </span>
+          <div className="flex items-center gap-1.5">
+            {item.client && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-coral/10 text-coral font-medium truncate max-w-[80px]">
+                {item.client}
+              </span>
+            )}
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-1">
+              <Tag className="w-3 h-3" />
+              {cat?.label || item.category}
+            </span>
+          </div>
           {pri && (
             <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${
               item.priority === "alta" ? "bg-destructive/20 text-destructive" :
