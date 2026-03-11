@@ -151,7 +151,7 @@ const OperationsDashboard = () => {
             ))}
           </div>
 
-          {viewMode !== "pipeline" && (
+          {!["pipeline", "interactions"].includes(viewMode) && (
             <Button
               onClick={() => { setSelectedItem(null); setIsNewItem(true); }}
               className="bg-gradient-coral text-primary-foreground font-semibold ml-auto"
