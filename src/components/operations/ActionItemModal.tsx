@@ -102,6 +102,21 @@ const ActionItemModal = ({ item, teamMembers, open, onClose, onSave, onCreate, i
             />
           </div>
 
+          <div className="space-y-2">
+            <Label className="text-foreground">Cliente / Proyecto</Label>
+            <Select value={form.client || "none"} onValueChange={(v) => setForm(prev => ({ ...prev, client: v === "none" ? null : v }))}>
+              <SelectTrigger className="bg-secondary border-border">
+                <SelectValue placeholder="Seleccionar cliente..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Sin asignar</SelectItem>
+                {CLIENTS.map(c => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label className="text-foreground">Responsable</Label>
