@@ -81,7 +81,7 @@ const OperationsLogin = () => {
           </div>
 
           <form onSubmit={handleAuth} className="space-y-4">
-            {isSignUp && (
+            {isSignUp && !isForgot && (
               <div className="space-y-2">
                 <Label htmlFor="fullName" className="text-foreground">Nombre completo</Label>
                 <Input
@@ -109,25 +109,38 @@ const OperationsLogin = () => {
                 />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-foreground">Contraseña</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="bg-secondary border-border"
-                required
-                minLength={6}
-              />
-            </div>
+            {!isForgot && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password" className="text-foreground">Contraseña</Label>
+                  {!isSignUp && (
+                    <button
+                      type="button"
+                      onClick={() => setIsForgot(true)}
+                      className="text-xs text-muted-foreground hover:text-coral transition-colors"
+                    >
+                      ¿Olvidaste tu contraseña?
+                    </button>
+                  )}
+                </div>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="bg-secondary border-border"
+                  required
+                  minLength={6}
+                />
+              </div>
+            )}
             <Button
               type="submit"
               disabled={loading}
               className="w-full bg-gradient-coral hover:opacity-90 text-primary-foreground font-semibold group"
             >
-              {loading ? "Cargando..." : isSignUp ? "Crear cuenta" : "Entrar"}
+              {loading ? "Cargando..." : isForgot ? "Enviar enlace" : isSignUp ? "Crear cuenta" : "Entrar"}
               <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
             </Button>
           </form>
