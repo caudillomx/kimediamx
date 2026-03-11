@@ -77,6 +77,69 @@ export type Database = {
         }
         Relationships: []
       }
+      action_items: {
+        Row: {
+          category: string
+          completed_at: string | null
+          created_at: string
+          description: string
+          due_date: string | null
+          id: string
+          minute_id: string | null
+          notes: string | null
+          priority: string
+          responsible_id: string | null
+          responsible_name: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          completed_at?: string | null
+          created_at?: string
+          description: string
+          due_date?: string | null
+          id?: string
+          minute_id?: string | null
+          notes?: string | null
+          priority?: string
+          responsible_id?: string | null
+          responsible_name?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          completed_at?: string | null
+          created_at?: string
+          description?: string
+          due_date?: string | null
+          id?: string
+          minute_id?: string | null
+          notes?: string | null
+          priority?: string
+          responsible_id?: string | null
+          responsible_name?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "action_items_minute_id_fkey"
+            columns: ["minute_id"]
+            isOneToOne: false
+            referencedRelation: "minutes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "action_items_responsible_id_fkey"
+            columns: ["responsible_id"]
+            isOneToOne: false
+            referencedRelation: "team_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       app_settings: {
         Row: {
           id: string
@@ -239,6 +302,39 @@ export type Database = {
         }
         Relationships: []
       }
+      minutes: {
+        Row: {
+          created_at: string
+          file_name: string | null
+          id: string
+          meeting_date: string
+          parsed: boolean
+          raw_text: string | null
+          title: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          file_name?: string | null
+          id?: string
+          meeting_date?: string
+          parsed?: boolean
+          raw_text?: string | null
+          title: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          file_name?: string | null
+          id?: string
+          meeting_date?: string
+          parsed?: boolean
+          raw_text?: string | null
+          title?: string
+          uploaded_by?: string | null
+        }
+        Relationships: []
+      }
       participants: {
         Row: {
           access_code_used: string
@@ -395,6 +491,38 @@ export type Database = {
         }
         Relationships: []
       }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          team_member_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id: string
+          team_member_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          team_member_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_team_member_id_fkey"
+            columns: ["team_member_id"]
+            isOneToOne: false
+            referencedRelation: "team_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quiz_submissions: {
         Row: {
           answers: Json
@@ -474,6 +602,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      team_members: {
+        Row: {
+          avatar_color: string | null
+          category: string
+          created_at: string
+          email: string | null
+          full_name: string
+          id: string
+          is_active: boolean
+          role_title: string
+        }
+        Insert: {
+          avatar_color?: string | null
+          category?: string
+          created_at?: string
+          email?: string | null
+          full_name: string
+          id?: string
+          is_active?: boolean
+          role_title: string
+        }
+        Update: {
+          avatar_color?: string | null
+          category?: string
+          created_at?: string
+          email?: string | null
+          full_name?: string
+          id?: string
+          is_active?: boolean
+          role_title?: string
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {
