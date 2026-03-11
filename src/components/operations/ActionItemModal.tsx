@@ -28,6 +28,7 @@ const ActionItemModal = ({ item, teamMembers, open, onClose, onSave, onCreate, i
     priority: "media",
     due_date: "" as string | null,
     notes: "" as string | null,
+    client: "" as string | null,
   });
 
   useEffect(() => {
