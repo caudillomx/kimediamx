@@ -244,6 +244,15 @@ const OperationsDashboard = () => {
             <motion.div key="pipeline" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               <PipelineBoard deals={deals} teamMembers={teamMembers} onSelectDeal={(deal) => { setSelectedDeal(deal); setIsNewDeal(false); }} onUpdateDeal={updateDeal} onNewDeal={() => { setSelectedDeal(null); setIsNewDeal(true); }} />
             </motion.div>
+          ) : viewMode === "interactions" ? (
+            <motion.div key="interactions" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <InteractionsView
+                interactions={interactions}
+                onSelectInteraction={(i) => { setSelectedInteraction(i); setIsNewInteraction(false); }}
+                onNewInteraction={() => { setSelectedInteraction(null); setIsNewInteraction(true); }}
+                onToggleFollowUp={(id, done) => updateInteraction(id, { follow_up_done: done })}
+              />
+            </motion.div>
           ) : null}
         </AnimatePresence>
 
@@ -267,6 +276,16 @@ const OperationsDashboard = () => {
           onSave={updateDeal}
           onCreate={createDeal}
           isNew={isNewDeal}
+        />
+
+        {/* Interaction Modal */}
+        <InteractionModal
+          interaction={isNewInteraction ? null : selectedInteraction}
+          open={!!selectedInteraction || isNewInteraction}
+          onClose={() => { setSelectedInteraction(null); setIsNewInteraction(false); }}
+          onSave={updateInteraction}
+          onCreate={createInteraction}
+          isNew={isNewInteraction}
         />
       </div>
     </div>
