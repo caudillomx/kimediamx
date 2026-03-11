@@ -4,6 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import { useOperationsData, ActionItem } from "@/hooks/useOperationsData";
 import { useDealsData, Deal } from "@/hooks/useDealsData";
+import { useInteractionsData, Interaction } from "@/hooks/useInteractionsData";
+import InteractionsView from "@/components/operations/InteractionsView";
+import InteractionModal from "@/components/operations/InteractionModal";
 import StatsBar from "@/components/operations/StatsBar";
 import KanbanBoard from "@/components/operations/KanbanBoard";
 import ListView from "@/components/operations/ListView";
@@ -20,11 +23,11 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   LayoutGrid, List, Plus, Search, LogOut, RefreshCw, Filter, X,
-  Users, Building2, CalendarDays, TrendingUp,
+  Users, Building2, CalendarDays, TrendingUp, MessageSquare,
 } from "lucide-react";
 import { CATEGORIES, CLIENTS } from "@/hooks/useOperationsData";
 
-type ViewMode = "kanban" | "list" | "person" | "client" | "calendar" | "pipeline";
+type ViewMode = "kanban" | "list" | "person" | "client" | "calendar" | "pipeline" | "interactions";
 
 const VIEW_TABS = [
   { value: "kanban" as ViewMode, label: "Kanban", icon: LayoutGrid },
@@ -33,12 +36,14 @@ const VIEW_TABS = [
   { value: "client" as ViewMode, label: "Clientes", icon: Building2 },
   { value: "calendar" as ViewMode, label: "Calendario", icon: CalendarDays },
   { value: "pipeline" as ViewMode, label: "Pipeline", icon: TrendingUp },
+  { value: "interactions" as ViewMode, label: "Externos", icon: MessageSquare },
 ];
 
 const OperationsDashboard = () => {
   const navigate = useNavigate();
   const { actionItems, teamMembers, minutes, loading, updateActionItem, createActionItem, refetch } = useOperationsData();
   const { deals, createDeal, updateDeal, refetch: refetchDeals } = useDealsData();
+  const { interactions, createInteraction, updateInteraction, refetch: refetchInteractions } = useInteractionsData();
   const [session, setSession] = useState<any>(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>("kanban");
@@ -46,6 +51,8 @@ const OperationsDashboard = () => {
   const [isNewItem, setIsNewItem] = useState(false);
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
   const [isNewDeal, setIsNewDeal] = useState(false);
+  const [selectedInteraction, setSelectedInteraction] = useState<Interaction | null>(null);
+  const [isNewInteraction, setIsNewInteraction] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterMember, setFilterMember] = useState<string | null>(null);
   const [filterCategory, setFilterCategory] = useState<string | null>(null);
@@ -89,7 +96,7 @@ const OperationsDashboard = () => {
   };
 
   const activeFilters = [filterMember, filterCategory, filterClient, searchQuery].filter(Boolean).length;
-  const showFilters = !["pipeline", "person", "client"].includes(viewMode);
+  const showFilters = !["pipeline", "person", "client", "interactions"].includes(viewMode);
 
   return (
     <div className="min-h-screen bg-background relative">
@@ -103,11 +110,11 @@ const OperationsDashboard = () => {
               Operaciones <span className="text-gradient">KiMedia</span>
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
-              {filtered.length} actividades · {deals.length} oportunidades · {minutes.length} minutas
+              {filtered.length} actividades · {deals.length} oportunidades · {interactions.length} interacciones
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={() => { refetch(); refetchDeals(); }} className="text-muted-foreground hover:text-foreground">
+            <Button variant="ghost" size="sm" onClick={() => { refetch(); refetchDeals(); refetchInteractions(); }} className="text-muted-foreground hover:text-foreground">
               <RefreshCw className="w-4 h-4" />
             </Button>
             <Button variant="ghost" size="sm" onClick={handleLogout} className="text-muted-foreground hover:text-foreground">
@@ -144,7 +151,7 @@ const OperationsDashboard = () => {
             ))}
           </div>
 
-          {viewMode !== "pipeline" && (
+          {!["pipeline", "interactions"].includes(viewMode) && (
             <Button
               onClick={() => { setSelectedItem(null); setIsNewItem(true); }}
               className="bg-gradient-coral text-primary-foreground font-semibold ml-auto"
@@ -237,6 +244,15 @@ const OperationsDashboard = () => {
             <motion.div key="pipeline" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               <PipelineBoard deals={deals} teamMembers={teamMembers} onSelectDeal={(deal) => { setSelectedDeal(deal); setIsNewDeal(false); }} onUpdateDeal={updateDeal} onNewDeal={() => { setSelectedDeal(null); setIsNewDeal(true); }} />
             </motion.div>
+          ) : viewMode === "interactions" ? (
+            <motion.div key="interactions" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <InteractionsView
+                interactions={interactions}
+                onSelectInteraction={(i) => { setSelectedInteraction(i); setIsNewInteraction(false); }}
+                onNewInteraction={() => { setSelectedInteraction(null); setIsNewInteraction(true); }}
+                onToggleFollowUp={(id, done) => updateInteraction(id, { follow_up_done: done })}
+              />
+            </motion.div>
           ) : null}
         </AnimatePresence>
 
@@ -260,6 +276,16 @@ const OperationsDashboard = () => {
           onSave={updateDeal}
           onCreate={createDeal}
           isNew={isNewDeal}
+        />
+
+        {/* Interaction Modal */}
+        <InteractionModal
+          interaction={isNewInteraction ? null : selectedInteraction}
+          open={!!selectedInteraction || isNewInteraction}
+          onClose={() => { setSelectedInteraction(null); setIsNewInteraction(false); }}
+          onSave={updateInteraction}
+          onCreate={createInteraction}
+          isNew={isNewInteraction}
         />
       </div>
     </div>
