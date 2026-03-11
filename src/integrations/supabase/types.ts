@@ -275,6 +275,39 @@ export type Database = {
         }
         Relationships: []
       }
+      client_contacts: {
+        Row: {
+          client_name: string
+          created_at: string
+          full_name: string
+          id: string
+          is_active: boolean
+          nicknames: string[] | null
+          notes: string | null
+          role_title: string | null
+        }
+        Insert: {
+          client_name: string
+          created_at?: string
+          full_name: string
+          id?: string
+          is_active?: boolean
+          nicknames?: string[] | null
+          notes?: string | null
+          role_title?: string | null
+        }
+        Update: {
+          client_name?: string
+          created_at?: string
+          full_name?: string
+          id?: string
+          is_active?: boolean
+          nicknames?: string[] | null
+          notes?: string | null
+          role_title?: string | null
+        }
+        Relationships: []
+      }
       deals: {
         Row: {
           client_name: string

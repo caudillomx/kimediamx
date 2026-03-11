@@ -30,12 +30,14 @@ serve(async (req) => {
     // Extract text from the file
     const text = await fileData.text();
 
-    // Get team members for matching
-    const { data: teamMembers } = await supabase
-      .from("team_members")
-      .select("id, full_name, role_title");
+    // Get team members and client contacts for matching
+    const [{ data: teamMembers }, { data: clientContacts }] = await Promise.all([
+      supabase.from("team_members").select("id, full_name, role_title"),
+      supabase.from("client_contacts").select("client_name, full_name, role_title, nicknames"),
+    ]);
 
     const teamList = (teamMembers || []).map(m => m.full_name).join(", ");
+    const contactsList = (clientContacts || []).map(c => `${c.full_name} (${c.role_title || 'contacto'} de ${c.client_name}, apodos: ${(c.nicknames || []).join(', ')})`).join("; ");
 
     // Use AI to parse the minutes
     const aiResponse = await fetch("https://api.lovable.dev/v1/chat/completions", {
@@ -51,7 +53,11 @@ serve(async (req) => {
             role: "system",
             content: `Eres un asistente que extrae tareas y compromisos de minutas de reunión de la agencia KiMedia.
 
-El equipo incluye: ${teamList}.
+El equipo interno incluye: ${teamList}.
+
+Contactos externos por cliente: ${contactsList}.
+
+IMPORTANTE: Cuando en la minuta aparezca un apodo o nombre corto (ej: "Mara", "Fili", "Nava"), resuélvelo al nombre completo del contacto o miembro del equipo correspondiente.
 
 Extrae cada tarea/compromiso/pendiente como un objeto JSON con estos campos:
 - description: descripción clara de la tarea
