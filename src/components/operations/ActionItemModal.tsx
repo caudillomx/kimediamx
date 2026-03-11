@@ -42,6 +42,7 @@ const ActionItemModal = ({ item, teamMembers, open, onClose, onSave, onCreate, i
         priority: item.priority,
         due_date: item.due_date,
         notes: item.notes,
+        client: item.client,
       });
     } else {
       setForm({
@@ -53,6 +54,7 @@ const ActionItemModal = ({ item, teamMembers, open, onClose, onSave, onCreate, i
         priority: "media",
         due_date: null,
         notes: null,
+        client: null,
       });
     }
   }, [item, open]);
