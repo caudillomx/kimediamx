@@ -96,7 +96,7 @@ const OperationsDashboard = () => {
   };
 
   const activeFilters = [filterMember, filterCategory, filterClient, searchQuery].filter(Boolean).length;
-  const showFilters = !["pipeline", "person", "client"].includes(viewMode);
+  const showFilters = !["pipeline", "person", "client", "interactions"].includes(viewMode);
 
   return (
     <div className="min-h-screen bg-background relative">
