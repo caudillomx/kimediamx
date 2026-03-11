@@ -31,6 +31,7 @@ const OperationsDashboard = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterMember, setFilterMember] = useState<string | null>(null);
   const [filterCategory, setFilterCategory] = useState<string | null>(null);
+  const [filterClient, setFilterClient] = useState<string | null>(null);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
