@@ -23,7 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   LayoutGrid, List, Plus, Search, LogOut, RefreshCw, Filter, X,
-  Users, Building2, CalendarDays, TrendingUp,
+  Users, Building2, CalendarDays, TrendingUp, MessageSquare,
 } from "lucide-react";
 import { CATEGORIES, CLIENTS } from "@/hooks/useOperationsData";
 
