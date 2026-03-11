@@ -25,6 +25,7 @@ import NotFound from "./pages/NotFound";
 import Tools from "./pages/Tools";
 import OperationsLogin from "./pages/OperationsLogin";
 import OperationsDashboard from "./pages/OperationsDashboard";
+import ResetPassword from "./pages/ResetPassword";
 
 const queryClient = new QueryClient();
 

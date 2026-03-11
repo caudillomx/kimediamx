@@ -146,12 +146,21 @@ const OperationsLogin = () => {
           </form>
 
           <div className="text-center">
-            <button
-              onClick={() => setIsSignUp(!isSignUp)}
-              className="text-sm text-muted-foreground hover:text-coral transition-colors"
-            >
-              {isSignUp ? "¿Ya tienes cuenta? Inicia sesión" : "¿Primera vez? Crea tu cuenta"}
-            </button>
+            {isForgot ? (
+              <button
+                onClick={() => setIsForgot(false)}
+                className="text-sm text-muted-foreground hover:text-coral transition-colors"
+              >
+                ← Volver al inicio de sesión
+              </button>
+            ) : (
+              <button
+                onClick={() => setIsSignUp(!isSignUp)}
+                className="text-sm text-muted-foreground hover:text-coral transition-colors"
+              >
+                {isSignUp ? "¿Ya tienes cuenta? Inicia sesión" : "¿Primera vez? Crea tu cuenta"}
+              </button>
+            )}
           </div>
         </div>
       </motion.div>
