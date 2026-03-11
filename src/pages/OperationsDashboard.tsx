@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 import { CATEGORIES, CLIENTS } from "@/hooks/useOperationsData";
 
-type ViewMode = "kanban" | "list" | "person" | "client" | "calendar" | "pipeline";
+type ViewMode = "kanban" | "list" | "person" | "client" | "calendar" | "pipeline" | "interactions";
 
 const VIEW_TABS = [
   { value: "kanban" as ViewMode, label: "Kanban", icon: LayoutGrid },
@@ -36,6 +36,7 @@ const VIEW_TABS = [
   { value: "client" as ViewMode, label: "Clientes", icon: Building2 },
   { value: "calendar" as ViewMode, label: "Calendario", icon: CalendarDays },
   { value: "pipeline" as ViewMode, label: "Pipeline", icon: TrendingUp },
+  { value: "interactions" as ViewMode, label: "Externos", icon: MessageSquare },
 ];
 
 const OperationsDashboard = () => {
