@@ -110,7 +110,7 @@ const OperationsDashboard = () => {
               Operaciones <span className="text-gradient">KiMedia</span>
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
-              {filtered.length} actividades · {deals.length} oportunidades · {minutes.length} minutas
+              {filtered.length} actividades · {deals.length} oportunidades · {interactions.length} interacciones
             </p>
           </div>
           <div className="flex items-center gap-2">
