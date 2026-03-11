@@ -152,11 +152,23 @@ const OperationsDashboard = () => {
             </SelectContent>
           </Select>
 
+          <Select value={filterClient || "all"} onValueChange={(v) => setFilterClient(v === "all" ? null : v)}>
+            <SelectTrigger className="w-[180px] bg-secondary border-border">
+              <SelectValue placeholder="Cliente" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos los clientes</SelectItem>
+              {CLIENTS.map(c => (
+                <SelectItem key={c} value={c}>{c}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
           {activeFilters > 0 && (
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => { setSearchQuery(""); setFilterMember(null); setFilterCategory(null); }}
+              onClick={() => { setSearchQuery(""); setFilterMember(null); setFilterCategory(null); setFilterClient(null); }}
               className="text-muted-foreground"
             >
               <X className="w-3.5 h-3.5 mr-1" />
