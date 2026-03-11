@@ -400,6 +400,51 @@ export type Database = {
         }
         Relationships: []
       }
+      interactions: {
+        Row: {
+          client_name: string
+          contact_name: string
+          created_at: string
+          follow_up_date: string | null
+          follow_up_done: boolean
+          id: string
+          interaction_type: string
+          logged_by: string | null
+          notes: string | null
+          outcome: string | null
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          client_name: string
+          contact_name: string
+          created_at?: string
+          follow_up_date?: string | null
+          follow_up_done?: boolean
+          id?: string
+          interaction_type?: string
+          logged_by?: string | null
+          notes?: string | null
+          outcome?: string | null
+          subject: string
+          updated_at?: string
+        }
+        Update: {
+          client_name?: string
+          contact_name?: string
+          created_at?: string
+          follow_up_date?: string | null
+          follow_up_done?: boolean
+          id?: string
+          interaction_type?: string
+          logged_by?: string | null
+          notes?: string | null
+          outcome?: string | null
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       minutes: {
         Row: {
           created_at: string
