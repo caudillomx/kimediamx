@@ -275,6 +275,68 @@ export type Database = {
         }
         Relationships: []
       }
+      deals: {
+        Row: {
+          client_name: string
+          closed_date: string | null
+          contact_name: string | null
+          created_at: string
+          description: string | null
+          estimated_start_date: string | null
+          estimated_value: number | null
+          id: string
+          name: string
+          notes: string | null
+          responsible_id: string | null
+          responsible_name: string | null
+          source: string | null
+          stage: string
+          updated_at: string
+        }
+        Insert: {
+          client_name: string
+          closed_date?: string | null
+          contact_name?: string | null
+          created_at?: string
+          description?: string | null
+          estimated_start_date?: string | null
+          estimated_value?: number | null
+          id?: string
+          name: string
+          notes?: string | null
+          responsible_id?: string | null
+          responsible_name?: string | null
+          source?: string | null
+          stage?: string
+          updated_at?: string
+        }
+        Update: {
+          client_name?: string
+          closed_date?: string | null
+          contact_name?: string | null
+          created_at?: string
+          description?: string | null
+          estimated_start_date?: string | null
+          estimated_value?: number | null
+          id?: string
+          name?: string
+          notes?: string | null
+          responsible_id?: string | null
+          responsible_name?: string | null
+          source?: string | null
+          stage?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deals_responsible_id_fkey"
+            columns: ["responsible_id"]
+            isOneToOne: false
+            referencedRelation: "team_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       guide_registrations: {
         Row: {
           company_name: string | null
