@@ -108,6 +108,9 @@ export function useOperationsData() {
       .eq("id", id);
     if (error) {
       toast.error("Error al actualizar");
+    } else {
+      toast.success("Actividad actualizada");
+      fetchAll();
     }
   };
 
