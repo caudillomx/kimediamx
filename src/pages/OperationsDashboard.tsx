@@ -62,6 +62,7 @@ const OperationsDashboard = () => {
     if (searchQuery && !item.description.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     if (filterMember && item.responsible_name !== filterMember) return false;
     if (filterCategory && item.category !== filterCategory) return false;
+    if (filterClient && item.client !== filterClient) return false;
     return true;
   });
 
