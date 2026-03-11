@@ -114,7 +114,7 @@ const OperationsDashboard = () => {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={() => { refetch(); refetchDeals(); }} className="text-muted-foreground hover:text-foreground">
+            <Button variant="ghost" size="sm" onClick={() => { refetch(); refetchDeals(); refetchInteractions(); }} className="text-muted-foreground hover:text-foreground">
               <RefreshCw className="w-4 h-4" />
             </Button>
             <Button variant="ghost" size="sm" onClick={handleLogout} className="text-muted-foreground hover:text-foreground">
