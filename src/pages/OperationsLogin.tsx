@@ -22,7 +22,14 @@ const OperationsLogin = () => {
     setLoading(true);
 
     try {
-      if (isSignUp) {
+      if (isForgot) {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: window.location.origin + "/reset-password",
+        });
+        if (error) throw error;
+        toast.success("Revisa tu correo para restablecer tu contraseña");
+        setIsForgot(false);
+      } else if (isSignUp) {
         const { error } = await supabase.auth.signUp({
           email,
           password,
