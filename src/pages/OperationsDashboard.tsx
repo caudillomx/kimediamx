@@ -71,7 +71,7 @@ const OperationsDashboard = () => {
     navigate("/admin/operaciones/login");
   };
 
-  const activeFilters = [filterMember, filterCategory, searchQuery].filter(Boolean).length;
+  const activeFilters = [filterMember, filterCategory, filterClient, searchQuery].filter(Boolean).length;
 
   return (
     <div className="min-h-screen bg-background relative">
