@@ -16,7 +16,7 @@ import {
   LayoutGrid, List, Plus, Search, LogOut, RefreshCw, Filter, X,
 } from "lucide-react";
 import { toast } from "sonner";
-import { CATEGORIES } from "@/hooks/useOperationsData";
+import { CATEGORIES, CLIENTS } from "@/hooks/useOperationsData";
 
 type ViewMode = "kanban" | "list";
 
@@ -31,6 +31,7 @@ const OperationsDashboard = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterMember, setFilterMember] = useState<string | null>(null);
   const [filterCategory, setFilterCategory] = useState<string | null>(null);
+  const [filterClient, setFilterClient] = useState<string | null>(null);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
@@ -61,6 +62,7 @@ const OperationsDashboard = () => {
     if (searchQuery && !item.description.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     if (filterMember && item.responsible_name !== filterMember) return false;
     if (filterCategory && item.category !== filterCategory) return false;
+    if (filterClient && item.client !== filterClient) return false;
     return true;
   });
 
@@ -69,7 +71,7 @@ const OperationsDashboard = () => {
     navigate("/admin/operaciones/login");
   };
 
-  const activeFilters = [filterMember, filterCategory, searchQuery].filter(Boolean).length;
+  const activeFilters = [filterMember, filterCategory, filterClient, searchQuery].filter(Boolean).length;
 
   return (
     <div className="min-h-screen bg-background relative">
@@ -150,11 +152,23 @@ const OperationsDashboard = () => {
             </SelectContent>
           </Select>
 
+          <Select value={filterClient || "all"} onValueChange={(v) => setFilterClient(v === "all" ? null : v)}>
+            <SelectTrigger className="w-[180px] bg-secondary border-border">
+              <SelectValue placeholder="Cliente" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos los clientes</SelectItem>
+              {CLIENTS.map(c => (
+                <SelectItem key={c} value={c}>{c}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
           {activeFilters > 0 && (
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => { setSearchQuery(""); setFilterMember(null); setFilterCategory(null); }}
+              onClick={() => { setSearchQuery(""); setFilterMember(null); setFilterCategory(null); setFilterClient(null); }}
               className="text-muted-foreground"
             >
               <X className="w-3.5 h-3.5 mr-1" />

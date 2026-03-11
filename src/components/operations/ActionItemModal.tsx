@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ActionItem, TeamMember, CATEGORIES, STATUSES, PRIORITIES } from "@/hooks/useOperationsData";
+import { ActionItem, TeamMember, CATEGORIES, STATUSES, PRIORITIES, CLIENTS } from "@/hooks/useOperationsData";
 import { CalendarIcon, Save, Trash2 } from "lucide-react";
 
 interface ActionItemModalProps {
@@ -28,6 +28,7 @@ const ActionItemModal = ({ item, teamMembers, open, onClose, onSave, onCreate, i
     priority: "media",
     due_date: "" as string | null,
     notes: "" as string | null,
+    client: "" as string | null,
   });
 
   useEffect(() => {
@@ -41,6 +42,7 @@ const ActionItemModal = ({ item, teamMembers, open, onClose, onSave, onCreate, i
         priority: item.priority,
         due_date: item.due_date,
         notes: item.notes,
+        client: item.client,
       });
     } else {
       setForm({
@@ -52,6 +54,7 @@ const ActionItemModal = ({ item, teamMembers, open, onClose, onSave, onCreate, i
         priority: "media",
         due_date: null,
         notes: null,
+        client: null,
       });
     }
   }, [item, open]);
@@ -97,6 +100,21 @@ const ActionItemModal = ({ item, teamMembers, open, onClose, onSave, onCreate, i
               placeholder="¿Qué hay que hacer?"
               className="bg-secondary border-border min-h-[80px]"
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-foreground">Cliente / Proyecto</Label>
+            <Select value={form.client || "none"} onValueChange={(v) => setForm(prev => ({ ...prev, client: v === "none" ? null : v }))}>
+              <SelectTrigger className="bg-secondary border-border">
+                <SelectValue placeholder="Seleccionar cliente..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Sin asignar</SelectItem>
+                {CLIENTS.map(c => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="grid grid-cols-2 gap-3">

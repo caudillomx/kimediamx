@@ -14,9 +14,16 @@ export type ActionItem = {
   due_date: string | null;
   completed_at: string | null;
   notes: string | null;
+  client: string | null;
   created_at: string;
   updated_at: string;
 };
+
+export const CLIENTS = [
+  "Guanajuato", "Actinver", "El Diluvio", "Padre Sada",
+  "Mario Doria - Urólogo", "MID Clinic", "FIMEME", "KiMedia",
+  "Memeverso", "Mundo Empresarial", "Lidérate", "Strategos",
+];
 
 export type TeamMember = {
   id: string;

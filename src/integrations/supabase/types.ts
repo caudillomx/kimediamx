@@ -80,6 +80,7 @@ export type Database = {
       action_items: {
         Row: {
           category: string
+          client: string | null
           completed_at: string | null
           created_at: string
           description: string
@@ -95,6 +96,7 @@ export type Database = {
         }
         Insert: {
           category?: string
+          client?: string | null
           completed_at?: string | null
           created_at?: string
           description: string
@@ -110,6 +112,7 @@ export type Database = {
         }
         Update: {
           category?: string
+          client?: string | null
           completed_at?: string | null
           created_at?: string
           description?: string
