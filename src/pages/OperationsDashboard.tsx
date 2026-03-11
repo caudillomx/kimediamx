@@ -16,7 +16,7 @@ import {
   LayoutGrid, List, Plus, Search, LogOut, RefreshCw, Filter, X,
 } from "lucide-react";
 import { toast } from "sonner";
-import { CATEGORIES } from "@/hooks/useOperationsData";
+import { CATEGORIES, CLIENTS } from "@/hooks/useOperationsData";
 
 type ViewMode = "kanban" | "list";
 
