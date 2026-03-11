@@ -14,6 +14,7 @@ const OperationsLogin = () => {
   const [loading, setLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [fullName, setFullName] = useState("");
+  const [isForgot, setIsForgot] = useState(false);
   const navigate = useNavigate();
 
   const handleAuth = async (e: React.FormEvent) => {
@@ -21,7 +22,14 @@ const OperationsLogin = () => {
     setLoading(true);
 
     try {
-      if (isSignUp) {
+      if (isForgot) {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: window.location.origin + "/reset-password",
+        });
+        if (error) throw error;
+        toast.success("Revisa tu correo para restablecer tu contraseña");
+        setIsForgot(false);
+      } else if (isSignUp) {
         const { error } = await supabase.auth.signUp({
           email,
           password,
@@ -73,7 +81,7 @@ const OperationsLogin = () => {
           </div>
 
           <form onSubmit={handleAuth} className="space-y-4">
-            {isSignUp && (
+            {isSignUp && !isForgot && (
               <div className="space-y-2">
                 <Label htmlFor="fullName" className="text-foreground">Nombre completo</Label>
                 <Input
@@ -101,36 +109,58 @@ const OperationsLogin = () => {
                 />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-foreground">Contraseña</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="bg-secondary border-border"
-                required
-                minLength={6}
-              />
-            </div>
+            {!isForgot && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password" className="text-foreground">Contraseña</Label>
+                  {!isSignUp && (
+                    <button
+                      type="button"
+                      onClick={() => setIsForgot(true)}
+                      className="text-xs text-muted-foreground hover:text-coral transition-colors"
+                    >
+                      ¿Olvidaste tu contraseña?
+                    </button>
+                  )}
+                </div>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="bg-secondary border-border"
+                  required
+                  minLength={6}
+                />
+              </div>
+            )}
             <Button
               type="submit"
               disabled={loading}
               className="w-full bg-gradient-coral hover:opacity-90 text-primary-foreground font-semibold group"
             >
-              {loading ? "Cargando..." : isSignUp ? "Crear cuenta" : "Entrar"}
+              {loading ? "Cargando..." : isForgot ? "Enviar enlace" : isSignUp ? "Crear cuenta" : "Entrar"}
               <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
             </Button>
           </form>
 
           <div className="text-center">
-            <button
-              onClick={() => setIsSignUp(!isSignUp)}
-              className="text-sm text-muted-foreground hover:text-coral transition-colors"
-            >
-              {isSignUp ? "¿Ya tienes cuenta? Inicia sesión" : "¿Primera vez? Crea tu cuenta"}
-            </button>
+            {isForgot ? (
+              <button
+                onClick={() => setIsForgot(false)}
+                className="text-sm text-muted-foreground hover:text-coral transition-colors"
+              >
+                ← Volver al inicio de sesión
+              </button>
+            ) : (
+              <button
+                onClick={() => setIsSignUp(!isSignUp)}
+                className="text-sm text-muted-foreground hover:text-coral transition-colors"
+              >
+                {isSignUp ? "¿Ya tienes cuenta? Inicia sesión" : "¿Primera vez? Crea tu cuenta"}
+              </button>
+            )}
           </div>
         </div>
       </motion.div>

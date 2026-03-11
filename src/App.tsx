@@ -25,6 +25,7 @@ import NotFound from "./pages/NotFound";
 import Tools from "./pages/Tools";
 import OperationsLogin from "./pages/OperationsLogin";
 import OperationsDashboard from "./pages/OperationsDashboard";
+import ResetPassword from "./pages/ResetPassword";
 
 const queryClient = new QueryClient();
 
@@ -56,6 +57,7 @@ const App = () => (
           <Route path="/admin/liderazgos" element={<AdminLiderazgos />} />
           <Route path="/admin/operaciones/login" element={<OperationsLogin />} />
           <Route path="/admin/operaciones" element={<OperationsDashboard />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/tools" element={<Tools />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
