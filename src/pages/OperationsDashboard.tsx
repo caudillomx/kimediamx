@@ -43,6 +43,7 @@ const OperationsDashboard = () => {
   const navigate = useNavigate();
   const { actionItems, teamMembers, minutes, loading, updateActionItem, createActionItem, refetch } = useOperationsData();
   const { deals, createDeal, updateDeal, refetch: refetchDeals } = useDealsData();
+  const { interactions, createInteraction, updateInteraction, refetch: refetchInteractions } = useInteractionsData();
   const [session, setSession] = useState<any>(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>("kanban");
@@ -50,6 +51,8 @@ const OperationsDashboard = () => {
   const [isNewItem, setIsNewItem] = useState(false);
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
   const [isNewDeal, setIsNewDeal] = useState(false);
+  const [selectedInteraction, setSelectedInteraction] = useState<Interaction | null>(null);
+  const [isNewInteraction, setIsNewInteraction] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterMember, setFilterMember] = useState<string | null>(null);
   const [filterCategory, setFilterCategory] = useState<string | null>(null);
