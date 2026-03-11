@@ -23,6 +23,8 @@ import SocialSimulator from "./pages/SocialSimulator";
 import BrandPuzzle from "./pages/BrandPuzzle";
 import NotFound from "./pages/NotFound";
 import Tools from "./pages/Tools";
+import OperationsLogin from "./pages/OperationsLogin";
+import OperationsDashboard from "./pages/OperationsDashboard";
 
 const queryClient = new QueryClient();
 
@@ -52,6 +54,8 @@ const App = () => (
           <Route path="/simulador" element={<SocialSimulator />} />
           <Route path="/arcade" element={<BrandPuzzle />} />
           <Route path="/admin/liderazgos" element={<AdminLiderazgos />} />
+          <Route path="/admin/operaciones/login" element={<OperationsLogin />} />
+          <Route path="/admin/operaciones" element={<OperationsDashboard />} />
           <Route path="/tools" element={<Tools />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
