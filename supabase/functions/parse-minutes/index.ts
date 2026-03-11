@@ -53,7 +53,11 @@ serve(async (req) => {
             role: "system",
             content: `Eres un asistente que extrae tareas y compromisos de minutas de reunión de la agencia KiMedia.
 
-El equipo incluye: ${teamList}.
+El equipo interno incluye: ${teamList}.
+
+Contactos externos por cliente: ${contactsList}.
+
+IMPORTANTE: Cuando en la minuta aparezca un apodo o nombre corto (ej: "Mara", "Fili", "Nava"), resuélvelo al nombre completo del contacto o miembro del equipo correspondiente.
 
 Extrae cada tarea/compromiso/pendiente como un objeto JSON con estos campos:
 - description: descripción clara de la tarea
