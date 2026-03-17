@@ -104,6 +104,7 @@ const MinuteUploader = ({ onUploaded }: MinuteUploaderProps) => {
           accept=".docx,.doc,.txt,.pdf"
           className="hidden"
           onChange={(e) => {
+            console.log("MinuteUploader: file input changed, files:", e.target.files?.length);
             const file = e.target.files?.[0];
             if (file) handleFile(file);
           }}
