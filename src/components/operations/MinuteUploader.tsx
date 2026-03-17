@@ -17,6 +17,7 @@ const MinuteUploader = ({ onUploaded }: MinuteUploaderProps) => {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const handleFile = async (file: File) => {
+    console.log("MinuteUploader: handleFile called with", file.name, file.type, file.size);
     if (!file.name.match(/\.(docx|doc|txt|pdf)$/i)) {
       toast.error("Formato no soportado. Usa .docx, .doc, .txt o .pdf");
       return;
@@ -90,7 +91,7 @@ const MinuteUploader = ({ onUploaded }: MinuteUploaderProps) => {
         onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
         onDragLeave={() => setDragOver(false)}
         onDrop={handleDrop}
-        onClick={() => fileRef.current?.click()}
+        onClick={() => { console.log("MinuteUploader: zone clicked, triggering file input"); fileRef.current?.click(); }}
         className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all ${
           dragOver
             ? "border-coral bg-coral/5"
@@ -103,6 +104,7 @@ const MinuteUploader = ({ onUploaded }: MinuteUploaderProps) => {
           accept=".docx,.doc,.txt,.pdf"
           className="hidden"
           onChange={(e) => {
+            console.log("MinuteUploader: file input changed, files:", e.target.files?.length);
             const file = e.target.files?.[0];
             if (file) handleFile(file);
           }}
