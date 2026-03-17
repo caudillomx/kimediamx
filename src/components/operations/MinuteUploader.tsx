@@ -91,7 +91,7 @@ const MinuteUploader = ({ onUploaded }: MinuteUploaderProps) => {
         onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
         onDragLeave={() => setDragOver(false)}
         onDrop={handleDrop}
-        onClick={() => fileRef.current?.click()}
+        onClick={() => { console.log("MinuteUploader: zone clicked, triggering file input"); fileRef.current?.click(); }}
         className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all ${
           dragOver
             ? "border-coral bg-coral/5"
