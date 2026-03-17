@@ -40,7 +40,7 @@ serve(async (req) => {
     const contactsList = (clientContacts || []).map(c => `${c.full_name} (${c.role_title || 'contacto'} de ${c.client_name}, apodos: ${(c.nicknames || []).join(', ')})`).join("; ");
 
     // Use AI to parse the minutes
-    const aiResponse = await fetch("https://api.lovable.dev/v1/chat/completions", {
+    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
