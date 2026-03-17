@@ -1,10 +1,41 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import JSZip from "https://esm.sh/jszip@3.10.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+// Extract plain text from a .docx file (ZIP containing XML)
+async function extractDocxText(blob: Blob): Promise<string> {
+  try {
+    const arrayBuffer = await blob.arrayBuffer();
+    const zip = await JSZip.loadAsync(arrayBuffer);
+    const documentXml = await zip.file("word/document.xml")?.async("string");
+    if (!documentXml) {
+      console.log("No word/document.xml found, falling back to raw text");
+      return await blob.text();
+    }
+    // Strip XML tags, decode entities, clean up whitespace
+    const text = documentXml
+      .replace(/<w:p[^>]*>/g, "\n") // paragraph breaks
+      .replace(/<w:tab\/>/g, "\t") // tabs
+      .replace(/<w:br[^>]*\/>/g, "\n") // line breaks
+      .replace(/<[^>]+>/g, "") // strip all XML tags
+      .replace(/&amp;/g, "&")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&quot;/g, '"')
+      .replace(/&apos;/g, "'")
+      .replace(/\n{3,}/g, "\n\n") // collapse multiple newlines
+      .trim();
+    return text;
+  } catch (e) {
+    console.error("DOCX parse error, falling back to raw text:", e);
+    return await blob.text();
+  }
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -27,8 +58,10 @@ serve(async (req) => {
 
     if (downloadError) throw downloadError;
 
-    // Extract text from the file
-    const text = await fileData.text();
+    // Extract text from the file (handles .docx properly)
+    const isDocx = filePath.toLowerCase().endsWith(".docx");
+    const text = isDocx ? await extractDocxText(fileData) : await fileData.text();
+    console.log(`Extracted text length: ${text.length} chars (first 200): ${text.substring(0, 200)}`);
 
     // Get team members and client contacts for matching
     const [{ data: teamMembers }, { data: clientContacts }] = await Promise.all([
