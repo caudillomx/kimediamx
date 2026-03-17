@@ -65,8 +65,8 @@ const MinuteUploader = ({ onUploaded }: MinuteUploaderProps) => {
       setParsing(false);
       onUploaded();
     } catch (err: any) {
-      console.error(err);
-      toast.error("Error al subir la minuta");
+      console.error("MinuteUploader error:", err?.message, err?.statusCode, JSON.stringify(err));
+      toast.error(`Error al subir la minuta: ${err?.message || "desconocido"}`);
       setUploading(false);
       setParsing(false);
     }
