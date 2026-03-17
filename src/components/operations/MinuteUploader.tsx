@@ -17,6 +17,7 @@ const MinuteUploader = ({ onUploaded }: MinuteUploaderProps) => {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const handleFile = async (file: File) => {
+    console.log("MinuteUploader: handleFile called with", file.name, file.type, file.size);
     if (!file.name.match(/\.(docx|doc|txt|pdf)$/i)) {
       toast.error("Formato no soportado. Usa .docx, .doc, .txt o .pdf");
       return;
