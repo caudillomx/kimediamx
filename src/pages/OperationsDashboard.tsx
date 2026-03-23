@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import { useOperationsData, ActionItem } from "@/hooks/useOperationsData";
+import { useThemeToggle } from "@/hooks/useThemeToggle";
 import { useDealsData, Deal } from "@/hooks/useDealsData";
 import { useInteractionsData, Interaction } from "@/hooks/useInteractionsData";
 import InteractionsView from "@/components/operations/InteractionsView";
@@ -23,7 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   LayoutGrid, List, Plus, Search, LogOut, RefreshCw, Filter, X,
-  Users, Building2, CalendarDays, TrendingUp, MessageSquare,
+  Users, Building2, CalendarDays, TrendingUp, MessageSquare, Sun, Moon,
 } from "lucide-react";
 import { CATEGORIES, CLIENTS } from "@/hooks/useOperationsData";
 
@@ -42,6 +43,7 @@ const VIEW_TABS = [
 const OperationsDashboard = () => {
   const navigate = useNavigate();
   const { actionItems, teamMembers, minutes, loading, updateActionItem, createActionItem, refetch } = useOperationsData();
+  const { theme, toggle: toggleTheme, isDark } = useThemeToggle();
   const { deals, createDeal, updateDeal, refetch: refetchDeals } = useDealsData();
   const { interactions, createInteraction, updateInteraction, refetch: refetchInteractions } = useInteractionsData();
   const [session, setSession] = useState<any>(null);
@@ -99,7 +101,7 @@ const OperationsDashboard = () => {
   const showFilters = !["pipeline", "person", "client", "interactions"].includes(viewMode);
 
   return (
-    <div className="min-h-screen bg-background relative">
+    <div className={`min-h-screen bg-background relative ${isDark ? "" : "theme-light"}`}>
       <div className="fixed inset-0 bg-mesh opacity-30 pointer-events-none" />
 
       <div className="relative z-10 max-w-[1600px] mx-auto px-4 py-6 space-y-5">
@@ -114,6 +116,9 @@ const OperationsDashboard = () => {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={toggleTheme} className="text-muted-foreground hover:text-foreground">
+              {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </Button>
             <Button variant="ghost" size="sm" onClick={() => { refetch(); refetchDeals(); refetchInteractions(); }} className="text-muted-foreground hover:text-foreground">
               <RefreshCw className="w-4 h-4" />
             </Button>
