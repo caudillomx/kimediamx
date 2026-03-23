@@ -1,0 +1,1 @@
+UPDATE action_items SET description = REPLACE(description, 'Wendy Beana', 'Wendy Veana') WHERE description ILIKE '%Wendy Beana%';
