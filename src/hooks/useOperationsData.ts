@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -72,8 +72,10 @@ export function useOperationsData() {
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [minutes, setMinutes] = useState<Minute[]>([]);
   const [loading, setLoading] = useState(true);
+  // Track pending local updates to avoid realtime overwriting them
+  const pendingUpdates = useRef<Set<string>>(new Set());
 
-  const fetchAll = async () => {
+  const fetchAll = useCallback(async () => {
     setLoading(true);
     const [itemsRes, teamRes, minutesRes] = await Promise.all([
       supabase.from("action_items").select("*").order("created_at", { ascending: false }),
@@ -85,44 +87,61 @@ export function useOperationsData() {
     if (teamRes.data) setTeamMembers(teamRes.data as TeamMember[]);
     if (minutesRes.data) setMinutes(minutesRes.data as Minute[]);
     setLoading(false);
-  };
+  }, []);
 
   useEffect(() => {
     fetchAll();
 
-    // Realtime subscription
     const channel = supabase
       .channel("action_items_realtime")
-      .on("postgres_changes", { event: "*", schema: "public", table: "action_items" }, () => {
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "action_items" }, () => {
+        // Only full-refetch on inserts (e.g. new minute parsed)
         fetchAll();
+      })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "action_items" }, (payload) => {
+        const updated = payload.new as ActionItem;
+        // Skip if we already applied this optimistically
+        if (pendingUpdates.current.has(updated.id)) {
+          pendingUpdates.current.delete(updated.id);
+          return;
+        }
+        // Apply single-item update from another source
+        setActionItems(prev => prev.map(item => item.id === updated.id ? updated : item));
       })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, []);
+  }, [fetchAll]);
 
-  const updateActionItem = async (id: string, updates: Partial<ActionItem>) => {
+  const updateActionItem = useCallback(async (id: string, updates: Partial<ActionItem>) => {
+    // Optimistic update
+    pendingUpdates.current.add(id);
+    setActionItems(prev =>
+      prev.map(item => item.id === id ? { ...item, ...updates, updated_at: new Date().toISOString() } : item)
+    );
+
     const { error } = await supabase
       .from("action_items")
       .update(updates)
       .eq("id", id);
+
     if (error) {
       toast.error("Error al actualizar");
-    } else {
-      toast.success("Actividad actualizada");
-      fetchAll();
+      pendingUpdates.current.delete(id);
+      fetchAll(); // rollback by refetching
     }
-  };
+    // No toast on success for quick actions to reduce noise
+  }, [fetchAll]);
 
-  const createActionItem = async (item: Omit<ActionItem, "id" | "created_at" | "updated_at">) => {
+  const createActionItem = useCallback(async (item: Omit<ActionItem, "id" | "created_at" | "updated_at">) => {
     const { error } = await supabase.from("action_items").insert(item);
     if (error) {
       toast.error("Error al crear tarea");
     } else {
       toast.success("Tarea creada");
-      fetchAll();
+      // Realtime INSERT handler will refetch
     }
-  };
+  }, []);
 
   return { actionItems, teamMembers, minutes, loading, updateActionItem, createActionItem, refetch: fetchAll };
 }
