@@ -1,0 +1,1 @@
+UPDATE client_contacts SET full_name = 'Wendy Veana' WHERE id = 'ed13b2d5-d6e7-40df-bc2e-64d0ea058edb';
