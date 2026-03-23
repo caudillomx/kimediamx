@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Resend } from "https://esm.sh/resend@2.0.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
@@ -257,6 +258,36 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error("Missing required fields");
     }
 
+    // Verify submission exists and hasn't been sent
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    const { data: submission, error: queryError } = await supabase
+      .from("quiz_submissions")
+      .select("id, result_sent")
+      .eq("email", data.email)
+      .eq("quiz_type", data.quizType)
+      .eq("result_level", data.resultLevel)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
+
+    if (queryError || !submission) {
+      return new Response(
+        JSON.stringify({ error: "No matching quiz submission found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (submission.result_sent) {
+      return new Response(
+        JSON.stringify({ error: "Results already sent for this submission" }),
+        { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const quizName = data.quizType === "personal_brand" ? "Marca Personal" : "PyME";
 
     const emailResponse = await resend.emails.send({
@@ -265,6 +296,12 @@ const handler = async (req: Request): Promise<Response> => {
       subject: `Tu Diagnóstico de ${quizName} - KiMedia`,
       html: generateEmailHtml(data),
     });
+
+    // Mark as sent
+    await supabase
+      .from("quiz_submissions")
+      .update({ result_sent: true })
+      .eq("id", submission.id);
 
     console.log("Quiz results email sent successfully:", emailResponse);
 
