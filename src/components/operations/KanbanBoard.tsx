@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { ActionItem, TeamMember, STATUSES, CATEGORIES, PRIORITIES } from "@/hooks/useOperationsData";
-import { Clock, User, Tag, AlertCircle, GripVertical, ChevronDown, ChevronUp } from "lucide-react";
+import { Clock, User, Tag, AlertCircle, GripVertical, ChevronDown, ChevronUp, CheckCircle2, Circle } from "lucide-react";
 import { useState } from "react";
 import { format, isPast, isToday } from "date-fns";
 import { es } from "date-fns/locale";
@@ -144,6 +144,22 @@ function KanbanCard({
         {/* Client + Category + Priority */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5">
+            {/* Quick complete toggle */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                const isCompleted = item.status === "completado";
+                onStatusChange(item.id, isCompleted ? "pendiente" : "completado");
+              }}
+              className="shrink-0 text-muted-foreground hover:text-primary transition-colors"
+              title={item.status === "completado" ? "Marcar como pendiente" : "Marcar como completada"}
+            >
+              {item.status === "completado" ? (
+                <CheckCircle2 className="w-4 h-4 text-lime" />
+              ) : (
+                <Circle className="w-4 h-4" />
+              )}
+            </button>
             {item.client && (
               <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-coral/10 text-coral font-medium truncate max-w-[80px]">
                 {item.client}
@@ -166,7 +182,7 @@ function KanbanCard({
         </div>
 
         {/* Description */}
-        <p className="text-sm font-medium text-foreground leading-snug line-clamp-3">
+        <p className={`text-sm font-medium leading-snug line-clamp-3 ${item.status === "completado" ? "line-through text-muted-foreground" : "text-foreground"}`}>
           {item.description}
         </p>
 
