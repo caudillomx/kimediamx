@@ -6,6 +6,7 @@ import { useOperationsData, ActionItem } from "@/hooks/useOperationsData";
 import { useThemeToggle } from "@/hooks/useThemeToggle";
 import { useDealsData, Deal } from "@/hooks/useDealsData";
 import { useInteractionsData, Interaction } from "@/hooks/useInteractionsData";
+import { useObjectivesData } from "@/hooks/useObjectivesData";
 import InteractionsView from "@/components/operations/InteractionsView";
 import InteractionModal from "@/components/operations/InteractionModal";
 import StatsBar from "@/components/operations/StatsBar";
@@ -19,20 +20,22 @@ import DealModal from "@/components/operations/DealModal";
 import PersonView from "@/components/operations/PersonView";
 import ClientView from "@/components/operations/ClientView";
 import CalendarView from "@/components/operations/CalendarView";
+import ObjectivesView from "@/components/operations/ObjectivesView";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   LayoutGrid, List, Plus, Search, LogOut, RefreshCw, Filter, X,
-  Users, Building2, CalendarDays, TrendingUp, MessageSquare, Sun, Moon,
+  Users, Building2, CalendarDays, TrendingUp, MessageSquare, Sun, Moon, Target,
 } from "lucide-react";
 import { CATEGORIES, CLIENTS } from "@/hooks/useOperationsData";
 
-type ViewMode = "kanban" | "list" | "person" | "client" | "calendar" | "pipeline" | "interactions";
+type ViewMode = "kanban" | "list" | "person" | "client" | "calendar" | "pipeline" | "interactions" | "objectives";
 
 const VIEW_TABS = [
   { value: "kanban" as ViewMode, label: "Kanban", icon: LayoutGrid },
   { value: "list" as ViewMode, label: "Lista", icon: List },
+  { value: "objectives" as ViewMode, label: "Objetivos", icon: Target },
   { value: "person" as ViewMode, label: "Equipo", icon: Users },
   { value: "client" as ViewMode, label: "Clientes", icon: Building2 },
   { value: "calendar" as ViewMode, label: "Calendario", icon: CalendarDays },
@@ -46,6 +49,7 @@ const OperationsDashboard = () => {
   const { theme, toggle: toggleTheme, isDark } = useThemeToggle();
   const { deals, createDeal, updateDeal, refetch: refetchDeals } = useDealsData();
   const { interactions, createInteraction, updateInteraction, refetch: refetchInteractions } = useInteractionsData();
+  const { objectives, loading: loadingObjectives, refetch: refetchObjectives, toggleMilestone } = useObjectivesData();
   const [session, setSession] = useState<any>(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>("kanban");
@@ -98,7 +102,7 @@ const OperationsDashboard = () => {
   };
 
   const activeFilters = [filterMember, filterCategory, filterClient, searchQuery].filter(Boolean).length;
-  const showFilters = !["pipeline", "person", "client", "interactions"].includes(viewMode);
+  const showFilters = !["pipeline", "person", "client", "interactions", "objectives"].includes(viewMode);
 
   return (
     <div className={`min-h-screen bg-background relative ${isDark ? "" : "theme-light"}`}>
@@ -119,7 +123,7 @@ const OperationsDashboard = () => {
             <Button variant="ghost" size="sm" onClick={toggleTheme} className="text-muted-foreground hover:text-foreground">
               {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => { refetch(); refetchDeals(); refetchInteractions(); }} className="text-muted-foreground hover:text-foreground">
+            <Button variant="ghost" size="sm" onClick={() => { refetch(); refetchDeals(); refetchInteractions(); refetchObjectives(); }} className="text-muted-foreground hover:text-foreground">
               <RefreshCw className="w-4 h-4" />
             </Button>
             <Button variant="ghost" size="sm" onClick={handleLogout} className="text-muted-foreground hover:text-foreground">
@@ -156,7 +160,7 @@ const OperationsDashboard = () => {
             ))}
           </div>
 
-          {!["pipeline", "interactions"].includes(viewMode) && (
+          {!["pipeline", "interactions", "objectives"].includes(viewMode) && (
             <Button
               onClick={() => { setSelectedItem(null); setIsNewItem(true); }}
               className="bg-gradient-coral text-primary-foreground font-semibold ml-auto"
@@ -257,6 +261,10 @@ const OperationsDashboard = () => {
                 onNewInteraction={() => { setSelectedInteraction(null); setIsNewInteraction(true); }}
                 onToggleFollowUp={(id, done) => updateInteraction(id, { follow_up_done: done })}
               />
+            </motion.div>
+          ) : viewMode === "objectives" ? (
+            <motion.div key="objectives" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <ObjectivesView objectives={objectives} actionItems={actionItems} onToggleMilestone={toggleMilestone} />
             </motion.div>
           ) : null}
         </AnimatePresence>
