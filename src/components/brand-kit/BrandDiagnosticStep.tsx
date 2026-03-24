@@ -1,17 +1,10 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Activity, ArrowRight, HelpCircle, Target } from "lucide-react";
+import { Activity, ArrowRight, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Progress } from "@/components/ui/progress";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
-  diagnosticQuestions,
-  getDiagnosticLevel,
-  frequencyOptions,
-  perceptionOptions,
-  goalOptions,
+  diagnosticQuestions, getDiagnosticLevel, frequencyOptions, perceptionOptions, goalOptions,
 } from "@/data/brandKitData";
 
 interface BrandDiagnosticStepProps {
@@ -25,178 +18,148 @@ export function BrandDiagnosticStep({ onNext }: BrandDiagnosticStepProps) {
   const [goal, setGoal] = useState("");
   const [showResult, setShowResult] = useState(false);
 
-  const allAnswered = diagnosticQuestions.every((q) => answers[q.id] !== undefined);
+  const allAnswered = diagnosticQuestions.every(q => answers[q.id] !== undefined);
   const allExtras = frequency && perception && goal;
   const canProceed = allAnswered && allExtras;
   const totalScore = Object.values(answers).reduce((sum, v) => sum + v, 0);
   const result = getDiagnosticLevel(totalScore);
   const totalFields = diagnosticQuestions.length + 3;
-  const filledFields =
-    Object.keys(answers).length + (frequency ? 1 : 0) + (perception ? 1 : 0) + (goal ? 1 : 0);
-  const progress = (filledFields / totalFields) * 100;
+  const filledFields = Object.keys(answers).length + (frequency ? 1 : 0) + (perception ? 1 : 0) + (goal ? 1 : 0);
+  const progress = Math.round((filledFields / totalFields) * 100);
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: 40 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -40 }}
-      className="w-full max-w-lg mx-auto"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+      className="w-full max-w-xl mx-auto"
     >
-      <div className="text-center mb-6">
+      <div className="text-center mb-8">
         <motion.div
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
-          transition={{ type: "spring", stiffness: 200, delay: 0.1 }}
-          className="w-14 h-14 rounded-2xl bg-secondary flex items-center justify-center mx-auto mb-4"
+          transition={{ type: "spring", stiffness: 300, damping: 20 }}
+          className="w-16 h-16 rounded-3xl bg-secondary flex items-center justify-center mx-auto mb-5"
         >
-          <Activity className="w-7 h-7 text-coral" />
+          <Activity className="w-8 h-8 text-primary" />
         </motion.div>
-        <h2 className="font-display text-xl md:text-2xl font-bold text-foreground mb-1">
-          Diagnóstico de marca personal
+        <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground mb-2">
+          Diagnóstico de <span className="text-gradient">marca personal</span>
         </h2>
-        <TooltipProvider delayDuration={300}>
-          <p className="text-muted-foreground text-sm flex items-center justify-center gap-1">
-            Responde honestamente para conocer tu nivel
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <HelpCircle className="w-3.5 h-3.5 cursor-help" />
-              </TooltipTrigger>
-              <TooltipContent>
-                <p className="max-w-[220px] text-xs">
-                  Selecciona la opción que mejor describe tu situación actual. No hay respuestas correctas ni incorrectas.
-                </p>
-              </TooltipContent>
-            </Tooltip>
-          </p>
-        </TooltipProvider>
+        <p className="text-muted-foreground text-sm">Responde honestamente para conocer tu nivel</p>
       </div>
 
-      <Progress value={progress} className="mb-6 h-2" />
+      {/* Progress */}
+      <div className="flex items-center gap-3 mb-8">
+        <div className="flex-1 h-2 bg-secondary rounded-full overflow-hidden">
+          <motion.div
+            className="h-full bg-gradient-coral rounded-full"
+            initial={{ width: 0 }}
+            animate={{ width: `${progress}%` }}
+            transition={{ duration: 0.4 }}
+          />
+        </div>
+        <span className="text-xs font-medium text-muted-foreground w-10 text-right">{progress}%</span>
+      </div>
 
       {!showResult ? (
         <>
-          <div className="space-y-6">
+          <div className="space-y-4">
             {diagnosticQuestions.map((q, idx) => (
               <motion.div
                 key={q.id}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.04 }}
-                className="bg-card rounded-xl p-4 border border-border"
+                transition={{ delay: idx * 0.03 }}
+                className="bg-secondary rounded-2xl p-4 border border-border"
               >
                 <p className="text-foreground font-medium text-sm mb-3">
-                  {idx + 1}. {q.question}
+                  <span className="text-primary mr-1.5">{idx + 1}.</span> {q.question}
                 </p>
-                <RadioGroup
-                  value={answers[q.id]?.toString()}
-                  onValueChange={(v) => setAnswers({ ...answers, [q.id]: parseInt(v) })}
-                  className="space-y-2"
-                >
-                  {q.options.map((opt) => (
-                    <div key={opt.value} className="flex items-center space-x-3">
-                      <RadioGroupItem value={opt.value.toString()} id={`bq${q.id}-${opt.value}`} />
-                      <Label htmlFor={`bq${q.id}-${opt.value}`} className="text-sm text-muted-foreground cursor-pointer">
-                        {opt.label}
-                      </Label>
-                    </div>
+                <div className="space-y-1.5">
+                  {q.options.map(opt => (
+                    <motion.button
+                      key={opt.value}
+                      whileTap={{ scale: 0.98 }}
+                      type="button"
+                      onClick={() => setAnswers({ ...answers, [q.id]: opt.value })}
+                      className={`w-full text-left rounded-xl px-4 py-2.5 text-sm transition-all border ${
+                        answers[q.id] === opt.value
+                          ? "border-primary bg-primary/10 text-foreground"
+                          : "border-transparent bg-card text-muted-foreground hover:text-foreground hover:bg-card/80"
+                      }`}
+                    >
+                      {opt.label}
+                    </motion.button>
                   ))}
-                </RadioGroup>
+                </div>
               </motion.div>
             ))}
 
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: diagnosticQuestions.length * 0.04 }}
-              className="bg-card rounded-xl p-4 border border-coral/20"
-            >
-              <p className="text-foreground font-medium text-sm mb-3 flex items-center gap-2">
-                <Target className="w-4 h-4 text-coral" />
-                ¿Con qué frecuencia publicas contenido?
-              </p>
-              <RadioGroup value={frequency} onValueChange={setFrequency} className="space-y-2">
-                {frequencyOptions.map((opt) => (
-                  <div key={opt.value} className="flex items-center space-x-3">
-                    <RadioGroupItem value={opt.value} id={`bfreq-${opt.value}`} />
-                    <Label htmlFor={`bfreq-${opt.value}`} className="text-sm text-muted-foreground cursor-pointer">
+            {/* Extra questions */}
+            {[
+              { label: "¿Con qué frecuencia publicas contenido?", value: frequency, setter: setFrequency, options: frequencyOptions.map(o => ({ label: o.label, value: o.value })) },
+              { label: "¿Cómo crees que te percibe tu audiencia?", value: perception, setter: setPerception, options: perceptionOptions.map(o => ({ label: o, value: o })) },
+              { label: "¿Tu objetivo principal en los próximos 90 días?", value: goal, setter: setGoal, options: goalOptions.map(o => ({ label: o, value: o })) },
+            ].map((extra, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: (diagnosticQuestions.length + i) * 0.03 }}
+                className="bg-secondary rounded-2xl p-4 border border-primary/20"
+              >
+                <p className="text-foreground font-medium text-sm mb-3 flex items-center gap-2">
+                  <Target className="w-4 h-4 text-primary" /> {extra.label}
+                </p>
+                <div className="space-y-1.5">
+                  {extra.options.map(opt => (
+                    <motion.button
+                      key={opt.value}
+                      whileTap={{ scale: 0.98 }}
+                      type="button"
+                      onClick={() => extra.setter(opt.value)}
+                      className={`w-full text-left rounded-xl px-4 py-2.5 text-sm transition-all border ${
+                        extra.value === opt.value
+                          ? "border-primary bg-primary/10 text-foreground"
+                          : "border-transparent bg-card text-muted-foreground hover:text-foreground hover:bg-card/80"
+                      }`}
+                    >
                       {opt.label}
-                    </Label>
-                  </div>
-                ))}
-              </RadioGroup>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: (diagnosticQuestions.length + 1) * 0.04 }}
-              className="bg-card rounded-xl p-4 border border-coral/20"
-            >
-              <p className="text-foreground font-medium text-sm mb-3 flex items-center gap-2">
-                <Target className="w-4 h-4 text-coral" />
-                ¿Cómo crees que te percibe tu audiencia?
-              </p>
-              <RadioGroup value={perception} onValueChange={setPerception} className="space-y-2">
-                {perceptionOptions.map((opt) => (
-                  <div key={opt} className="flex items-center space-x-3">
-                    <RadioGroupItem value={opt} id={`bperc-${opt}`} />
-                    <Label htmlFor={`bperc-${opt}`} className="text-sm text-muted-foreground cursor-pointer">
-                      {opt}
-                    </Label>
-                  </div>
-                ))}
-              </RadioGroup>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: (diagnosticQuestions.length + 2) * 0.04 }}
-              className="bg-card rounded-xl p-4 border border-coral/20"
-            >
-              <p className="text-foreground font-medium text-sm mb-3 flex items-center gap-2">
-                <Target className="w-4 h-4 text-coral" />
-                ¿Cuál es tu objetivo principal en los próximos 90 días?
-              </p>
-              <RadioGroup value={goal} onValueChange={setGoal} className="space-y-2">
-                {goalOptions.map((opt) => (
-                  <div key={opt} className="flex items-center space-x-3">
-                    <RadioGroupItem value={opt} id={`bgoal-${opt}`} />
-                    <Label htmlFor={`bgoal-${opt}`} className="text-sm text-muted-foreground cursor-pointer">
-                      {opt}
-                    </Label>
-                  </div>
-                ))}
-              </RadioGroup>
-            </motion.div>
+                    </motion.button>
+                  ))}
+                </div>
+              </motion.div>
+            ))}
           </div>
 
           <Button
             onClick={() => setShowResult(true)}
             disabled={!canProceed}
-            className="w-full bg-gradient-coral hover:opacity-90 text-primary-foreground font-bold py-6 mt-6"
+            className="w-full bg-gradient-coral text-primary-foreground font-bold rounded-xl h-12 mt-8 shadow-glow hover:shadow-glow-lg transition-all"
           >
             Ver mi resultado
           </Button>
         </>
       ) : (
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="text-center">
-          <div className="bg-card rounded-2xl p-8 border border-border mb-6">
+          <div className="bg-secondary rounded-3xl p-10 border border-border mb-6">
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ type: "spring", stiffness: 200, delay: 0.2 }}
-              className={`w-20 h-20 rounded-full ${result.color} mx-auto mb-4 flex items-center justify-center`}
+              className={`w-24 h-24 rounded-full ${result.color} mx-auto mb-5 flex items-center justify-center shadow-lg`}
             >
-              <span className="text-white font-display font-bold text-2xl">{totalScore}</span>
+              <span className="text-white font-display font-bold text-3xl">{totalScore}</span>
             </motion.div>
-            <h3 className="font-display text-lg font-bold text-foreground mb-1">{result.label}</h3>
-            <p className="text-muted-foreground text-sm leading-relaxed">{result.message}</p>
+            <h3 className="font-display text-xl font-bold text-foreground mb-2">{result.label}</h3>
+            <p className="text-muted-foreground text-sm leading-relaxed max-w-sm mx-auto">{result.message}</p>
           </div>
 
           <Button
             onClick={() => onNext(totalScore, result.level, { frequency, perception, goal })}
-            className="w-full bg-gradient-coral hover:opacity-90 text-primary-foreground font-bold py-6"
+            className="w-full bg-gradient-coral text-primary-foreground font-bold rounded-xl h-12 shadow-glow hover:shadow-glow-lg transition-all"
           >
             Construir mi identidad <ArrowRight className="w-4 h-4 ml-2" />
           </Button>
