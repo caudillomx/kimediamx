@@ -22,6 +22,7 @@ import ClientView from "@/components/operations/ClientView";
 import CalendarView from "@/components/operations/CalendarView";
 import ObjectivesView from "@/components/operations/ObjectivesView";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
