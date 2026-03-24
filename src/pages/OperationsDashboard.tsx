@@ -27,10 +27,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   LayoutGrid, List, Plus, Search, LogOut, RefreshCw, Filter, X,
   Users, Building2, CalendarDays, TrendingUp, MessageSquare, Sun, Moon, Target,
+  Grid3X3,
 } from "lucide-react";
 import { CATEGORIES, CLIENTS } from "@/hooks/useOperationsData";
 
-type ViewMode = "kanban" | "list" | "person" | "client" | "calendar" | "pipeline" | "interactions" | "objectives";
+type ViewMode = "kanban" | "list" | "person" | "client" | "calendar" | "pipeline" | "interactions" | "objectives" | "content";
 
 const VIEW_TABS = [
   { value: "kanban" as ViewMode, label: "Kanban", icon: LayoutGrid },
@@ -41,6 +42,7 @@ const VIEW_TABS = [
   { value: "calendar" as ViewMode, label: "Calendario", icon: CalendarDays },
   { value: "pipeline" as ViewMode, label: "Pipeline", icon: TrendingUp },
   { value: "interactions" as ViewMode, label: "Externos", icon: MessageSquare },
+  { value: "content" as ViewMode, label: "Parrilla", icon: Grid3X3 },
 ];
 
 const OperationsDashboard = () => {
