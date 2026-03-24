@@ -22,15 +22,17 @@ import ClientView from "@/components/operations/ClientView";
 import CalendarView from "@/components/operations/CalendarView";
 import ObjectivesView from "@/components/operations/ObjectivesView";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   LayoutGrid, List, Plus, Search, LogOut, RefreshCw, Filter, X,
   Users, Building2, CalendarDays, TrendingUp, MessageSquare, Sun, Moon, Target,
+  Grid3X3,
 } from "lucide-react";
 import { CATEGORIES, CLIENTS } from "@/hooks/useOperationsData";
 
-type ViewMode = "kanban" | "list" | "person" | "client" | "calendar" | "pipeline" | "interactions" | "objectives";
+type ViewMode = "kanban" | "list" | "person" | "client" | "calendar" | "pipeline" | "interactions" | "objectives" | "content";
 
 const VIEW_TABS = [
   { value: "kanban" as ViewMode, label: "Kanban", icon: LayoutGrid },
@@ -41,6 +43,7 @@ const VIEW_TABS = [
   { value: "calendar" as ViewMode, label: "Calendario", icon: CalendarDays },
   { value: "pipeline" as ViewMode, label: "Pipeline", icon: TrendingUp },
   { value: "interactions" as ViewMode, label: "Externos", icon: MessageSquare },
+  { value: "content" as ViewMode, label: "Parrilla", icon: Grid3X3 },
 ];
 
 const OperationsDashboard = () => {
@@ -102,7 +105,7 @@ const OperationsDashboard = () => {
   };
 
   const activeFilters = [filterMember, filterCategory, filterClient, searchQuery].filter(Boolean).length;
-  const showFilters = !["pipeline", "person", "client", "interactions", "objectives"].includes(viewMode);
+  const showFilters = !["pipeline", "person", "client", "interactions", "objectives", "content"].includes(viewMode);
 
   return (
     <div className={`min-h-screen bg-background relative ${isDark ? "" : "theme-light"}`}>
@@ -160,7 +163,7 @@ const OperationsDashboard = () => {
             ))}
           </div>
 
-          {!["pipeline", "interactions", "objectives"].includes(viewMode) && (
+          {!["pipeline", "interactions", "objectives", "content"].includes(viewMode) && (
             <Button
               onClick={() => { setSelectedItem(null); setIsNewItem(true); }}
               className="bg-gradient-coral text-primary-foreground font-semibold ml-auto"
@@ -265,6 +268,17 @@ const OperationsDashboard = () => {
           ) : viewMode === "objectives" ? (
             <motion.div key="objectives" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               <ObjectivesView objectives={objectives} actionItems={actionItems} onToggleMilestone={toggleMilestone} onSelectItem={(item) => { setSelectedItem(item); setIsNewItem(false); }} />
+            </motion.div>
+          ) : viewMode === "content" ? (
+            <motion.div key="content" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <Card className="p-8 text-center bg-card border-border">
+                <Grid3X3 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-foreground mb-2">Motor de Contenido</h3>
+                <p className="text-sm text-muted-foreground mb-4">Planea, ejecuta y evalúa parrillas de contenido por cliente</p>
+                <Button onClick={() => navigate("/parrilla")} className="bg-gradient-coral text-primary-foreground font-semibold">
+                  <Grid3X3 className="w-4 h-4 mr-1.5" /> Ir al Motor de Contenido
+                </Button>
+              </Card>
             </motion.div>
           ) : null}
         </AnimatePresence>
