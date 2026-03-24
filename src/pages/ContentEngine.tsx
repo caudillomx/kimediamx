@@ -271,6 +271,10 @@ const ContentEngine = () => {
             <Input value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
               placeholder="Buscar cliente..." className="pl-10 bg-secondary border-border rounded-xl h-11" />
           </div>
+          <Button variant="outline" onClick={() => { setShowImportKit(true); loadKitProfiles(); }}
+            className="border-border text-foreground font-semibold rounded-xl h-11 px-5">
+            <Download className="w-4 h-4 mr-1.5" /> Importar desde Kit
+          </Button>
           <Button onClick={() => setShowNewProfile(true)}
             className="bg-gradient-coral text-primary-foreground font-semibold rounded-xl h-11 px-5 shadow-glow hover:shadow-glow-lg transition-shadow">
             <Plus className="w-4 h-4 mr-1.5" /> Nuevo cliente
