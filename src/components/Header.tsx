@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Sparkles } from "lucide-react";
+import { Menu, X, Sparkles, Sun, Moon } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
+import { useThemeToggle } from "@/hooks/useThemeToggle";
 import kimediaLogo from "@/assets/kimedia-logo.png";
 const navLinks = [
   { href: "metodologia", label: "Metodología" },
