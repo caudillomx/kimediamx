@@ -253,7 +253,7 @@ export function KitPDFGenerator({ participantId }: KitPDFGeneratorProps) {
             unit: "px",
             format: [800, 1130],
             orientation: "portrait" as const,
-            hotfixes: ["px_scaling"],
+            
           },
           pagebreak: {
             mode: ["css"],
