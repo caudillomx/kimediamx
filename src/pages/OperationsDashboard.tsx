@@ -162,7 +162,7 @@ const OperationsDashboard = () => {
             ))}
           </div>
 
-          {!["pipeline", "interactions", "objectives"].includes(viewMode) && (
+          {!["pipeline", "interactions", "objectives", "content"].includes(viewMode) && (
             <Button
               onClick={() => { setSelectedItem(null); setIsNewItem(true); }}
               className="bg-gradient-coral text-primary-foreground font-semibold ml-auto"
@@ -267,6 +267,17 @@ const OperationsDashboard = () => {
           ) : viewMode === "objectives" ? (
             <motion.div key="objectives" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               <ObjectivesView objectives={objectives} actionItems={actionItems} onToggleMilestone={toggleMilestone} onSelectItem={(item) => { setSelectedItem(item); setIsNewItem(false); }} />
+            </motion.div>
+          ) : viewMode === "content" ? (
+            <motion.div key="content" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <Card className="p-8 text-center bg-card border-border">
+                <Grid3X3 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-foreground mb-2">Motor de Contenido</h3>
+                <p className="text-sm text-muted-foreground mb-4">Planea, ejecuta y evalúa parrillas de contenido por cliente</p>
+                <Button onClick={() => navigate("/parrilla")} className="bg-gradient-coral text-primary-foreground font-semibold">
+                  <Grid3X3 className="w-4 h-4 mr-1.5" /> Ir al Motor de Contenido
+                </Button>
+              </Card>
             </motion.div>
           ) : null}
         </AnimatePresence>
