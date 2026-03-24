@@ -110,11 +110,21 @@ export function Header() {
                   {link.label}
                 </motion.a>
               ))}
+              <motion.button
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.35 }}
+                onClick={toggleTheme}
+                className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors py-2 font-medium text-lg"
+              >
+                {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                {isDark ? "Modo claro" : "Modo oscuro"}
+              </motion.button>
               <motion.a
                 href={getNavHref("contacto")}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.4 }}
+                transition={{ delay: 0.45 }}
                 onClick={() => setIsOpen(false)}
                 className="flex items-center justify-center gap-2 bg-gradient-coral text-primary-foreground px-6 py-4 rounded-xl font-bold mt-2"
               >
