@@ -13,11 +13,6 @@ import { toast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
 import kimediaLogo from "@/assets/kimedia-logo.png";
 import { generatePymeBio } from "@/data/pymeKitData";
-import { PYME_BADGES } from "@/data/gamificationData";
-import { useKitGamification } from "@/hooks/useKitGamification";
-import { XPBar } from "@/components/kit-gamification/XPBar";
-import { BadgeUnlock } from "@/components/kit-gamification/BadgeUnlock";
-import { BadgeCollection } from "@/components/kit-gamification/BadgeCollection";
 
 type Step = "welcome" | "diagnostic" | "competitive" | "identity" | "bio" | "post" | "closing";
 const stepOrder: Step[] = ["welcome", "diagnostic", "competitive", "identity", "bio", "post", "closing"];
@@ -30,7 +25,6 @@ export default function KitPyme() {
   const [identityData, setIdentityData] = useState<{
     valueProposition: string; targetAudience: string; differentiator: string; brandTone: string;
   } | null>(null);
-  const gamification = useKitGamification(PYME_BADGES);
 
   const progress = (stepOrder.indexOf(step) / (stepOrder.length - 1)) * 100;
 
@@ -61,7 +55,6 @@ export default function KitPyme() {
     } catch {
       toast({ title: "Error guardando datos", variant: "destructive" });
     }
-    gamification.completeStep("welcome");
     setStep("diagnostic");
   };
 
@@ -72,7 +65,6 @@ export default function KitPyme() {
         publication_frequency: extras.frequency, self_perception: extras.perception, goal_90_days: extras.goal,
       }).eq("id", profileId);
     }
-    gamification.completeStep("diagnostic");
     setStep("competitive");
   };
 
@@ -82,7 +74,6 @@ export default function KitPyme() {
         competitors: data.competitors, market_position: data.marketPosition,
       }).eq("id", profileId);
     }
-    gamification.completeStep("competitive");
     setStep("identity");
   };
 
@@ -94,19 +85,16 @@ export default function KitPyme() {
         differentiator: data.differentiator, brand_tone: data.brandTone,
       }).eq("id", profileId);
     }
-    gamification.completeStep("identity");
     setStep("bio");
   };
 
   const handleBio = async (bio: string) => {
     if (profileId) await supabase.from("brand_kit_profiles").update({ bio_text: bio }).eq("id", profileId);
-    gamification.completeStep("bio");
     setStep("post");
   };
 
   const handlePost = async (postType: string, postText: string, published: boolean) => {
     if (profileId) await supabase.from("brand_kit_profiles").update({ post_type: postType, post_text: postText, post_published: published }).eq("id", profileId);
-    gamification.completeStep("post");
     setStep("closing");
   };
 
@@ -119,8 +107,7 @@ export default function KitPyme() {
       <div className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <Link to="/" className="flex items-center"><img src={kimediaLogo} alt="KiMedia" className="h-6 w-auto" /></Link>
-          <XPBar totalXP={gamification.totalXP} xpGained={gamification.xpGained} />
-          <BadgeCollection allBadges={PYME_BADGES} unlockedBadges={gamification.unlockedBadges} />
+          <span className="text-xs text-muted-foreground">Kit PyME</span>
         </div>
         <Progress value={progress} className="h-1 rounded-none" />
       </div>
@@ -144,8 +131,6 @@ export default function KitPyme() {
           </AnimatePresence>
         </div>
       </div>
-
-      <BadgeUnlock badge={gamification.latestBadge} onDismiss={gamification.dismissBadge} />
     </div>
   );
 }

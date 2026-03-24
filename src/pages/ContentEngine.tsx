@@ -11,10 +11,11 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { toast } from "@/hooks/use-toast";
 import {
   Plus, Search, RefreshCw, LogOut, Sun, Moon, ArrowLeft,
   Grid3X3, BarChart3, Megaphone, BookOpen, Zap, TrendingUp,
-  Calendar, Layers,
+  Calendar, Layers, Download, Users,
 } from "lucide-react";
 import { CLIENTS } from "@/hooks/useOperationsData";
 
@@ -111,6 +112,9 @@ const ContentEngine = () => {
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [showNewProfile, setShowNewProfile] = useState(false);
+  const [showImportKit, setShowImportKit] = useState(false);
+  const [kitProfiles, setKitProfiles] = useState<any[]>([]);
+  const [loadingKit, setLoadingKit] = useState(false);
   const [newProfile, setNewProfile] = useState({
     client_name: "",
     industry: "",
@@ -122,6 +126,45 @@ const ContentEngine = () => {
     restrictions: "",
   });
   const [pillarInput, setPillarInput] = useState("");
+
+  const loadKitProfiles = async () => {
+    setLoadingKit(true);
+    const { data } = await supabase
+      .from("brand_kit_profiles")
+      .select("id, full_name, email, profession, industry, brand_tone, target_audience, main_channel, company_name, kit_type, created_at")
+      .order("created_at", { ascending: false });
+    setKitProfiles(data || []);
+    setLoadingKit(false);
+  };
+
+  const importKitProfile = async (kit: any) => {
+    const clientName = kit.kit_type === "pyme" ? kit.company_name || kit.full_name : kit.full_name;
+    const existing = profiles.find(p => p.client_name === clientName);
+    if (existing) {
+      toast({ title: "Ya existe un perfil para este cliente", variant: "destructive" });
+      return;
+    }
+    const mainChannel = kit.main_channel || "Instagram";
+    const networks = [mainChannel];
+    if (!networks.includes("Instagram")) networks.push("Instagram");
+    if (!networks.includes("Facebook")) networks.push("Facebook");
+
+    const result = await createProfile({
+      client_name: clientName,
+      industry: kit.industry || "",
+      target_audience: kit.target_audience || "",
+      brand_tone: kit.brand_tone || "Profesional",
+      content_pillars: [],
+      preferred_networks: networks,
+      posting_frequency: "3 veces por semana",
+      restrictions: "",
+      notes: `Importado desde Kit ${kit.kit_type === "pyme" ? "PyME" : "Marca Personal"} — ${kit.email}`,
+    });
+    if (result) {
+      toast({ title: `Perfil "${clientName}" creado desde Kit` });
+      setShowImportKit(false);
+    }
+  };
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, s) => {
@@ -228,6 +271,10 @@ const ContentEngine = () => {
             <Input value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
               placeholder="Buscar cliente..." className="pl-10 bg-secondary border-border rounded-xl h-11" />
           </div>
+          <Button variant="outline" onClick={() => { setShowImportKit(true); loadKitProfiles(); }}
+            className="border-border text-foreground font-semibold rounded-xl h-11 px-5">
+            <Download className="w-4 h-4 mr-1.5" /> Importar desde Kit
+          </Button>
           <Button onClick={() => setShowNewProfile(true)}
             className="bg-gradient-coral text-primary-foreground font-semibold rounded-xl h-11 px-5 shadow-glow hover:shadow-glow-lg transition-shadow">
             <Plus className="w-4 h-4 mr-1.5" /> Nuevo cliente
@@ -385,6 +432,62 @@ const ContentEngine = () => {
               Crear perfil editorial
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Import from Kit Dialog */}
+      <Dialog open={showImportKit} onOpenChange={setShowImportKit}>
+        <DialogContent className="max-w-lg bg-card border-border max-h-[90vh] overflow-y-auto rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-foreground font-display text-xl flex items-center gap-2">
+              <Users className="w-5 h-5 text-primary" /> Importar desde Kit Digital
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Selecciona un perfil del Kit de Marca Personal o PyME para crear automáticamente un perfil editorial.
+          </p>
+          {loadingKit ? (
+            <div className="flex items-center justify-center py-8">
+              <RefreshCw className="w-5 h-5 text-primary animate-spin" />
+            </div>
+          ) : kitProfiles.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground text-sm">
+              No hay perfiles de Kit registrados aún.
+            </div>
+          ) : (
+            <div className="space-y-2 max-h-[50vh] overflow-y-auto">
+              {kitProfiles.map(kit => {
+                const clientName = kit.kit_type === "pyme" ? kit.company_name || kit.full_name : kit.full_name;
+                const alreadyImported = profiles.some(p => p.client_name === clientName);
+                return (
+                  <div key={kit.id}
+                    className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
+                      alreadyImported ? "border-border bg-muted/50 opacity-60" : "border-border bg-secondary hover:border-primary/40 hover:bg-secondary/80"
+                    }`}>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-9 h-9 rounded-full bg-gradient-coral flex items-center justify-center text-primary-foreground font-bold text-xs shrink-0">
+                        {clientName.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate">{clientName}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {kit.kit_type === "pyme" ? "PyME" : "Personal"} · {kit.industry || "Sin industria"} · {kit.email}
+                        </p>
+                      </div>
+                    </div>
+                    {alreadyImported ? (
+                      <Badge variant="secondary" className="text-xs shrink-0">Ya importado</Badge>
+                    ) : (
+                      <Button size="sm" variant="outline" className="rounded-lg shrink-0"
+                        onClick={() => importKitProfile(kit)}>
+                        Importar
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
