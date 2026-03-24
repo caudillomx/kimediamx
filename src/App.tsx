@@ -18,6 +18,9 @@ import OperationsDashboard from "./pages/OperationsDashboard";
 import ResetPassword from "./pages/ResetPassword";
 import ContentEngine from "./pages/ContentEngine";
 import ContentCycleDetail from "./pages/ContentCycleDetail";
+import AuthPage from "./pages/AuthPage";
+import MyStrategy from "./pages/MyStrategy";
+import MyStrategyDetail from "./pages/MyStrategyDetail";
 
 const queryClient = new QueryClient();
 
@@ -38,6 +41,9 @@ const App = () => (
           <Route path="/kit/marca-personal/perfil/:id" element={<BrandKitProfile />} />
           <Route path="/kit/pyme" element={<KitPyme />} />
           <Route path="/kit/pyme/perfil/:id" element={<BrandKitProfile />} />
+          <Route path="/registro" element={<AuthPage />} />
+          <Route path="/mi-estrategia" element={<MyStrategy />} />
+          <Route path="/mi-estrategia/:profileId" element={<MyStrategyDetail />} />
           <Route path="/admin/operaciones/login" element={<OperationsLogin />} />
           <Route path="/admin/operaciones" element={<OperationsDashboard />} />
           <Route path="/reset-password" element={<ResetPassword />} />

@@ -238,7 +238,7 @@ const MyStrategyDetail = () => {
 
 // ─── Inputs Section ─────────────────────────────────
 function InputsSection({ cycleId }: { cycleId: string }) {
-  const { inputs, fetchInputs, createInput, deleteInput } = useContentInputs(cycleId);
+  const { inputs, fetchInputs, addInput, removeInput } = useContentInputs(cycleId);
   const [showAdd, setShowAdd] = useState(false);
   const [inputType, setInputType] = useState("texto");
   const [inputTitle, setInputTitle] = useState("");
@@ -246,7 +246,7 @@ function InputsSection({ cycleId }: { cycleId: string }) {
 
   const handleAdd = async () => {
     if (!inputTitle) return;
-    await createInput({ cycle_id: cycleId, input_type: inputType, title: inputTitle, content: inputContent });
+    await addInput({ cycle_id: cycleId, input_type: inputType, title: inputTitle, content: inputContent });
     setShowAdd(false);
     setInputTitle("");
     setInputContent("");
@@ -283,7 +283,7 @@ function InputsSection({ cycleId }: { cycleId: string }) {
                     </div>
                   </div>
                   <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-destructive w-8 h-8"
-                    onClick={() => deleteInput(inp.id)}>
+                    onClick={() => removeInput(inp.id)}>
                     <Trash2 className="w-3.5 h-3.5" />
                   </Button>
                 </div>
@@ -330,16 +330,30 @@ function GridSection({ cycleId, profileId, profile, onExport }: {
   cycleId: string; profileId: string; profile: ContentProfile;
   onExport: (pieces: ContentPiece[]) => void;
 }) {
-  const { pieces, fetchPieces, generateGrid, updatePieceStatus, updatePieceCopy } = useContentPieces(cycleId);
+  const { pieces, fetchPieces, updatePiece, bulkInsertPieces } = useContentPieces(cycleId);
   const { inputs } = useContentInputs(cycleId);
   const [generating, setGenerating] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
 
   const handleGenerate = async () => {
     setGenerating(true);
-    await generateGrid(profile, inputs);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-content", {
+        body: { profile, inputs, cycleId },
+      });
+      if (error) throw error;
+      if (data?.pieces?.length) {
+        await bulkInsertPieces(data.pieces.map((p: any) => ({ ...p, cycle_id: cycleId })));
+        toast.success(`${data.pieces.length} piezas generadas`);
+      }
+    } catch {
+      toast.error("Error generando parrilla");
+    }
     setGenerating(false);
   };
+
+  const updatePieceStatus = (id: string, status: string) => updatePiece(id, { status } as any);
+  const updatePieceCopy = (id: string, copy: string) => updatePiece(id, { draft_copy: copy } as any);
 
   const filtered = statusFilter ? pieces.filter(p => p.status === statusFilter) : pieces;
 
