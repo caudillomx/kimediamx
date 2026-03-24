@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Sparkles } from "lucide-react";
+import { Menu, X, Sparkles, Sun, Moon } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
+import { useThemeToggle } from "@/hooks/useThemeToggle";
 import kimediaLogo from "@/assets/kimedia-logo.png";
 const navLinks = [
   { href: "metodologia", label: "Metodología" },
@@ -11,6 +12,7 @@ const navLinks = [
 ];
 
 export function Header() {
+  const { isDark, toggle: toggleTheme } = useThemeToggle();
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
@@ -58,6 +60,13 @@ export function Header() {
                 <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-coral group-hover:w-full transition-all duration-300" />
               </a>
             ))}
+            <button
+              onClick={toggleTheme}
+              className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+              aria-label="Cambiar tema"
+            >
+              {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
             <a
               href={getNavHref("contacto")}
               className="group flex items-center gap-2 bg-gradient-coral text-primary-foreground px-6 py-2.5 rounded-xl font-bold text-sm hover:shadow-glow transition-all duration-300"
@@ -101,11 +110,21 @@ export function Header() {
                   {link.label}
                 </motion.a>
               ))}
+              <motion.button
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.35 }}
+                onClick={toggleTheme}
+                className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors py-2 font-medium text-lg"
+              >
+                {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                {isDark ? "Modo claro" : "Modo oscuro"}
+              </motion.button>
               <motion.a
                 href={getNavHref("contacto")}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.4 }}
+                transition={{ delay: 0.45 }}
                 onClick={() => setIsOpen(false)}
                 className="flex items-center justify-center gap-2 bg-gradient-coral text-primary-foreground px-6 py-4 rounded-xl font-bold mt-2"
               >
