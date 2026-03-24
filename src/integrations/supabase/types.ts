@@ -143,6 +143,130 @@ export type Database = {
           },
         ]
       }
+      ad_campaigns: {
+        Row: {
+          budget: number | null
+          campaign_id_external: string | null
+          campaign_name: string
+          created_at: string
+          end_date: string | null
+          id: string
+          import_batch: string | null
+          objective: string | null
+          platform: string
+          profile_id: string
+          start_date: string | null
+          status: string | null
+        }
+        Insert: {
+          budget?: number | null
+          campaign_id_external?: string | null
+          campaign_name: string
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          import_batch?: string | null
+          objective?: string | null
+          platform: string
+          profile_id: string
+          start_date?: string | null
+          status?: string | null
+        }
+        Update: {
+          budget?: number | null
+          campaign_id_external?: string | null
+          campaign_name?: string
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          import_batch?: string | null
+          objective?: string | null
+          platform?: string
+          profile_id?: string
+          start_date?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_campaigns_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "content_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ad_performance: {
+        Row: {
+          ad_name: string | null
+          ad_set_name: string | null
+          campaign_id: string
+          clicks: number | null
+          conversion_value: number | null
+          conversions: number | null
+          cpc: number | null
+          cpm: number | null
+          created_at: string
+          ctr: number | null
+          frequency: number | null
+          id: string
+          impressions: number | null
+          raw_data: Json | null
+          reach: number | null
+          report_date: string | null
+          roas: number | null
+          spend: number | null
+        }
+        Insert: {
+          ad_name?: string | null
+          ad_set_name?: string | null
+          campaign_id: string
+          clicks?: number | null
+          conversion_value?: number | null
+          conversions?: number | null
+          cpc?: number | null
+          cpm?: number | null
+          created_at?: string
+          ctr?: number | null
+          frequency?: number | null
+          id?: string
+          impressions?: number | null
+          raw_data?: Json | null
+          reach?: number | null
+          report_date?: string | null
+          roas?: number | null
+          spend?: number | null
+        }
+        Update: {
+          ad_name?: string | null
+          ad_set_name?: string | null
+          campaign_id?: string
+          clicks?: number | null
+          conversion_value?: number | null
+          conversions?: number | null
+          cpc?: number | null
+          cpm?: number | null
+          created_at?: string
+          ctr?: number | null
+          frequency?: number | null
+          id?: string
+          impressions?: number | null
+          raw_data?: Json | null
+          reach?: number | null
+          report_date?: string | null
+          roas?: number | null
+          spend?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_performance_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "ad_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       app_settings: {
         Row: {
           id: string
@@ -344,6 +468,56 @@ export type Database = {
         }
         Relationships: []
       }
+      client_reports: {
+        Row: {
+          created_at: string
+          file_url: string | null
+          generated_by: string | null
+          id: string
+          period_end: string
+          period_start: string
+          profile_id: string
+          recommendations: string | null
+          report_type: string
+          summary: string | null
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          file_url?: string | null
+          generated_by?: string | null
+          id?: string
+          period_end: string
+          period_start: string
+          profile_id: string
+          recommendations?: string | null
+          report_type?: string
+          summary?: string | null
+          title: string
+        }
+        Update: {
+          created_at?: string
+          file_url?: string | null
+          generated_by?: string | null
+          id?: string
+          period_end?: string
+          period_start?: string
+          profile_id?: string
+          recommendations?: string | null
+          report_type?: string
+          summary?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_reports_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "content_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_weekly_milestones: {
         Row: {
           activity_text: string
@@ -384,6 +558,304 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      content_analytics: {
+        Row: {
+          clicks: number | null
+          comments: number | null
+          created_at: string
+          engagement: number | null
+          engagement_rate: number | null
+          id: string
+          import_batch: string | null
+          impressions: number | null
+          network: string | null
+          piece_id: string | null
+          post_text: string | null
+          post_type: string | null
+          profile_id: string
+          published_date: string | null
+          raw_data: Json | null
+          reach: number | null
+          reactions: number | null
+          shares: number | null
+          video_views: number | null
+        }
+        Insert: {
+          clicks?: number | null
+          comments?: number | null
+          created_at?: string
+          engagement?: number | null
+          engagement_rate?: number | null
+          id?: string
+          import_batch?: string | null
+          impressions?: number | null
+          network?: string | null
+          piece_id?: string | null
+          post_text?: string | null
+          post_type?: string | null
+          profile_id: string
+          published_date?: string | null
+          raw_data?: Json | null
+          reach?: number | null
+          reactions?: number | null
+          shares?: number | null
+          video_views?: number | null
+        }
+        Update: {
+          clicks?: number | null
+          comments?: number | null
+          created_at?: string
+          engagement?: number | null
+          engagement_rate?: number | null
+          id?: string
+          import_batch?: string | null
+          impressions?: number | null
+          network?: string | null
+          piece_id?: string | null
+          post_text?: string | null
+          post_type?: string | null
+          profile_id?: string
+          published_date?: string | null
+          raw_data?: Json | null
+          reach?: number | null
+          reactions?: number | null
+          shares?: number | null
+          video_views?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_analytics_piece_id_fkey"
+            columns: ["piece_id"]
+            isOneToOne: false
+            referencedRelation: "content_pieces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_analytics_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "content_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_cycles: {
+        Row: {
+          ai_recommendations: string | null
+          briefing_data: Json | null
+          created_at: string
+          cycle_type: string
+          end_date: string
+          id: string
+          profile_id: string
+          start_date: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          ai_recommendations?: string | null
+          briefing_data?: Json | null
+          created_at?: string
+          cycle_type?: string
+          end_date: string
+          id?: string
+          profile_id: string
+          start_date: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          ai_recommendations?: string | null
+          briefing_data?: Json | null
+          created_at?: string
+          cycle_type?: string
+          end_date?: string
+          id?: string
+          profile_id?: string
+          start_date?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_cycles_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "content_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_learnings: {
+        Row: {
+          category: string
+          confidence: number | null
+          created_at: string
+          cycle_id: string | null
+          id: string
+          insight: string
+          is_active: boolean | null
+          profile_id: string
+          source: string | null
+        }
+        Insert: {
+          category?: string
+          confidence?: number | null
+          created_at?: string
+          cycle_id?: string | null
+          id?: string
+          insight: string
+          is_active?: boolean | null
+          profile_id: string
+          source?: string | null
+        }
+        Update: {
+          category?: string
+          confidence?: number | null
+          created_at?: string
+          cycle_id?: string | null
+          id?: string
+          insight?: string
+          is_active?: boolean | null
+          profile_id?: string
+          source?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_learnings_cycle_id_fkey"
+            columns: ["cycle_id"]
+            isOneToOne: false
+            referencedRelation: "content_cycles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_learnings_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "content_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_pieces: {
+        Row: {
+          created_at: string
+          cta: string | null
+          cycle_id: string
+          design_prompt: string | null
+          draft_copy: string | null
+          final_copy: string | null
+          format: string
+          hashtags: string[] | null
+          id: string
+          network: string
+          objective: string | null
+          pillar: string | null
+          scheduled_date: string | null
+          sort_order: number | null
+          status: string
+          tone: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          cta?: string | null
+          cycle_id: string
+          design_prompt?: string | null
+          draft_copy?: string | null
+          final_copy?: string | null
+          format: string
+          hashtags?: string[] | null
+          id?: string
+          network: string
+          objective?: string | null
+          pillar?: string | null
+          scheduled_date?: string | null
+          sort_order?: number | null
+          status?: string
+          tone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          cta?: string | null
+          cycle_id?: string
+          design_prompt?: string | null
+          draft_copy?: string | null
+          final_copy?: string | null
+          format?: string
+          hashtags?: string[] | null
+          id?: string
+          network?: string
+          objective?: string | null
+          pillar?: string | null
+          scheduled_date?: string | null
+          sort_order?: number | null
+          status?: string
+          tone?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_pieces_cycle_id_fkey"
+            columns: ["cycle_id"]
+            isOneToOne: false
+            referencedRelation: "content_cycles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_profiles: {
+        Row: {
+          brand_tone: string | null
+          client_name: string
+          content_pillars: string[] | null
+          created_at: string
+          hashtag_groups: Json | null
+          id: string
+          industry: string | null
+          notes: string | null
+          posting_frequency: string | null
+          preferred_networks: string[] | null
+          restrictions: string | null
+          target_audience: string | null
+          updated_at: string
+        }
+        Insert: {
+          brand_tone?: string | null
+          client_name: string
+          content_pillars?: string[] | null
+          created_at?: string
+          hashtag_groups?: Json | null
+          id?: string
+          industry?: string | null
+          notes?: string | null
+          posting_frequency?: string | null
+          preferred_networks?: string[] | null
+          restrictions?: string | null
+          target_audience?: string | null
+          updated_at?: string
+        }
+        Update: {
+          brand_tone?: string | null
+          client_name?: string
+          content_pillars?: string[] | null
+          created_at?: string
+          hashtag_groups?: Json | null
+          id?: string
+          industry?: string | null
+          notes?: string | null
+          posting_frequency?: string | null
+          preferred_networks?: string[] | null
+          restrictions?: string | null
+          target_audience?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       deals: {
         Row: {
