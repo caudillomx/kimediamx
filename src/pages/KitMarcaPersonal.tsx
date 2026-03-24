@@ -12,11 +12,6 @@ import { toast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
 import kimediaLogo from "@/assets/kimedia-logo.png";
 import { generateBrandBio } from "@/data/brandKitData";
-import { BRAND_BADGES } from "@/data/gamificationData";
-import { useKitGamification } from "@/hooks/useKitGamification";
-import { XPBar } from "@/components/kit-gamification/XPBar";
-import { BadgeUnlock } from "@/components/kit-gamification/BadgeUnlock";
-import { BadgeCollection } from "@/components/kit-gamification/BadgeCollection";
 
 type Step = "welcome" | "diagnostic" | "identity" | "bio" | "post" | "closing";
 const stepOrder: Step[] = ["welcome", "diagnostic", "identity", "bio", "post", "closing"];
@@ -32,7 +27,6 @@ export default function KitMarcaPersonal() {
     differentiator: string;
     brandTone: string;
   } | null>(null);
-  const gamification = useKitGamification(BRAND_BADGES);
 
   const progress = (stepOrder.indexOf(step) / (stepOrder.length - 1)) * 100;
 
@@ -60,7 +54,6 @@ export default function KitMarcaPersonal() {
     } catch {
       toast({ title: "Error guardando datos", variant: "destructive" });
     }
-    gamification.completeStep("welcome");
     setStep("diagnostic");
   };
 
@@ -81,7 +74,6 @@ export default function KitMarcaPersonal() {
         })
         .eq("id", profileId);
     }
-    gamification.completeStep("diagnostic");
     setStep("identity");
   };
 
@@ -98,7 +90,6 @@ export default function KitMarcaPersonal() {
         })
         .eq("id", profileId);
     }
-    gamification.completeStep("identity");
     setStep("bio");
   };
 
@@ -109,7 +100,6 @@ export default function KitMarcaPersonal() {
         .update({ bio_text: bio })
         .eq("id", profileId);
     }
-    gamification.completeStep("bio");
     setStep("post");
   };
 
@@ -124,7 +114,6 @@ export default function KitMarcaPersonal() {
         })
         .eq("id", profileId);
     }
-    gamification.completeStep("post");
     setStep("closing");
   };
 
@@ -147,8 +136,7 @@ export default function KitMarcaPersonal() {
           <Link to="/" className="flex items-center">
             <img src={kimediaLogo} alt="KiMedia" className="h-6 w-auto" />
           </Link>
-          <XPBar totalXP={gamification.totalXP} xpGained={gamification.xpGained} />
-          <BadgeCollection allBadges={BRAND_BADGES} unlockedBadges={gamification.unlockedBadges} />
+          <span className="text-xs text-muted-foreground">Kit Marca Personal</span>
         </div>
         <Progress value={progress} className="h-1 rounded-none" />
       </div>
@@ -187,8 +175,6 @@ export default function KitMarcaPersonal() {
           </AnimatePresence>
         </div>
       </div>
-
-      <BadgeUnlock badge={gamification.latestBadge} onDismiss={gamification.dismissBadge} />
     </div>
   );
 }

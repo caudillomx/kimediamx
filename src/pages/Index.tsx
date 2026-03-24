@@ -4,7 +4,6 @@ import { Methodology } from "@/components/Methodology";
 import { Services } from "@/components/Services";
 import { DiagnosticCTA } from "@/components/DiagnosticCTA";
 import { GuidesCTA } from "@/components/GuidesCTA";
-import { ArcadeCTA } from "@/components/ArcadeCTA";
 import { Team } from "@/components/Team";
 import { Contact } from "@/components/Contact";
 import { Footer } from "@/components/Footer";
@@ -19,7 +18,6 @@ const Index = () => {
         <Services />
         <DiagnosticCTA />
         <GuidesCTA />
-        <ArcadeCTA />
         <Team />
         <Contact />
       </main>

@@ -9,20 +9,10 @@ import QuizPyme from "./pages/QuizPyme";
 import GuidePersonalBrand from "./pages/GuidePersonalBrand";
 import GuidePyme from "./pages/GuidePyme";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
-import Liderazgos from "./pages/Liderazgos";
-import LiderazgosPresentation from "./pages/LiderazgosPresentation";
-
-import AdminLiderazgos from "./pages/AdminLiderazgos";
-import ParticipantProfile from "./pages/ParticipantProfile";
 import KitMarcaPersonal from "./pages/KitMarcaPersonal";
 import BrandKitProfile from "./pages/BrandKitProfile";
 import KitPyme from "./pages/KitPyme";
-import Membership from "./pages/Membership";
-import BrandTrivia from "./pages/BrandTrivia";
-import SocialSimulator from "./pages/SocialSimulator";
-import BrandPuzzle from "./pages/BrandPuzzle";
 import NotFound from "./pages/NotFound";
-import Tools from "./pages/Tools";
 import OperationsLogin from "./pages/OperationsLogin";
 import OperationsDashboard from "./pages/OperationsDashboard";
 import ResetPassword from "./pages/ResetPassword";
@@ -44,23 +34,13 @@ const App = () => (
           <Route path="/guias/marca-personal" element={<GuidePersonalBrand />} />
           <Route path="/guias/pyme" element={<GuidePyme />} />
           <Route path="/aviso-de-privacidad" element={<PrivacyPolicy />} />
-          <Route path="/liderazgos" element={<Liderazgos />} />
-          <Route path="/liderazgos/presentacion" element={<LiderazgosPresentation />} />
-          
-          <Route path="/liderazgos/perfil/:id" element={<ParticipantProfile />} />
           <Route path="/kit/marca-personal" element={<KitMarcaPersonal />} />
           <Route path="/kit/marca-personal/perfil/:id" element={<BrandKitProfile />} />
           <Route path="/kit/pyme" element={<KitPyme />} />
           <Route path="/kit/pyme/perfil/:id" element={<BrandKitProfile />} />
-          <Route path="/membresia" element={<Membership />} />
-          <Route path="/trivia" element={<BrandTrivia />} />
-          <Route path="/simulador" element={<SocialSimulator />} />
-          <Route path="/arcade" element={<BrandPuzzle />} />
-          <Route path="/admin/liderazgos" element={<AdminLiderazgos />} />
           <Route path="/admin/operaciones/login" element={<OperationsLogin />} />
           <Route path="/admin/operaciones" element={<OperationsDashboard />} />
           <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/tools" element={<Tools />} />
           <Route path="/parrilla" element={<ContentEngine />} />
           <Route path="/parrilla/:profileId" element={<ContentCycleDetail />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
