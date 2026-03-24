@@ -11,10 +11,11 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { toast } from "@/hooks/use-toast";
 import {
   Plus, Search, RefreshCw, LogOut, Sun, Moon, ArrowLeft,
   Grid3X3, BarChart3, Megaphone, BookOpen, Zap, TrendingUp,
-  Calendar, Layers,
+  Calendar, Layers, Download, Users,
 } from "lucide-react";
 import { CLIENTS } from "@/hooks/useOperationsData";
 
@@ -111,6 +112,9 @@ const ContentEngine = () => {
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [showNewProfile, setShowNewProfile] = useState(false);
+  const [showImportKit, setShowImportKit] = useState(false);
+  const [kitProfiles, setKitProfiles] = useState<any[]>([]);
+  const [loadingKit, setLoadingKit] = useState(false);
   const [newProfile, setNewProfile] = useState({
     client_name: "",
     industry: "",
@@ -122,6 +126,45 @@ const ContentEngine = () => {
     restrictions: "",
   });
   const [pillarInput, setPillarInput] = useState("");
+
+  const loadKitProfiles = async () => {
+    setLoadingKit(true);
+    const { data } = await supabase
+      .from("brand_kit_profiles")
+      .select("id, full_name, email, profession, industry, brand_tone, target_audience, main_channel, company_name, kit_type, created_at")
+      .order("created_at", { ascending: false });
+    setKitProfiles(data || []);
+    setLoadingKit(false);
+  };
+
+  const importKitProfile = async (kit: any) => {
+    const clientName = kit.kit_type === "pyme" ? kit.company_name || kit.full_name : kit.full_name;
+    const existing = profiles.find(p => p.client_name === clientName);
+    if (existing) {
+      toast({ title: "Ya existe un perfil para este cliente", variant: "destructive" });
+      return;
+    }
+    const mainChannel = kit.main_channel || "Instagram";
+    const networks = [mainChannel];
+    if (!networks.includes("Instagram")) networks.push("Instagram");
+    if (!networks.includes("Facebook")) networks.push("Facebook");
+
+    const result = await createProfile({
+      client_name: clientName,
+      industry: kit.industry || "",
+      target_audience: kit.target_audience || "",
+      brand_tone: kit.brand_tone || "Profesional",
+      content_pillars: [],
+      preferred_networks: networks,
+      posting_frequency: "3 veces por semana",
+      restrictions: "",
+      notes: `Importado desde Kit ${kit.kit_type === "pyme" ? "PyME" : "Marca Personal"} — ${kit.email}`,
+    });
+    if (result) {
+      toast({ title: `Perfil "${clientName}" creado desde Kit` });
+      setShowImportKit(false);
+    }
+  };
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, s) => {
