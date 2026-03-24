@@ -6,6 +6,7 @@ import { useOperationsData, ActionItem } from "@/hooks/useOperationsData";
 import { useThemeToggle } from "@/hooks/useThemeToggle";
 import { useDealsData, Deal } from "@/hooks/useDealsData";
 import { useInteractionsData, Interaction } from "@/hooks/useInteractionsData";
+import { useObjectivesData } from "@/hooks/useObjectivesData";
 import InteractionsView from "@/components/operations/InteractionsView";
 import InteractionModal from "@/components/operations/InteractionModal";
 import StatsBar from "@/components/operations/StatsBar";
@@ -19,20 +20,22 @@ import DealModal from "@/components/operations/DealModal";
 import PersonView from "@/components/operations/PersonView";
 import ClientView from "@/components/operations/ClientView";
 import CalendarView from "@/components/operations/CalendarView";
+import ObjectivesView from "@/components/operations/ObjectivesView";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   LayoutGrid, List, Plus, Search, LogOut, RefreshCw, Filter, X,
-  Users, Building2, CalendarDays, TrendingUp, MessageSquare, Sun, Moon,
+  Users, Building2, CalendarDays, TrendingUp, MessageSquare, Sun, Moon, Target,
 } from "lucide-react";
 import { CATEGORIES, CLIENTS } from "@/hooks/useOperationsData";
 
-type ViewMode = "kanban" | "list" | "person" | "client" | "calendar" | "pipeline" | "interactions";
+type ViewMode = "kanban" | "list" | "person" | "client" | "calendar" | "pipeline" | "interactions" | "objectives";
 
 const VIEW_TABS = [
   { value: "kanban" as ViewMode, label: "Kanban", icon: LayoutGrid },
   { value: "list" as ViewMode, label: "Lista", icon: List },
+  { value: "objectives" as ViewMode, label: "Objetivos", icon: Target },
   { value: "person" as ViewMode, label: "Equipo", icon: Users },
   { value: "client" as ViewMode, label: "Clientes", icon: Building2 },
   { value: "calendar" as ViewMode, label: "Calendario", icon: CalendarDays },
