@@ -322,6 +322,7 @@ export type Database = {
           social_handle: string
           target_audience: string | null
           updated_at: string
+          user_id: string | null
           value_proposition: string | null
           years_in_business: string | null
         }
@@ -358,6 +359,7 @@ export type Database = {
           social_handle: string
           target_audience?: string | null
           updated_at?: string
+          user_id?: string | null
           value_proposition?: string | null
           years_in_business?: string | null
         }
@@ -394,6 +396,7 @@ export type Database = {
           social_handle?: string
           target_audience?: string | null
           updated_at?: string
+          user_id?: string | null
           value_proposition?: string | null
           years_in_business?: string | null
         }
