@@ -434,6 +434,62 @@ const ContentEngine = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Import from Kit Dialog */}
+      <Dialog open={showImportKit} onOpenChange={setShowImportKit}>
+        <DialogContent className="max-w-lg bg-card border-border max-h-[90vh] overflow-y-auto rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-foreground font-display text-xl flex items-center gap-2">
+              <Users className="w-5 h-5 text-primary" /> Importar desde Kit Digital
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Selecciona un perfil del Kit de Marca Personal o PyME para crear automáticamente un perfil editorial.
+          </p>
+          {loadingKit ? (
+            <div className="flex items-center justify-center py-8">
+              <RefreshCw className="w-5 h-5 text-primary animate-spin" />
+            </div>
+          ) : kitProfiles.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground text-sm">
+              No hay perfiles de Kit registrados aún.
+            </div>
+          ) : (
+            <div className="space-y-2 max-h-[50vh] overflow-y-auto">
+              {kitProfiles.map(kit => {
+                const clientName = kit.kit_type === "pyme" ? kit.company_name || kit.full_name : kit.full_name;
+                const alreadyImported = profiles.some(p => p.client_name === clientName);
+                return (
+                  <div key={kit.id}
+                    className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
+                      alreadyImported ? "border-border bg-muted/50 opacity-60" : "border-border bg-secondary hover:border-primary/40 hover:bg-secondary/80"
+                    }`}>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-9 h-9 rounded-full bg-gradient-coral flex items-center justify-center text-primary-foreground font-bold text-xs shrink-0">
+                        {clientName.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate">{clientName}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {kit.kit_type === "pyme" ? "PyME" : "Personal"} · {kit.industry || "Sin industria"} · {kit.email}
+                        </p>
+                      </div>
+                    </div>
+                    {alreadyImported ? (
+                      <Badge variant="secondary" className="text-xs shrink-0">Ya importado</Badge>
+                    ) : (
+                      <Button size="sm" variant="outline" className="rounded-lg shrink-0"
+                        onClick={() => importKitProfile(kit)}>
+                        Importar
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
