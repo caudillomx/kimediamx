@@ -64,6 +64,78 @@ export type ContentLearning = {
   created_at: string;
 };
 
+export type ContentInput = {
+  id: string;
+  cycle_id: string;
+  input_type: string;
+  title: string | null;
+  content: string | null;
+  url: string | null;
+  file_name: string | null;
+  file_url: string | null;
+  tags: string[];
+  sort_order: number;
+  created_at: string;
+};
+
+export type ContentAnalyticRow = {
+  id: string;
+  profile_id: string;
+  piece_id: string | null;
+  published_date: string | null;
+  network: string | null;
+  post_type: string | null;
+  post_text: string | null;
+  reach: number;
+  impressions: number;
+  engagement: number;
+  reactions: number;
+  comments: number;
+  shares: number;
+  clicks: number;
+  video_views: number;
+  engagement_rate: number;
+  import_batch: string | null;
+  raw_data: any;
+  created_at: string;
+};
+
+export type AdCampaign = {
+  id: string;
+  profile_id: string;
+  platform: string;
+  campaign_name: string;
+  campaign_id_external: string | null;
+  objective: string | null;
+  budget: number;
+  start_date: string | null;
+  end_date: string | null;
+  status: string;
+  import_batch: string | null;
+  created_at: string;
+};
+
+export type AdPerformanceRow = {
+  id: string;
+  campaign_id: string;
+  ad_name: string | null;
+  ad_set_name: string | null;
+  report_date: string | null;
+  impressions: number;
+  clicks: number;
+  spend: number;
+  conversions: number;
+  conversion_value: number;
+  cpc: number;
+  cpm: number;
+  ctr: number;
+  roas: number;
+  reach: number;
+  frequency: number;
+  raw_data: any;
+  created_at: string;
+};
+
 export function useContentEngine() {
   const [profiles, setProfiles] = useState<ContentProfile[]>([]);
   const [loading, setLoading] = useState(true);
