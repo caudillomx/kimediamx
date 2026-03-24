@@ -264,7 +264,7 @@ const OperationsDashboard = () => {
             </motion.div>
           ) : viewMode === "objectives" ? (
             <motion.div key="objectives" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <ObjectivesView objectives={objectives} actionItems={actionItems} onToggleMilestone={toggleMilestone} />
+              <ObjectivesView objectives={objectives} actionItems={actionItems} onToggleMilestone={toggleMilestone} onSelectItem={(item) => { setSelectedItem(item); setIsNewItem(false); }} />
             </motion.div>
           ) : null}
         </AnimatePresence>
