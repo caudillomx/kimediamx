@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useContentEngine, ContentProfile } from "@/hooks/useContentEngine";
+import { useContentEngine, useContentCycles, ContentProfile } from "@/hooks/useContentEngine";
 import { useThemeToggle } from "@/hooks/useThemeToggle";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -13,12 +13,95 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Plus, Search, RefreshCw, LogOut, Sun, Moon, ArrowLeft,
-  Grid3X3, BarChart3, Megaphone, BookOpen,
+  Grid3X3, BarChart3, Megaphone, BookOpen, Zap, TrendingUp,
+  Calendar, Layers,
 } from "lucide-react";
 import { CLIENTS } from "@/hooks/useOperationsData";
 
 const NETWORKS = ["Instagram", "Facebook", "X", "LinkedIn", "TikTok"];
 const TONES = ["Profesional", "Cercano", "Inspirador", "Educativo", "Disruptivo", "Formal"];
+
+const NETWORK_ICONS: Record<string, string> = {
+  Instagram: "📸", Facebook: "📘", X: "𝕏", LinkedIn: "💼", TikTok: "🎵",
+};
+
+const ClientCard = ({ profile, onClick }: { profile: ContentProfile; onClick: () => void }) => {
+  const networks = profile.preferred_networks || [];
+  const pillars = profile.content_pillars || [];
+
+  return (
+    <motion.div
+      whileHover={{ y: -4, scale: 1.01 }}
+      whileTap={{ scale: 0.98 }}
+      transition={{ type: "spring", stiffness: 400, damping: 25 }}
+    >
+      <Card
+        className="group relative overflow-hidden cursor-pointer bg-card border-border hover:border-primary/40 transition-all duration-300 hover:shadow-glow"
+        onClick={onClick}
+      >
+        {/* Top accent bar */}
+        <div className="h-1 bg-gradient-coral w-full" />
+
+        <div className="p-5 space-y-4">
+          {/* Header */}
+          <div className="flex items-start justify-between">
+            <div className="space-y-1">
+              <h3 className="text-lg font-display font-bold text-foreground group-hover:text-gradient transition-colors">
+                {profile.client_name}
+              </h3>
+              <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                <Layers className="w-3 h-3" />
+                {profile.industry || "Sin industria"} · {profile.brand_tone || "Profesional"}
+              </p>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-gradient-coral flex items-center justify-center text-primary-foreground text-sm font-bold opacity-80 group-hover:opacity-100 transition-opacity">
+              {profile.client_name.charAt(0)}
+            </div>
+          </div>
+
+          {/* Audience */}
+          {profile.target_audience && (
+            <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
+              🎯 {profile.target_audience}
+            </p>
+          )}
+
+          {/* Pillars */}
+          {pillars.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {pillars.slice(0, 4).map(p => (
+                <span key={p} className="text-[11px] px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 font-medium">
+                  {p}
+                </span>
+              ))}
+              {pillars.length > 4 && (
+                <span className="text-[11px] px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">
+                  +{pillars.length - 4}
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Networks + Frequency */}
+          <div className="flex items-center justify-between pt-2 border-t border-border/50">
+            <div className="flex items-center gap-1">
+              {networks.map(n => (
+                <span key={n} className="text-sm" title={n}>{NETWORK_ICONS[n] || "📱"}</span>
+              ))}
+            </div>
+            <span className="text-[11px] text-muted-foreground flex items-center gap-1">
+              <Calendar className="w-3 h-3" />
+              {profile.posting_frequency || "Sin frecuencia"}
+            </span>
+          </div>
+        </div>
+
+        {/* Hover glow effect */}
+        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none bg-gradient-to-t from-primary/5 to-transparent" />
+      </Card>
+    </motion.div>
+  );
+};
 
 const ContentEngine = () => {
   const navigate = useNavigate();
@@ -57,7 +140,12 @@ const ContentEngine = () => {
   if (checkingAuth) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <RefreshCw className="w-6 h-6 text-coral animate-spin" />
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-coral flex items-center justify-center animate-pulse">
+            <Zap className="w-6 h-6 text-primary-foreground" />
+          </div>
+          <p className="text-sm text-muted-foreground animate-fade-in">Cargando motor...</p>
+        </div>
       </div>
     );
   }
@@ -95,190 +183,204 @@ const ContentEngine = () => {
     }));
   };
 
-  const getCycleCount = (profileId: string) => 0; // Will be populated when cycles exist
-
   return (
     <div className={`min-h-screen bg-background ${isDark ? "" : "theme-light"}`}>
       <div className="fixed inset-0 bg-mesh opacity-30 pointer-events-none" />
 
-      <div className="relative z-10 max-w-[1400px] mx-auto px-4 py-6 space-y-6">
+      <div className="relative z-10 max-w-[1400px] mx-auto px-4 sm:px-6 py-6 space-y-8">
         {/* Header */}
-        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}
+        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
           className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" onClick={() => navigate("/admin/operaciones")}
-              className="text-muted-foreground hover:text-foreground">
-              <ArrowLeft className="w-4 h-4" />
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate("/admin/operaciones")}
+              className="text-muted-foreground hover:text-foreground rounded-xl">
+              <ArrowLeft className="w-5 h-5" />
             </Button>
             <div>
-              <h1 className="text-2xl md:text-3xl font-display font-bold text-foreground">
+              <h1 className="text-2xl md:text-3xl font-display font-bold text-foreground flex items-center gap-3">
+                <span className="w-10 h-10 rounded-2xl bg-gradient-coral flex items-center justify-center">
+                  <Zap className="w-5 h-5 text-primary-foreground" />
+                </span>
                 Motor de <span className="text-gradient">Contenido</span>
               </h1>
-              <p className="text-sm text-muted-foreground mt-1">
-                {profiles.length} clientes · Planea, ejecuta y evalúa
+              <p className="text-sm text-muted-foreground mt-1 ml-[52px]">
+                {profiles.length} {profiles.length === 1 ? "cliente" : "clientes"} · Planea → Ejecuta → Evalúa
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={toggleTheme}
-              className="text-muted-foreground hover:text-foreground">
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon" onClick={toggleTheme}
+              className="text-muted-foreground hover:text-foreground rounded-xl">
               {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => navigate("/admin/operaciones")}
-              className="text-muted-foreground hover:text-foreground">
+            <Button variant="ghost" size="icon" onClick={() => navigate("/admin/operaciones")}
+              className="text-muted-foreground hover:text-foreground rounded-xl">
               <LogOut className="w-4 h-4" />
             </Button>
           </div>
         </motion.div>
 
-        {/* Search + New */}
-        <div className="flex items-center gap-3">
+        {/* Search + Actions */}
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 0.4 }}
+          className="flex items-center gap-3">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Buscar cliente..." className="pl-10 bg-secondary border-border" />
+              placeholder="Buscar cliente..." className="pl-10 bg-secondary border-border rounded-xl h-11" />
           </div>
           <Button onClick={() => setShowNewProfile(true)}
-            className="bg-gradient-coral text-primary-foreground font-semibold">
+            className="bg-gradient-coral text-primary-foreground font-semibold rounded-xl h-11 px-5 shadow-glow hover:shadow-glow-lg transition-shadow">
             <Plus className="w-4 h-4 mr-1.5" /> Nuevo cliente
           </Button>
-        </div>
+        </motion.div>
 
         {/* Client Grid */}
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <RefreshCw className="w-6 h-6 text-coral animate-spin" />
+            <div className="flex flex-col items-center gap-3">
+              <RefreshCw className="w-6 h-6 text-primary animate-spin" />
+              <p className="text-sm text-muted-foreground">Cargando clientes...</p>
+            </div>
           </div>
         ) : filtered.length === 0 ? (
-          <Card className="p-12 text-center bg-card border-border">
-            <Grid3X3 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-foreground mb-2">Sin clientes aún</h3>
-            <p className="text-muted-foreground mb-4">Crea tu primer perfil editorial para comenzar</p>
-            <Button onClick={() => setShowNewProfile(true)} className="bg-gradient-coral text-primary-foreground">
-              <Plus className="w-4 h-4 mr-1.5" /> Crear perfil
-            </Button>
-          </Card>
+          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
+            <Card className="p-16 text-center bg-card border-border border-dashed">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-coral/10 flex items-center justify-center mx-auto mb-5">
+                <Grid3X3 className="w-8 h-8 text-primary" />
+              </div>
+              <h3 className="text-xl font-display font-bold text-foreground mb-2">
+                {searchQuery ? "Sin resultados" : "Tu motor está listo"}
+              </h3>
+              <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                {searchQuery
+                  ? `No hay clientes que coincidan con "${searchQuery}"`
+                  : "Crea tu primer perfil editorial para comenzar a planear, generar y evaluar contenido con IA"}
+              </p>
+              {!searchQuery && (
+                <Button onClick={() => setShowNewProfile(true)} className="bg-gradient-coral text-primary-foreground font-semibold rounded-xl px-6">
+                  <Plus className="w-4 h-4 mr-1.5" /> Crear primer perfil
+                </Button>
+              )}
+            </Card>
+          </motion.div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filtered.map(profile => (
-              <motion.div key={profile.id} whileHover={{ y: -2 }} whileTap={{ scale: 0.98 }}>
-                <Card className="p-5 bg-card border-border cursor-pointer hover:border-coral/50 transition-colors"
-                  onClick={() => navigate(`/parrilla/${profile.id}`)}>
-                  <div className="flex items-start justify-between mb-3">
-                    <h3 className="text-lg font-bold text-foreground">{profile.client_name}</h3>
-                    <Badge variant="secondary" className="text-xs">{profile.industry || "General"}</Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
-                    {profile.target_audience || "Audiencia no definida"}
-                  </p>
-                  <div className="flex flex-wrap gap-1.5 mb-3">
-                    {(profile.content_pillars || []).slice(0, 3).map(p => (
-                      <Badge key={p} variant="outline" className="text-xs">{p}</Badge>
-                    ))}
-                    {(profile.content_pillars || []).length > 3 && (
-                      <Badge variant="outline" className="text-xs">+{profile.content_pillars.length - 3}</Badge>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <Grid3X3 className="w-3 h-3" /> {(profile.preferred_networks || []).length} redes
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <BookOpen className="w-3 h-3" /> {profile.posting_frequency || "—"}
-                    </span>
-                  </div>
-                </Card>
-              </motion.div>
-            ))}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            <AnimatePresence mode="popLayout">
+              {filtered.map((profile, i) => (
+                <motion.div
+                  key={profile.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ delay: i * 0.05, duration: 0.3 }}
+                >
+                  <ClientCard
+                    profile={profile}
+                    onClick={() => navigate(`/parrilla/${profile.id}`)}
+                  />
+                </motion.div>
+              ))}
+            </AnimatePresence>
           </div>
         )}
       </div>
 
       {/* New Profile Dialog */}
       <Dialog open={showNewProfile} onOpenChange={setShowNewProfile}>
-        <DialogContent className="max-w-lg bg-card border-border max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-lg bg-card border-border max-h-[90vh] overflow-y-auto rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="text-foreground">Nuevo Perfil Editorial</DialogTitle>
+            <DialogTitle className="text-foreground font-display text-xl">Nuevo Perfil Editorial</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-5">
             <div>
-              <Label>Cliente *</Label>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Cliente *</Label>
               <select value={newProfile.client_name}
                 onChange={e => setNewProfile(p => ({ ...p, client_name: e.target.value }))}
-                className="w-full mt-1 rounded-md border border-border bg-secondary px-3 py-2 text-sm text-foreground">
+                className="w-full mt-1.5 rounded-xl border border-border bg-secondary px-3 py-2.5 text-sm text-foreground focus:ring-2 focus:ring-primary/30 transition-shadow">
                 <option value="">Seleccionar...</option>
                 {CLIENTS.map(c => <option key={c} value={c}>{c}</option>)}
                 <option value="__custom__">+ Otro cliente</option>
               </select>
               {newProfile.client_name === "__custom__" && (
-                <Input className="mt-2 bg-secondary border-border" placeholder="Nombre del cliente"
+                <Input className="mt-2 bg-secondary border-border rounded-xl" placeholder="Nombre del cliente"
                   onChange={e => setNewProfile(p => ({ ...p, client_name: e.target.value }))} />
               )}
             </div>
             <div>
-              <Label>Industria</Label>
-              <Input value={newProfile.industry} className="bg-secondary border-border mt-1"
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Industria</Label>
+              <Input value={newProfile.industry} className="bg-secondary border-border mt-1.5 rounded-xl"
                 onChange={e => setNewProfile(p => ({ ...p, industry: e.target.value }))}
                 placeholder="Ej: Salud, Tecnología, Gobierno..." />
             </div>
             <div>
-              <Label>Audiencia objetivo</Label>
-              <Textarea value={newProfile.target_audience} className="bg-secondary border-border mt-1"
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Audiencia objetivo</Label>
+              <Textarea value={newProfile.target_audience} className="bg-secondary border-border mt-1.5 rounded-xl"
                 onChange={e => setNewProfile(p => ({ ...p, target_audience: e.target.value }))}
                 placeholder="¿A quién le habla este cliente?" rows={2} />
             </div>
             <div>
-              <Label>Tono de marca</Label>
-              <div className="flex flex-wrap gap-2 mt-1">
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Tono de marca</Label>
+              <div className="flex flex-wrap gap-2 mt-1.5">
                 {TONES.map(t => (
-                  <Badge key={t} variant={newProfile.brand_tone === t ? "default" : "outline"}
-                    className="cursor-pointer" onClick={() => setNewProfile(p => ({ ...p, brand_tone: t }))}>
+                  <button key={t}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                      newProfile.brand_tone === t
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80"
+                    }`}
+                    onClick={() => setNewProfile(p => ({ ...p, brand_tone: t }))}>
                     {t}
-                  </Badge>
+                  </button>
                 ))}
               </div>
             </div>
             <div>
-              <Label>Pilares de contenido</Label>
-              <div className="flex gap-2 mt-1">
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Pilares de contenido</Label>
+              <div className="flex gap-2 mt-1.5">
                 <Input value={pillarInput} onChange={e => setPillarInput(e.target.value)}
                   onKeyDown={e => e.key === "Enter" && (e.preventDefault(), addPillar())}
-                  placeholder="Agregar pilar..." className="bg-secondary border-border" />
-                <Button variant="outline" onClick={addPillar} size="sm">+</Button>
+                  placeholder="Agregar pilar..." className="bg-secondary border-border rounded-xl" />
+                <Button variant="outline" onClick={addPillar} size="sm" className="rounded-xl">+</Button>
               </div>
               <div className="flex flex-wrap gap-1.5 mt-2">
                 {newProfile.content_pillars.map(p => (
-                  <Badge key={p} variant="secondary" className="cursor-pointer"
+                  <span key={p} className="px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium cursor-pointer hover:bg-destructive/10 hover:text-destructive transition-colors"
                     onClick={() => setNewProfile(pr => ({ ...pr, content_pillars: pr.content_pillars.filter(x => x !== p) }))}>
                     {p} ×
-                  </Badge>
+                  </span>
                 ))}
               </div>
             </div>
             <div>
-              <Label>Redes sociales</Label>
-              <div className="flex flex-wrap gap-2 mt-1">
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Redes sociales</Label>
+              <div className="flex flex-wrap gap-2 mt-1.5">
                 {NETWORKS.map(n => (
-                  <Badge key={n} variant={newProfile.preferred_networks.includes(n) ? "default" : "outline"}
-                    className="cursor-pointer" onClick={() => toggleNetwork(n)}>
-                    {n}
-                  </Badge>
+                  <button key={n}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all flex items-center gap-1.5 ${
+                      newProfile.preferred_networks.includes(n)
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "bg-secondary text-muted-foreground hover:text-foreground"
+                    }`}
+                    onClick={() => toggleNetwork(n)}>
+                    <span>{NETWORK_ICONS[n]}</span> {n}
+                  </button>
                 ))}
               </div>
             </div>
             <div>
-              <Label>Frecuencia de publicación</Label>
-              <Input value={newProfile.posting_frequency} className="bg-secondary border-border mt-1"
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Frecuencia</Label>
+              <Input value={newProfile.posting_frequency} className="bg-secondary border-border mt-1.5 rounded-xl"
                 onChange={e => setNewProfile(p => ({ ...p, posting_frequency: e.target.value }))}
                 placeholder="Ej: 3 veces por semana" />
             </div>
             <div>
-              <Label>Restricciones</Label>
-              <Textarea value={newProfile.restrictions} className="bg-secondary border-border mt-1"
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Restricciones</Label>
+              <Textarea value={newProfile.restrictions} className="bg-secondary border-border mt-1.5 rounded-xl"
                 onChange={e => setNewProfile(p => ({ ...p, restrictions: e.target.value }))}
                 placeholder="Temas prohibidos, lineamientos..." rows={2} />
             </div>
-            <Button onClick={handleCreateProfile} className="w-full bg-gradient-coral text-primary-foreground font-semibold"
+            <Button onClick={handleCreateProfile}
+              className="w-full bg-gradient-coral text-primary-foreground font-bold rounded-xl h-11 shadow-glow hover:shadow-glow-lg transition-shadow"
               disabled={!newProfile.client_name || newProfile.client_name === "__custom__"}>
               Crear perfil editorial
             </Button>
