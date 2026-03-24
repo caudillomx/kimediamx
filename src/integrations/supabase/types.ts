@@ -690,6 +690,56 @@ export type Database = {
           },
         ]
       }
+      content_inputs: {
+        Row: {
+          content: string | null
+          created_at: string
+          cycle_id: string
+          file_name: string | null
+          file_url: string | null
+          id: string
+          input_type: string
+          sort_order: number | null
+          tags: string[] | null
+          title: string | null
+          url: string | null
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          cycle_id: string
+          file_name?: string | null
+          file_url?: string | null
+          id?: string
+          input_type?: string
+          sort_order?: number | null
+          tags?: string[] | null
+          title?: string | null
+          url?: string | null
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          cycle_id?: string
+          file_name?: string | null
+          file_url?: string | null
+          id?: string
+          input_type?: string
+          sort_order?: number | null
+          tags?: string[] | null
+          title?: string | null
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_inputs_cycle_id_fkey"
+            columns: ["cycle_id"]
+            isOneToOne: false
+            referencedRelation: "content_cycles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       content_learnings: {
         Row: {
           category: string
