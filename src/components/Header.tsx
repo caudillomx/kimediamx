@@ -12,6 +12,7 @@ const navLinks = [
 ];
 
 export function Header() {
+  const { isDark, toggle: toggleTheme } = useThemeToggle();
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
