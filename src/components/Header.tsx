@@ -60,6 +60,13 @@ export function Header() {
                 <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-coral group-hover:w-full transition-all duration-300" />
               </a>
             ))}
+            <button
+              onClick={toggleTheme}
+              className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+              aria-label="Cambiar tema"
+            >
+              {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
             <a
               href={getNavHref("contacto")}
               className="group flex items-center gap-2 bg-gradient-coral text-primary-foreground px-6 py-2.5 rounded-xl font-bold text-sm hover:shadow-glow transition-all duration-300"
