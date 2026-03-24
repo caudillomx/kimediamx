@@ -308,6 +308,83 @@ export type Database = {
         }
         Relationships: []
       }
+      client_objectives: {
+        Row: {
+          business_unit: string | null
+          client_name: string
+          created_at: string
+          id: string
+          main_activities: string | null
+          objective_text: string
+          priority: number
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          business_unit?: string | null
+          client_name: string
+          created_at?: string
+          id?: string
+          main_activities?: string | null
+          objective_text: string
+          priority?: number
+          updated_at?: string
+          year?: number
+        }
+        Update: {
+          business_unit?: string | null
+          client_name?: string
+          created_at?: string
+          id?: string
+          main_activities?: string | null
+          objective_text?: string
+          priority?: number
+          updated_at?: string
+          year?: number
+        }
+        Relationships: []
+      }
+      client_weekly_milestones: {
+        Row: {
+          activity_text: string
+          completed_at: string | null
+          created_at: string
+          id: string
+          is_completed: boolean
+          month: number
+          objective_id: string
+          week_number: number
+        }
+        Insert: {
+          activity_text: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          is_completed?: boolean
+          month: number
+          objective_id: string
+          week_number: number
+        }
+        Update: {
+          activity_text?: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          is_completed?: boolean
+          month?: number
+          objective_id?: string
+          week_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_weekly_milestones_objective_id_fkey"
+            columns: ["objective_id"]
+            isOneToOne: false
+            referencedRelation: "client_objectives"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       deals: {
         Row: {
           client_name: string
