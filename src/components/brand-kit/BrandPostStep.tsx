@@ -15,13 +15,14 @@ interface BrandPostStepProps {
   onNext: (postType: string, postText: string, published: boolean) => void;
 }
 
+const POST_TYPES = [
+  { value: "expertise" as const, label: "Expertise", desc: "Demuestra conocimiento", emoji: "🧠" },
+  { value: "historia" as const, label: "Historia", desc: "Conecta emocionalmente", emoji: "📖" },
+  { value: "valor" as const, label: "Tips", desc: "Comparte aprendizajes", emoji: "💡" },
+];
+
 export function BrandPostStep({
-  profession,
-  industry,
-  valueProposition,
-  targetAudience,
-  differentiator,
-  onNext,
+  profession, industry, valueProposition, targetAudience, differentiator, onNext,
 }: BrandPostStepProps) {
   const [postType, setPostType] = useState<"expertise" | "historia" | "valor">("expertise");
   const [postText, setPostText] = useState(
@@ -40,7 +41,7 @@ export function BrandPostStep({
     await navigator.clipboard.writeText(postText);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-    toast({ title: "Texto copiado" });
+    toast({ title: "Post copiado al portapapeles" });
   };
 
   const handleEnhance = async () => {
@@ -58,87 +59,100 @@ export function BrandPostStep({
     }
   };
 
-  const postTypes = [
-    { value: "expertise" as const, label: "Expertise", desc: "Demuestra conocimiento" },
-    { value: "historia" as const, label: "Historia", desc: "Conecta con tu historia" },
-    { value: "valor" as const, label: "Tips de valor", desc: "Comparte aprendizajes" },
-  ];
-
   return (
     <motion.div
-      initial={{ opacity: 0, x: 40 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -40 }}
-      className="w-full max-w-lg mx-auto"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+      className="w-full max-w-xl mx-auto"
     >
-      <div className="text-center mb-6">
-        <div className="w-14 h-14 rounded-2xl bg-secondary flex items-center justify-center mx-auto mb-4">
-          <PenTool className="w-7 h-7 text-coral" />
-        </div>
-        <h2 className="font-display text-xl md:text-2xl font-bold text-foreground mb-1">
-          Tu primer post de marca
+      <div className="text-center mb-8">
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ type: "spring", stiffness: 300, damping: 20 }}
+          className="w-16 h-16 rounded-3xl bg-secondary flex items-center justify-center mx-auto mb-5"
+        >
+          <PenTool className="w-8 h-8 text-primary" />
+        </motion.div>
+        <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground mb-2">
+          Tu primer <span className="text-gradient">post de marca</span>
         </h2>
-        <p className="text-muted-foreground text-sm">Elige el tipo y personalízalo</p>
+        <p className="text-muted-foreground text-sm">Elige el tipo, personalízalo y publícalo</p>
       </div>
 
-      <div className="grid grid-cols-3 gap-2 mb-4">
-        {postTypes.map((t) => (
-          <button
+      {/* Post type selector */}
+      <div className="grid grid-cols-3 gap-2 mb-6">
+        {POST_TYPES.map(t => (
+          <motion.button
             key={t.value}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.97 }}
             onClick={() => handleTypeChange(t.value)}
-            className={`rounded-xl p-3 text-center transition-all border ${
+            className={`rounded-2xl p-4 text-center transition-all border ${
               postType === t.value
-                ? "border-coral bg-coral/10 text-coral"
-                : "border-border bg-card text-muted-foreground hover:border-coral/30"
+                ? "border-primary bg-primary/10 shadow-sm"
+                : "border-border bg-secondary hover:border-primary/30"
             }`}
           >
-            <span className="block text-sm font-bold">{t.label}</span>
-            <span className="block text-[10px] mt-0.5">{t.desc}</span>
-          </button>
+            <span className="text-xl mb-1 block">{t.emoji}</span>
+            <span className={`block text-sm font-bold ${postType === t.value ? "text-primary" : "text-foreground"}`}>
+              {t.label}
+            </span>
+            <span className="block text-[10px] text-muted-foreground mt-0.5">{t.desc}</span>
+          </motion.button>
         ))}
       </div>
 
-      <div className="bg-card rounded-2xl p-6 border border-border mb-4">
+      {/* Editor */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.15 }}
+        className="relative bg-secondary rounded-2xl p-5 border border-border mb-4 focus-within:border-primary/30 transition-colors"
+      >
         <textarea
           value={postText}
-          onChange={(e) => setPostText(e.target.value)}
-          rows={6}
+          onChange={e => setPostText(e.target.value)}
+          rows={7}
           className="w-full bg-transparent text-foreground text-sm resize-none focus:outline-none leading-relaxed whitespace-pre-wrap"
           maxLength={500}
         />
-      </div>
+        <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/50">
+          <span className="text-xs text-muted-foreground">{postText.length}/500</span>
+          <div className="flex gap-1">
+            <Button variant="ghost" size="sm" onClick={handleEnhance} disabled={enhancing}
+              className="text-primary hover:bg-primary/10 rounded-lg h-8 px-3 text-xs">
+              {enhancing ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Sparkles className="w-3.5 h-3.5 mr-1" />}
+              IA
+            </Button>
+            <Button variant="ghost" size="sm" onClick={handleCopy}
+              className="text-muted-foreground hover:text-foreground rounded-lg h-8 px-3 text-xs">
+              {copied ? <Check className="w-3.5 h-3.5 mr-1" /> : <Copy className="w-3.5 h-3.5 mr-1" />}
+              Copiar
+            </Button>
+          </div>
+        </div>
+      </motion.div>
 
-      <div className="flex gap-2 mb-4">
-        <Button
-          variant="outline"
-          onClick={handleEnhance}
-          disabled={enhancing}
-          className="flex-1 border-coral/30 text-coral hover:bg-coral/10"
-        >
-          {enhancing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
-          Mejorar con IA
-        </Button>
-        <Button variant="outline" onClick={handleCopy} className="border-border">
-          {copied ? <Check className="w-4 h-4 mr-1" /> : <Copy className="w-4 h-4 mr-1" />}
-          Copiar
-        </Button>
-      </div>
-
-      <button
+      {/* Published toggle */}
+      <motion.button
+        whileTap={{ scale: 0.98 }}
         onClick={() => setPublished(!published)}
-        className={`w-full flex items-center justify-center gap-2 rounded-xl p-3 mb-6 text-sm font-medium transition-all border ${
+        className={`w-full flex items-center justify-center gap-2 rounded-xl p-3.5 mb-6 text-sm font-medium transition-all border ${
           published
-            ? "border-green-500 bg-green-500/10 text-green-400"
-            : "border-border bg-card text-muted-foreground hover:border-coral/30"
+            ? "border-green-500/40 bg-green-500/10 text-green-400"
+            : "border-border bg-secondary text-muted-foreground hover:border-primary/30"
         }`}
       >
-        <CheckCircle2 className={`w-4 h-4 ${published ? "text-green-400" : ""}`} />
-        {published ? "¡Marcado como publicado!" : "Marcar como 'Ya publicado'"}
-      </button>
+        <CheckCircle2 className="w-4 h-4" />
+        {published ? "¡Marcado como publicado!" : "¿Ya lo publicaste? Márcalo aquí"}
+      </motion.button>
 
       <Button
         onClick={() => onNext(postType, postText, published)}
-        className="w-full bg-gradient-coral hover:opacity-90 text-primary-foreground font-bold py-6"
+        className="w-full bg-gradient-coral text-primary-foreground font-bold rounded-xl h-12 shadow-glow hover:shadow-glow-lg transition-all"
       >
         Finalizar <ArrowRight className="w-4 h-4 ml-2" />
       </Button>
