@@ -1,0 +1,1 @@
+ALTER TABLE public.brand_kit_profiles ADD COLUMN user_id uuid REFERENCES auth.users(id) ON DELETE SET NULL;

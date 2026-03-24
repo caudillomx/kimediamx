@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Star, Briefcase, AtSign, Lightbulb, ArrowRight, Mail, Phone, Gift, Globe, ExternalLink, Zap } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Star, Briefcase, AtSign, Lightbulb, ArrowRight, Mail, Phone, Gift, Globe, ExternalLink, Zap, Rocket } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -21,6 +22,7 @@ export function BrandClosingStep({
   const [consentEmail, setConsentEmail] = useState(false);
   const [consentWhatsapp, setConsentWhatsapp] = useState(false);
   const [saved, setSaved] = useState(false);
+  const navigate = useNavigate();
 
   const handleSaveConsent = async () => {
     if (profileId) {
@@ -133,17 +135,23 @@ export function BrandClosingStep({
               </Button>
             </a>
 
-            {/* CTA to content engine */}
+            {/* CTA to register and use content engine */}
             <div className="bg-secondary rounded-2xl p-5 border border-primary/20 text-left">
               <div className="flex items-start gap-3">
                 <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                  <Zap className="w-5 h-5 text-primary" />
+                  <Rocket className="w-5 h-5 text-primary" />
                 </div>
-                <div>
-                  <p className="text-foreground font-semibold text-sm mb-1">¿Quieres una estrategia completa?</p>
+                <div className="space-y-2">
+                  <p className="text-foreground font-semibold text-sm">¡Lleva tu marca al siguiente nivel!</p>
                   <p className="text-muted-foreground text-xs leading-relaxed">
-                    Con el Motor de Contenido de KiMedia, tu kit se convierte en la base para generar parrillas de contenido profesionales, evaluar rendimiento y escalar tu marca.
+                    Crea tu cuenta gratuita y accede a tu Motor de Contenido personalizado: genera parrillas con IA, planea tus publicaciones y descarga todo listo para publicar.
                   </p>
+                  <Button
+                    onClick={() => navigate("/registro?redirect=/mi-estrategia")}
+                    className="bg-gradient-coral text-primary-foreground font-bold rounded-xl h-10 shadow-glow text-sm"
+                  >
+                    <Zap className="w-4 h-4 mr-1.5" /> Crear mi cuenta y usar el Motor
+                  </Button>
                 </div>
               </div>
             </div>
