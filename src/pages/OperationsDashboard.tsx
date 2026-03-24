@@ -108,7 +108,7 @@ const OperationsDashboard = () => {
   const showFilters = !["pipeline", "person", "client", "interactions", "objectives", "content"].includes(viewMode);
 
   return (
-    <div className={`min-h-screen bg-background relative ${isDark ? "" : "theme-light"}`}>
+    <div className="min-h-screen bg-background relative">
       <div className="fixed inset-0 bg-mesh opacity-30 pointer-events-none" />
 
       <div className="relative z-10 max-w-[1600px] mx-auto px-4 py-6 space-y-5">

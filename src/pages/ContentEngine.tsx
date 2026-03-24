@@ -227,7 +227,7 @@ const ContentEngine = () => {
   };
 
   return (
-    <div className={`min-h-screen bg-background ${isDark ? "" : "theme-light"}`}>
+    <div className="min-h-screen bg-background">
       <div className="fixed inset-0 bg-mesh opacity-30 pointer-events-none" />
 
       <div className="relative z-10 max-w-[1400px] mx-auto px-4 sm:px-6 py-6 space-y-8">

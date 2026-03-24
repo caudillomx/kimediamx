@@ -29,18 +29,18 @@ import {
 import kimediaLogo from "@/assets/kimedia-logo.png";
 
 const STATUS_CONFIG: Record<string, { color: string; icon: any; label: string }> = {
-  pendiente: { color: "bg-amber-500/15 text-amber-400 border-amber-500/30", icon: Clock, label: "Pendiente" },
-  aprobada: { color: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30", icon: CheckCircle2, label: "Aprobada" },
-  rechazada: { color: "bg-red-500/15 text-red-400 border-red-500/30", icon: X, label: "Rechazada" },
-  ejecutada: { color: "bg-sky-500/15 text-sky-400 border-sky-500/30", icon: Sparkles, label: "Lista" },
+  pendiente: { color: "bg-amber-500/15 text-amber-600 border-amber-500/30", icon: Clock, label: "Pendiente" },
+  aprobada: { color: "bg-emerald-500/15 text-emerald-600 border-emerald-500/30", icon: CheckCircle2, label: "Aprobada" },
+  rechazada: { color: "bg-red-500/15 text-red-600 border-red-500/30", icon: X, label: "Rechazada" },
+  ejecutada: { color: "bg-sky-500/15 text-sky-600 border-sky-500/30", icon: Sparkles, label: "Lista" },
 };
 
 const NETWORK_CONFIG: Record<string, { emoji: string; color: string }> = {
-  Instagram: { emoji: "📸", color: "bg-pink-500/15 text-pink-400 border-pink-500/30" },
-  Facebook: { emoji: "📘", color: "bg-blue-600/15 text-blue-400 border-blue-600/30" },
-  X: { emoji: "𝕏", color: "bg-zinc-500/15 text-zinc-300 border-zinc-500/30" },
-  LinkedIn: { emoji: "💼", color: "bg-blue-700/15 text-blue-300 border-blue-700/30" },
-  TikTok: { emoji: "🎵", color: "bg-purple-500/15 text-purple-400 border-purple-500/30" },
+  Instagram: { emoji: "📸", color: "bg-pink-500/15 text-pink-600 border-pink-500/30" },
+  Facebook: { emoji: "📘", color: "bg-blue-600/15 text-blue-700 border-blue-600/30" },
+  X: { emoji: "𝕏", color: "bg-zinc-500/15 text-zinc-600 border-zinc-500/30" },
+  LinkedIn: { emoji: "💼", color: "bg-blue-700/15 text-blue-700 border-blue-700/30" },
+  TikTok: { emoji: "🎵", color: "bg-purple-500/15 text-purple-600 border-purple-500/30" },
 };
 
 const INPUT_TYPES = [
