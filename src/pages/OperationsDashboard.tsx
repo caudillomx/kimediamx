@@ -262,6 +262,10 @@ const OperationsDashboard = () => {
                 onToggleFollowUp={(id, done) => updateInteraction(id, { follow_up_done: done })}
               />
             </motion.div>
+          ) : viewMode === "objectives" ? (
+            <motion.div key="objectives" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <ObjectivesView objectives={objectives} actionItems={actionItems} onToggleMilestone={toggleMilestone} />
+            </motion.div>
           ) : null}
         </AnimatePresence>
 
