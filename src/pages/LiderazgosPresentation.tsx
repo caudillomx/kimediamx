@@ -401,15 +401,8 @@ export default function LiderazgosPresentation() {
             unit: "px",
             format: [1280, 720],
             orientation: "landscape" as const,
-            hotfixes: ["px_scaling"],
           },
-          pagebreak: {
-            mode: ["css"],
-            before: [],
-            after: [],
-            avoid: [],
-          },
-        })
+        } as any)
         .from(container)
         .save();
 
