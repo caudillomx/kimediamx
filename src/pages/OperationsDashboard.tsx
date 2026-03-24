@@ -49,6 +49,7 @@ const OperationsDashboard = () => {
   const { theme, toggle: toggleTheme, isDark } = useThemeToggle();
   const { deals, createDeal, updateDeal, refetch: refetchDeals } = useDealsData();
   const { interactions, createInteraction, updateInteraction, refetch: refetchInteractions } = useInteractionsData();
+  const { objectives, loading: loadingObjectives, refetch: refetchObjectives, toggleMilestone } = useObjectivesData();
   const [session, setSession] = useState<any>(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>("kanban");
@@ -101,7 +102,7 @@ const OperationsDashboard = () => {
   };
 
   const activeFilters = [filterMember, filterCategory, filterClient, searchQuery].filter(Boolean).length;
-  const showFilters = !["pipeline", "person", "client", "interactions"].includes(viewMode);
+  const showFilters = !["pipeline", "person", "client", "interactions", "objectives"].includes(viewMode);
 
   return (
     <div className={`min-h-screen bg-background relative ${isDark ? "" : "theme-light"}`}>
@@ -122,7 +123,7 @@ const OperationsDashboard = () => {
             <Button variant="ghost" size="sm" onClick={toggleTheme} className="text-muted-foreground hover:text-foreground">
               {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => { refetch(); refetchDeals(); refetchInteractions(); }} className="text-muted-foreground hover:text-foreground">
+            <Button variant="ghost" size="sm" onClick={() => { refetch(); refetchDeals(); refetchInteractions(); refetchObjectives(); }} className="text-muted-foreground hover:text-foreground">
               <RefreshCw className="w-4 h-4" />
             </Button>
             <Button variant="ghost" size="sm" onClick={handleLogout} className="text-muted-foreground hover:text-foreground">
@@ -159,7 +160,7 @@ const OperationsDashboard = () => {
             ))}
           </div>
 
-          {!["pipeline", "interactions"].includes(viewMode) && (
+          {!["pipeline", "interactions", "objectives"].includes(viewMode) && (
             <Button
               onClick={() => { setSelectedItem(null); setIsNewItem(true); }}
               className="bg-gradient-coral text-primary-foreground font-semibold ml-auto"
