@@ -26,6 +26,8 @@ import Tools from "./pages/Tools";
 import OperationsLogin from "./pages/OperationsLogin";
 import OperationsDashboard from "./pages/OperationsDashboard";
 import ResetPassword from "./pages/ResetPassword";
+import ContentEngine from "./pages/ContentEngine";
+import ContentCycleDetail from "./pages/ContentCycleDetail";
 
 const queryClient = new QueryClient();
 
@@ -59,6 +61,8 @@ const App = () => (
           <Route path="/admin/operaciones" element={<OperationsDashboard />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/tools" element={<Tools />} />
+          <Route path="/parrilla" element={<ContentEngine />} />
+          <Route path="/parrilla/:profileId" element={<ContentCycleDetail />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
