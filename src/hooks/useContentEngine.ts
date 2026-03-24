@@ -64,6 +64,78 @@ export type ContentLearning = {
   created_at: string;
 };
 
+export type ContentInput = {
+  id: string;
+  cycle_id: string;
+  input_type: string;
+  title: string | null;
+  content: string | null;
+  url: string | null;
+  file_name: string | null;
+  file_url: string | null;
+  tags: string[];
+  sort_order: number;
+  created_at: string;
+};
+
+export type ContentAnalyticRow = {
+  id: string;
+  profile_id: string;
+  piece_id: string | null;
+  published_date: string | null;
+  network: string | null;
+  post_type: string | null;
+  post_text: string | null;
+  reach: number;
+  impressions: number;
+  engagement: number;
+  reactions: number;
+  comments: number;
+  shares: number;
+  clicks: number;
+  video_views: number;
+  engagement_rate: number;
+  import_batch: string | null;
+  raw_data: any;
+  created_at: string;
+};
+
+export type AdCampaign = {
+  id: string;
+  profile_id: string;
+  platform: string;
+  campaign_name: string;
+  campaign_id_external: string | null;
+  objective: string | null;
+  budget: number;
+  start_date: string | null;
+  end_date: string | null;
+  status: string;
+  import_batch: string | null;
+  created_at: string;
+};
+
+export type AdPerformanceRow = {
+  id: string;
+  campaign_id: string;
+  ad_name: string | null;
+  ad_set_name: string | null;
+  report_date: string | null;
+  impressions: number;
+  clicks: number;
+  spend: number;
+  conversions: number;
+  conversion_value: number;
+  cpc: number;
+  cpm: number;
+  ctr: number;
+  roas: number;
+  reach: number;
+  frequency: number;
+  raw_data: any;
+  created_at: string;
+};
+
 export function useContentEngine() {
   const [profiles, setProfiles] = useState<ContentProfile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -206,4 +278,103 @@ export function useContentLearnings(profileId: string | null) {
   useEffect(() => { fetchLearnings(); }, [fetchLearnings]);
 
   return { learnings, fetchLearnings };
+}
+
+export function useContentInputs(cycleId: string | null) {
+  const [inputs, setInputs] = useState<ContentInput[]>([]);
+
+  const fetchInputs = useCallback(async () => {
+    if (!cycleId) { setInputs([]); return; }
+    const { data } = await supabase
+      .from("content_inputs")
+      .select("*")
+      .eq("cycle_id", cycleId)
+      .order("sort_order");
+    setInputs((data || []) as ContentInput[]);
+  }, [cycleId]);
+
+  useEffect(() => { fetchInputs(); }, [fetchInputs]);
+
+  const addInput = useCallback(async (input: Partial<ContentInput>) => {
+    const { error } = await supabase.from("content_inputs").insert(input as any);
+    if (error) { toast.error("Error agregando insumo"); return false; }
+    fetchInputs();
+    return true;
+  }, [fetchInputs]);
+
+  const removeInput = useCallback(async (id: string) => {
+    const { error } = await supabase.from("content_inputs").delete().eq("id", id);
+    if (error) toast.error("Error eliminando insumo");
+    else fetchInputs();
+  }, [fetchInputs]);
+
+  return { inputs, fetchInputs, addInput, removeInput };
+}
+
+export function useContentAnalytics(profileId: string | null) {
+  const [analytics, setAnalytics] = useState<ContentAnalyticRow[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const fetchAnalytics = useCallback(async () => {
+    if (!profileId) { setAnalytics([]); return; }
+    setLoading(true);
+    const { data } = await supabase
+      .from("content_analytics")
+      .select("*")
+      .eq("profile_id", profileId)
+      .order("published_date", { ascending: false });
+    setAnalytics((data || []) as ContentAnalyticRow[]);
+    setLoading(false);
+  }, [profileId]);
+
+  useEffect(() => { fetchAnalytics(); }, [fetchAnalytics]);
+
+  const bulkInsert = useCallback(async (rows: Partial<ContentAnalyticRow>[]) => {
+    const { error } = await supabase.from("content_analytics").insert(rows as any[]);
+    if (error) { toast.error("Error importando datos"); return false; }
+    toast.success(`${rows.length} registros importados`);
+    fetchAnalytics();
+    return true;
+  }, [fetchAnalytics]);
+
+  return { analytics, loading, fetchAnalytics, bulkInsert };
+}
+
+export function useAdCampaigns(profileId: string | null) {
+  const [campaigns, setCampaigns] = useState<AdCampaign[]>([]);
+  const [performance, setPerformance] = useState<AdPerformanceRow[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const fetchCampaigns = useCallback(async () => {
+    if (!profileId) { setCampaigns([]); setPerformance([]); return; }
+    setLoading(true);
+    const [campRes, perfRes] = await Promise.all([
+      supabase.from("ad_campaigns").select("*").eq("profile_id", profileId).order("created_at", { ascending: false }),
+      supabase.from("ad_performance").select("*, ad_campaigns!inner(profile_id)").eq("ad_campaigns.profile_id", profileId).order("report_date", { ascending: false }),
+    ]);
+    setCampaigns((campRes.data || []) as AdCampaign[]);
+    setPerformance((perfRes.data || []) as AdPerformanceRow[]);
+    setLoading(false);
+  }, [profileId]);
+
+  useEffect(() => { fetchCampaigns(); }, [fetchCampaigns]);
+
+  const importAds = useCallback(async (campaignData: Partial<AdCampaign>, performanceRows: Partial<AdPerformanceRow>[]) => {
+    const { data: camp, error: campErr } = await supabase
+      .from("ad_campaigns")
+      .insert(campaignData as any)
+      .select()
+      .single();
+    if (campErr || !camp) { toast.error("Error creando campaña"); return false; }
+
+    const rows = performanceRows.map(r => ({ ...r, campaign_id: (camp as any).id }));
+    const { error: perfErr } = await supabase.from("ad_performance").insert(rows as any[]);
+    if (perfErr) { toast.error("Error importando performance"); return false; }
+
+    toast.success(`Campaña importada con ${rows.length} registros`);
+    fetchCampaigns();
+    return true;
+  }, [fetchCampaigns]);
+
+  return { campaigns, performance, loading, fetchCampaigns, importAds };
 }

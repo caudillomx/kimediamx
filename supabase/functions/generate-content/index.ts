@@ -12,7 +12,7 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    const { action, profile, cycle, pieces, learnings, analytics } = await req.json();
+    const { action, profile, cycle, pieces, learnings, analytics, inputs } = await req.json();
 
     let systemPrompt = "";
     let userPrompt = "";
@@ -62,6 +62,18 @@ TIPO DE CICLO: ${cycle.cycle_type}
 
 ${cycle.briefing_data?.objective ? `OBJETIVO DEL CICLO: ${cycle.briefing_data.objective}` : ""}
 ${cycle.briefing_data?.themes ? `TEMAS PRIORITARIOS: ${cycle.briefing_data.themes}` : ""}
+
+${inputs && inputs.length > 0 ? `
+INSUMOS CLAVE (BASA LA PARRILLA EN ESTOS MATERIALES):
+${inputs.map((inp: any, i: number) => `
+--- Insumo ${i + 1}: ${inp.title || "Sin título"} [${inp.input_type}] ---
+${inp.content || ""}
+${inp.url ? `URL: ${inp.url}` : ""}
+${inp.tags?.length > 0 ? `Tags: ${inp.tags.join(", ")}` : ""}
+`).join("\n")}
+
+IMPORTANTE: Cada pieza de la parrilla DEBE estar basada en uno o más de estos insumos. No inventes contenido que no esté respaldado por los materiales proporcionados. Indica en el campo "objective" de qué insumo proviene cada pieza.
+` : ""}
 
 ${learnings && learnings.length > 0 ? `
 APRENDIZAJES PREVIOS (considera esto para mejorar):
