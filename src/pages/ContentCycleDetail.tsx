@@ -328,6 +328,15 @@ const ContentCycleDetail = () => {
       toast.error("Agrega al menos un insumo antes de generar la parrilla");
       return;
     }
+    // Warn if all inputs are URL-only without text content
+    const hasTextContent = inputs.some(inp => inp.content && inp.content.trim().length > 20);
+    if (!hasTextContent) {
+      const urlOnlyCount = inputs.filter(inp => inp.input_type === "url" && !inp.content).length;
+      if (urlOnlyCount === inputs.length) {
+        toast.error("Los insumos solo tienen URLs. La IA necesita texto/contenido para generar la parrilla. Pega el contenido de los artículos o agrega insumos de tipo texto.");
+        return;
+      }
+    }
     setGenerating(true);
     try {
       const { data, error } = await supabase.functions.invoke("generate-content", {
