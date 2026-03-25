@@ -116,13 +116,14 @@ const ClientCard = ({ profile, onClick, onDelete }: { profile: ContentProfile; o
 
 const ContentEngine = () => {
   const navigate = useNavigate();
-  const { profiles, loading, fetchProfiles, createProfile } = useContentEngine();
+  const { profiles, loading, fetchProfiles, createProfile, deleteProfile } = useContentEngine();
   const { isDark, toggle: toggleTheme } = useThemeToggle();
   const [session, setSession] = useState<any>(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [showNewProfile, setShowNewProfile] = useState(false);
   const [showImportKit, setShowImportKit] = useState(false);
+  const [profileToDelete, setProfileToDelete] = useState<ContentProfile | null>(null);
   const [kitProfiles, setKitProfiles] = useState<any[]>([]);
   const [loadingKit, setLoadingKit] = useState(false);
   const [newProfile, setNewProfile] = useState({
