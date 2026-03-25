@@ -8,6 +8,8 @@ export type ContentProfile = {
   industry: string | null;
   target_audience: string | null;
   brand_tone: string | null;
+  brand_essence: string | null;
+  client_type: string | null;
   content_pillars: string[];
   preferred_networks: string[];
   posting_frequency: string | null;
@@ -28,6 +30,7 @@ export type ContentCycle = {
   end_date: string;
   status: string;
   briefing_data: any;
+  ads_budget: number;
   ai_recommendations: string | null;
   created_at: string;
   updated_at: string;

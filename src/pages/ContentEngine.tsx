@@ -22,6 +22,11 @@ import { CLIENTS } from "@/hooks/useOperationsData";
 
 const NETWORKS = ["Instagram", "Facebook", "X", "LinkedIn", "TikTok"];
 const TONES = ["Profesional", "Cercano", "Inspirador", "Educativo", "Disruptivo", "Formal"];
+const CLIENT_TYPES = [
+  { value: "calendarizado", label: "📅 Calendarizado", desc: "Contenido predecible, temáticas fijas (ej: Padre Sada)" },
+  { value: "coyuntural", label: "🔥 Coyuntural", desc: "Depende de tendencias y virales (ej: KiMedia)" },
+  { value: "mixto", label: "⚡ Mixto", desc: "Combina calendario fijo con contenido de tendencias" },
+];
 
 const NETWORK_ICONS: Record<string, string> = {
   Instagram: "📸", Facebook: "📘", X: "𝕏", LinkedIn: "💼", TikTok: "🎵",
@@ -54,6 +59,9 @@ const ClientCard = ({ profile, onClick, onDelete, onEdit }: { profile: ContentPr
               <p className="text-xs text-muted-foreground flex items-center gap-1.5">
                 <Layers className="w-3 h-3" />
                 {profile.industry || "Sin industria"} · {profile.brand_tone || "Profesional"}
+                {profile.client_type && profile.client_type !== "calendarizado" && (
+                  <span className="ml-1">{profile.client_type === "coyuntural" ? "🔥" : "⚡"}</span>
+                )}
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -136,7 +144,7 @@ const ContentEngine = () => {
   const [showImportKit, setShowImportKit] = useState(false);
   const [profileToDelete, setProfileToDelete] = useState<ContentProfile | null>(null);
   const [profileToEdit, setProfileToEdit] = useState<ContentProfile | null>(null);
-  const [editData, setEditData] = useState({ client_name: "", brand_tone: "", content_pillars: [] as string[], preferred_networks: [] as string[] });
+  const [editData, setEditData] = useState({ client_name: "", brand_tone: "", brand_essence: "", client_type: "calendarizado", content_pillars: [] as string[], preferred_networks: [] as string[] });
   const [editPillarInput, setEditPillarInput] = useState("");
   const [kitProfiles, setKitProfiles] = useState<any[]>([]);
   const [loadingKit, setLoadingKit] = useState(false);
@@ -145,6 +153,8 @@ const ContentEngine = () => {
     industry: "",
     target_audience: "",
     brand_tone: "Profesional",
+    brand_essence: "",
+    client_type: "calendarizado",
     content_pillars: [] as string[],
     preferred_networks: ["Instagram", "Facebook"] as string[],
     posting_frequency: "3 veces por semana",
@@ -229,6 +239,7 @@ const ContentEngine = () => {
       setShowNewProfile(false);
       setNewProfile({
         client_name: "", industry: "", target_audience: "", brand_tone: "Profesional",
+        brand_essence: "", client_type: "calendarizado",
         content_pillars: [], preferred_networks: ["Instagram", "Facebook"],
         posting_frequency: "3 veces por semana", restrictions: "",
       });
@@ -355,6 +366,8 @@ const ContentEngine = () => {
                       setEditData({
                         client_name: profile.client_name,
                         brand_tone: profile.brand_tone || "",
+                        brand_essence: (profile as any).brand_essence || "",
+                        client_type: (profile as any).client_type || "calendarizado",
                         content_pillars: profile.content_pillars || [],
                         preferred_networks: profile.preferred_networks || [],
                       });
@@ -402,20 +415,51 @@ const ContentEngine = () => {
                 placeholder="¿A quién le habla este cliente?" rows={2} />
             </div>
             <div>
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Tono de marca</Label>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Tono de marca <span className="text-primary">(puedes elegir varios)</span></Label>
               <div className="flex flex-wrap gap-2 mt-1.5">
-                {TONES.map(t => (
-                  <button key={t}
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                      newProfile.brand_tone === t
-                        ? "bg-primary text-primary-foreground shadow-sm"
-                        : "bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80"
+                {TONES.map(t => {
+                  const selected = newProfile.brand_tone.split(", ").filter(Boolean);
+                  const isSelected = selected.includes(t);
+                  return (
+                    <button key={t}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                        isSelected
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80"
+                      }`}
+                      onClick={() => {
+                        const tones = selected.includes(t) ? selected.filter(x => x !== t) : [...selected, t];
+                        setNewProfile(p => ({ ...p, brand_tone: tones.join(", ") }));
+                      }}>
+                      {t}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Tipo de cliente</Label>
+              <div className="flex flex-col gap-2 mt-1.5">
+                {CLIENT_TYPES.map(ct => (
+                  <button key={ct.value}
+                    className={`text-left px-3 py-2 rounded-xl text-sm transition-all border ${
+                      newProfile.client_type === ct.value
+                        ? "bg-primary/10 border-primary/40 text-foreground"
+                        : "bg-secondary border-border text-muted-foreground hover:border-primary/20"
                     }`}
-                    onClick={() => setNewProfile(p => ({ ...p, brand_tone: t }))}>
-                    {t}
+                    onClick={() => setNewProfile(p => ({ ...p, client_type: ct.value }))}>
+                    <span className="font-medium">{ct.label}</span>
+                    <span className="text-xs block mt-0.5 opacity-70">{ct.desc}</span>
                   </button>
                 ))}
               </div>
+            </div>
+            <div>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Esencia de marca / Brandbook</Label>
+              <Textarea value={newProfile.brand_essence} className="bg-secondary border-border mt-1.5 rounded-xl"
+                onChange={e => setNewProfile(p => ({ ...p, brand_essence: e.target.value }))}
+                placeholder="Visión, misión, valores, personalidad de marca, propuesta de valor..." rows={4} />
+              <p className="text-[10px] text-muted-foreground mt-1">Este texto se usará como contexto base para la IA al generar contenido</p>
             </div>
             <div>
               <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Pilares de contenido</Label>
@@ -596,20 +640,51 @@ const ContentEngine = () => {
                 onChange={e => setEditData(d => ({ ...d, client_name: e.target.value }))} />
             </div>
             <div>
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Tono de marca</Label>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Tono de marca <span className="text-primary">(puedes elegir varios)</span></Label>
               <div className="flex flex-wrap gap-2 mt-1.5">
-                {TONES.map(t => (
-                  <button key={t}
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                      editData.brand_tone === t
-                        ? "bg-primary text-primary-foreground shadow-sm"
-                        : "bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80"
+                {TONES.map(t => {
+                  const selected = editData.brand_tone.split(", ").filter(Boolean);
+                  const isSelected = selected.includes(t);
+                  return (
+                    <button key={t}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                        isSelected
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80"
+                      }`}
+                      onClick={() => {
+                        const tones = isSelected ? selected.filter(x => x !== t) : [...selected, t];
+                        setEditData(d => ({ ...d, brand_tone: tones.join(", ") }));
+                      }}>
+                      {t}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Tipo de cliente</Label>
+              <div className="flex flex-col gap-2 mt-1.5">
+                {CLIENT_TYPES.map(ct => (
+                  <button key={ct.value}
+                    className={`text-left px-3 py-2 rounded-xl text-sm transition-all border ${
+                      editData.client_type === ct.value
+                        ? "bg-primary/10 border-primary/40 text-foreground"
+                        : "bg-secondary border-border text-muted-foreground hover:border-primary/20"
                     }`}
-                    onClick={() => setEditData(d => ({ ...d, brand_tone: t }))}>
-                    {t}
+                    onClick={() => setEditData(d => ({ ...d, client_type: ct.value }))}>
+                    <span className="font-medium">{ct.label}</span>
+                    <span className="text-xs block mt-0.5 opacity-70">{ct.desc}</span>
                   </button>
                 ))}
               </div>
+            </div>
+            <div>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Esencia de marca / Brandbook</Label>
+              <Textarea value={editData.brand_essence} className="bg-secondary border-border mt-1.5 rounded-xl"
+                onChange={e => setEditData(d => ({ ...d, brand_essence: e.target.value }))}
+                placeholder="Visión, misión, valores, personalidad de marca..." rows={4} />
+              <p className="text-[10px] text-muted-foreground mt-1">Contexto base para la IA al generar contenido</p>
             </div>
             <div>
               <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Pilares de contenido</Label>
@@ -670,9 +745,11 @@ const ContentEngine = () => {
                   await updateProfile(profileToEdit.id, {
                     client_name: editData.client_name.trim(),
                     brand_tone: editData.brand_tone,
+                    brand_essence: editData.brand_essence,
+                    client_type: editData.client_type,
                     content_pillars: editData.content_pillars,
                     preferred_networks: editData.preferred_networks,
-                  });
+                  } as any);
                   setProfileToEdit(null);
                   toast({ title: "Perfil actualizado" });
                 }
