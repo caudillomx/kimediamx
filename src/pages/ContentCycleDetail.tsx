@@ -788,6 +788,13 @@ const ContentCycleDetail = () => {
                       </div>
                       {pieces.length > 0 && (
                         <div className="flex gap-2 flex-wrap">
+                          {pendingCount > 0 && (
+                            <Button variant="outline" size="sm" className="rounded-xl border-amber-500/30 text-amber-400 hover:bg-amber-500/10"
+                              onClick={handleReviewPieces} disabled={reviewing}>
+                              {reviewing ? <RefreshCw className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Eye className="w-3.5 h-3.5 mr-1" />}
+                              Revisar con IA ({pendingCount})
+                            </Button>
+                          )}
                           <Button variant="outline" size="sm" className="rounded-xl"
                             onClick={() => { pieces.filter(p => p.status === "pendiente").forEach(p => updatePiece(p.id, { status: "aprobada" })); }}>
                             <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Aprobar todas
