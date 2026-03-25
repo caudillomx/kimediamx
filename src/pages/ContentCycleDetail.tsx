@@ -6,6 +6,7 @@ import {
   useContentLearnings, useContentInputs, useContentAnalytics,
   useAdCampaigns, ContentProfile, ContentPiece, ContentInput,
 } from "@/hooks/useContentEngine";
+import { useTrendKeywords, useTrendResults } from "@/hooks/useTrends";
 import { useThemeToggle } from "@/hooks/useThemeToggle";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -22,7 +23,7 @@ import {
   FileText, Calendar, Sun, Moon, Upload, ChevronDown, ChevronUp,
   LinkIcon, Type, Trash2, BarChart3, TrendingUp, Zap,
   Edit3, Eye, CheckCircle2, Circle, Clock, Package,
-  Filter, Copy, ExternalLink, Hash,
+  Filter, Copy, ExternalLink, Hash, Search, Globe, Lightbulb,
 } from "lucide-react";
 
 // ─── Constants ───────────────────────────────────────────
