@@ -16,7 +16,7 @@ import { toast } from "@/hooks/use-toast";
 import {
   Plus, Search, RefreshCw, LogOut, Sun, Moon, ArrowLeft,
   Grid3X3, BarChart3, Megaphone, BookOpen, Zap, TrendingUp,
-  Calendar, Layers, Download, Users, Trash2,
+  Calendar, Layers, Download, Users, Trash2, Pencil,
 } from "lucide-react";
 import { CLIENTS } from "@/hooks/useOperationsData";
 
@@ -27,7 +27,7 @@ const NETWORK_ICONS: Record<string, string> = {
   Instagram: "📸", Facebook: "📘", X: "𝕏", LinkedIn: "💼", TikTok: "🎵",
 };
 
-const ClientCard = ({ profile, onClick, onDelete }: { profile: ContentProfile; onClick: () => void; onDelete: () => void }) => {
+const ClientCard = ({ profile, onClick, onDelete, onEdit }: { profile: ContentProfile; onClick: () => void; onDelete: () => void; onEdit: () => void }) => {
   const networks = profile.preferred_networks || [];
   const pillars = profile.content_pillars || [];
 
