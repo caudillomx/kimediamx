@@ -160,26 +160,12 @@ OBJETIVOS DEL CLIENTE: ${analytics?.objectives || "No definidos"}`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
-        tools: [{
-          type: "function",
-          function: {
-            name: "content_response",
-            description: "Return structured content data",
-            parameters: {
-              type: "object",
-              properties: {
-                result: { type: "object" }
-              },
-              required: ["result"],
-            }
-          }
-        }],
-        tool_choice: { type: "function", function: { name: "content_response" } },
+        response_format: { type: "json_object" },
       }),
     });
 
