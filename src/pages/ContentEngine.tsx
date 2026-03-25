@@ -59,6 +59,9 @@ const ClientCard = ({ profile, onClick, onDelete, onEdit }: { profile: ContentPr
               <p className="text-xs text-muted-foreground flex items-center gap-1.5">
                 <Layers className="w-3 h-3" />
                 {profile.industry || "Sin industria"} · {profile.brand_tone || "Profesional"}
+                {profile.client_type && profile.client_type !== "calendarizado" && (
+                  <span className="ml-1">{profile.client_type === "coyuntural" ? "🔥" : "⚡"}</span>
+                )}
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -141,7 +144,7 @@ const ContentEngine = () => {
   const [showImportKit, setShowImportKit] = useState(false);
   const [profileToDelete, setProfileToDelete] = useState<ContentProfile | null>(null);
   const [profileToEdit, setProfileToEdit] = useState<ContentProfile | null>(null);
-  const [editData, setEditData] = useState({ client_name: "", brand_tone: "", content_pillars: [] as string[], preferred_networks: [] as string[] });
+  const [editData, setEditData] = useState({ client_name: "", brand_tone: "", brand_essence: "", client_type: "calendarizado", content_pillars: [] as string[], preferred_networks: [] as string[] });
   const [editPillarInput, setEditPillarInput] = useState("");
   const [kitProfiles, setKitProfiles] = useState<any[]>([]);
   const [loadingKit, setLoadingKit] = useState(false);
@@ -150,6 +153,8 @@ const ContentEngine = () => {
     industry: "",
     target_audience: "",
     brand_tone: "Profesional",
+    brand_essence: "",
+    client_type: "calendarizado",
     content_pillars: [] as string[],
     preferred_networks: ["Instagram", "Facebook"] as string[],
     posting_frequency: "3 veces por semana",
@@ -234,6 +239,7 @@ const ContentEngine = () => {
       setShowNewProfile(false);
       setNewProfile({
         client_name: "", industry: "", target_audience: "", brand_tone: "Profesional",
+        brand_essence: "", client_type: "calendarizado",
         content_pillars: [], preferred_networks: ["Instagram", "Facebook"],
         posting_frequency: "3 veces por semana", restrictions: "",
       });
