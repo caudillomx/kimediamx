@@ -372,6 +372,8 @@ const ContentEngine = () => {
                         client_type: (profile as any).client_type || "calendarizado",
                         content_pillars: profile.content_pillars || [],
                         preferred_networks: profile.preferred_networks || [],
+                        brandbook_url: (profile as any).brandbook_url || null,
+                        brandbook_file_name: (profile as any).brandbook_file_name || null,
                       });
                       setEditPillarInput("");
                     }}
