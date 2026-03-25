@@ -548,6 +548,108 @@ const ContentEngine = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      {/* Edit Profile Dialog */}
+      <Dialog open={!!profileToEdit} onOpenChange={(open) => !open && setProfileToEdit(null)}>
+        <DialogContent className="max-w-lg bg-card border-border max-h-[90vh] overflow-y-auto rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-foreground font-display text-xl flex items-center gap-2">
+              <Pencil className="w-5 h-5 text-primary" /> Editar perfil
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-5">
+            <div>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Nombre del cliente</Label>
+              <Input value={editData.client_name} className="bg-secondary border-border mt-1.5 rounded-xl"
+                onChange={e => setEditData(d => ({ ...d, client_name: e.target.value }))} />
+            </div>
+            <div>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Tono de marca</Label>
+              <div className="flex flex-wrap gap-2 mt-1.5">
+                {TONES.map(t => (
+                  <button key={t}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                      editData.brand_tone === t
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80"
+                    }`}
+                    onClick={() => setEditData(d => ({ ...d, brand_tone: t }))}>
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Pilares de contenido</Label>
+              <div className="flex gap-2 mt-1.5">
+                <Input value={editPillarInput} onChange={e => setEditPillarInput(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      if (editPillarInput.trim() && !editData.content_pillars.includes(editPillarInput.trim())) {
+                        setEditData(d => ({ ...d, content_pillars: [...d.content_pillars, editPillarInput.trim()] }));
+                        setEditPillarInput("");
+                      }
+                    }
+                  }}
+                  placeholder="Agregar pilar..." className="bg-secondary border-border rounded-xl" />
+                <Button variant="outline" size="sm" className="rounded-xl" onClick={() => {
+                  if (editPillarInput.trim() && !editData.content_pillars.includes(editPillarInput.trim())) {
+                    setEditData(d => ({ ...d, content_pillars: [...d.content_pillars, editPillarInput.trim()] }));
+                    setEditPillarInput("");
+                  }
+                }}>+</Button>
+              </div>
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {editData.content_pillars.map(p => (
+                  <span key={p} className="px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium cursor-pointer hover:bg-destructive/10 hover:text-destructive transition-colors"
+                    onClick={() => setEditData(d => ({ ...d, content_pillars: d.content_pillars.filter(x => x !== p) }))}>
+                    {p} ×
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Redes sociales</Label>
+              <div className="flex flex-wrap gap-2 mt-1.5">
+                {NETWORKS.map(n => (
+                  <button key={n}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all flex items-center gap-1.5 ${
+                      editData.preferred_networks.includes(n)
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "bg-secondary text-muted-foreground hover:text-foreground"
+                    }`}
+                    onClick={() => setEditData(d => ({
+                      ...d,
+                      preferred_networks: d.preferred_networks.includes(n)
+                        ? d.preferred_networks.filter(x => x !== n)
+                        : [...d.preferred_networks, n]
+                    }))}>
+                    <span>{NETWORK_ICONS[n]}</span> {n}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <Button
+              className="w-full bg-gradient-coral text-primary-foreground font-bold rounded-xl h-11 shadow-glow hover:shadow-glow-lg transition-shadow"
+              disabled={!editData.client_name.trim()}
+              onClick={async () => {
+                if (profileToEdit) {
+                  await updateProfile(profileToEdit.id, {
+                    client_name: editData.client_name.trim(),
+                    brand_tone: editData.brand_tone,
+                    content_pillars: editData.content_pillars,
+                    preferred_networks: editData.preferred_networks,
+                  });
+                  setProfileToEdit(null);
+                  toast({ title: "Perfil actualizado" });
+                }
+              }}
+            >
+              Guardar cambios
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
