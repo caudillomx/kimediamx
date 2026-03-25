@@ -17,6 +17,7 @@ import {
   Plus, Search, RefreshCw, LogOut, Sun, Moon, ArrowLeft,
   Grid3X3, BarChart3, Megaphone, BookOpen, Zap, TrendingUp,
   Calendar, Layers, Download, Users, Trash2, Pencil, Camera,
+  Upload, FileText, X,
 } from "lucide-react";
 import { CLIENTS } from "@/hooks/useOperationsData";
 
@@ -144,7 +145,8 @@ const ContentEngine = () => {
   const [showImportKit, setShowImportKit] = useState(false);
   const [profileToDelete, setProfileToDelete] = useState<ContentProfile | null>(null);
   const [profileToEdit, setProfileToEdit] = useState<ContentProfile | null>(null);
-  const [editData, setEditData] = useState({ client_name: "", brand_tone: "", brand_essence: "", client_type: "calendarizado", content_pillars: [] as string[], preferred_networks: [] as string[] });
+  const [editData, setEditData] = useState({ client_name: "", brand_tone: "", brand_essence: "", client_type: "calendarizado", content_pillars: [] as string[], preferred_networks: [] as string[], brandbook_url: "" as string | null, brandbook_file_name: "" as string | null });
+  const [uploadingBrandbook, setUploadingBrandbook] = useState(false);
   const [editPillarInput, setEditPillarInput] = useState("");
   const [kitProfiles, setKitProfiles] = useState<any[]>([]);
   const [loadingKit, setLoadingKit] = useState(false);
