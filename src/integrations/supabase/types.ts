@@ -645,6 +645,7 @@ export type Database = {
       }
       content_cycles: {
         Row: {
+          ads_budget: number | null
           ai_recommendations: string | null
           briefing_data: Json | null
           created_at: string
@@ -658,6 +659,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          ads_budget?: number | null
           ai_recommendations?: string | null
           briefing_data?: Json | null
           created_at?: string
@@ -671,6 +673,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          ads_budget?: number | null
           ai_recommendations?: string | null
           briefing_data?: Json | null
           created_at?: string
@@ -865,8 +868,10 @@ export type Database = {
       content_profiles: {
         Row: {
           avatar_url: string | null
+          brand_essence: string | null
           brand_tone: string | null
           client_name: string
+          client_type: string | null
           content_pillars: string[] | null
           created_at: string
           hashtag_groups: Json | null
@@ -881,8 +886,10 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          brand_essence?: string | null
           brand_tone?: string | null
           client_name: string
+          client_type?: string | null
           content_pillars?: string[] | null
           created_at?: string
           hashtag_groups?: Json | null
@@ -897,8 +904,10 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          brand_essence?: string | null
           brand_tone?: string | null
           client_name?: string
+          client_type?: string | null
           content_pillars?: string[] | null
           created_at?: string
           hashtag_groups?: Json | null
