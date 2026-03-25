@@ -415,20 +415,51 @@ const ContentEngine = () => {
                 placeholder="¿A quién le habla este cliente?" rows={2} />
             </div>
             <div>
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Tono de marca</Label>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Tono de marca <span className="text-primary">(puedes elegir varios)</span></Label>
               <div className="flex flex-wrap gap-2 mt-1.5">
-                {TONES.map(t => (
-                  <button key={t}
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                      newProfile.brand_tone === t
-                        ? "bg-primary text-primary-foreground shadow-sm"
-                        : "bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80"
+                {TONES.map(t => {
+                  const selected = newProfile.brand_tone.split(", ").filter(Boolean);
+                  const isSelected = selected.includes(t);
+                  return (
+                    <button key={t}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                        isSelected
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80"
+                      }`}
+                      onClick={() => {
+                        const tones = selected.includes(t) ? selected.filter(x => x !== t) : [...selected, t];
+                        setNewProfile(p => ({ ...p, brand_tone: tones.join(", ") }));
+                      }}>
+                      {t}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Tipo de cliente</Label>
+              <div className="flex flex-col gap-2 mt-1.5">
+                {CLIENT_TYPES.map(ct => (
+                  <button key={ct.value}
+                    className={`text-left px-3 py-2 rounded-xl text-sm transition-all border ${
+                      newProfile.client_type === ct.value
+                        ? "bg-primary/10 border-primary/40 text-foreground"
+                        : "bg-secondary border-border text-muted-foreground hover:border-primary/20"
                     }`}
-                    onClick={() => setNewProfile(p => ({ ...p, brand_tone: t }))}>
-                    {t}
+                    onClick={() => setNewProfile(p => ({ ...p, client_type: ct.value }))}>
+                    <span className="font-medium">{ct.label}</span>
+                    <span className="text-xs block mt-0.5 opacity-70">{ct.desc}</span>
                   </button>
                 ))}
               </div>
+            </div>
+            <div>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Esencia de marca / Brandbook</Label>
+              <Textarea value={newProfile.brand_essence} className="bg-secondary border-border mt-1.5 rounded-xl"
+                onChange={e => setNewProfile(p => ({ ...p, brand_essence: e.target.value }))}
+                placeholder="Visión, misión, valores, personalidad de marca, propuesta de valor..." rows={4} />
+              <p className="text-[10px] text-muted-foreground mt-1">Este texto se usará como contexto base para la IA al generar contenido</p>
             </div>
             <div>
               <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Pilares de contenido</Label>
