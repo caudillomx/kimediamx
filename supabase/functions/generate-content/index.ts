@@ -153,6 +153,13 @@ MÉTRICAS RECIENTES:
 - Mejor pilar: ${analytics.bestPillar || "N/A"}
 - Mejor día: ${analytics.bestDay || "N/A"}
 - Engagement promedio: ${analytics.avgEngagement || "N/A"}
+` : ""}
+
+${trendResults && trendResults.length > 0 ? `
+TENDENCIAS ACTUALES DEL SECTOR (usa estas tendencias para proponer contenido relevante y oportuno):
+${trendResults.slice(0, 15).map((t: any) => `- [${t.keyword}] ${t.title || ""}: ${(t.summary || "").slice(0, 200)}`).join("\n")}
+
+IMPORTANTE: Incorpora al menos 2-3 piezas basadas en estas tendencias. Esto hará el contenido más relevante y aumentará el engagement.
 ` : ""}`;
 
   return { systemPrompt, userPrompt };
