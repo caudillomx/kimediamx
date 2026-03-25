@@ -453,7 +453,7 @@ const ContentCycleDetail = () => {
     }
   };
 
-
+  const exportCSV = () => {
     const headers = ["Fecha", "Red", "Formato", "Pilar", "Copy", "Hashtags", "CTA", "Estado"];
     const rows = pieces.map(p => [
       p.scheduled_date || "", p.network, p.format, p.pillar || "",
@@ -806,7 +806,7 @@ const ContentCycleDetail = () => {
                               Ejecutar {approvedCount} aprobadas
                             </Button>
                           )}
-                          <Button variant="outline" size="sm" onClick={handleExportCSV} className="rounded-xl">
+                          <Button variant="outline" size="sm" onClick={exportCSV} className="rounded-xl">
                             <Download className="w-3.5 h-3.5 mr-1" /> CSV
                           </Button>
                         </div>
