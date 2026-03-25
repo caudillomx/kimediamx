@@ -234,6 +234,7 @@ const ContentCycleDetail = () => {
   const { campaigns, performance, importAds } = useAdCampaigns(profileId || null);
   const [generating, setGenerating] = useState(false);
   const [executing, setExecuting] = useState(false);
+  const [reviewing, setReviewing] = useState(false);
   const [showNewCycle, setShowNewCycle] = useState(false);
   const [showAddInput, setShowAddInput] = useState(false);
   const [expandedPiece, setExpandedPiece] = useState<string | null>(null);
