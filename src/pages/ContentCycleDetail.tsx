@@ -45,7 +45,7 @@ const NETWORK_CONFIG: Record<string, { emoji: string; color: string }> = {
 const INPUT_TYPES = [
   { value: "articulo", label: "Artículo", icon: "📄", hint: "Pega el contenido de un artículo o blog que quieras usar como base.", fields: ["title", "url", "content"] },
   { value: "historia", label: "Historia / Caso", icon: "📖", hint: "Describe una historia de éxito, caso de estudio o testimonio.", fields: ["title", "content"] },
-  { value: "url", label: "URL / Enlace", icon: "🔗", hint: "Comparte un enlace relevante (noticia, referencia, recurso).", fields: ["url"] },
+  { value: "url", label: "URL / Enlace", icon: "🔗", hint: "Pega un enlace y el contenido se extraerá automáticamente.", fields: ["url"] },
   { value: "texto", label: "Texto libre", icon: "✍️", hint: "Ideas sueltas, mensajes clave, datos o temas prioritarios.", fields: ["title", "content"] },
   { value: "notas", label: "Notas de reunión", icon: "📝", hint: "Pega las notas o acuerdos de una junta con el cliente.", fields: ["title", "content"] },
   { value: "referencia", label: "Referencia visual", icon: "🖼️", hint: "Sube una imagen, brand book o referencia de diseño.", fields: ["title", "file"] },
