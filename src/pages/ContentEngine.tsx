@@ -123,7 +123,7 @@ const ClientCard = ({ profile, onClick, onDelete, onEdit }: { profile: ContentPr
 
 const ContentEngine = () => {
   const navigate = useNavigate();
-  const { profiles, loading, fetchProfiles, createProfile, deleteProfile } = useContentEngine();
+  const { profiles, loading, fetchProfiles, createProfile, updateProfile, deleteProfile } = useContentEngine();
   const { isDark, toggle: toggleTheme } = useThemeToggle();
   const [session, setSession] = useState<any>(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
@@ -131,6 +131,9 @@ const ContentEngine = () => {
   const [showNewProfile, setShowNewProfile] = useState(false);
   const [showImportKit, setShowImportKit] = useState(false);
   const [profileToDelete, setProfileToDelete] = useState<ContentProfile | null>(null);
+  const [profileToEdit, setProfileToEdit] = useState<ContentProfile | null>(null);
+  const [editData, setEditData] = useState({ client_name: "", brand_tone: "", content_pillars: [] as string[], preferred_networks: [] as string[] });
+  const [editPillarInput, setEditPillarInput] = useState("");
   const [kitProfiles, setKitProfiles] = useState<any[]>([]);
   const [loadingKit, setLoadingKit] = useState(false);
   const [newProfile, setNewProfile] = useState({
@@ -343,6 +346,16 @@ const ContentEngine = () => {
                     profile={profile}
                     onClick={() => navigate(`/parrilla/${profile.id}`)}
                     onDelete={() => setProfileToDelete(profile)}
+                    onEdit={() => {
+                      setProfileToEdit(profile);
+                      setEditData({
+                        client_name: profile.client_name,
+                        brand_tone: profile.brand_tone || "",
+                        content_pillars: profile.content_pillars || [],
+                        preferred_networks: profile.preferred_networks || [],
+                      });
+                      setEditPillarInput("");
+                    }}
                   />
                 </motion.div>
               ))}
