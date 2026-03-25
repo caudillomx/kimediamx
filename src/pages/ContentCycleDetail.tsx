@@ -234,6 +234,7 @@ const ContentCycleDetail = () => {
   const { campaigns, performance, importAds } = useAdCampaigns(profileId || null);
   const [generating, setGenerating] = useState(false);
   const [executing, setExecuting] = useState(false);
+  const [reviewing, setReviewing] = useState(false);
   const [showNewCycle, setShowNewCycle] = useState(false);
   const [showAddInput, setShowAddInput] = useState(false);
   const [expandedPiece, setExpandedPiece] = useState<string | null>(null);
@@ -421,7 +422,38 @@ const ContentCycleDetail = () => {
     }
   };
 
-  const handleExportCSV = () => {
+  const handleReviewPieces = async () => {
+    const pendingPieces = pieces.filter(p => p.status === "pendiente");
+    if (pendingPieces.length === 0) { toast.error("No hay piezas pendientes para revisar"); return; }
+    setReviewing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-content", {
+        body: { action: "review_pieces", profile, pieces: pendingPieces },
+      });
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error);
+      const reviews = data.data.reviews || [];
+      let improved = 0;
+      for (const review of reviews) {
+        const piece = pendingPieces[review.piece_index];
+        if (!piece) continue;
+        const updates: any = {};
+        if (review.improved_copy) { updates.draft_copy = review.improved_copy; improved++; }
+        if (review.improved_cta) updates.cta = review.improved_cta;
+        if (review.improved_hashtags?.length) updates.hashtags = review.improved_hashtags;
+        if (Object.keys(updates).length > 0) await updatePiece(piece.id, updates);
+      }
+      const generalNotes = data.data.general_notes;
+      if (generalNotes) toast.info(generalNotes, { duration: 8000 });
+      toast.success(`Revisión completa: ${improved} piezas mejoradas de ${pendingPieces.length}`);
+    } catch (e: any) {
+      toast.error(e.message || "Error en revisión");
+    } finally {
+      setReviewing(false);
+    }
+  };
+
+
     const headers = ["Fecha", "Red", "Formato", "Pilar", "Copy", "Hashtags", "CTA", "Estado"];
     const rows = pieces.map(p => [
       p.scheduled_date || "", p.network, p.format, p.pillar || "",
@@ -756,6 +788,13 @@ const ContentCycleDetail = () => {
                       </div>
                       {pieces.length > 0 && (
                         <div className="flex gap-2 flex-wrap">
+                          {pendingCount > 0 && (
+                            <Button variant="outline" size="sm" className="rounded-xl border-amber-500/30 text-amber-400 hover:bg-amber-500/10"
+                              onClick={handleReviewPieces} disabled={reviewing}>
+                              {reviewing ? <RefreshCw className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Eye className="w-3.5 h-3.5 mr-1" />}
+                              Revisar con IA ({pendingCount})
+                            </Button>
+                          )}
                           <Button variant="outline" size="sm" className="rounded-xl"
                             onClick={() => { pieces.filter(p => p.status === "pendiente").forEach(p => updatePiece(p.id, { status: "aprobada" })); }}>
                             <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Aprobar todas
