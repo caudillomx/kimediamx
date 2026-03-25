@@ -57,9 +57,13 @@ const ClientCard = ({ profile, onClick, onDelete, onEdit }: { profile: ContentPr
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-xl bg-gradient-coral flex items-center justify-center text-primary-foreground text-sm font-bold opacity-80 group-hover:opacity-100 transition-opacity">
-                {profile.client_name.charAt(0)}
-              </div>
+              {profile.avatar_url ? (
+                <img src={profile.avatar_url} alt={profile.client_name} className="w-10 h-10 rounded-xl object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
+              ) : (
+                <div className="w-10 h-10 rounded-xl bg-gradient-coral flex items-center justify-center text-primary-foreground text-sm font-bold opacity-80 group-hover:opacity-100 transition-opacity">
+                  {profile.client_name.charAt(0)}
+                </div>
+              )}
               <button
                 onClick={(e) => { e.stopPropagation(); onEdit(); }}
                 className="w-8 h-8 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-primary hover:bg-primary/10"
