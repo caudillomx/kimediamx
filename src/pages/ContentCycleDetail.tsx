@@ -245,6 +245,7 @@ const ContentCycleDetail = () => {
   const [newCycle, setNewCycle] = useState({
     title: "", cycle_type: "mensual", start_date: "", end_date: "",
     briefing_data: { objective: "", themes: "", special_dates: "" },
+    ads_budget: 0,
   });
   const [newInput, setNewInput] = useState({
     input_type: "articulo", title: "", content: "", url: "", tags: [] as string[],
@@ -288,7 +289,7 @@ const ContentCycleDetail = () => {
     if (result) {
       setSelectedCycleId(result.id);
       setShowNewCycle(false);
-      setNewCycle({ title: "", cycle_type: "mensual", start_date: "", end_date: "", briefing_data: { objective: "", themes: "", special_dates: "" } });
+      setNewCycle({ title: "", cycle_type: "mensual", start_date: "", end_date: "", briefing_data: { objective: "", themes: "", special_dates: "" }, ads_budget: 0 });
     }
   };
 
