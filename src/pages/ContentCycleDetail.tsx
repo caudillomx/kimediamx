@@ -374,7 +374,7 @@ const ContentCycleDetail = () => {
     setGenerating(true);
     try {
       const { data, error } = await supabase.functions.invoke("generate-content", {
-        body: { action: "generate_grid", profile, cycle: selectedCycle, learnings, inputs },
+        body: { action: "generate_grid", profile, cycle: selectedCycle, learnings, inputs, trendResults },
       });
       if (error) throw error;
       if (!data?.success) throw new Error(data?.error || "Error generando parrilla");
