@@ -1179,8 +1179,10 @@ const ContentCycleDetail = () => {
                 </div>
                 <Button onClick={handleAddInput}
                   className="w-full bg-gradient-coral text-primary-foreground font-bold rounded-xl h-11 shadow-glow hover:shadow-glow-lg transition-shadow"
-                  disabled={uploading || (!newInput.title && !newInput.content && !newInput.url)}>
-                  Agregar insumo
+                  disabled={uploading || scraping || (!newInput.title && !newInput.content && !newInput.url)}>
+                  {scraping ? (
+                    <><RefreshCw className="w-4 h-4 mr-2 animate-spin" /> Extrayendo contenido…</>
+                  ) : "Agregar insumo"}
                 </Button>
               </div>
             );
