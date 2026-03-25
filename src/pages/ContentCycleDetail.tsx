@@ -699,6 +699,187 @@ const ContentCycleDetail = () => {
               <motion.div key={activeTab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.2 }}>
 
+                {/* TENDENCIAS */}
+                {activeTab === "tendencias" && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between flex-wrap gap-3">
+                      <div>
+                        <h2 className="text-lg font-display font-bold text-foreground flex items-center gap-2">
+                          <Globe className="w-5 h-5 text-primary" /> Tendencias
+                        </h2>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Keywords de monitoreo y tendencias actuales para {profile.client_name}
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        {trendKeywords.length > 0 && (
+                          <Button onClick={() => research(
+                            trendKeywords.map(k => k.keyword),
+                            { industry: profile.industry || undefined, networks: profile.preferred_networks || [], profileName: profile.client_name, cycleId: selectedCycleId }
+                          )} disabled={researching}
+                            className="bg-gradient-coral text-primary-foreground font-semibold rounded-xl shadow-glow hover:shadow-glow-lg transition-shadow" size="sm">
+                            {researching ? <RefreshCw className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Search className="w-3.5 h-3.5 mr-1.5" />}
+                            {researching ? "Investigando..." : "Investigar tendencias"}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Keywords Management */}
+                    <Card className="p-4 bg-card border-border">
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                          <Hash className="w-4 h-4 text-primary" /> Keywords de monitoreo
+                        </h3>
+                        <Button variant="ghost" size="sm" className="text-xs text-primary hover:text-primary/80 rounded-xl"
+                          onClick={async () => {
+                            const suggested = [
+                              ...(profile.content_pillars || []),
+                              profile.industry,
+                              ...(profile.target_audience ? [profile.target_audience.split(" ")[0]] : []),
+                            ].filter(Boolean).slice(0, 5);
+                            if (suggested.length > 0) {
+                              await bulkAddKeywords(suggested as string[]);
+                              toast.success(`${suggested.length} keywords sugeridas agregadas`);
+                            }
+                          }}>
+                          <Lightbulb className="w-3.5 h-3.5 mr-1" /> Sugerir desde perfil
+                        </Button>
+                      </div>
+                      <div className="flex gap-2 mb-3">
+                        <Input value={trendKeywordInput} onChange={e => setTrendKeywordInput(e.target.value)}
+                          onKeyDown={e => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              if (trendKeywordInput.trim()) {
+                                addKeyword(trendKeywordInput.trim());
+                                setTrendKeywordInput("");
+                              }
+                            }
+                          }}
+                          placeholder="Agregar keyword y Enter..." className="bg-secondary border-border rounded-xl" />
+                        <Button variant="outline" size="sm" className="rounded-xl" onClick={() => {
+                          if (trendKeywordInput.trim()) {
+                            addKeyword(trendKeywordInput.trim());
+                            setTrendKeywordInput("");
+                          }
+                        }}>+</Button>
+                      </div>
+                      {trendKeywords.length === 0 ? (
+                        <p className="text-xs text-muted-foreground text-center py-4">
+                          Agrega keywords para monitorear tendencias. Puedes usar "Sugerir desde perfil" para comenzar rápido.
+                        </p>
+                      ) : (
+                        <div className="flex flex-wrap gap-1.5">
+                          {trendKeywords.map(kw => (
+                            <span key={kw.id}
+                              className={`px-2.5 py-1 rounded-full text-xs font-medium cursor-pointer transition-colors ${
+                                kw.source === "ai_suggested"
+                                  ? "bg-primary/10 text-primary hover:bg-destructive/10 hover:text-destructive"
+                                  : "bg-secondary text-foreground hover:bg-destructive/10 hover:text-destructive"
+                              }`}
+                              onClick={() => removeKeyword(kw.id)}>
+                              {kw.keyword} ×
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </Card>
+
+                    {/* Results */}
+                    {trendResults.length > 0 && (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-sm font-semibold text-foreground">
+                            {trendResults.length} tendencias encontradas
+                          </h3>
+                          <Button variant="ghost" size="sm" className="text-xs text-muted-foreground rounded-xl" onClick={clearResults}>
+                            Limpiar resultados
+                          </Button>
+                        </div>
+
+                        {/* Group by keyword */}
+                        {Array.from(new Set(trendResults.map(r => r.keyword))).map(keyword => {
+                          const keyResults = trendResults.filter(r => r.keyword === keyword);
+                          return (
+                            <Card key={keyword} className="overflow-hidden bg-card border-border">
+                              <div className="px-4 py-3 bg-secondary/30 border-b border-border">
+                                <div className="flex items-center gap-2">
+                                  <Hash className="w-3.5 h-3.5 text-primary" />
+                                  <span className="text-sm font-semibold text-foreground">{keyword}</span>
+                                  <Badge variant="secondary" className="text-[10px]">{keyResults.length} resultados</Badge>
+                                </div>
+                              </div>
+                              <div className="divide-y divide-border/30">
+                                {keyResults.slice(0, 5).map(result => (
+                                  <div key={result.id} className="px-4 py-3 hover:bg-secondary/20 transition-colors group">
+                                    <div className="flex items-start gap-3">
+                                      <span className="text-sm mt-0.5">
+                                        {result.source_type === "social" ? "💬" : result.source_type === "news" ? "📰" : "🌐"}
+                                      </span>
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2">
+                                          <p className="text-sm font-medium text-foreground truncate">{result.title || "Sin título"}</p>
+                                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-secondary text-muted-foreground capitalize shrink-0">
+                                            {result.source_type}
+                                          </span>
+                                        </div>
+                                        {result.summary && (
+                                          <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5 leading-relaxed">{result.summary}</p>
+                                        )}
+                                        {result.url && (
+                                          <a href={result.url} target="_blank" rel="noopener noreferrer"
+                                            className="text-[11px] text-primary hover:underline flex items-center gap-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <ExternalLink className="w-3 h-3" /> Ver fuente
+                                          </a>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </Card>
+                          );
+                        })}
+
+                        {/* Use as inputs button */}
+                        {selectedCycleId && (
+                          <Button variant="outline" className="w-full rounded-xl" size="sm"
+                            onClick={async () => {
+                              const summaryText = trendResults
+                                .map(r => `• [${r.keyword}] ${r.title}: ${r.summary || ""}`.slice(0, 300))
+                                .join("\n");
+                              await addInput({
+                                cycle_id: selectedCycleId,
+                                input_type: "texto",
+                                title: `Tendencias investigadas – ${new Date().toLocaleDateString("es-MX")}`,
+                                content: summaryText.slice(0, 8000),
+                                tags: ["tendencias", "auto"],
+                                sort_order: inputs.length,
+                              });
+                              toast.success("Tendencias agregadas como insumo del ciclo");
+                              setActiveTab("insumos");
+                            }}>
+                            <Lightbulb className="w-3.5 h-3.5 mr-1.5" /> Usar como insumo para la parrilla
+                          </Button>
+                        )}
+                      </div>
+                    )}
+
+                    {trendResults.length === 0 && trendKeywords.length > 0 && !researching && (
+                      <Card className="p-12 text-center bg-card border-border border-dashed">
+                        <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                          <Search className="w-7 h-7 text-primary" />
+                        </div>
+                        <h3 className="text-foreground font-display font-bold mb-1">Listo para investigar</h3>
+                        <p className="text-sm text-muted-foreground max-w-sm mx-auto mb-4">
+                          Tienes {trendKeywords.length} keywords configuradas. Haz clic en "Investigar tendencias" para buscar artículos y posts sociales relevantes.
+                        </p>
+                      </Card>
+                    )}
+                  </div>
+                )}
+
                 {/* INSUMOS */}
                 {activeTab === "insumos" && (
                   <div className="space-y-4">
