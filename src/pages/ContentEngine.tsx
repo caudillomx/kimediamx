@@ -22,6 +22,11 @@ import { CLIENTS } from "@/hooks/useOperationsData";
 
 const NETWORKS = ["Instagram", "Facebook", "X", "LinkedIn", "TikTok"];
 const TONES = ["Profesional", "Cercano", "Inspirador", "Educativo", "Disruptivo", "Formal"];
+const CLIENT_TYPES = [
+  { value: "calendarizado", label: "📅 Calendarizado", desc: "Contenido predecible, temáticas fijas (ej: Padre Sada)" },
+  { value: "coyuntural", label: "🔥 Coyuntural", desc: "Depende de tendencias y virales (ej: KiMedia)" },
+  { value: "mixto", label: "⚡ Mixto", desc: "Combina calendario fijo con contenido de tendencias" },
+];
 
 const NETWORK_ICONS: Record<string, string> = {
   Instagram: "📸", Facebook: "📘", X: "𝕏", LinkedIn: "💼", TikTok: "🎵",
