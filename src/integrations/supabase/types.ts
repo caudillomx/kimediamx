@@ -521,6 +521,101 @@ export type Database = {
           },
         ]
       }
+      client_trend_keywords: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean | null
+          keyword: string
+          profile_id: string
+          source: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          keyword: string
+          profile_id: string
+          source?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          keyword?: string
+          profile_id?: string
+          source?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_trend_keywords_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "content_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_trend_results: {
+        Row: {
+          created_at: string
+          cycle_id: string | null
+          id: string
+          keyword: string
+          profile_id: string
+          raw_data: Json | null
+          relevance_score: number | null
+          searched_at: string
+          source_type: string | null
+          summary: string | null
+          title: string | null
+          url: string | null
+        }
+        Insert: {
+          created_at?: string
+          cycle_id?: string | null
+          id?: string
+          keyword: string
+          profile_id: string
+          raw_data?: Json | null
+          relevance_score?: number | null
+          searched_at?: string
+          source_type?: string | null
+          summary?: string | null
+          title?: string | null
+          url?: string | null
+        }
+        Update: {
+          created_at?: string
+          cycle_id?: string | null
+          id?: string
+          keyword?: string
+          profile_id?: string
+          raw_data?: Json | null
+          relevance_score?: number | null
+          searched_at?: string
+          source_type?: string | null
+          summary?: string | null
+          title?: string | null
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_trend_results_cycle_id_fkey"
+            columns: ["cycle_id"]
+            isOneToOne: false
+            referencedRelation: "content_cycles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_trend_results_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "content_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_weekly_milestones: {
         Row: {
           activity_text: string
