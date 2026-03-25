@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useContentEngine, useContentCycles, ContentProfile } from "@/hooks/useContentEngine";
@@ -16,7 +16,7 @@ import { toast } from "@/hooks/use-toast";
 import {
   Plus, Search, RefreshCw, LogOut, Sun, Moon, ArrowLeft,
   Grid3X3, BarChart3, Megaphone, BookOpen, Zap, TrendingUp,
-  Calendar, Layers, Download, Users, Trash2, Pencil,
+  Calendar, Layers, Download, Users, Trash2, Pencil, Camera,
 } from "lucide-react";
 import { CLIENTS } from "@/hooks/useOperationsData";
 
