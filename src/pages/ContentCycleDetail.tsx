@@ -301,6 +301,8 @@ const ContentCycleDetail = () => {
     return { url: urlData.publicUrl, name: file.name };
   };
 
+  const [scraping, setScraping] = useState(false);
+
   const handleAddInput = async () => {
     const typeConfig = INPUT_TYPES.find(t => t.value === newInput.input_type);
     const fields = typeConfig?.fields || [];
@@ -309,11 +311,39 @@ const ContentCycleDetail = () => {
       (fields.includes("url") && newInput.url);
     if (!hasContent && !fields.includes("file")) return;
 
+    let finalTitle = newInput.title || null;
+    let finalContent = newInput.content || null;
+
+    // Auto-scrape URL content
+    if (newInput.input_type === "url" && newInput.url) {
+      setScraping(true);
+      toast.info("Extrayendo contenido de la URL…");
+      try {
+        const { data, error } = await supabase.functions.invoke("firecrawl-scrape", {
+          body: { url: newInput.url },
+        });
+        if (error) throw error;
+        if (data?.success && data.markdown) {
+          // Truncate to ~8000 chars to keep prompt manageable
+          finalContent = data.markdown.slice(0, 8000);
+          finalTitle = finalTitle || data.title || new URL(newInput.url).hostname;
+          toast.success(`Contenido extraído (${finalContent.length} caracteres)`);
+        } else {
+          toast.warning("No se pudo extraer contenido. Se guardará solo la URL.");
+        }
+      } catch (e: any) {
+        console.error("Scraping error:", e);
+        toast.warning("Error extrayendo contenido. Se guardará solo la URL.");
+      } finally {
+        setScraping(false);
+      }
+    }
+
     await addInput({
       cycle_id: selectedCycleId!,
       input_type: newInput.input_type,
-      title: newInput.title || null,
-      content: newInput.content || null,
+      title: finalTitle,
+      content: finalContent,
       url: newInput.url || null,
       tags: newInput.tags,
       sort_order: inputs.length,
