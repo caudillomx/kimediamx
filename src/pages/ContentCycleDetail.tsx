@@ -365,7 +365,6 @@ const ContentCycleDetail = () => {
       toast.error("Agrega al menos un insumo antes de generar la parrilla");
       return;
     }
-    // Warn if no inputs have actual text content
     const hasTextContent = inputs.some(inp => inp.content && inp.content.trim().length > 20);
     if (!hasTextContent) {
       toast.error("Los insumos no tienen contenido de texto. Agrega insumos con contenido o URLs (se extraerán automáticamente).");
@@ -373,8 +372,29 @@ const ContentCycleDetail = () => {
     }
     setGenerating(true);
     try {
+      // Auto-research trends if none exist and keywords are configured
+      let currentTrends = trendResults;
+      if (trendResults.length === 0 && trendKeywords.length > 0) {
+        toast.info("Investigando tendencias antes de generar la parrilla...");
+        const success = await research(
+          trendKeywords.map(k => k.keyword),
+          { industry: profile?.industry || undefined, networks: profile?.preferred_networks || [], profileName: profile?.client_name, cycleId: selectedCycleId }
+        );
+        if (success) {
+          // Fetch fresh results after research
+          const { data: freshTrends } = await supabase
+            .from("client_trend_results")
+            .select("*")
+            .eq("profile_id", profileId!)
+            .order("searched_at", { ascending: false })
+            .limit(50);
+          currentTrends = freshTrends || [];
+          toast.success(`${currentTrends.length} tendencias encontradas e integradas`);
+        }
+      }
+
       const { data, error } = await supabase.functions.invoke("generate-content", {
-        body: { action: "generate_grid", profile, cycle: selectedCycle, learnings, inputs, trendResults },
+        body: { action: "generate_grid", profile, cycle: selectedCycle, learnings, inputs, trendResults: currentTrends },
       });
       if (error) throw error;
       if (!data?.success) throw new Error(data?.error || "Error generando parrilla");
