@@ -188,25 +188,23 @@ OBJETIVOS DEL CLIENTE: ${analytics?.objectives || "No definidos"}`;
     const aiData = await response.json();
     let result;
 
-    const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
-    if (toolCall) {
-      const args = JSON.parse(toolCall.function.arguments);
-      // The result may be nested under "result" key or be the args directly
-      result = args.result || args;
-      // If result has a "pieces" key at top level, use it
-      if (!result.pieces && args.pieces) result = args;
-    }
-    
-    if (!result || (typeof result === "object" && Object.keys(result).length === 0)) {
-      // Fallback: try parsing from message content
-      const content = aiData.choices?.[0]?.message?.content || "";
-      const jsonMatch = content.match(/```json\n?([\s\S]*?)\n?```/) || content.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        result = JSON.parse(jsonMatch[1] || jsonMatch[0]);
-      } else {
-        console.error("Empty AI response:", JSON.stringify(aiData));
-        throw new Error("La IA no generó contenido. Intenta de nuevo o agrega más insumos con texto.");
+    // With response_format json_object, content should be JSON directly
+    const content = aiData.choices?.[0]?.message?.content || "";
+    try {
+      const cleaned = content.replace(/```json\n?/g, "").replace(/```/g, "").trim();
+      result = JSON.parse(cleaned);
+    } catch {
+      // Try tool_calls as fallback
+      const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
+      if (toolCall) {
+        const args = JSON.parse(toolCall.function.arguments);
+        result = args.result || args;
       }
+    }
+
+    if (!result || (typeof result === "object" && Object.keys(result).length === 0)) {
+      console.error("Empty AI response:", JSON.stringify(aiData).slice(0, 500));
+      throw new Error("La IA no generó contenido. Intenta agregar insumos con más texto o contenido.");
     }
 
     return new Response(JSON.stringify({ success: true, data: result }), {
