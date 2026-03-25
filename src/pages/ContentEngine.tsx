@@ -366,6 +366,8 @@ const ContentEngine = () => {
                       setEditData({
                         client_name: profile.client_name,
                         brand_tone: profile.brand_tone || "",
+                        brand_essence: (profile as any).brand_essence || "",
+                        client_type: (profile as any).client_type || "calendarizado",
                         content_pillars: profile.content_pillars || [],
                         preferred_networks: profile.preferred_networks || [],
                       });
