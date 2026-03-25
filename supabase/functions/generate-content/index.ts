@@ -160,26 +160,12 @@ OBJETIVOS DEL CLIENTE: ${analytics?.objectives || "No definidos"}`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
-        tools: [{
-          type: "function",
-          function: {
-            name: "content_response",
-            description: "Return structured content data",
-            parameters: {
-              type: "object",
-              properties: {
-                result: { type: "object" }
-              },
-              required: ["result"],
-            }
-          }
-        }],
-        tool_choice: { type: "function", function: { name: "content_response" } },
+        response_format: { type: "json_object" },
       }),
     });
 
@@ -202,14 +188,23 @@ OBJETIVOS DEL CLIENTE: ${analytics?.objectives || "No definidos"}`;
     const aiData = await response.json();
     let result;
 
-    const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
-    if (toolCall) {
-      result = JSON.parse(toolCall.function.arguments).result;
-    } else {
-      // Fallback: parse from content
-      const content = aiData.choices?.[0]?.message?.content || "";
-      const jsonMatch = content.match(/```json\n?([\s\S]*?)\n?```/) || content.match(/\{[\s\S]*\}/);
-      result = jsonMatch ? JSON.parse(jsonMatch[1] || jsonMatch[0]) : { error: "No se pudo parsear la respuesta" };
+    // With response_format json_object, content should be JSON directly
+    const content = aiData.choices?.[0]?.message?.content || "";
+    try {
+      const cleaned = content.replace(/```json\n?/g, "").replace(/```/g, "").trim();
+      result = JSON.parse(cleaned);
+    } catch {
+      // Try tool_calls as fallback
+      const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
+      if (toolCall) {
+        const args = JSON.parse(toolCall.function.arguments);
+        result = args.result || args;
+      }
+    }
+
+    if (!result || (typeof result === "object" && Object.keys(result).length === 0)) {
+      console.error("Empty AI response:", JSON.stringify(aiData).slice(0, 500));
+      throw new Error("La IA no generó contenido. Intenta agregar insumos con más texto o contenido.");
     }
 
     return new Response(JSON.stringify({ success: true, data: result }), {
