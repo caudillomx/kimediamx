@@ -61,6 +61,13 @@ const ClientCard = ({ profile, onClick, onDelete, onEdit }: { profile: ContentPr
                 {profile.client_name.charAt(0)}
               </div>
               <button
+                onClick={(e) => { e.stopPropagation(); onEdit(); }}
+                className="w-8 h-8 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-primary hover:bg-primary/10"
+                title="Editar cliente"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+              </button>
+              <button
                 onClick={(e) => { e.stopPropagation(); onDelete(); }}
                 className="w-8 h-8 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                 title="Eliminar cliente"
