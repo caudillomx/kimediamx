@@ -669,7 +669,8 @@ const ContentCycleDetail = () => {
               {FLOW_STEPS.map((step, i) => {
                 const isActive = activeTab === step.key;
                 const StepIcon = step.icon;
-                const count = step.key === "insumos" ? inputs.length
+                const count = step.key === "tendencias" ? trendResults.length
+                  : step.key === "insumos" ? inputs.length
                   : step.key === "parrilla" ? pieces.length
                   : step.key === "analytics" ? analytics.length
                   : campaigns.length;
