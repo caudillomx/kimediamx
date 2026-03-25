@@ -302,7 +302,6 @@ const ContentCycleDetail = () => {
     return { url: urlData.publicUrl, name: file.name };
   };
 
-  const [scraping, setScraping] = useState(false);
 
   const handleAddInput = async () => {
     const typeConfig = INPUT_TYPES.find(t => t.value === newInput.input_type);
