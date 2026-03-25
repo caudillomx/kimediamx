@@ -9,13 +9,14 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import {
   Plus, Search, RefreshCw, LogOut, Sun, Moon, ArrowLeft,
   Grid3X3, BarChart3, Megaphone, BookOpen, Zap, TrendingUp,
-  Calendar, Layers, Download, Users,
+  Calendar, Layers, Download, Users, Trash2,
 } from "lucide-react";
 import { CLIENTS } from "@/hooks/useOperationsData";
 
@@ -26,7 +27,7 @@ const NETWORK_ICONS: Record<string, string> = {
   Instagram: "📸", Facebook: "📘", X: "𝕏", LinkedIn: "💼", TikTok: "🎵",
 };
 
-const ClientCard = ({ profile, onClick }: { profile: ContentProfile; onClick: () => void }) => {
+const ClientCard = ({ profile, onClick, onDelete }: { profile: ContentProfile; onClick: () => void; onDelete: () => void }) => {
   const networks = profile.preferred_networks || [];
   const pillars = profile.content_pillars || [];
 
@@ -55,8 +56,17 @@ const ClientCard = ({ profile, onClick }: { profile: ContentProfile; onClick: ()
                 {profile.industry || "Sin industria"} · {profile.brand_tone || "Profesional"}
               </p>
             </div>
-            <div className="w-10 h-10 rounded-xl bg-gradient-coral flex items-center justify-center text-primary-foreground text-sm font-bold opacity-80 group-hover:opacity-100 transition-opacity">
-              {profile.client_name.charAt(0)}
+            <div className="flex items-center gap-2">
+              <div className="w-10 h-10 rounded-xl bg-gradient-coral flex items-center justify-center text-primary-foreground text-sm font-bold opacity-80 group-hover:opacity-100 transition-opacity">
+                {profile.client_name.charAt(0)}
+              </div>
+              <button
+                onClick={(e) => { e.stopPropagation(); onDelete(); }}
+                className="w-8 h-8 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                title="Eliminar cliente"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
             </div>
           </div>
 
@@ -106,13 +116,14 @@ const ClientCard = ({ profile, onClick }: { profile: ContentProfile; onClick: ()
 
 const ContentEngine = () => {
   const navigate = useNavigate();
-  const { profiles, loading, fetchProfiles, createProfile } = useContentEngine();
+  const { profiles, loading, fetchProfiles, createProfile, deleteProfile } = useContentEngine();
   const { isDark, toggle: toggleTheme } = useThemeToggle();
   const [session, setSession] = useState<any>(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [showNewProfile, setShowNewProfile] = useState(false);
   const [showImportKit, setShowImportKit] = useState(false);
+  const [profileToDelete, setProfileToDelete] = useState<ContentProfile | null>(null);
   const [kitProfiles, setKitProfiles] = useState<any[]>([]);
   const [loadingKit, setLoadingKit] = useState(false);
   const [newProfile, setNewProfile] = useState({
@@ -324,6 +335,7 @@ const ContentEngine = () => {
                   <ClientCard
                     profile={profile}
                     onClick={() => navigate(`/parrilla/${profile.id}`)}
+                    onDelete={() => setProfileToDelete(profile)}
                   />
                 </motion.div>
               ))}
@@ -490,6 +502,32 @@ const ContentEngine = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!profileToDelete} onOpenChange={(open) => !open && setProfileToDelete(null)}>
+        <AlertDialogContent className="bg-card border-border rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-foreground font-display">¿Eliminar a {profileToDelete?.client_name}?</AlertDialogTitle>
+            <AlertDialogDescription className="text-muted-foreground">
+              Se borrarán todos los ciclos, piezas, insumos, analytics y campañas asociados. Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-xl">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground rounded-xl hover:bg-destructive/90"
+              onClick={async () => {
+                if (profileToDelete) {
+                  await deleteProfile(profileToDelete.id);
+                  setProfileToDelete(null);
+                }
+              }}
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

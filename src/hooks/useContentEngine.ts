@@ -174,7 +174,33 @@ export function useContentEngine() {
     else fetchProfiles();
   }, [fetchProfiles]);
 
-  return { profiles, loading, fetchProfiles, createProfile, updateProfile };
+  const deleteProfile = useCallback(async (id: string) => {
+    // Delete related data first (cycles, pieces, inputs, learnings, analytics, campaigns)
+    const { data: cycles } = await supabase.from("content_cycles").select("id").eq("profile_id", id);
+    if (cycles && cycles.length > 0) {
+      const cycleIds = cycles.map(c => c.id);
+      await supabase.from("content_pieces").delete().in("cycle_id", cycleIds);
+      await supabase.from("content_inputs").delete().in("cycle_id", cycleIds);
+      await supabase.from("content_cycles").delete().eq("profile_id", id);
+    }
+    await supabase.from("content_learnings").delete().eq("profile_id", id);
+    await supabase.from("content_analytics").delete().eq("profile_id", id);
+    
+    const { data: camps } = await supabase.from("ad_campaigns").select("id").eq("profile_id", id);
+    if (camps && camps.length > 0) {
+      await supabase.from("ad_performance").delete().in("campaign_id", camps.map(c => c.id));
+      await supabase.from("ad_campaigns").delete().eq("profile_id", id);
+    }
+    await supabase.from("client_reports").delete().eq("profile_id", id);
+
+    const { error } = await supabase.from("content_profiles").delete().eq("id", id);
+    if (error) { toast.error("Error eliminando perfil"); return false; }
+    toast.success("Perfil eliminado");
+    fetchProfiles();
+    return true;
+  }, [fetchProfiles]);
+
+  return { profiles, loading, fetchProfiles, createProfile, updateProfile, deleteProfile };
 }
 
 export function useContentCycles(profileId: string | null) {
