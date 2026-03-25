@@ -495,38 +495,131 @@ const ContentCycleDetail = () => {
     toast.success("CSV exportado");
   };
 
+  const parseFanPageKarmaXLSX = async (file: File): Promise<any[]> => {
+    const XLSX = await import("xlsx");
+    const buffer = await file.arrayBuffer();
+    const wb = XLSX.read(buffer, { type: "array", cellDates: true });
+    const allRows: any[] = [];
+    const batch = crypto.randomUUID().slice(0, 8);
+
+    for (const sheetName of wb.SheetNames) {
+      const ws = wb.Sheets[sheetName];
+      const rawData: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
+
+      // FanPage Karma puts headers in row 5 (index 4)
+      let headerRowIdx = 0;
+      for (let i = 0; i < Math.min(10, rawData.length); i++) {
+        const row = rawData[i];
+        if (row && row.some((c: any) => typeof c === "string" && (c === "Profile" || c === "Date" || c === "Network"))) {
+          headerRowIdx = i;
+          break;
+        }
+      }
+
+      const headers = (rawData[headerRowIdx] || []).map((h: any) => String(h || "").trim().toLowerCase());
+      if (!headers.some(h => h.includes("profile") || h.includes("date") || h.includes("network"))) continue;
+
+      const dataRows = rawData.slice(headerRowIdx + 1).filter((r: any[]) => r.some((c: any) => c !== "" && c != null));
+
+      for (const cols of dataRows) {
+        const row: any = { profile_id: profileId, import_batch: batch, raw_data: {} };
+        headers.forEach((h: string, i: number) => {
+          const v = cols[i];
+          const vs = v != null ? String(v) : "";
+          row.raw_data[h] = vs;
+
+          // Date
+          if (h === "date" || h === "fecha") {
+            if (v instanceof Date) row.published_date = v.toISOString().split("T")[0];
+            else if (vs && vs !== "-") row.published_date = vs;
+          }
+          // Network
+          else if (h === "network" || h === "red") row.network = vs.charAt(0).toUpperCase() + vs.slice(1).toLowerCase();
+          // Post text / message
+          else if (h === "message" || h === "mensaje" || h === "post text") row.post_text = vs;
+          // Likes
+          else if (h.includes("me gusta") || h.includes("likes") || h === "número de me gusta") row.reactions = Math.round(parseFloat(vs) || 0);
+          // Comments
+          else if (h.includes("comentario") || h.includes("comment")) row.comments = Math.round(parseFloat(vs) || 0);
+          // Total engagement (Reacciones, Comentarios y Compartidos)
+          else if (h.includes("reacciones") || (h.includes("compartido") && h.includes("comentario"))) row.engagement = Math.round(parseFloat(vs) || 0);
+          // Engagement rate (Tasa de interacción)
+          else if (h.includes("tasa de interacción") || h.includes("interaction rate") || h.includes("post interaction")) row.engagement_rate = parseFloat(vs) || 0;
+          // Reach
+          else if (h.includes("alcance") || h.includes("reach")) {
+            if (vs !== "-") row.reach = Math.round(parseFloat(vs) || 0);
+          }
+          // Impression interaction
+          else if (h.includes("impresión") || h.includes("impression") || h.includes("visualizacion")) {
+            if (vs !== "-") row.impressions = Math.round(parseFloat(vs) || 0);
+          }
+          // Sentiment
+          else if (h.includes("sentimiento") || h.includes("sentiment")) {
+            row.raw_data.negative_sentiment = vs;
+          }
+          // Post type from format
+          else if (h === "format" || h === "formato") row.post_type = vs;
+        });
+
+        // Only include rows with meaningful data
+        if (row.published_date || row.post_text || row.engagement > 0 || row.reactions > 0) {
+          allRows.push(row);
+        }
+      }
+    }
+    return allRows;
+  };
+
   const handleAnalyticsImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const text = await file.text();
-    const lines = text.split("\n").filter(l => l.trim());
-    if (lines.length < 2) { toast.error("CSV vacío"); return; }
-    const headers = lines[0].split(",").map(h => h.trim().replace(/^"|"$/g, "").toLowerCase());
-    const batch = crypto.randomUUID().slice(0, 8);
-    const rows = lines.slice(1).map(line => {
-      const cols = line.split(",").map(c => c.trim().replace(/^"|"$/g, ""));
-      const row: any = { profile_id: profileId, import_batch: batch, raw_data: {} };
-      headers.forEach((h, i) => {
-        const v = cols[i] || "";
-        row.raw_data[h] = v;
-        if (h.includes("date") || h.includes("fecha")) row.published_date = v || null;
-        else if (h.includes("network") || h.includes("red")) row.network = v;
-        else if (h.includes("type") || h.includes("tipo")) row.post_type = v;
-        else if (h.includes("text") || h.includes("post") || h.includes("mensaje")) row.post_text = v;
-        else if (h.includes("reach") || h.includes("alcance")) row.reach = parseInt(v) || 0;
-        else if (h.includes("impression")) row.impressions = parseInt(v) || 0;
-        else if (h.includes("engagement") && !h.includes("rate")) row.engagement = parseInt(v) || 0;
-        else if (h.includes("reaction") || h.includes("like")) row.reactions = parseInt(v) || 0;
-        else if (h.includes("comment") || h.includes("comentario")) row.comments = parseInt(v) || 0;
-        else if (h.includes("share") || h.includes("compartido")) row.shares = parseInt(v) || 0;
-        else if (h.includes("click")) row.clicks = parseInt(v) || 0;
-        else if (h.includes("video") || h.includes("view")) row.video_views = parseInt(v) || 0;
-        else if (h.includes("rate") || h.includes("tasa")) row.engagement_rate = parseFloat(v) || 0;
-      });
-      return row;
-    }).filter(r => r.published_date || r.post_text);
+
+    let rows: any[] = [];
+
+    if (file.name.endsWith(".xlsx") || file.name.endsWith(".xls")) {
+      // FanPage Karma XLSX format
+      try {
+        rows = await parseFanPageKarmaXLSX(file);
+      } catch (err) {
+        console.error("XLSX parse error:", err);
+        toast.error("Error al leer el archivo Excel. Verifica que sea un export de FanPage Karma.");
+        e.target.value = "";
+        return;
+      }
+    } else {
+      // Legacy CSV format
+      const text = await file.text();
+      const lines = text.split("\n").filter(l => l.trim());
+      if (lines.length < 2) { toast.error("CSV vacío"); return; }
+      const headers = lines[0].split(",").map(h => h.trim().replace(/^"|"$/g, "").toLowerCase());
+      const batch = crypto.randomUUID().slice(0, 8);
+      rows = lines.slice(1).map(line => {
+        const cols = line.split(",").map(c => c.trim().replace(/^"|"$/g, ""));
+        const row: any = { profile_id: profileId, import_batch: batch, raw_data: {} };
+        headers.forEach((h, i) => {
+          const v = cols[i] || "";
+          row.raw_data[h] = v;
+          if (h.includes("date") || h.includes("fecha")) row.published_date = v || null;
+          else if (h.includes("network") || h.includes("red")) row.network = v;
+          else if (h.includes("type") || h.includes("tipo")) row.post_type = v;
+          else if (h.includes("text") || h.includes("post") || h.includes("mensaje")) row.post_text = v;
+          else if (h.includes("reach") || h.includes("alcance")) row.reach = parseInt(v) || 0;
+          else if (h.includes("impression")) row.impressions = parseInt(v) || 0;
+          else if (h.includes("engagement") && !h.includes("rate")) row.engagement = parseInt(v) || 0;
+          else if (h.includes("reaction") || h.includes("like")) row.reactions = parseInt(v) || 0;
+          else if (h.includes("comment") || h.includes("comentario")) row.comments = parseInt(v) || 0;
+          else if (h.includes("share") || h.includes("compartido")) row.shares = parseInt(v) || 0;
+          else if (h.includes("click")) row.clicks = parseInt(v) || 0;
+          else if (h.includes("video") || h.includes("view")) row.video_views = parseInt(v) || 0;
+          else if (h.includes("rate") || h.includes("tasa")) row.engagement_rate = parseFloat(v) || 0;
+        });
+        return row;
+      }).filter(r => r.published_date || r.post_text);
+    }
+
     if (rows.length === 0) { toast.error("No se encontraron datos válidos"); return; }
     await bulkInsertAnalytics(rows);
+    toast.success(`${rows.length} registros importados desde ${file.name}`);
     e.target.value = "";
   };
 
@@ -1080,9 +1173,9 @@ const ContentCycleDetail = () => {
                         <p className="text-xs text-muted-foreground mt-0.5">Importa datos de FanPage Karma para evaluar rendimiento</p>
                       </div>
                       <div>
-                        <input ref={analyticsFileRef} type="file" accept=".csv" className="hidden" onChange={handleAnalyticsImport} />
+                        <input ref={analyticsFileRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleAnalyticsImport} />
                         <Button variant="outline" size="sm" onClick={() => analyticsFileRef.current?.click()} className="rounded-xl">
-                          <Upload className="w-3.5 h-3.5 mr-1" /> Importar CSV
+                          <Upload className="w-3.5 h-3.5 mr-1" /> Importar FanPage Karma
                         </Button>
                       </div>
                     </div>
@@ -1094,7 +1187,7 @@ const ContentCycleDetail = () => {
                         </div>
                         <h3 className="text-foreground font-display font-bold mb-1">Sin datos de analytics</h3>
                         <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-                          Exporta tu reporte de FanPage Karma como CSV y súbelo aquí
+                          Exporta tu reporte de FanPage Karma (XLSX o CSV) y súbelo aquí. Se detectan automáticamente los formatos POST TABLE y PROFILE HEADER.
                         </p>
                       </Card>
                     ) : (
