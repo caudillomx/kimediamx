@@ -1173,9 +1173,9 @@ const ContentCycleDetail = () => {
                         <p className="text-xs text-muted-foreground mt-0.5">Importa datos de FanPage Karma para evaluar rendimiento</p>
                       </div>
                       <div>
-                        <input ref={analyticsFileRef} type="file" accept=".csv" className="hidden" onChange={handleAnalyticsImport} />
+                        <input ref={analyticsFileRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleAnalyticsImport} />
                         <Button variant="outline" size="sm" onClick={() => analyticsFileRef.current?.click()} className="rounded-xl">
-                          <Upload className="w-3.5 h-3.5 mr-1" /> Importar CSV
+                          <Upload className="w-3.5 h-3.5 mr-1" /> Importar FanPage Karma
                         </Button>
                       </div>
                     </div>
