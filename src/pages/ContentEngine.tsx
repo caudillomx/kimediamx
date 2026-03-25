@@ -561,6 +561,35 @@ const ContentEngine = () => {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-5">
+            {/* Avatar upload */}
+            <div className="flex flex-col items-center gap-3">
+              <div className="relative group/avatar">
+                {profileToEdit?.avatar_url ? (
+                  <img src={profileToEdit.avatar_url} alt="" className="w-20 h-20 rounded-2xl object-cover border-2 border-border" />
+                ) : (
+                  <div className="w-20 h-20 rounded-2xl bg-gradient-coral flex items-center justify-center text-primary-foreground text-2xl font-bold">
+                    {editData.client_name?.charAt(0) || "?"}
+                  </div>
+                )}
+                <label className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-2xl opacity-0 group-hover/avatar:opacity-100 transition-opacity cursor-pointer">
+                  <Camera className="w-5 h-5 text-white" />
+                  <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file || !profileToEdit) return;
+                    const ext = file.name.split(".").pop();
+                    const path = `${profileToEdit.id}.${ext}`;
+                    const { error: upErr } = await supabase.storage.from("client-avatars").upload(path, file, { upsert: true });
+                    if (upErr) { toast({ title: "Error subiendo imagen", variant: "destructive" }); return; }
+                    const { data: urlData } = supabase.storage.from("client-avatars").getPublicUrl(path);
+                    const avatarUrl = urlData.publicUrl + "?t=" + Date.now();
+                    await updateProfile(profileToEdit.id, { avatar_url: avatarUrl } as any);
+                    setProfileToEdit({ ...profileToEdit, avatar_url: avatarUrl });
+                    toast({ title: "Imagen actualizada" });
+                  }} />
+                </label>
+              </div>
+              <p className="text-xs text-muted-foreground">Haz clic en la imagen para cambiarla</p>
+            </div>
             <div>
               <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Nombre del cliente</Label>
               <Input value={editData.client_name} className="bg-secondary border-border mt-1.5 rounded-xl"
