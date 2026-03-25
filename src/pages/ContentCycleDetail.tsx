@@ -1072,6 +1072,19 @@ const ContentCycleDetail = () => {
                 onChange={e => setNewCycle(c => ({ ...c, briefing_data: { ...c.briefing_data, themes: e.target.value } }))}
                 placeholder="Ej: Lanzamiento nuevo producto, fecha conmemorativa..." />
             </div>
+            <div>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Fechas especiales / Efemérides</Label>
+              <Input value={newCycle.briefing_data.special_dates} className="bg-secondary border-border mt-1.5 rounded-xl"
+                onChange={e => setNewCycle(c => ({ ...c, briefing_data: { ...c.briefing_data, special_dates: e.target.value } }))}
+                placeholder="Ej: Día de la madre, Semana Santa, Buen Fin..." />
+            </div>
+            <div>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Presupuesto de Ads (MXN)</Label>
+              <Input type="number" value={newCycle.ads_budget || ""} className="bg-secondary border-border mt-1.5 rounded-xl"
+                onChange={e => setNewCycle(c => ({ ...c, ads_budget: parseFloat(e.target.value) || 0 }))}
+                placeholder="0 = sin pauta" />
+              <p className="text-[10px] text-muted-foreground mt-1">La IA recomendará qué posts pautar según el presupuesto</p>
+            </div>
             <Button onClick={handleCreateCycle}
               className="w-full bg-gradient-coral text-primary-foreground font-bold rounded-xl h-11 shadow-glow hover:shadow-glow-lg transition-shadow"
               disabled={!newCycle.title || !newCycle.start_date || !newCycle.end_date}>
