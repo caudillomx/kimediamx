@@ -43,12 +43,12 @@ const NETWORK_CONFIG: Record<string, { emoji: string; color: string }> = {
 };
 
 const INPUT_TYPES = [
-  { value: "articulo", label: "Artículo", icon: "📄" },
-  { value: "historia", label: "Historia / Caso", icon: "📖" },
-  { value: "url", label: "URL / Enlace", icon: "🔗" },
-  { value: "texto", label: "Texto libre", icon: "✍️" },
-  { value: "notas", label: "Notas de reunión", icon: "📝" },
-  { value: "referencia", label: "Referencia visual", icon: "🖼️" },
+  { value: "articulo", label: "Artículo", icon: "📄", hint: "Pega el contenido de un artículo o blog que quieras usar como base.", fields: ["title", "url", "content"] },
+  { value: "historia", label: "Historia / Caso", icon: "📖", hint: "Describe una historia de éxito, caso de estudio o testimonio.", fields: ["title", "content"] },
+  { value: "url", label: "URL / Enlace", icon: "🔗", hint: "Comparte un enlace relevante (noticia, referencia, recurso).", fields: ["url"] },
+  { value: "texto", label: "Texto libre", icon: "✍️", hint: "Ideas sueltas, mensajes clave, datos o temas prioritarios.", fields: ["title", "content"] },
+  { value: "notas", label: "Notas de reunión", icon: "📝", hint: "Pega las notas o acuerdos de una junta con el cliente.", fields: ["title", "content"] },
+  { value: "referencia", label: "Referencia visual", icon: "🖼️", hint: "Sube una imagen, brand book o referencia de diseño.", fields: ["title", "file"] },
 ];
 
 // ─── Flow Steps ───────────────────────────────────────────
@@ -249,6 +249,8 @@ const ContentCycleDetail = () => {
     input_type: "articulo", title: "", content: "", url: "", tags: [] as string[],
   });
   const [tagInput, setTagInput] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const inputFileRef = useRef<HTMLInputElement>(null);
 
   const profile = useMemo(() => profiles.find(p => p.id === profileId), [profiles, profileId]);
   const selectedCycle = useMemo(() => cycles.find(c => c.id === selectedCycleId), [cycles, selectedCycleId]);
@@ -288,8 +290,25 @@ const ContentCycleDetail = () => {
     }
   };
 
+  const handleFileUpload = async (file: File) => {
+    setUploading(true);
+    const ext = file.name.split(".").pop();
+    const path = `${selectedCycleId}/${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from("content-inputs").upload(path, file);
+    if (error) { toast.error("Error subiendo archivo"); setUploading(false); return null; }
+    const { data: urlData } = supabase.storage.from("content-inputs").getPublicUrl(path);
+    setUploading(false);
+    return { url: urlData.publicUrl, name: file.name };
+  };
+
   const handleAddInput = async () => {
-    if (!newInput.title && !newInput.content && !newInput.url) return;
+    const typeConfig = INPUT_TYPES.find(t => t.value === newInput.input_type);
+    const fields = typeConfig?.fields || [];
+    const hasContent = (fields.includes("title") && newInput.title) ||
+      (fields.includes("content") && newInput.content) ||
+      (fields.includes("url") && newInput.url);
+    if (!hasContent && !fields.includes("file")) return;
+
     await addInput({
       cycle_id: selectedCycleId!,
       input_type: newInput.input_type,
@@ -992,64 +1011,141 @@ const ContentCycleDetail = () => {
           <DialogHeader>
             <DialogTitle className="text-foreground font-display text-xl">Agregar Insumo</DialogTitle>
           </DialogHeader>
-          <div className="space-y-5">
-            <div>
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Tipo de insumo</Label>
-              <div className="grid grid-cols-3 gap-2 mt-2">
-                {INPUT_TYPES.map(t => (
-                  <button key={t.value}
-                    className={`flex items-center gap-2 p-3 rounded-xl text-xs font-medium transition-all border ${
-                      newInput.input_type === t.value
-                        ? "bg-primary/10 text-primary border-primary/30 shadow-sm"
-                        : "bg-secondary text-muted-foreground border-transparent hover:text-foreground hover:border-border"
-                    }`}
-                    onClick={() => setNewInput(i => ({ ...i, input_type: t.value }))}>
-                    <span className="text-base">{t.icon}</span>
-                    <span>{t.label}</span>
-                  </button>
-                ))}
+          {(() => {
+            const typeConfig = INPUT_TYPES.find(t => t.value === newInput.input_type);
+            const fields = typeConfig?.fields || [];
+            return (
+              <div className="space-y-5">
+                <div>
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Tipo de insumo</Label>
+                  <div className="grid grid-cols-3 gap-2 mt-2">
+                    {INPUT_TYPES.map(t => (
+                      <button key={t.value}
+                        className={`flex items-center gap-2 p-3 rounded-xl text-xs font-medium transition-all border ${
+                          newInput.input_type === t.value
+                            ? "bg-primary/10 text-primary border-primary/30 shadow-sm"
+                            : "bg-secondary text-muted-foreground border-transparent hover:text-foreground hover:border-border"
+                        }`}
+                        onClick={() => setNewInput(i => ({ ...i, input_type: t.value, title: "", content: "", url: "", tags: [] }))}>
+                        <span className="text-base">{t.icon}</span>
+                        <span>{t.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                  {typeConfig?.hint && (
+                    <p className="text-xs text-muted-foreground mt-2 italic">{typeConfig.hint}</p>
+                  )}
+                </div>
+
+                {fields.includes("title") && (
+                  <div>
+                    <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
+                      {newInput.input_type === "notas" ? "Nombre de la reunión" : newInput.input_type === "historia" ? "Nombre del caso" : "Título"}
+                    </Label>
+                    <Input value={newInput.title} className="bg-secondary border-border mt-1.5 rounded-xl"
+                      onChange={e => setNewInput(i => ({ ...i, title: e.target.value }))}
+                      placeholder={
+                        newInput.input_type === "notas" ? "Ej: Junta semanal FIMeme 24-mar" :
+                        newInput.input_type === "historia" ? "Ej: Caso éxito campaña diciembre" :
+                        newInput.input_type === "texto" ? "Ej: Ideas para campaña de verano" :
+                        "Ej: Artículo sobre tendencias 2026"
+                      } />
+                  </div>
+                )}
+
+                {fields.includes("url") && (
+                  <div>
+                    <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">URL</Label>
+                    <Input value={newInput.url} className="bg-secondary border-border mt-1.5 rounded-xl"
+                      onChange={e => setNewInput(i => ({ ...i, url: e.target.value }))}
+                      placeholder="https://..." />
+                    {newInput.input_type === "url" && (
+                      <p className="text-[11px] text-muted-foreground mt-1">La IA usará esta referencia al generar la parrilla.</p>
+                    )}
+                  </div>
+                )}
+
+                {fields.includes("content") && (
+                  <div>
+                    <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
+                      {newInput.input_type === "notas" ? "Notas / Acuerdos" :
+                       newInput.input_type === "historia" ? "Descripción del caso" :
+                       newInput.input_type === "articulo" ? "Contenido del artículo" : "Texto"}
+                    </Label>
+                    <Textarea value={newInput.content} className="bg-secondary border-border mt-1.5 rounded-xl"
+                      onChange={e => setNewInput(i => ({ ...i, content: e.target.value }))}
+                      placeholder={
+                        newInput.input_type === "notas" ? "Pega aquí las notas o puntos clave de la reunión..." :
+                        newInput.input_type === "historia" ? "Describe la historia, quién participó, qué pasó, qué resultados hubo..." :
+                        newInput.input_type === "articulo" ? "Pega el texto completo del artículo (importante para que la IA genere contenido basado en él)..." :
+                        "Escribe ideas, mensajes clave, datos o temas que quieras incluir en la parrilla..."
+                      } rows={6} />
+                  </div>
+                )}
+
+                {fields.includes("file") && (
+                  <div>
+                    <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Archivo / Imagen</Label>
+                    <input ref={inputFileRef} type="file" accept="image/*,.pdf,.pptx,.ppt" className="hidden"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        const result = await handleFileUpload(file);
+                        if (result) {
+                          setNewInput(i => ({ ...i, url: result.url, title: i.title || result.name }));
+                        }
+                      }} />
+                    <div className="mt-1.5">
+                      {newInput.url ? (
+                        <div className="flex items-center gap-2 p-3 rounded-xl bg-secondary border border-border">
+                          {newInput.url.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                            <img src={newInput.url} alt="" className="w-16 h-16 rounded-lg object-cover" />
+                          ) : (
+                            <FileText className="w-8 h-8 text-muted-foreground" />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium text-foreground truncate">{newInput.title || "Archivo subido"}</p>
+                            <p className="text-[10px] text-muted-foreground truncate">{newInput.url}</p>
+                          </div>
+                          <Button variant="ghost" size="sm" onClick={() => setNewInput(i => ({ ...i, url: "", title: "" }))}>
+                            <X className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button variant="outline" className="w-full rounded-xl h-20 border-dashed flex flex-col gap-1"
+                          onClick={() => inputFileRef.current?.click()} disabled={uploading}>
+                          {uploading ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Upload className="w-5 h-5" />}
+                          <span className="text-xs">{uploading ? "Subiendo..." : "Haz clic para subir imagen, PDF o presentación"}</span>
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Tags <span className="normal-case font-normal">(opcional)</span></Label>
+                  <div className="flex gap-2 mt-1.5">
+                    <Input value={tagInput} onChange={e => setTagInput(e.target.value)}
+                      onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); if (tagInput.trim()) { setNewInput(i => ({ ...i, tags: [...i.tags, tagInput.trim()] })); setTagInput(""); } } }}
+                      placeholder="Agregar tag y Enter..." className="bg-secondary border-border rounded-xl" />
+                  </div>
+                  {newInput.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {newInput.tags.map(t => (
+                        <span key={t} className="px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium cursor-pointer hover:bg-destructive/10 hover:text-destructive transition-colors"
+                          onClick={() => setNewInput(i => ({ ...i, tags: i.tags.filter(x => x !== t) }))}>{t} ×</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <Button onClick={handleAddInput}
+                  className="w-full bg-gradient-coral text-primary-foreground font-bold rounded-xl h-11 shadow-glow hover:shadow-glow-lg transition-shadow"
+                  disabled={uploading || (!newInput.title && !newInput.content && !newInput.url)}>
+                  Agregar insumo
+                </Button>
               </div>
-            </div>
-            <div>
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Título</Label>
-              <Input value={newInput.title} className="bg-secondary border-border mt-1.5 rounded-xl"
-                onChange={e => setNewInput(i => ({ ...i, title: e.target.value }))}
-                placeholder="Ej: Artículo sobre elecciones 2026" />
-            </div>
-            {(newInput.input_type === "url" || newInput.input_type === "articulo") && (
-              <div>
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">URL</Label>
-                <Input value={newInput.url} className="bg-secondary border-border mt-1.5 rounded-xl"
-                  onChange={e => setNewInput(i => ({ ...i, url: e.target.value }))}
-                  placeholder="https://..." />
-              </div>
-            )}
-            <div>
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Contenido / Texto</Label>
-              <Textarea value={newInput.content} className="bg-secondary border-border mt-1.5 rounded-xl"
-                onChange={e => setNewInput(i => ({ ...i, content: e.target.value }))}
-                placeholder="Pega aquí el texto del artículo, historia, notas..." rows={6} />
-            </div>
-            <div>
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Tags</Label>
-              <div className="flex gap-2 mt-1.5">
-                <Input value={tagInput} onChange={e => setTagInput(e.target.value)}
-                  onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); if (tagInput.trim()) { setNewInput(i => ({ ...i, tags: [...i.tags, tagInput.trim()] })); setTagInput(""); } } }}
-                  placeholder="Agregar tag y Enter..." className="bg-secondary border-border rounded-xl" />
-              </div>
-              <div className="flex flex-wrap gap-1.5 mt-2">
-                {newInput.tags.map(t => (
-                  <span key={t} className="px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium cursor-pointer hover:bg-destructive/10 hover:text-destructive transition-colors"
-                    onClick={() => setNewInput(i => ({ ...i, tags: i.tags.filter(x => x !== t) }))}>{t} ×</span>
-                ))}
-              </div>
-            </div>
-            <Button onClick={handleAddInput}
-              className="w-full bg-gradient-coral text-primary-foreground font-bold rounded-xl h-11 shadow-glow hover:shadow-glow-lg transition-shadow"
-              disabled={!newInput.title && !newInput.content && !newInput.url}>
-              Agregar insumo
-            </Button>
-          </div>
+            );
+          })()}
         </DialogContent>
       </Dialog>
     </div>
