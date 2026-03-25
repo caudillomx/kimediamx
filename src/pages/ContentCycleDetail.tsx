@@ -250,6 +250,7 @@ const ContentCycleDetail = () => {
   });
   const [tagInput, setTagInput] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [scraping, setScraping] = useState(false);
   const inputFileRef = useRef<HTMLInputElement>(null);
 
   const profile = useMemo(() => profiles.find(p => p.id === profileId), [profiles, profileId]);
