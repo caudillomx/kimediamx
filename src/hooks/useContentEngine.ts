@@ -189,6 +189,8 @@ export function useContentEngine() {
     }
     await supabase.from("content_learnings").delete().eq("profile_id", id);
     await supabase.from("content_analytics").delete().eq("profile_id", id);
+    await supabase.from("client_trend_results").delete().eq("profile_id", id);
+    await supabase.from("client_trend_keywords").delete().eq("profile_id", id);
     
     const { data: camps } = await supabase.from("ad_campaigns").select("id").eq("profile_id", id);
     if (camps && camps.length > 0) {
