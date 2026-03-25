@@ -204,12 +204,23 @@ OBJETIVOS DEL CLIENTE: ${analytics?.objectives || "No definidos"}`;
 
     const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
     if (toolCall) {
-      result = JSON.parse(toolCall.function.arguments).result;
-    } else {
-      // Fallback: parse from content
+      const args = JSON.parse(toolCall.function.arguments);
+      // The result may be nested under "result" key or be the args directly
+      result = args.result || args;
+      // If result has a "pieces" key at top level, use it
+      if (!result.pieces && args.pieces) result = args;
+    }
+    
+    if (!result || (typeof result === "object" && Object.keys(result).length === 0)) {
+      // Fallback: try parsing from message content
       const content = aiData.choices?.[0]?.message?.content || "";
       const jsonMatch = content.match(/```json\n?([\s\S]*?)\n?```/) || content.match(/\{[\s\S]*\}/);
-      result = jsonMatch ? JSON.parse(jsonMatch[1] || jsonMatch[0]) : { error: "No se pudo parsear la respuesta" };
+      if (jsonMatch) {
+        result = JSON.parse(jsonMatch[1] || jsonMatch[0]);
+      } else {
+        console.error("Empty AI response:", JSON.stringify(aiData));
+        throw new Error("La IA no generó contenido. Intenta de nuevo o agrega más insumos con texto.");
+      }
     }
 
     return new Response(JSON.stringify({ success: true, data: result }), {
