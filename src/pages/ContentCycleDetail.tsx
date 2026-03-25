@@ -1187,7 +1187,7 @@ const ContentCycleDetail = () => {
                         </div>
                         <h3 className="text-foreground font-display font-bold mb-1">Sin datos de analytics</h3>
                         <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-                          Exporta tu reporte de FanPage Karma como CSV y súbelo aquí
+                          Exporta tu reporte de FanPage Karma (XLSX o CSV) y súbelo aquí. Se detectan automáticamente los formatos POST TABLE y PROFILE HEADER.
                         </p>
                       </Card>
                     ) : (
