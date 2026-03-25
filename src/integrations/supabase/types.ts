@@ -965,6 +965,8 @@ export type Database = {
           avatar_url: string | null
           brand_essence: string | null
           brand_tone: string | null
+          brandbook_file_name: string | null
+          brandbook_url: string | null
           client_name: string
           client_type: string | null
           content_pillars: string[] | null
@@ -983,6 +985,8 @@ export type Database = {
           avatar_url?: string | null
           brand_essence?: string | null
           brand_tone?: string | null
+          brandbook_file_name?: string | null
+          brandbook_url?: string | null
           client_name: string
           client_type?: string | null
           content_pillars?: string[] | null
@@ -1001,6 +1005,8 @@ export type Database = {
           avatar_url?: string | null
           brand_essence?: string | null
           brand_tone?: string | null
+          brandbook_file_name?: string | null
+          brandbook_url?: string | null
           client_name?: string
           client_type?: string | null
           content_pillars?: string[] | null

@@ -123,6 +123,7 @@ PILARES: ${(profile.content_pillars || []).join(", ") || "No definidos"}
 REDES: ${networks.join(", ")}
 FRECUENCIA: ${profile.posting_frequency || "3 veces por semana"}
 RESTRICCIONES: ${profile.restrictions || "Ninguna"}
+${profile.brand_essence ? `\nESENCIA DE MARCA / BRANDBOOK:\n${profile.brand_essence}` : ""}
 
 PERIODO: ${cycle.start_date} a ${cycle.end_date}
 TIPO DE CICLO: ${cycle.cycle_type}
