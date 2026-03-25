@@ -77,7 +77,7 @@ function getNetworkGuidelines(networks: string[]): string {
 
 // ─── Prompts ───────────────────────────────────────────────
 
-function buildGridPrompt(profile: any, cycle: any, inputs: any[], learnings: any[], analytics: any) {
+function buildGridPrompt(profile: any, cycle: any, inputs: any[], learnings: any[], analytics: any, trendResults?: any[]) {
   const networks = profile.preferred_networks || ["Instagram", "Facebook"];
 
   const systemPrompt = `Eres un estratega de contenidos digitales de élite para Latinoamérica, con expertise especializado en cada red social.
