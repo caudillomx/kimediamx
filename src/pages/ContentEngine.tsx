@@ -335,6 +335,7 @@ const ContentEngine = () => {
                   <ClientCard
                     profile={profile}
                     onClick={() => navigate(`/parrilla/${profile.id}`)}
+                    onDelete={() => setProfileToDelete(profile)}
                   />
                 </motion.div>
               ))}
@@ -501,6 +502,32 @@ const ContentEngine = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!profileToDelete} onOpenChange={(open) => !open && setProfileToDelete(null)}>
+        <AlertDialogContent className="bg-card border-border rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-foreground font-display">¿Eliminar a {profileToDelete?.client_name}?</AlertDialogTitle>
+            <AlertDialogDescription className="text-muted-foreground">
+              Se borrarán todos los ciclos, piezas, insumos, analytics y campañas asociados. Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-xl">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground rounded-xl hover:bg-destructive/90"
+              onClick={async () => {
+                if (profileToDelete) {
+                  await deleteProfile(profileToDelete.id);
+                  setProfileToDelete(null);
+                }
+              }}
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
