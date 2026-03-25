@@ -463,7 +463,16 @@ const ContentEngine = () => {
               <Textarea value={newProfile.brand_essence} className="bg-secondary border-border mt-1.5 rounded-xl"
                 onChange={e => setNewProfile(p => ({ ...p, brand_essence: e.target.value }))}
                 placeholder="Visión, misión, valores, personalidad de marca, propuesta de valor..." rows={4} />
-              <p className="text-[10px] text-muted-foreground mt-1">Este texto se usará como contexto base para la IA al generar contenido</p>
+              <p className="text-[10px] text-muted-foreground mt-1">Escribe un resumen o sube el archivo completo del brandbook</p>
+              <label className="mt-2 flex items-center gap-2 px-3 py-2 rounded-xl border border-dashed border-border bg-secondary/50 cursor-pointer hover:bg-secondary transition-colors">
+                <Upload className="w-4 h-4 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">Subir brandbook (PDF, DOCX)</span>
+                <input type="file" accept=".pdf,.docx,.doc,.txt" className="hidden" onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  toast({ title: "El brandbook se guardará al crear el perfil" });
+                }} />
+              </label>
             </div>
             <div>
               <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Pilares de contenido</Label>
@@ -689,6 +698,41 @@ const ContentEngine = () => {
                 onChange={e => setEditData(d => ({ ...d, brand_essence: e.target.value }))}
                 placeholder="Visión, misión, valores, personalidad de marca..." rows={4} />
               <p className="text-[10px] text-muted-foreground mt-1">Contexto base para la IA al generar contenido</p>
+              {editData.brandbook_file_name ? (
+                <div className="mt-2 flex items-center gap-2 px-3 py-2 rounded-xl border border-border bg-secondary/50">
+                  <FileText className="w-4 h-4 text-primary" />
+                  <span className="text-xs text-foreground flex-1 truncate">{editData.brandbook_file_name}</span>
+                  <button className="text-muted-foreground hover:text-destructive transition-colors" onClick={async () => {
+                    if (!profileToEdit) return;
+                    const path = `${profileToEdit.id}/${editData.brandbook_file_name}`;
+                    await supabase.storage.from("client-brandbooks").remove([path]);
+                    await updateProfile(profileToEdit.id, { brandbook_url: null, brandbook_file_name: null } as any);
+                    setEditData(d => ({ ...d, brandbook_url: null, brandbook_file_name: null }));
+                    toast({ title: "Brandbook eliminado" });
+                  }}>
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <label className={`mt-2 flex items-center gap-2 px-3 py-2 rounded-xl border border-dashed border-border bg-secondary/50 cursor-pointer hover:bg-secondary transition-colors ${uploadingBrandbook ? "opacity-50 pointer-events-none" : ""}`}>
+                  <Upload className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">{uploadingBrandbook ? "Subiendo..." : "Subir brandbook (PDF, DOCX)"}</span>
+                  <input type="file" accept=".pdf,.docx,.doc,.txt" className="hidden" onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file || !profileToEdit) return;
+                    setUploadingBrandbook(true);
+                    const path = `${profileToEdit.id}/${file.name}`;
+                    const { error: upErr } = await supabase.storage.from("client-brandbooks").upload(path, file, { upsert: true });
+                    if (upErr) { toast({ title: "Error subiendo brandbook", variant: "destructive" }); setUploadingBrandbook(false); return; }
+                    const { data: urlData } = supabase.storage.from("client-brandbooks").getPublicUrl(path);
+                    const bbUrl = urlData.publicUrl;
+                    await updateProfile(profileToEdit.id, { brandbook_url: bbUrl, brandbook_file_name: file.name } as any);
+                    setEditData(d => ({ ...d, brandbook_url: bbUrl, brandbook_file_name: file.name }));
+                    setUploadingBrandbook(false);
+                    toast({ title: "Brandbook subido correctamente" });
+                  }} />
+                </label>
+              )}
             </div>
             <div>
               <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Pilares de contenido</Label>
