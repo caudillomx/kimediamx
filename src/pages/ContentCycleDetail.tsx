@@ -45,7 +45,7 @@ const NETWORK_CONFIG: Record<string, { emoji: string; color: string }> = {
 const INPUT_TYPES = [
   { value: "articulo", label: "Artículo", icon: "📄", hint: "Pega el contenido de un artículo o blog que quieras usar como base.", fields: ["title", "url", "content"] },
   { value: "historia", label: "Historia / Caso", icon: "📖", hint: "Describe una historia de éxito, caso de estudio o testimonio.", fields: ["title", "content"] },
-  { value: "url", label: "URL / Enlace", icon: "🔗", hint: "Comparte un enlace relevante (noticia, referencia, recurso).", fields: ["url"] },
+  { value: "url", label: "URL / Enlace", icon: "🔗", hint: "Pega un enlace y el contenido se extraerá automáticamente.", fields: ["url"] },
   { value: "texto", label: "Texto libre", icon: "✍️", hint: "Ideas sueltas, mensajes clave, datos o temas prioritarios.", fields: ["title", "content"] },
   { value: "notas", label: "Notas de reunión", icon: "📝", hint: "Pega las notas o acuerdos de una junta con el cliente.", fields: ["title", "content"] },
   { value: "referencia", label: "Referencia visual", icon: "🖼️", hint: "Sube una imagen, brand book o referencia de diseño.", fields: ["title", "file"] },
@@ -250,6 +250,7 @@ const ContentCycleDetail = () => {
   });
   const [tagInput, setTagInput] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [scraping, setScraping] = useState(false);
   const inputFileRef = useRef<HTMLInputElement>(null);
 
   const profile = useMemo(() => profiles.find(p => p.id === profileId), [profiles, profileId]);
@@ -301,6 +302,7 @@ const ContentCycleDetail = () => {
     return { url: urlData.publicUrl, name: file.name };
   };
 
+
   const handleAddInput = async () => {
     const typeConfig = INPUT_TYPES.find(t => t.value === newInput.input_type);
     const fields = typeConfig?.fields || [];
@@ -309,11 +311,39 @@ const ContentCycleDetail = () => {
       (fields.includes("url") && newInput.url);
     if (!hasContent && !fields.includes("file")) return;
 
+    let finalTitle = newInput.title || null;
+    let finalContent = newInput.content || null;
+
+    // Auto-scrape URL content
+    if (newInput.input_type === "url" && newInput.url) {
+      setScraping(true);
+      toast.info("Extrayendo contenido de la URL…");
+      try {
+        const { data, error } = await supabase.functions.invoke("firecrawl-scrape", {
+          body: { url: newInput.url },
+        });
+        if (error) throw error;
+        if (data?.success && data.markdown) {
+          // Truncate to ~8000 chars to keep prompt manageable
+          finalContent = data.markdown.slice(0, 8000);
+          finalTitle = finalTitle || data.title || new URL(newInput.url).hostname;
+          toast.success(`Contenido extraído (${finalContent.length} caracteres)`);
+        } else {
+          toast.warning("No se pudo extraer contenido. Se guardará solo la URL.");
+        }
+      } catch (e: any) {
+        console.error("Scraping error:", e);
+        toast.warning("Error extrayendo contenido. Se guardará solo la URL.");
+      } finally {
+        setScraping(false);
+      }
+    }
+
     await addInput({
       cycle_id: selectedCycleId!,
       input_type: newInput.input_type,
-      title: newInput.title || null,
-      content: newInput.content || null,
+      title: finalTitle,
+      content: finalContent,
       url: newInput.url || null,
       tags: newInput.tags,
       sort_order: inputs.length,
@@ -328,14 +358,11 @@ const ContentCycleDetail = () => {
       toast.error("Agrega al menos un insumo antes de generar la parrilla");
       return;
     }
-    // Warn if all inputs are URL-only without text content
+    // Warn if no inputs have actual text content
     const hasTextContent = inputs.some(inp => inp.content && inp.content.trim().length > 20);
     if (!hasTextContent) {
-      const urlOnlyCount = inputs.filter(inp => inp.input_type === "url" && !inp.content).length;
-      if (urlOnlyCount === inputs.length) {
-        toast.error("Los insumos solo tienen URLs. La IA necesita texto/contenido para generar la parrilla. Pega el contenido de los artículos o agrega insumos de tipo texto.");
-        return;
-      }
+      toast.error("Los insumos no tienen contenido de texto. Agrega insumos con contenido o URLs (se extraerán automáticamente).");
+      return;
     }
     setGenerating(true);
     try {
@@ -1149,8 +1176,10 @@ const ContentCycleDetail = () => {
                 </div>
                 <Button onClick={handleAddInput}
                   className="w-full bg-gradient-coral text-primary-foreground font-bold rounded-xl h-11 shadow-glow hover:shadow-glow-lg transition-shadow"
-                  disabled={uploading || (!newInput.title && !newInput.content && !newInput.url)}>
-                  Agregar insumo
+                  disabled={uploading || scraping || (!newInput.title && !newInput.content && !newInput.url)}>
+                  {scraping ? (
+                    <><RefreshCw className="w-4 h-4 mr-2 animate-spin" /> Extrayendo contenido…</>
+                  ) : "Agregar insumo"}
                 </Button>
               </div>
             );
