@@ -55,6 +55,7 @@ const INPUT_TYPES = [
 // ─── Flow Steps ───────────────────────────────────────────
 
 const FLOW_STEPS = [
+  { key: "tendencias", label: "Tendencias", icon: Globe, description: "Investigar temas" },
   { key: "insumos", label: "Insumos", icon: Package, description: "Materiales base" },
   { key: "parrilla", label: "Parrilla", icon: Calendar, description: "Planear contenido" },
   { key: "analytics", label: "Analytics", icon: BarChart3, description: "Evaluar rendimiento" },
