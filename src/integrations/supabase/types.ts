@@ -864,6 +864,7 @@ export type Database = {
       }
       content_profiles: {
         Row: {
+          avatar_url: string | null
           brand_tone: string | null
           client_name: string
           content_pillars: string[] | null
@@ -879,6 +880,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          avatar_url?: string | null
           brand_tone?: string | null
           client_name: string
           content_pillars?: string[] | null
@@ -894,6 +896,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          avatar_url?: string | null
           brand_tone?: string | null
           client_name?: string
           content_pillars?: string[] | null

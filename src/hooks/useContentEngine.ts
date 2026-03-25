@@ -14,6 +14,7 @@ export type ContentProfile = {
   hashtag_groups: any;
   restrictions: string | null;
   notes: string | null;
+  avatar_url: string | null;
   created_at: string;
   updated_at: string;
 };
