@@ -328,13 +328,13 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    const { action, profile, cycle, pieces, learnings, analytics, inputs } = await req.json();
+    const { action, profile, cycle, pieces, learnings, analytics, inputs, trendResults } = await req.json();
 
     let systemPrompt: string;
     let userPrompt: string;
 
     if (action === "generate_grid") {
-      ({ systemPrompt, userPrompt } = buildGridPrompt(profile, cycle, inputs, learnings, analytics));
+      ({ systemPrompt, userPrompt } = buildGridPrompt(profile, cycle, inputs, learnings, analytics, trendResults));
     } else if (action === "execute_pieces") {
       ({ systemPrompt, userPrompt } = buildExecutePrompt(profile, pieces));
     } else if (action === "analyze_performance") {
