@@ -77,7 +77,7 @@ function getNetworkGuidelines(networks: string[]): string {
 
 // ─── Prompts ───────────────────────────────────────────────
 
-function buildGridPrompt(profile: any, cycle: any, inputs: any[], learnings: any[], analytics: any) {
+function buildGridPrompt(profile: any, cycle: any, inputs: any[], learnings: any[], analytics: any, trendResults?: any[]) {
   const networks = profile.preferred_networks || ["Instagram", "Facebook"];
 
   const systemPrompt = `Eres un estratega de contenidos digitales de élite para Latinoamérica, con expertise especializado en cada red social.
@@ -153,6 +153,13 @@ MÉTRICAS RECIENTES:
 - Mejor pilar: ${analytics.bestPillar || "N/A"}
 - Mejor día: ${analytics.bestDay || "N/A"}
 - Engagement promedio: ${analytics.avgEngagement || "N/A"}
+` : ""}
+
+${trendResults && trendResults.length > 0 ? `
+TENDENCIAS ACTUALES DEL SECTOR (usa estas tendencias para proponer contenido relevante y oportuno):
+${trendResults.slice(0, 15).map((t: any) => `- [${t.keyword}] ${t.title || ""}: ${(t.summary || "").slice(0, 200)}`).join("\n")}
+
+IMPORTANTE: Incorpora al menos 2-3 piezas basadas en estas tendencias. Esto hará el contenido más relevante y aumentará el engagement.
 ` : ""}`;
 
   return { systemPrompt, userPrompt };
@@ -321,13 +328,13 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    const { action, profile, cycle, pieces, learnings, analytics, inputs } = await req.json();
+    const { action, profile, cycle, pieces, learnings, analytics, inputs, trendResults } = await req.json();
 
     let systemPrompt: string;
     let userPrompt: string;
 
     if (action === "generate_grid") {
-      ({ systemPrompt, userPrompt } = buildGridPrompt(profile, cycle, inputs, learnings, analytics));
+      ({ systemPrompt, userPrompt } = buildGridPrompt(profile, cycle, inputs, learnings, analytics, trendResults));
     } else if (action === "execute_pieces") {
       ({ systemPrompt, userPrompt } = buildExecutePrompt(profile, pieces));
     } else if (action === "analyze_performance") {
