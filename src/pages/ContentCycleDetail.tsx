@@ -1397,6 +1397,19 @@ const ContentCycleDetail = () => {
                 placeholder="Ej: Día de la madre, Semana Santa, Buen Fin..." />
             </div>
             <div>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Tono del contenido</Label>
+              <select 
+                value={newCycle.briefing_data.tone || "professional"} 
+                onChange={e => setNewCycle(c => ({ ...c, briefing_data: { ...c.briefing_data, tone: e.target.value } }))}
+                className="w-full mt-1.5 rounded-xl bg-secondary border border-border px-3 py-2 text-sm"
+              >
+                <option value="professional">🎯 Profesional — Autoritativo con datos</option>
+                <option value="casual">😎 Casual — Cercano y conversacional</option>
+                <option value="educational">📚 Educativo — Didáctico paso a paso</option>
+                <option value="viral">🔥 Viral — Provocador y compartible</option>
+              </select>
+            </div>
+            <div>
               <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Presupuesto de Ads (MXN)</Label>
               <Input type="number" value={newCycle.ads_budget || ""} className="bg-secondary border-border mt-1.5 rounded-xl"
                 onChange={e => setNewCycle(c => ({ ...c, ads_budget: parseFloat(e.target.value) || 0 }))}
