@@ -146,10 +146,57 @@ export const pymeDiagnosticQuestions = [
       { label: "Sí, sitio web profesional y optimizado", value: 2 },
     ],
   },
+  // --- Nuevas preguntas alineadas con el Motor de Contenido ---
+  {
+    id: 11,
+    question: "¿Invierten en publicidad digital (Facebook Ads, Google Ads, etc.)?",
+    options: [
+      { label: "No invertimos en pauta digital", value: 0 },
+      { label: "Hemos probado pero sin medir retorno", value: 1 },
+      { label: "Sí, con presupuesto definido y seguimiento de ROI", value: 2 },
+    ],
+  },
+  {
+    id: 12,
+    question: "¿Tienen su ficha de Google Business Profile actualizada?",
+    options: [
+      { label: "No la tenemos o no sabemos qué es", value: 0 },
+      { label: "La tenemos pero no la actualizamos", value: 1 },
+      { label: "Sí, con fotos, reseñas y publicaciones regulares", value: 2 },
+    ],
+  },
+  {
+    id: 13,
+    question: "¿Varían los formatos de contenido (fotos, videos, carruseles, stories)?",
+    options: [
+      { label: "Solo publicamos fotos con texto", value: 0 },
+      { label: "A veces probamos video o stories", value: 1 },
+      { label: "Usamos múltiples formatos adaptados a cada plataforma", value: 2 },
+    ],
+  },
+  {
+    id: 14,
+    question: "¿Tienen un tono de comunicación definido para la marca?",
+    options: [
+      { label: "Cada quien escribe como quiere", value: 0 },
+      { label: "Hay una idea general pero no está documentada", value: 1 },
+      { label: "Sí, tenemos lineamientos claros de voz y tono", value: 2 },
+    ],
+  },
+  {
+    id: 15,
+    question: "¿Capturan datos de clientes potenciales (email, WhatsApp, formularios)?",
+    options: [
+      { label: "No capturamos datos de prospectos", value: 0 },
+      { label: "Tenemos WhatsApp pero sin base de datos organizada", value: 1 },
+      { label: "Sí, con formularios, base de datos y seguimiento", value: 2 },
+    ],
+  },
 ];
 
 export function getPymeDiagnosticLevel(score: number) {
-  if (score <= 6) {
+  // Max score = 15 preguntas × 2 = 30
+  if (score <= 9) {
     return {
       level: "rojo",
       color: "bg-red-500",
@@ -157,7 +204,7 @@ export function getPymeDiagnosticLevel(score: number) {
       message: "Tu empresa necesita construir su presencia digital desde cero. ¡Este kit te dará las bases!",
     };
   }
-  if (score <= 13) {
+  if (score <= 19) {
     return {
       level: "amarillo",
       color: "bg-yellow-500",
