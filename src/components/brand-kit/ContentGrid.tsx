@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Calendar, Sparkles, Loader2, Copy, Check, RefreshCw } from "lucide-react";
+import { Calendar, Sparkles, Loader2, Copy, Check, RefreshCw, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -66,6 +66,12 @@ export function ContentGrid({ profileId, profileToken, initialGrid, onGridGenera
     setTimeout(() => setCopiedIndex(null), 2000);
   };
 
+  const copyVideoPrompt = async (post: ContentPost) => {
+    const prompt = `Crea un video corto de 5 segundos para redes sociales con estilo cinematográfico y profesional. El tema es: "${post.content.substring(0, 150)}". Formato: ${post.format}. Día: ${post.day}. El video debe transmitir confianza, autoridad y ser visualmente impactante para LinkedIn/Instagram.`;
+    await navigator.clipboard.writeText(prompt);
+    toast({ title: "Prompt de video copiado al portapapeles", description: "Pégalo en el chat para generar el video con IA" });
+  };
+
   return (
     <div className="bg-card rounded-2xl p-5 border border-border mb-4">
       <div className="flex items-center justify-between mb-4">
@@ -128,18 +134,29 @@ export function ContentGrid({ profileId, profileToken, initialGrid, onGridGenera
                   </span>
                   <span className="text-[10px] text-muted-foreground font-medium">{post.format}</span>
                 </div>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-7 w-7 p-0"
-                  onClick={() => copyPost(post, i)}
-                >
-                  {copiedIndex === i ? (
-                    <Check className="w-3 h-3 text-green-400" />
-                  ) : (
-                    <Copy className="w-3 h-3 text-muted-foreground" />
-                  )}
-                </Button>
+                <div className="flex items-center gap-1">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 w-7 p-0"
+                    title="Generar prompt de video"
+                    onClick={() => copyVideoPrompt(post)}
+                  >
+                    <Video className="w-3 h-3 text-coral" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 w-7 p-0"
+                    onClick={() => copyPost(post, i)}
+                  >
+                    {copiedIndex === i ? (
+                      <Check className="w-3 h-3 text-emerald-400" />
+                    ) : (
+                      <Copy className="w-3 h-3 text-muted-foreground" />
+                    )}
+                  </Button>
+                </div>
               </div>
               <p className="text-foreground text-sm leading-relaxed">{post.content}</p>
               <div className="flex flex-wrap gap-1 mt-2">
