@@ -152,6 +152,52 @@ export const diagnosticQuestions = [
       { label: "Sí, clientes, invitaciones o colaboraciones", value: 2 },
     ],
   },
+  // --- Nuevas preguntas alineadas con el Motor de Contenido ---
+  {
+    id: 11,
+    question: "¿Tienes definidos tus pilares de contenido (temas clave que comunicas)?",
+    options: [
+      { label: "No sé qué son pilares de contenido", value: 0 },
+      { label: "Tengo temas pero no están formalizados", value: 1 },
+      { label: "Sí, tengo 3-5 pilares claros que guían todo mi contenido", value: 2 },
+    ],
+  },
+  {
+    id: 12,
+    question: "¿Varías los formatos de tu contenido (carruseles, reels, stories, texto largo)?",
+    options: [
+      { label: "Solo publico un tipo de formato", value: 0 },
+      { label: "A veces pruebo algo diferente", value: 1 },
+      { label: "Uso varios formatos según la plataforma y el objetivo", value: 2 },
+    ],
+  },
+  {
+    id: 13,
+    question: "¿Defines el tono de tu comunicación de forma intencional?",
+    options: [
+      { label: "No he pensado en mi tono de voz", value: 0 },
+      { label: "Tengo una idea pero no es consistente", value: 1 },
+      { label: "Sí, tengo un tono definido (profesional, educativo, cercano, etc.)", value: 2 },
+    ],
+  },
+  {
+    id: 14,
+    question: "¿Incluyes llamados a la acción (CTAs) claros en tus publicaciones?",
+    options: [
+      { label: "Nunca o no sé qué es un CTA", value: 0 },
+      { label: "A veces pido que comenten o compartan", value: 1 },
+      { label: "Cada post tiene un CTA estratégico según su objetivo", value: 2 },
+    ],
+  },
+  {
+    id: 15,
+    question: "¿Investigas tendencias o temas relevantes antes de crear contenido?",
+    options: [
+      { label: "No, publico lo que se me ocurre en el momento", value: 0 },
+      { label: "A veces veo qué está de moda", value: 1 },
+      { label: "Investigo tendencias y las adapto a mi marca regularmente", value: 2 },
+    ],
+  },
 ];
 
 export function getDiagnosticLevel(score: number): {
@@ -160,7 +206,8 @@ export function getDiagnosticLevel(score: number): {
   label: string;
   message: string;
 } {
-  if (score <= 6) {
+  // Max score = 15 preguntas × 2 = 30
+  if (score <= 9) {
     return {
       level: "rojo",
       color: "bg-red-500",
@@ -169,7 +216,7 @@ export function getDiagnosticLevel(score: number): {
         "Tu marca personal está en fase inicial. ¡Este es el momento perfecto para construirla con estrategia! Sigue adelante.",
     };
   }
-  if (score <= 13) {
+  if (score <= 19) {
     return {
       level: "amarillo",
       color: "bg-yellow-500",
