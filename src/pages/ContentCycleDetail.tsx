@@ -239,6 +239,7 @@ const ContentCycleDetail = () => {
   const [generating, setGenerating] = useState(false);
   const [executing, setExecuting] = useState(false);
   const [reviewing, setReviewing] = useState(false);
+  const [selectedModel, setSelectedModel] = useState("gemini-flash");
   const [showNewCycle, setShowNewCycle] = useState(false);
   const [showAddInput, setShowAddInput] = useState(false);
   const [expandedPiece, setExpandedPiece] = useState<string | null>(null);
@@ -394,8 +395,9 @@ const ContentCycleDetail = () => {
       }
 
       const { data, error } = await supabase.functions.invoke("generate-content", {
-        body: { action: "generate_grid", profile, cycle: selectedCycle, learnings, inputs, trendResults: currentTrends },
+        body: { action: "generate_grid", profile, cycle: selectedCycle, learnings, inputs, trendResults: currentTrends, model: selectedModel },
       });
+      if (data?.model_used) toast.info(`Modelo usado: ${data.model_used}`);
       if (error) throw error;
       if (!data?.success) throw new Error(data?.error || "Error generando parrilla");
       const generatedPieces = (data.data.pieces || []).map((p: any, i: number) => ({
@@ -429,7 +431,7 @@ const ContentCycleDetail = () => {
     setExecuting(true);
     try {
       const { data, error } = await supabase.functions.invoke("generate-content", {
-        body: { action: "execute_pieces", profile, pieces: approved },
+        body: { action: "execute_pieces", profile, pieces: approved, model: selectedModel },
       });
       if (error) throw error;
       if (!data?.success) throw new Error(data?.error);
@@ -454,7 +456,7 @@ const ContentCycleDetail = () => {
     setReviewing(true);
     try {
       const { data, error } = await supabase.functions.invoke("generate-content", {
-        body: { action: "review_pieces", profile, pieces: pendingPieces },
+        body: { action: "review_pieces", profile, pieces: pendingPieces, model: selectedModel },
       });
       if (error) throw error;
       if (!data?.success) throw new Error(data?.error);
