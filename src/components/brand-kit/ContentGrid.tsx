@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Calendar, Sparkles, Loader2, Copy, Check, RefreshCw } from "lucide-react";
+import { Calendar, Sparkles, Loader2, Copy, Check, RefreshCw, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
