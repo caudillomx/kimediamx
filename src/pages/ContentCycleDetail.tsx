@@ -239,6 +239,7 @@ const ContentCycleDetail = () => {
   const [generating, setGenerating] = useState(false);
   const [executing, setExecuting] = useState(false);
   const [reviewing, setReviewing] = useState(false);
+  const [selectedModel, setSelectedModel] = useState("gemini-flash");
   const [showNewCycle, setShowNewCycle] = useState(false);
   const [showAddInput, setShowAddInput] = useState(false);
   const [expandedPiece, setExpandedPiece] = useState<string | null>(null);
@@ -394,8 +395,9 @@ const ContentCycleDetail = () => {
       }
 
       const { data, error } = await supabase.functions.invoke("generate-content", {
-        body: { action: "generate_grid", profile, cycle: selectedCycle, learnings, inputs, trendResults: currentTrends },
+        body: { action: "generate_grid", profile, cycle: selectedCycle, learnings, inputs, trendResults: currentTrends, model: selectedModel },
       });
+      if (data?.model_used) toast.info(`Modelo usado: ${data.model_used}`);
       if (error) throw error;
       if (!data?.success) throw new Error(data?.error || "Error generando parrilla");
       const generatedPieces = (data.data.pieces || []).map((p: any, i: number) => ({
@@ -429,7 +431,7 @@ const ContentCycleDetail = () => {
     setExecuting(true);
     try {
       const { data, error } = await supabase.functions.invoke("generate-content", {
-        body: { action: "execute_pieces", profile, pieces: approved },
+        body: { action: "execute_pieces", profile, pieces: approved, model: selectedModel },
       });
       if (error) throw error;
       if (!data?.success) throw new Error(data?.error);
@@ -454,7 +456,7 @@ const ContentCycleDetail = () => {
     setReviewing(true);
     try {
       const { data, error } = await supabase.functions.invoke("generate-content", {
-        body: { action: "review_pieces", profile, pieces: pendingPieces },
+        body: { action: "review_pieces", profile, pieces: pendingPieces, model: selectedModel },
       });
       if (error) throw error;
       if (!data?.success) throw new Error(data?.error);
@@ -1003,7 +1005,23 @@ const ContentCycleDetail = () => {
                           Artículos, historias, notas y materiales que alimentarán la parrilla
                         </p>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 items-center flex-wrap">
+                        <select
+                          value={selectedModel}
+                          onChange={(e) => setSelectedModel(e.target.value)}
+                          className="h-8 rounded-xl border border-border bg-card text-foreground text-xs px-2 pr-6 focus:ring-1 focus:ring-primary"
+                        >
+                          <optgroup label="Lovable AI (incluido)">
+                            <option value="gemini-flash">⚡ Gemini Flash</option>
+                            <option value="gemini-pro">🧠 Gemini Pro</option>
+                            <option value="gpt-5">🤖 GPT-5</option>
+                            <option value="gpt-5-mini">🤖 GPT-5 Mini</option>
+                          </optgroup>
+                          <optgroup label="Anthropic">
+                            <option value="claude-sonnet">🟣 Claude Sonnet 4</option>
+                            <option value="claude-haiku">🟣 Claude Haiku 4</option>
+                          </optgroup>
+                        </select>
                         <Button variant="outline" size="sm" onClick={() => setShowAddInput(true)} className="rounded-xl">
                           <Plus className="w-3.5 h-3.5 mr-1" /> Agregar
                         </Button>
