@@ -77,8 +77,42 @@ function getNetworkGuidelines(networks: string[]): string {
 
 // ─── Prompts ───────────────────────────────────────────────
 
+// ─── Tone Presets ──────────────────────────────────────────
+
+const TONE_PRESETS: Record<string, string> = {
+  professional: `TONO: Profesional y autoritativo.
+- Usa datos, métricas y referencias para respaldar cada punto.
+- Lenguaje preciso, sin coloquialismos excesivos.
+- Proyecta credibilidad y expertise en el sector.`,
+
+  casual: `TONO: Casual y cercano.
+- Escribe como hablarías con un amigo que respetas.
+- Usa humor ligero, referencias culturales y lenguaje cotidiano.
+- Prioriza conexión emocional sobre formalidad.
+- Emojis permitidos con moderación.`,
+
+  educational: `TONO: Educativo y didáctico.
+- Estructura paso a paso, listas numeradas, frameworks.
+- Simplifica conceptos complejos sin ser condescendiente.
+- Incluye ejemplos prácticos y aplicables.
+- "Aprende esto" > "Compra esto".`,
+
+  viral: `TONO: Viral y provocador.
+- Hooks extremadamente potentes y polarizantes (sin ser ofensivo).
+- Opiniones fuertes con datos que las respalden.
+- Formato diseñado para compartir y debatir.
+- Usa pattern interrupts, datos sorprendentes, contradicciones.
+- Prioriza reacciones emocionales fuertes.`,
+};
+
+function getToneGuidelines(tone?: string): string {
+  if (!tone || !TONE_PRESETS[tone.toLowerCase()]) return "";
+  return `\n\n${TONE_PRESETS[tone.toLowerCase()]}`;
+}
+
 function buildGridPrompt(profile: any, cycle: any, inputs: any[], learnings: any[], analytics: any, trendResults?: any[]) {
   const networks = profile.preferred_networks || ["Instagram", "Facebook"];
+  const toneKey = cycle?.briefing_data?.tone || profile.brand_tone_preset || "";
 
   const systemPrompt = `Eres un estratega de contenidos digitales de élite para Latinoamérica, con expertise especializado en cada red social.
 
@@ -95,6 +129,7 @@ REGLAS TÉCNICAS:
 - Distribuir pilares equitativamente.
 - Considerar días y horarios óptimos por red.
 ${getNetworkGuidelines(networks)}
+${getToneGuidelines(toneKey)}
 
 Responde SIEMPRE en JSON válido:
 {

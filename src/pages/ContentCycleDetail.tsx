@@ -250,7 +250,7 @@ const ContentCycleDetail = () => {
   const adsFileRef = useRef<HTMLInputElement>(null);
   const [newCycle, setNewCycle] = useState({
     title: "", cycle_type: "mensual", start_date: "", end_date: "",
-    briefing_data: { objective: "", themes: "", special_dates: "" },
+    briefing_data: { objective: "", themes: "", special_dates: "", tone: "professional" },
     ads_budget: 0,
   });
   const [newInput, setNewInput] = useState({
@@ -295,7 +295,7 @@ const ContentCycleDetail = () => {
     if (result) {
       setSelectedCycleId(result.id);
       setShowNewCycle(false);
-      setNewCycle({ title: "", cycle_type: "mensual", start_date: "", end_date: "", briefing_data: { objective: "", themes: "", special_dates: "" }, ads_budget: 0 });
+      setNewCycle({ title: "", cycle_type: "mensual", start_date: "", end_date: "", briefing_data: { objective: "", themes: "", special_dates: "", tone: "professional" }, ads_budget: 0 });
     }
   };
 
@@ -1395,6 +1395,19 @@ const ContentCycleDetail = () => {
               <Input value={newCycle.briefing_data.special_dates} className="bg-secondary border-border mt-1.5 rounded-xl"
                 onChange={e => setNewCycle(c => ({ ...c, briefing_data: { ...c.briefing_data, special_dates: e.target.value } }))}
                 placeholder="Ej: Día de la madre, Semana Santa, Buen Fin..." />
+            </div>
+            <div>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Tono del contenido</Label>
+              <select 
+                value={newCycle.briefing_data.tone || "professional"} 
+                onChange={e => setNewCycle(c => ({ ...c, briefing_data: { ...c.briefing_data, tone: e.target.value } }))}
+                className="w-full mt-1.5 rounded-xl bg-secondary border border-border px-3 py-2 text-sm"
+              >
+                <option value="professional">🎯 Profesional — Autoritativo con datos</option>
+                <option value="casual">😎 Casual — Cercano y conversacional</option>
+                <option value="educational">📚 Educativo — Didáctico paso a paso</option>
+                <option value="viral">🔥 Viral — Provocador y compartible</option>
+              </select>
             </div>
             <div>
               <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Presupuesto de Ads (MXN)</Label>
