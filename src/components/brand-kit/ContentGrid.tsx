@@ -66,6 +66,12 @@ export function ContentGrid({ profileId, profileToken, initialGrid, onGridGenera
     setTimeout(() => setCopiedIndex(null), 2000);
   };
 
+  const copyVideoPrompt = async (post: ContentPost) => {
+    const prompt = `Crea un video corto de 5 segundos para redes sociales con estilo cinematográfico y profesional. El tema es: "${post.content.substring(0, 150)}". Formato: ${post.format}. Día: ${post.day}. El video debe transmitir confianza, autoridad y ser visualmente impactante para LinkedIn/Instagram.`;
+    await navigator.clipboard.writeText(prompt);
+    toast({ title: "Prompt de video copiado al portapapeles", description: "Pégalo en el chat para generar el video con IA" });
+  };
+
   return (
     <div className="bg-card rounded-2xl p-5 border border-border mb-4">
       <div className="flex items-center justify-between mb-4">
