@@ -402,6 +402,10 @@ const ContentEngine = () => {
             <Input value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
               placeholder="Buscar cliente..." className="pl-10 bg-secondary border-border rounded-xl h-11" />
           </div>
+          <Button variant="outline" onClick={() => { setShowExpress(true); if (profiles.length > 0 && !expressData.profileId) setExpressData(d => ({ ...d, profileId: profiles[0].id })); }}
+            className="border-amber-500/40 text-amber-400 hover:bg-amber-500/10 font-semibold rounded-xl h-11 px-5">
+            <Flame className="w-4 h-4 mr-1.5" /> Post Express
+          </Button>
           <Button variant="outline" onClick={() => { setShowImportKit(true); loadKitProfiles(); }}
             className="border-border text-foreground font-semibold rounded-xl h-11 px-5">
             <Download className="w-4 h-4 mr-1.5" /> Importar desde Kit
