@@ -12,7 +12,7 @@ const quizzes = [
     icon: User,
     gradient: "from-magenta to-coral",
     href: "/diagnostico/marca-personal",
-    stats: "10 preguntas · 5 min",
+    stats: "15 preguntas · 7 min",
   },
   {
     id: "pyme",
@@ -22,7 +22,7 @@ const quizzes = [
     icon: Building2,
     gradient: "from-cyan to-electric",
     href: "/diagnostico/pyme",
-    stats: "12 preguntas · 6 min",
+    stats: "15 preguntas · 7 min",
   },
 ];
 
