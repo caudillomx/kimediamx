@@ -250,7 +250,7 @@ const ContentCycleDetail = () => {
   const adsFileRef = useRef<HTMLInputElement>(null);
   const [newCycle, setNewCycle] = useState({
     title: "", cycle_type: "mensual", start_date: "", end_date: "",
-    briefing_data: { objective: "", themes: "", special_dates: "" },
+    briefing_data: { objective: "", themes: "", special_dates: "", tone: "professional" },
     ads_budget: 0,
   });
   const [newInput, setNewInput] = useState({
@@ -295,7 +295,7 @@ const ContentCycleDetail = () => {
     if (result) {
       setSelectedCycleId(result.id);
       setShowNewCycle(false);
-      setNewCycle({ title: "", cycle_type: "mensual", start_date: "", end_date: "", briefing_data: { objective: "", themes: "", special_dates: "" }, ads_budget: 0 });
+      setNewCycle({ title: "", cycle_type: "mensual", start_date: "", end_date: "", briefing_data: { objective: "", themes: "", special_dates: "", tone: "professional" }, ads_budget: 0 });
     }
   };
 
