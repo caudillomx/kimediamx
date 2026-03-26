@@ -129,6 +129,7 @@ REGLAS TÉCNICAS:
 - Distribuir pilares equitativamente.
 - Considerar días y horarios óptimos por red.
 ${getNetworkGuidelines(networks)}
+${getToneGuidelines(toneKey)}
 
 Responde SIEMPRE en JSON válido:
 {
