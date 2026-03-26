@@ -127,7 +127,7 @@ ${profile.brand_essence ? `\nESENCIA DE MARCA / BRANDBOOK:\n${profile.brand_esse
 
 PERIODO: ${cycle.start_date} a ${cycle.end_date}
 TIPO DE CICLO: ${cycle.cycle_type}
-
+${cycle.cycle_type === "express" ? `\n🔥 CICLO EXPRESS / COYUNTURA: Genera EXACTAMENTE el número de piezas indicado en los insumos. Todo el contenido es para publicación INMEDIATA (fecha: ${cycle.start_date}). Prioriza urgencia, relevancia y timing. El contenido debe sentirse oportuno y reactivo a la coyuntura.\n` : ""}
 ${cycle.briefing_data?.objective ? `OBJETIVO DEL CICLO: ${cycle.briefing_data.objective}` : ""}
 ${cycle.briefing_data?.themes ? `TEMAS PRIORITARIOS: ${cycle.briefing_data.themes}` : ""}
 
