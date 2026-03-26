@@ -277,9 +277,28 @@ Sé exigente. Si un copy es genérico o aburrido, reescríbelo con más punch.`;
   return { systemPrompt, userPrompt };
 }
 
-// ─── AI Call ───────────────────────────────────────────────
+// ─── AI Providers ─────────────────────────────────────────
 
-async function callAI(systemPrompt: string, userPrompt: string, apiKey: string) {
+type AIProvider = "lovable" | "anthropic";
+
+interface ModelOption {
+  id: string;
+  label: string;
+  provider: AIProvider;
+}
+
+const MODEL_MAP: Record<string, ModelOption> = {
+  "gemini-flash": { id: "google/gemini-2.5-flash", label: "Gemini Flash", provider: "lovable" },
+  "gemini-pro": { id: "google/gemini-2.5-pro", label: "Gemini Pro", provider: "lovable" },
+  "gpt-5": { id: "openai/gpt-5", label: "GPT-5", provider: "lovable" },
+  "gpt-5-mini": { id: "openai/gpt-5-mini", label: "GPT-5 Mini", provider: "lovable" },
+  "claude-sonnet": { id: "claude-sonnet-4-20250514", label: "Claude Sonnet 4", provider: "anthropic" },
+  "claude-haiku": { id: "claude-haiku-4-20250514", label: "Claude Haiku 4", provider: "anthropic" },
+};
+
+const DEFAULT_MODEL = "gemini-flash";
+
+async function callLovableAI(systemPrompt: string, userPrompt: string, apiKey: string, modelId: string) {
   const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -287,7 +306,7 @@ async function callAI(systemPrompt: string, userPrompt: string, apiKey: string) 
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
+      model: modelId,
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
@@ -300,21 +319,71 @@ async function callAI(systemPrompt: string, userPrompt: string, apiKey: string) 
     if (response.status === 429) throw { status: 429, message: "Límite de solicitudes excedido. Intenta en un momento." };
     if (response.status === 402) throw { status: 402, message: "Créditos agotados." };
     const t = await response.text();
-    console.error("AI error:", response.status, t);
-    throw { status: 500, message: "Error del servicio de IA" };
+    console.error("Lovable AI error:", response.status, t);
+    throw { status: 500, message: "Error del servicio de IA (Lovable)" };
   }
 
   const aiData = await response.json();
-  const content = aiData.choices?.[0]?.message?.content || "";
+  return aiData.choices?.[0]?.message?.content || "";
+}
+
+async function callAnthropicAI(systemPrompt: string, userPrompt: string, apiKey: string, modelId: string) {
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: modelId,
+      max_tokens: 8192,
+      system: systemPrompt,
+      messages: [
+        { role: "user", content: userPrompt },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    if (response.status === 429) throw { status: 429, message: "Límite de solicitudes excedido en Anthropic. Intenta en un momento." };
+    if (response.status === 401) throw { status: 401, message: "API key de Anthropic inválida o expirada." };
+    const t = await response.text();
+    console.error("Anthropic error:", response.status, t);
+    throw { status: 500, message: "Error del servicio de IA (Claude)" };
+  }
+
+  const aiData = await response.json();
+  // Anthropic returns content as an array of blocks
+  const textBlock = aiData.content?.find((b: any) => b.type === "text");
+  return textBlock?.text || "";
+}
+
+async function callAI(systemPrompt: string, userPrompt: string, modelKey: string) {
+  const model = MODEL_MAP[modelKey] || MODEL_MAP[DEFAULT_MODEL];
   
+  let rawContent: string;
+
+  if (model.provider === "anthropic") {
+    const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY");
+    if (!anthropicKey) throw { status: 500, message: "ANTHROPIC_API_KEY no está configurada. Agrega tu API key de Anthropic." };
+    rawContent = await callAnthropicAI(systemPrompt, userPrompt, anthropicKey, model.id);
+  } else {
+    const lovableKey = Deno.env.get("LOVABLE_API_KEY");
+    if (!lovableKey) throw new Error("LOVABLE_API_KEY is not configured");
+    rawContent = await callLovableAI(systemPrompt, userPrompt, lovableKey, model.id);
+  }
+
   try {
-    const cleaned = content.replace(/```json\n?/g, "").replace(/```/g, "").trim();
+    const cleaned = rawContent.replace(/```json\n?/g, "").replace(/```/g, "").trim();
     return JSON.parse(cleaned);
   } catch {
-    const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
-    if (toolCall) {
-      const args = JSON.parse(toolCall.function.arguments);
-      return args.result || args;
+    // Try to extract JSON from the content
+    const jsonMatch = rawContent.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      try {
+        return JSON.parse(jsonMatch[0]);
+      } catch { /* fall through */ }
     }
   }
   return null;
@@ -326,10 +395,9 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const { action, profile, cycle, pieces, learnings, analytics, inputs, trendResults, model } = await req.json();
 
-    const { action, profile, cycle, pieces, learnings, analytics, inputs, trendResults } = await req.json();
+    const modelKey = model || DEFAULT_MODEL;
 
     let systemPrompt: string;
     let userPrompt: string;
@@ -346,13 +414,16 @@ serve(async (req) => {
       throw new Error(`Acción no reconocida: ${action}`);
     }
 
-    const result = await callAI(systemPrompt, userPrompt, LOVABLE_API_KEY);
+    const selectedModel = MODEL_MAP[modelKey] || MODEL_MAP[DEFAULT_MODEL];
+    console.log(`Using model: ${selectedModel.label} (${selectedModel.id}) via ${selectedModel.provider}`);
+
+    const result = await callAI(systemPrompt, userPrompt, modelKey);
 
     if (!result || (typeof result === "object" && Object.keys(result).length === 0)) {
       throw new Error("La IA no generó contenido. Intenta agregar insumos con más texto o contenido.");
     }
 
-    return new Response(JSON.stringify({ success: true, data: result }), {
+    return new Response(JSON.stringify({ success: true, data: result, model_used: selectedModel.label }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e: any) {
