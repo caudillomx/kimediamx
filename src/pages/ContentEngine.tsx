@@ -17,7 +17,7 @@ import {
   Plus, Search, RefreshCw, LogOut, Sun, Moon, ArrowLeft,
   Grid3X3, BarChart3, Megaphone, BookOpen, Zap, TrendingUp,
   Calendar, Layers, Download, Users, Trash2, Pencil, Camera,
-  Upload, FileText, X,
+  Upload, FileText, X, Flame, Loader2, Send,
 } from "lucide-react";
 import { CLIENTS } from "@/hooks/useOperationsData";
 
@@ -150,6 +150,17 @@ const ContentEngine = () => {
   const [editPillarInput, setEditPillarInput] = useState("");
   const [kitProfiles, setKitProfiles] = useState<any[]>([]);
   const [loadingKit, setLoadingKit] = useState(false);
+  // Express Cycle state
+  const [showExpress, setShowExpress] = useState(false);
+  const [expressGenerating, setExpressGenerating] = useState(false);
+  const [expressData, setExpressData] = useState({
+    profileId: "",
+    topic: "",
+    context: "",
+    networks: ["Instagram"] as string[],
+    formats: ["imagen"] as string[],
+    numPieces: 3,
+  });
   const [newProfile, setNewProfile] = useState({
     client_name: "",
     industry: "",
