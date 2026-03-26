@@ -17,7 +17,7 @@ import {
   Plus, Search, RefreshCw, LogOut, Sun, Moon, ArrowLeft,
   Grid3X3, BarChart3, Megaphone, BookOpen, Zap, TrendingUp,
   Calendar, Layers, Download, Users, Trash2, Pencil, Camera,
-  Upload, FileText, X,
+  Upload, FileText, X, Flame, Loader2, Send,
 } from "lucide-react";
 import { CLIENTS } from "@/hooks/useOperationsData";
 
@@ -150,6 +150,17 @@ const ContentEngine = () => {
   const [editPillarInput, setEditPillarInput] = useState("");
   const [kitProfiles, setKitProfiles] = useState<any[]>([]);
   const [loadingKit, setLoadingKit] = useState(false);
+  // Express Cycle state
+  const [showExpress, setShowExpress] = useState(false);
+  const [expressGenerating, setExpressGenerating] = useState(false);
+  const [expressData, setExpressData] = useState({
+    profileId: "",
+    topic: "",
+    context: "",
+    networks: ["Instagram"] as string[],
+    formats: ["imagen"] as string[],
+    numPieces: 3,
+  });
   const [newProfile, setNewProfile] = useState({
     client_name: "",
     industry: "",
@@ -248,6 +259,88 @@ const ContentEngine = () => {
     }
   };
 
+  const handleExpressCycle = async () => {
+    if (!expressData.profileId || !expressData.topic.trim()) return;
+    const selectedProfile = profiles.find(p => p.id === expressData.profileId);
+    if (!selectedProfile) return;
+    setExpressGenerating(true);
+    try {
+      const today = new Date().toISOString().split("T")[0];
+      // 1. Create express cycle
+      const { data: cycle, error: cycleErr } = await supabase
+        .from("content_cycles")
+        .insert({
+          profile_id: expressData.profileId,
+          title: `⚡ Express: ${expressData.topic.slice(0, 50)}`,
+          cycle_type: "express",
+          start_date: today,
+          end_date: today,
+          status: "briefing",
+          briefing_data: { objective: expressData.topic, themes: expressData.context },
+        })
+        .select()
+        .single();
+      if (cycleErr || !cycle) throw new Error("Error creando ciclo express");
+
+      // 2. Add topic as input
+      await supabase.from("content_inputs").insert({
+        cycle_id: (cycle as any).id,
+        input_type: "texto",
+        title: expressData.topic,
+        content: `TEMA DE COYUNTURA / EMERGENCIA:\n${expressData.topic}\n\nCONTEXTO:\n${expressData.context || "Sin contexto adicional"}`,
+        sort_order: 0,
+      });
+
+      // 3. Generate pieces via AI
+      const expressCycle = {
+        ...(cycle as any),
+        cycle_type: "express",
+      };
+      const expressProfile = {
+        ...selectedProfile,
+        preferred_networks: expressData.networks,
+      };
+      const expressInputs = [{
+        input_type: "texto",
+        title: expressData.topic,
+        content: `TEMA DE COYUNTURA / EMERGENCIA:\n${expressData.topic}\n\nCONTEXTO:\n${expressData.context || "Sin contexto adicional"}\n\nINSTRUCCIONES ESPECIALES: Genera exactamente ${expressData.numPieces} piezas de contenido para publicación INMEDIATA. Formatos solicitados: ${expressData.formats.join(", ")}. Prioriza urgencia, relevancia y timing. El contenido debe sentirse oportuno y actual.`,
+        tags: [],
+      }];
+
+      const { data: genData, error: genErr } = await supabase.functions.invoke("generate-content", {
+        body: { action: "generate_grid", profile: expressProfile, cycle: expressCycle, learnings: [], inputs: expressInputs, trendResults: [] },
+      });
+      if (genErr) throw genErr;
+      if (!genData?.success) throw new Error(genData?.error || "Error generando contenido express");
+
+      const generatedPieces = (genData.data.pieces || []).map((p: any, i: number) => ({
+        cycle_id: (cycle as any).id,
+        scheduled_date: today,
+        network: p.network,
+        format: p.format,
+        pillar: p.pillar,
+        objective: p.objective,
+        draft_copy: p.draft_copy,
+        hashtags: p.hashtags || [],
+        cta: p.cta,
+        tone: p.tone,
+        status: "pendiente",
+        sort_order: i,
+      }));
+      await supabase.from("content_pieces").insert(generatedPieces as any[]);
+      await supabase.from("content_cycles").update({ status: "parrilla" }).eq("id", (cycle as any).id);
+
+      toast({ title: `⚡ ${generatedPieces.length} piezas express generadas` });
+      setShowExpress(false);
+      setExpressData({ profileId: "", topic: "", context: "", networks: ["Instagram"], formats: ["imagen"], numPieces: 3 });
+      navigate(`/parrilla/${expressData.profileId}`);
+    } catch (e: any) {
+      toast({ title: e.message || "Error creando ciclo express", variant: "destructive" });
+    } finally {
+      setExpressGenerating(false);
+    }
+  };
+
   const addPillar = () => {
     if (pillarInput.trim() && !newProfile.content_pillars.includes(pillarInput.trim())) {
       setNewProfile(p => ({ ...p, content_pillars: [...p.content_pillars, pillarInput.trim()] }));
@@ -309,6 +402,10 @@ const ContentEngine = () => {
             <Input value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
               placeholder="Buscar cliente..." className="pl-10 bg-secondary border-border rounded-xl h-11" />
           </div>
+          <Button variant="outline" onClick={() => { setShowExpress(true); if (profiles.length > 0 && !expressData.profileId) setExpressData(d => ({ ...d, profileId: profiles[0].id })); }}
+            className="border-amber-500/40 text-amber-400 hover:bg-amber-500/10 font-semibold rounded-xl h-11 px-5">
+            <Flame className="w-4 h-4 mr-1.5" /> Post Express
+          </Button>
           <Button variant="outline" onClick={() => { setShowImportKit(true); loadKitProfiles(); }}
             className="border-border text-foreground font-semibold rounded-xl h-11 px-5">
             <Download className="w-4 h-4 mr-1.5" /> Importar desde Kit
@@ -804,6 +901,122 @@ const ContentEngine = () => {
               }}
             >
               Guardar cambios
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Express Cycle Dialog */}
+      <Dialog open={showExpress} onOpenChange={setShowExpress}>
+        <DialogContent className="max-w-lg bg-card border-border max-h-[90vh] overflow-y-auto rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-foreground font-display text-xl flex items-center gap-2">
+              <Flame className="w-5 h-5 text-amber-400" /> Post Express — Coyuntura
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Genera contenido de emergencia al instante. Se creará un ciclo express con las piezas listas para publicar.
+          </p>
+          <div className="space-y-4 mt-2">
+            {/* Client selector */}
+            <div>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Cliente *</Label>
+              <select value={expressData.profileId}
+                onChange={e => setExpressData(d => ({ ...d, profileId: e.target.value }))}
+                className="w-full mt-1.5 rounded-xl border border-border bg-secondary px-3 py-2.5 text-sm text-foreground focus:ring-2 focus:ring-primary/30 transition-shadow">
+                <option value="">Seleccionar...</option>
+                {profiles.map(p => <option key={p.id} value={p.id}>{p.client_name}</option>)}
+              </select>
+            </div>
+
+            {/* Topic */}
+            <div>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Tema / Coyuntura *</Label>
+              <Input value={expressData.topic} className="bg-secondary border-border mt-1.5 rounded-xl"
+                onChange={e => setExpressData(d => ({ ...d, topic: e.target.value }))}
+                placeholder="Ej: Día del Padre, crisis de imagen, viral del momento..." />
+            </div>
+
+            {/* Context */}
+            <div>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Contexto adicional</Label>
+              <Textarea value={expressData.context} className="bg-secondary border-border mt-1.5 rounded-xl"
+                onChange={e => setExpressData(d => ({ ...d, context: e.target.value }))}
+                placeholder="Información relevante, ángulo deseado, datos clave, postura de la marca..." rows={3} />
+            </div>
+
+            {/* Networks */}
+            <div>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Redes sociales</Label>
+              <div className="flex flex-wrap gap-2 mt-1.5">
+                {NETWORKS.map(n => (
+                  <button key={n}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all flex items-center gap-1.5 ${
+                      expressData.networks.includes(n)
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "bg-secondary text-muted-foreground hover:text-foreground"
+                    }`}
+                    onClick={() => setExpressData(d => ({
+                      ...d,
+                      networks: d.networks.includes(n)
+                        ? d.networks.filter(x => x !== n)
+                        : [...d.networks, n]
+                    }))}>
+                    <span>{NETWORK_ICONS[n]}</span> {n}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Formats */}
+            <div>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Formatos preferidos</Label>
+              <div className="flex flex-wrap gap-2 mt-1.5">
+                {["imagen", "carrusel", "reel", "historia", "video", "texto", "hilo"].map(f => (
+                  <button key={f}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all capitalize ${
+                      expressData.formats.includes(f)
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "bg-secondary text-muted-foreground hover:text-foreground"
+                    }`}
+                    onClick={() => setExpressData(d => ({
+                      ...d,
+                      formats: d.formats.includes(f)
+                        ? d.formats.filter(x => x !== f)
+                        : [...d.formats, f]
+                    }))}>
+                    {f}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Num pieces */}
+            <div>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Cantidad de piezas</Label>
+              <div className="flex gap-2 mt-1.5">
+                {[1, 2, 3, 5].map(n => (
+                  <button key={n}
+                    className={`w-10 h-10 rounded-xl text-sm font-bold transition-all ${
+                      expressData.numPieces === n
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "bg-secondary text-muted-foreground hover:text-foreground"
+                    }`}
+                    onClick={() => setExpressData(d => ({ ...d, numPieces: n }))}>
+                    {n}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <Button onClick={handleExpressCycle}
+              disabled={!expressData.profileId || !expressData.topic.trim() || expressData.networks.length === 0 || expressGenerating}
+              className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-primary-foreground font-bold rounded-xl h-12 shadow-glow hover:shadow-glow-lg transition-shadow">
+              {expressGenerating ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Generando contenido express...</>
+              ) : (
+                <><Flame className="w-4 h-4 mr-2" /> Generar {expressData.numPieces} {expressData.numPieces === 1 ? "pieza" : "piezas"} express</>
+              )}
             </Button>
           </div>
         </DialogContent>
