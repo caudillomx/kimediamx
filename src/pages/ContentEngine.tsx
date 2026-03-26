@@ -905,6 +905,122 @@ const ContentEngine = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Express Cycle Dialog */}
+      <Dialog open={showExpress} onOpenChange={setShowExpress}>
+        <DialogContent className="max-w-lg bg-card border-border max-h-[90vh] overflow-y-auto rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-foreground font-display text-xl flex items-center gap-2">
+              <Flame className="w-5 h-5 text-amber-400" /> Post Express — Coyuntura
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Genera contenido de emergencia al instante. Se creará un ciclo express con las piezas listas para publicar.
+          </p>
+          <div className="space-y-4 mt-2">
+            {/* Client selector */}
+            <div>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Cliente *</Label>
+              <select value={expressData.profileId}
+                onChange={e => setExpressData(d => ({ ...d, profileId: e.target.value }))}
+                className="w-full mt-1.5 rounded-xl border border-border bg-secondary px-3 py-2.5 text-sm text-foreground focus:ring-2 focus:ring-primary/30 transition-shadow">
+                <option value="">Seleccionar...</option>
+                {profiles.map(p => <option key={p.id} value={p.id}>{p.client_name}</option>)}
+              </select>
+            </div>
+
+            {/* Topic */}
+            <div>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Tema / Coyuntura *</Label>
+              <Input value={expressData.topic} className="bg-secondary border-border mt-1.5 rounded-xl"
+                onChange={e => setExpressData(d => ({ ...d, topic: e.target.value }))}
+                placeholder="Ej: Día del Padre, crisis de imagen, viral del momento..." />
+            </div>
+
+            {/* Context */}
+            <div>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Contexto adicional</Label>
+              <Textarea value={expressData.context} className="bg-secondary border-border mt-1.5 rounded-xl"
+                onChange={e => setExpressData(d => ({ ...d, context: e.target.value }))}
+                placeholder="Información relevante, ángulo deseado, datos clave, postura de la marca..." rows={3} />
+            </div>
+
+            {/* Networks */}
+            <div>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Redes sociales</Label>
+              <div className="flex flex-wrap gap-2 mt-1.5">
+                {NETWORKS.map(n => (
+                  <button key={n}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all flex items-center gap-1.5 ${
+                      expressData.networks.includes(n)
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "bg-secondary text-muted-foreground hover:text-foreground"
+                    }`}
+                    onClick={() => setExpressData(d => ({
+                      ...d,
+                      networks: d.networks.includes(n)
+                        ? d.networks.filter(x => x !== n)
+                        : [...d.networks, n]
+                    }))}>
+                    <span>{NETWORK_ICONS[n]}</span> {n}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Formats */}
+            <div>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Formatos preferidos</Label>
+              <div className="flex flex-wrap gap-2 mt-1.5">
+                {["imagen", "carrusel", "reel", "historia", "video", "texto", "hilo"].map(f => (
+                  <button key={f}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all capitalize ${
+                      expressData.formats.includes(f)
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "bg-secondary text-muted-foreground hover:text-foreground"
+                    }`}
+                    onClick={() => setExpressData(d => ({
+                      ...d,
+                      formats: d.formats.includes(f)
+                        ? d.formats.filter(x => x !== f)
+                        : [...d.formats, f]
+                    }))}>
+                    {f}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Num pieces */}
+            <div>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Cantidad de piezas</Label>
+              <div className="flex gap-2 mt-1.5">
+                {[1, 2, 3, 5].map(n => (
+                  <button key={n}
+                    className={`w-10 h-10 rounded-xl text-sm font-bold transition-all ${
+                      expressData.numPieces === n
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "bg-secondary text-muted-foreground hover:text-foreground"
+                    }`}
+                    onClick={() => setExpressData(d => ({ ...d, numPieces: n }))}>
+                    {n}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <Button onClick={handleExpressCycle}
+              disabled={!expressData.profileId || !expressData.topic.trim() || expressData.networks.length === 0 || expressGenerating}
+              className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-primary-foreground font-bold rounded-xl h-12 shadow-glow hover:shadow-glow-lg transition-shadow">
+              {expressGenerating ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Generando contenido express...</>
+              ) : (
+                <><Flame className="w-4 h-4 mr-2" /> Generar {expressData.numPieces} {expressData.numPieces === 1 ? "pieza" : "piezas"} express</>
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
