@@ -259,6 +259,88 @@ const ContentEngine = () => {
     }
   };
 
+  const handleExpressCycle = async () => {
+    if (!expressData.profileId || !expressData.topic.trim()) return;
+    const selectedProfile = profiles.find(p => p.id === expressData.profileId);
+    if (!selectedProfile) return;
+    setExpressGenerating(true);
+    try {
+      const today = new Date().toISOString().split("T")[0];
+      // 1. Create express cycle
+      const { data: cycle, error: cycleErr } = await supabase
+        .from("content_cycles")
+        .insert({
+          profile_id: expressData.profileId,
+          title: `⚡ Express: ${expressData.topic.slice(0, 50)}`,
+          cycle_type: "express",
+          start_date: today,
+          end_date: today,
+          status: "briefing",
+          briefing_data: { objective: expressData.topic, themes: expressData.context },
+        })
+        .select()
+        .single();
+      if (cycleErr || !cycle) throw new Error("Error creando ciclo express");
+
+      // 2. Add topic as input
+      await supabase.from("content_inputs").insert({
+        cycle_id: (cycle as any).id,
+        input_type: "texto",
+        title: expressData.topic,
+        content: `TEMA DE COYUNTURA / EMERGENCIA:\n${expressData.topic}\n\nCONTEXTO:\n${expressData.context || "Sin contexto adicional"}`,
+        sort_order: 0,
+      });
+
+      // 3. Generate pieces via AI
+      const expressCycle = {
+        ...(cycle as any),
+        cycle_type: "express",
+      };
+      const expressProfile = {
+        ...selectedProfile,
+        preferred_networks: expressData.networks,
+      };
+      const expressInputs = [{
+        input_type: "texto",
+        title: expressData.topic,
+        content: `TEMA DE COYUNTURA / EMERGENCIA:\n${expressData.topic}\n\nCONTEXTO:\n${expressData.context || "Sin contexto adicional"}\n\nINSTRUCCIONES ESPECIALES: Genera exactamente ${expressData.numPieces} piezas de contenido para publicación INMEDIATA. Formatos solicitados: ${expressData.formats.join(", ")}. Prioriza urgencia, relevancia y timing. El contenido debe sentirse oportuno y actual.`,
+        tags: [],
+      }];
+
+      const { data: genData, error: genErr } = await supabase.functions.invoke("generate-content", {
+        body: { action: "generate_grid", profile: expressProfile, cycle: expressCycle, learnings: [], inputs: expressInputs, trendResults: [] },
+      });
+      if (genErr) throw genErr;
+      if (!genData?.success) throw new Error(genData?.error || "Error generando contenido express");
+
+      const generatedPieces = (genData.data.pieces || []).map((p: any, i: number) => ({
+        cycle_id: (cycle as any).id,
+        scheduled_date: today,
+        network: p.network,
+        format: p.format,
+        pillar: p.pillar,
+        objective: p.objective,
+        draft_copy: p.draft_copy,
+        hashtags: p.hashtags || [],
+        cta: p.cta,
+        tone: p.tone,
+        status: "pendiente",
+        sort_order: i,
+      }));
+      await supabase.from("content_pieces").insert(generatedPieces as any[]);
+      await supabase.from("content_cycles").update({ status: "parrilla" }).eq("id", (cycle as any).id);
+
+      toast({ title: `⚡ ${generatedPieces.length} piezas express generadas` });
+      setShowExpress(false);
+      setExpressData({ profileId: "", topic: "", context: "", networks: ["Instagram"], formats: ["imagen"], numPieces: 3 });
+      navigate(`/parrilla/${expressData.profileId}`);
+    } catch (e: any) {
+      toast({ title: e.message || "Error creando ciclo express", variant: "destructive" });
+    } finally {
+      setExpressGenerating(false);
+    }
+  };
+
   const addPillar = () => {
     if (pillarInput.trim() && !newProfile.content_pillars.includes(pillarInput.trim())) {
       setNewProfile(p => ({ ...p, content_pillars: [...p.content_pillars, pillarInput.trim()] }));
