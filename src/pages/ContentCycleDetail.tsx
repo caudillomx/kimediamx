@@ -1005,7 +1005,23 @@ const ContentCycleDetail = () => {
                           Artículos, historias, notas y materiales que alimentarán la parrilla
                         </p>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 items-center flex-wrap">
+                        <select
+                          value={selectedModel}
+                          onChange={(e) => setSelectedModel(e.target.value)}
+                          className="h-8 rounded-xl border border-border bg-card text-foreground text-xs px-2 pr-6 focus:ring-1 focus:ring-primary"
+                        >
+                          <optgroup label="Lovable AI (incluido)">
+                            <option value="gemini-flash">⚡ Gemini Flash</option>
+                            <option value="gemini-pro">🧠 Gemini Pro</option>
+                            <option value="gpt-5">🤖 GPT-5</option>
+                            <option value="gpt-5-mini">🤖 GPT-5 Mini</option>
+                          </optgroup>
+                          <optgroup label="Anthropic">
+                            <option value="claude-sonnet">🟣 Claude Sonnet 4</option>
+                            <option value="claude-haiku">🟣 Claude Haiku 4</option>
+                          </optgroup>
+                        </select>
                         <Button variant="outline" size="sm" onClick={() => setShowAddInput(true)} className="rounded-xl">
                           <Plus className="w-3.5 h-3.5 mr-1" /> Agregar
                         </Button>
