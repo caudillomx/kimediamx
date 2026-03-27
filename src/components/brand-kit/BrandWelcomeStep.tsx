@@ -77,7 +77,7 @@ export function BrandWelcomeStep({ onNext }: BrandWelcomeStepProps) {
           transition={{ delay: 0.35 }}
           className="text-muted-foreground text-sm leading-relaxed max-w-md mx-auto"
         >
-          En 6 pasos construirás tu diagnóstico, identidad, bio profesional y primer post estratégico.
+          Completa tu brief estratégico: datos, diagnóstico e identidad de marca.
         </motion.p>
       </div>
 
