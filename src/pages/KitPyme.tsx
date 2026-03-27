@@ -5,27 +5,20 @@ import { PymeWelcomeStep, type PymeParticipantInfo } from "@/components/pyme-kit
 import { PymeDiagnosticStep } from "@/components/pyme-kit/PymeDiagnosticStep";
 import { PymeCompetitiveStep } from "@/components/pyme-kit/PymeCompetitiveStep";
 import { PymeIdentityStep } from "@/components/pyme-kit/PymeIdentityStep";
-import { PymeBioStep } from "@/components/pyme-kit/PymeBioStep";
-import { PymePostStep } from "@/components/pyme-kit/PymePostStep";
 import { PymeClosingStep } from "@/components/pyme-kit/PymeClosingStep";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import kimediaLogo from "@/assets/kimedia-logo.png";
-import { generatePymeBio } from "@/data/pymeKitData";
-import { Building2, Activity, Search, Lightbulb, UserCircle, PenTool, Star } from "lucide-react";
+import { Building2, Activity, Search, Lightbulb, Star } from "lucide-react";
 
-type Step = "welcome" | "diagnostic" | "competitive" | "identity" | "bio" | "post" | "closing";
-const stepOrder: Step[] = ["welcome", "diagnostic", "competitive", "identity", "bio", "post", "closing"];
-const STEP_ICONS = [Building2, Activity, Search, Lightbulb, UserCircle, PenTool, Star];
+type Step = "welcome" | "diagnostic" | "competitive" | "identity" | "closing";
+const stepOrder: Step[] = ["welcome", "diagnostic", "competitive", "identity", "closing"];
+const STEP_ICONS = [Building2, Activity, Search, Lightbulb, Star];
 
 export default function KitPyme() {
   const [step, setStep] = useState<Step>("welcome");
   const [profileId, setProfileId] = useState<string | null>(null);
-  const [profileToken, setProfileToken] = useState("");
   const [participantInfo, setParticipantInfo] = useState<PymeParticipantInfo | null>(null);
-  const [identityData, setIdentityData] = useState<{
-    valueProposition: string; targetAudience: string; differentiator: string; brandTone: string;
-  } | null>(null);
 
   const currentIdx = stepOrder.indexOf(step);
   const progress = (currentIdx / (stepOrder.length - 1)) * 100;
@@ -38,10 +31,9 @@ export default function KitPyme() {
         social_handle: info.socialHandle, industry: info.industry, main_channel: info.mainChannel,
         approx_followers: info.approxFollowers, has_website: info.hasWebsite, kit_type: "pyme",
         company_name: info.companyName, company_size: info.companySize, years_in_business: info.yearsInBusiness,
-      }).select("id, profile_token").single();
+      }).select("id").single();
       if (error) throw error;
       setProfileId(data.id);
-      setProfileToken(data.profile_token || "");
     } catch {
       toast({ title: "Error guardando datos", variant: "destructive" });
     }
@@ -67,30 +59,15 @@ export default function KitPyme() {
     setStep("identity");
   };
 
-  const handleIdentity = async (data: typeof identityData) => {
-    setIdentityData(data);
-    if (profileId && data) {
+  const handleIdentity = async (data: { valueProposition: string; targetAudience: string; differentiator: string; brandTone: string }) => {
+    if (profileId) {
       await supabase.from("brand_kit_profiles").update({
         value_proposition: data.valueProposition, target_audience: data.targetAudience,
         differentiator: data.differentiator, brand_tone: data.brandTone,
       }).eq("id", profileId);
     }
-    setStep("bio");
-  };
-
-  const handleBio = async (bio: string) => {
-    if (profileId) await supabase.from("brand_kit_profiles").update({ bio_text: bio }).eq("id", profileId);
-    setStep("post");
-  };
-
-  const handlePost = async (postType: string, postText: string, published: boolean) => {
-    if (profileId) await supabase.from("brand_kit_profiles").update({ post_type: postType, post_text: postText, post_published: published }).eq("id", profileId);
     setStep("closing");
   };
-
-  const generatedBio = participantInfo && identityData
-    ? generatePymeBio(participantInfo.companyName, participantInfo.industry, identityData.valueProposition, identityData.targetAudience, identityData.brandTone)
-    : "";
 
   return (
     <div className="min-h-screen bg-background relative">
@@ -137,15 +114,10 @@ export default function KitPyme() {
             {step === "diagnostic" && <PymeDiagnosticStep key="diagnostic" onNext={handleDiagnostic} />}
             {step === "competitive" && <PymeCompetitiveStep key="competitive" onNext={handleCompetitive} />}
             {step === "identity" && <PymeIdentityStep key="identity" onNext={handleIdentity} />}
-            {step === "bio" && participantInfo && identityData && <PymeBioStep key="bio" initialBio={generatedBio} onNext={handleBio} />}
-            {step === "post" && participantInfo && identityData && (
-              <PymePostStep key="post" companyName={participantInfo.companyName} industry={participantInfo.industry}
-                valueProposition={identityData.valueProposition} targetAudience={identityData.targetAudience}
-                differentiator={identityData.differentiator} onNext={handlePost} />
-            )}
             {step === "closing" && participantInfo && (
-              <PymeClosingStep key="closing" profileId={profileId} profileToken={profileToken}
-                companyName={participantInfo.companyName} industry={participantInfo.industry} socialHandle={participantInfo.socialHandle} />
+              <PymeClosingStep key="closing" profileId={profileId}
+                companyName={participantInfo.companyName} industry={participantInfo.industry}
+                email={participantInfo.email} socialHandle={participantInfo.socialHandle} />
             )}
           </AnimatePresence>
         </div>
