@@ -1,39 +1,50 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
-import { Star, Briefcase, AtSign, Lightbulb, ArrowRight, Mail, Phone, Gift, Globe, ExternalLink, Zap, Rocket } from "lucide-react";
+import { Star, Briefcase, AtSign, ArrowRight, Mail, Phone, Gift, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 
 interface BrandClosingStepProps {
   profileId: string | null;
-  profileToken: string;
   name: string;
   profession: string;
   industry: string;
+  email: string;
   socialHandle: string;
 }
 
 export function BrandClosingStep({
-  profileId, profileToken, name, profession, industry, socialHandle,
+  profileId, name, profession, industry, email, socialHandle,
 }: BrandClosingStepProps) {
   const [consentEmail, setConsentEmail] = useState(false);
   const [consentWhatsapp, setConsentWhatsapp] = useState(false);
   const [saved, setSaved] = useState(false);
-  const navigate = useNavigate();
+  const [sending, setSending] = useState(false);
 
-  const handleSaveConsent = async () => {
-    if (profileId) {
-      await supabase.from("brand_kit_profiles").update({
-        consent_email: consentEmail, consent_whatsapp: consentWhatsapp,
-      }).eq("id", profileId);
+  const handleSubmit = async () => {
+    setSending(true);
+    try {
+      if (profileId) {
+        await supabase.from("brand_kit_profiles").update({
+          consent_email: consentEmail, consent_whatsapp: consentWhatsapp,
+        }).eq("id", profileId);
+      }
+
+      // Send brief summary email
+      await supabase.functions.invoke("send-brief-summary", {
+        body: { profileId, kitType: "marca-personal", recipientEmail: email, recipientName: name },
+      });
+
+      setSaved(true);
+    } catch {
+      toast({ title: "Error al enviar", variant: "destructive" });
+    } finally {
+      setSending(false);
     }
-    setSaved(true);
   };
-
-  const profileUrl = `/kit/marca-personal/perfil/${profileId}?token=${profileToken}`;
 
   return (
     <motion.div
@@ -54,10 +65,10 @@ export function BrandClosingStep({
       {!saved ? (
         <>
           <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground mb-3">
-            ¡Tu Kit está <span className="text-gradient">listo</span>!
+            ¡Tu brief está <span className="text-gradient">completo</span>!
           </h2>
           <p className="text-muted-foreground text-sm leading-relaxed mb-8 max-w-sm mx-auto">
-            Has construido tu diagnóstico, identidad, bio y primer post. ¡Gran paso para tu marca personal!
+            Hemos capturado tu diagnóstico e identidad de marca. Recibirás un resumen por correo electrónico.
           </p>
 
           {/* Profile summary card */}
@@ -113,48 +124,24 @@ export function BrandClosingStep({
           </motion.div>
 
           <Button
-            onClick={handleSaveConsent}
+            onClick={handleSubmit}
+            disabled={sending}
             className="w-full bg-gradient-coral hover:opacity-90 text-primary-foreground font-bold rounded-xl h-12 shadow-glow"
           >
-            Recibir mi kit <ArrowRight className="w-4 h-4 ml-2" />
+            {sending ? "Enviando..." : "Enviar mi brief"} <ArrowRight className="w-4 h-4 ml-2" />
           </Button>
         </>
       ) : (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
           <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground mb-3">
-            Tu Kit de Marca Personal está listo
+            ¡Gracias, {name}!
           </h2>
-          <p className="text-muted-foreground text-sm leading-relaxed mb-8 max-w-sm mx-auto">
-            Accede a tu perfil privado con todo tu contenido personalizado.
+          <p className="text-muted-foreground text-sm leading-relaxed mb-6 max-w-sm mx-auto">
+            Hemos recibido tu brief de marca personal. Te enviaremos un resumen a <strong className="text-foreground">{email}</strong> y nuestro equipo te contactará pronto.
           </p>
-
-          <div className="space-y-3">
-            <a href={profileUrl} target="_blank" rel="noopener noreferrer" className="block">
-              <Button className="w-full bg-gradient-coral hover:opacity-90 text-primary-foreground font-bold rounded-xl h-12 shadow-glow">
-                <Globe className="w-5 h-5 mr-2" /> Abrir mi perfil de marca <ExternalLink className="w-4 h-4 ml-2" />
-              </Button>
-            </a>
-
-            {/* CTA to register and use content engine */}
-            <div className="bg-secondary rounded-2xl p-5 border border-primary/20 text-left">
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                  <Rocket className="w-5 h-5 text-primary" />
-                </div>
-                <div className="space-y-2">
-                  <p className="text-foreground font-semibold text-sm">¡Lleva tu marca al siguiente nivel!</p>
-                  <p className="text-muted-foreground text-xs leading-relaxed">
-                    Crea tu cuenta gratuita y accede a tu Motor de Contenido personalizado: genera parrillas con IA, planea tus publicaciones y descarga todo listo para publicar.
-                  </p>
-                  <Button
-                    onClick={() => navigate("/registro?redirect=/mi-estrategia")}
-                    className="bg-gradient-coral text-primary-foreground font-bold rounded-xl h-10 shadow-glow text-sm"
-                  >
-                    <Zap className="w-4 h-4 mr-1.5" /> Crear mi cuenta y usar el Motor
-                  </Button>
-                </div>
-              </div>
-            </div>
+          <div className="flex items-center justify-center gap-2 text-primary">
+            <CheckCircle className="w-5 h-5" />
+            <span className="text-sm font-medium">Brief enviado correctamente</span>
           </div>
         </motion.div>
       )}
