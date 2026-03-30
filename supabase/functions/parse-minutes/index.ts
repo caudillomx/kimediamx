@@ -97,11 +97,16 @@ El equipo interno incluye: ${teamList}.
 
 Contactos externos por cliente: ${contactsList}.
 
-IMPORTANTE: Cuando en la minuta aparezca un apodo o nombre corto (ej: "Mara", "Fili", "Nava"), resuélvelo al nombre completo del contacto o miembro del equipo correspondiente.
+Clientes conocidos: ${clientList}.
+
+IMPORTANTE:
+- Cuando en la minuta aparezca un apodo o nombre corto (ej: "Mara", "Fili", "Nava"), resuélvelo al nombre completo del contacto o miembro del equipo correspondiente.
+- Cuando aparezca un nombre abreviado o informal de cliente (ej: "Tinver" = "Actinver", "Diluvio" = "El Diluvio", "Doria" = "Mario Doria - Urólogo", "MID" = "MID Clinic"), resuélvelo al nombre exacto de la lista de clientes conocidos.
 
 Extrae cada tarea/compromiso/pendiente como un objeto JSON con estos campos:
 - description: descripción clara de la tarea
 - responsible_name: nombre exacto del responsable (debe coincidir con la lista del equipo). Si no es claro, pon null.
+- client: nombre exacto del cliente de la lista de clientes conocidos. Si no aplica, pon null.
 - category: una de [tarea, llamada, evento, cotizacion, reporte, prospecto, proyecto]
 - priority: una de [alta, media, baja]
 - due_date: fecha en formato YYYY-MM-DD si se menciona, o null
