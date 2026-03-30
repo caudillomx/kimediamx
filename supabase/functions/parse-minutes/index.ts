@@ -72,6 +72,13 @@ serve(async (req) => {
     const teamList = (teamMembers || []).map(m => m.full_name).join(", ");
     const contactsList = (clientContacts || []).map(c => `${c.full_name} (${c.role_title || 'contacto'} de ${c.client_name}, apodos: ${(c.nicknames || []).join(', ')})`).join("; ");
 
+    // Build unique client list from contacts
+    const clientNames = [...new Set((clientContacts || []).map(c => c.client_name))];
+    // Add known clients from action_items
+    const { data: existingClients } = await supabase.from("action_items").select("client").not("client", "is", null);
+    const allClients = [...new Set([...clientNames, ...(existingClients || []).map((r: any) => r.client)])].filter(Boolean);
+    const clientList = allClients.join(", ");
+
     // Use AI to parse the minutes
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -90,11 +97,16 @@ El equipo interno incluye: ${teamList}.
 
 Contactos externos por cliente: ${contactsList}.
 
-IMPORTANTE: Cuando en la minuta aparezca un apodo o nombre corto (ej: "Mara", "Fili", "Nava"), resuélvelo al nombre completo del contacto o miembro del equipo correspondiente.
+Clientes conocidos: ${clientList}.
+
+IMPORTANTE:
+- Cuando en la minuta aparezca un apodo o nombre corto (ej: "Mara", "Fili", "Nava"), resuélvelo al nombre completo del contacto o miembro del equipo correspondiente.
+- Cuando aparezca un nombre abreviado o informal de cliente (ej: "Tinver" = "Actinver", "Diluvio" = "El Diluvio", "Doria" = "Mario Doria - Urólogo", "MID" = "MID Clinic"), resuélvelo al nombre exacto de la lista de clientes conocidos.
 
 Extrae cada tarea/compromiso/pendiente como un objeto JSON con estos campos:
 - description: descripción clara de la tarea
 - responsible_name: nombre exacto del responsable (debe coincidir con la lista del equipo). Si no es claro, pon null.
+- client: nombre exacto del cliente de la lista de clientes conocidos. Si no aplica, pon null.
 - category: una de [tarea, llamada, evento, cotizacion, reporte, prospecto, proyecto]
 - priority: una de [alta, media, baja]
 - due_date: fecha en formato YYYY-MM-DD si se menciona, o null
@@ -138,6 +150,7 @@ Responde SOLO con un JSON array. Sin explicaciones.`,
         description: task.description || "Sin descripción",
         responsible_id: member?.id || null,
         responsible_name: task.responsible_name || null,
+        client: task.client || null,
         category: task.category || "tarea",
         priority: task.priority || "media",
         due_date: task.due_date || null,
