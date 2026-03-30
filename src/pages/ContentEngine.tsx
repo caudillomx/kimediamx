@@ -491,15 +491,24 @@ const ContentEngine = () => {
           <div className="space-y-5">
             <div>
               <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Cliente *</Label>
-              <select value={newProfile.client_name}
-                onChange={e => setNewProfile(p => ({ ...p, client_name: e.target.value }))}
+              <select value={isCustomClient ? "__custom__" : newProfile.client_name}
+                onChange={e => {
+                  if (e.target.value === "__custom__") {
+                    setIsCustomClient(true);
+                    setNewProfile(p => ({ ...p, client_name: "" }));
+                  } else {
+                    setIsCustomClient(false);
+                    setNewProfile(p => ({ ...p, client_name: e.target.value }));
+                  }
+                }}
                 className="w-full mt-1.5 rounded-xl border border-border bg-secondary px-3 py-2.5 text-sm text-foreground focus:ring-2 focus:ring-primary/30 transition-shadow">
                 <option value="">Seleccionar...</option>
                 {CLIENTS.map(c => <option key={c} value={c}>{c}</option>)}
                 <option value="__custom__">+ Otro cliente</option>
               </select>
-              {newProfile.client_name === "__custom__" && (
+              {isCustomClient && (
                 <Input className="mt-2 bg-secondary border-border rounded-xl" placeholder="Nombre del cliente"
+                  value={newProfile.client_name}
                   onChange={e => setNewProfile(p => ({ ...p, client_name: e.target.value }))} />
               )}
             </div>
