@@ -251,6 +251,7 @@ const ContentEngine = () => {
     const result = await createProfile(newProfile);
     if (result) {
       setShowNewProfile(false);
+      setIsCustomClient(false);
       setNewProfile({
         client_name: "", industry: "", target_audience: "", brand_tone: "Profesional",
         brand_essence: "", client_type: "calendarizado",
