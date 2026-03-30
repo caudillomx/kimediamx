@@ -72,6 +72,13 @@ serve(async (req) => {
     const teamList = (teamMembers || []).map(m => m.full_name).join(", ");
     const contactsList = (clientContacts || []).map(c => `${c.full_name} (${c.role_title || 'contacto'} de ${c.client_name}, apodos: ${(c.nicknames || []).join(', ')})`).join("; ");
 
+    // Build unique client list from contacts
+    const clientNames = [...new Set((clientContacts || []).map(c => c.client_name))];
+    // Add known clients from action_items
+    const { data: existingClients } = await supabase.from("action_items").select("client").not("client", "is", null);
+    const allClients = [...new Set([...clientNames, ...(existingClients || []).map((r: any) => r.client)])].filter(Boolean);
+    const clientList = allClients.join(", ");
+
     // Use AI to parse the minutes
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
