@@ -142,6 +142,7 @@ const ContentEngine = () => {
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [showNewProfile, setShowNewProfile] = useState(false);
+  const [isCustomClient, setIsCustomClient] = useState(false);
   const [showImportKit, setShowImportKit] = useState(false);
   const [profileToDelete, setProfileToDelete] = useState<ContentProfile | null>(null);
   const [profileToEdit, setProfileToEdit] = useState<ContentProfile | null>(null);
