@@ -340,7 +340,14 @@ export function useContentInputs(cycleId: string | null) {
     else fetchInputs();
   }, [fetchInputs]);
 
-  return { inputs, fetchInputs, addInput, removeInput };
+  const updateInput = useCallback(async (id: string, updates: Partial<ContentInput>) => {
+    const { error } = await supabase.from("content_inputs").update(updates as any).eq("id", id);
+    if (error) { toast.error("Error actualizando insumo"); return false; }
+    fetchInputs();
+    return true;
+  }, [fetchInputs]);
+
+  return { inputs, fetchInputs, addInput, removeInput, updateInput };
 }
 
 export function useContentAnalytics(profileId: string | null) {
