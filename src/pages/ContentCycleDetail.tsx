@@ -231,7 +231,7 @@ const ContentCycleDetail = () => {
   const [selectedCycleId, setSelectedCycleId] = useState<string | null>(null);
   const { pieces, updatePiece, bulkInsertPieces } = useContentPieces(selectedCycleId);
   const { learnings } = useContentLearnings(profileId || null);
-  const { inputs, addInput, removeInput } = useContentInputs(selectedCycleId);
+  const { inputs, addInput, removeInput, updateInput } = useContentInputs(selectedCycleId);
   const { analytics, bulkInsert: bulkInsertAnalytics } = useContentAnalytics(profileId || null);
   const { campaigns, performance, importAds } = useAdCampaigns(profileId || null);
   const { keywords: trendKeywords, addKeyword, removeKeyword, bulkAddKeywords } = useTrendKeywords(profileId || null);
