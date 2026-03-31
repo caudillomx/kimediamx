@@ -231,7 +231,7 @@ const ContentCycleDetail = () => {
   const [selectedCycleId, setSelectedCycleId] = useState<string | null>(null);
   const { pieces, updatePiece, bulkInsertPieces } = useContentPieces(selectedCycleId);
   const { learnings } = useContentLearnings(profileId || null);
-  const { inputs, addInput, removeInput } = useContentInputs(selectedCycleId);
+  const { inputs, addInput, removeInput, updateInput } = useContentInputs(selectedCycleId);
   const { analytics, bulkInsert: bulkInsertAnalytics } = useContentAnalytics(profileId || null);
   const { campaigns, performance, importAds } = useAdCampaigns(profileId || null);
   const { keywords: trendKeywords, addKeyword, removeKeyword, bulkAddKeywords } = useTrendKeywords(profileId || null);
@@ -242,6 +242,7 @@ const ContentCycleDetail = () => {
   const [selectedModel, setSelectedModel] = useState("gemini-flash");
   const [showNewCycle, setShowNewCycle] = useState(false);
   const [showAddInput, setShowAddInput] = useState(false);
+  const [editingInput, setEditingInput] = useState<ContentInput | null>(null);
   const [expandedPiece, setExpandedPiece] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("tendencias");
   const [pieceFilter, setPieceFilter] = useState<string>("all");
@@ -1055,7 +1056,8 @@ const ContentCycleDetail = () => {
                           return (
                             <motion.div key={inp.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
                               transition={{ delay: i * 0.03 }}>
-                              <Card className="p-4 bg-card border-border hover:border-primary/20 transition-colors group">
+                              <Card className="p-4 bg-card border-border hover:border-primary/20 transition-colors group cursor-pointer"
+                                onClick={() => setEditingInput(inp)}>
                                 <div className="flex items-start gap-3">
                                   <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center text-lg shrink-0">
                                     {typeConfig?.icon || "📄"}
@@ -1068,7 +1070,8 @@ const ContentCycleDetail = () => {
                                     {inp.content && <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">{inp.content}</p>}
                                     {inp.url && (
                                       <a href={inp.url} target="_blank" rel="noopener noreferrer"
-                                        className="text-xs text-primary hover:underline flex items-center gap-1 mt-1">
+                                        className="text-xs text-primary hover:underline flex items-center gap-1 mt-1"
+                                        onClick={e => e.stopPropagation()}>
                                         <LinkIcon className="w-3 h-3" /> {inp.url}
                                       </a>
                                     )}
@@ -1080,11 +1083,18 @@ const ContentCycleDetail = () => {
                                       </div>
                                     )}
                                   </div>
-                                  <Button variant="ghost" size="sm"
-                                    className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive rounded-xl"
-                                    onClick={() => removeInput(inp.id)}>
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </Button>
+                                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <Button variant="ghost" size="sm"
+                                      className="text-muted-foreground hover:text-foreground rounded-xl"
+                                      onClick={(e) => { e.stopPropagation(); setEditingInput(inp); }}>
+                                      <Edit3 className="w-3.5 h-3.5" />
+                                    </Button>
+                                    <Button variant="ghost" size="sm"
+                                      className="text-destructive hover:text-destructive rounded-xl"
+                                      onClick={(e) => { e.stopPropagation(); removeInput(inp.id); }}>
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </Button>
+                                  </div>
                                 </div>
                               </Card>
                             </motion.div>
@@ -1570,6 +1580,70 @@ const ContentCycleDetail = () => {
                     <><RefreshCw className="w-4 h-4 mr-2 animate-spin" /> Extrayendo contenido…</>
                   ) : "Agregar insumo"}
                 </Button>
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
+
+      {/* ─── Edit Input Dialog ─── */}
+      <Dialog open={!!editingInput} onOpenChange={(open) => { if (!open) setEditingInput(null); }}>
+        <DialogContent className="max-w-lg bg-card border-border max-h-[90vh] overflow-y-auto rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-foreground font-display text-xl">Editar Insumo</DialogTitle>
+          </DialogHeader>
+          {editingInput && (() => {
+            const typeConfig = INPUT_TYPES.find(t => t.value === editingInput.input_type);
+            return (
+              <div className="space-y-5">
+                <div className="flex items-center gap-2 p-3 rounded-xl bg-secondary">
+                  <span className="text-base">{typeConfig?.icon || "📄"}</span>
+                  <span className="text-sm font-medium text-foreground capitalize">{editingInput.input_type}</span>
+                </div>
+
+                <div>
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Título</Label>
+                  <Input value={editingInput.title || ""} className="bg-secondary border-border mt-1.5 rounded-xl"
+                    onChange={e => setEditingInput(prev => prev ? { ...prev, title: e.target.value } : null)} />
+                </div>
+
+                {editingInput.url && (
+                  <div>
+                    <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">URL</Label>
+                    <Input value={editingInput.url || ""} className="bg-secondary border-border mt-1.5 rounded-xl"
+                      onChange={e => setEditingInput(prev => prev ? { ...prev, url: e.target.value } : null)} />
+                  </div>
+                )}
+
+                {(editingInput.content !== null || !editingInput.url) && (
+                  <div>
+                    <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Contenido</Label>
+                    <Textarea value={editingInput.content || ""} className="bg-secondary border-border mt-1.5 rounded-xl"
+                      onChange={e => setEditingInput(prev => prev ? { ...prev, content: e.target.value } : null)}
+                      rows={8} />
+                  </div>
+                )}
+
+                <div className="flex gap-3">
+                  <Button variant="outline" className="flex-1 rounded-xl" onClick={() => setEditingInput(null)}>
+                    Cancelar
+                  </Button>
+                  <Button className="flex-1 bg-gradient-coral text-primary-foreground font-bold rounded-xl shadow-glow hover:shadow-glow-lg transition-shadow"
+                    onClick={async () => {
+                      if (!editingInput) return;
+                      const ok = await updateInput(editingInput.id, {
+                        title: editingInput.title,
+                        content: editingInput.content,
+                        url: editingInput.url,
+                      });
+                      if (ok) {
+                        toast.success("Insumo actualizado");
+                        setEditingInput(null);
+                      }
+                    }}>
+                    Guardar cambios
+                  </Button>
+                </div>
               </div>
             );
           })()}
