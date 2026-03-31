@@ -1585,6 +1585,70 @@ const ContentCycleDetail = () => {
           })()}
         </DialogContent>
       </Dialog>
+
+      {/* ─── Edit Input Dialog ─── */}
+      <Dialog open={!!editingInput} onOpenChange={(open) => { if (!open) setEditingInput(null); }}>
+        <DialogContent className="max-w-lg bg-card border-border max-h-[90vh] overflow-y-auto rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-foreground font-display text-xl">Editar Insumo</DialogTitle>
+          </DialogHeader>
+          {editingInput && (() => {
+            const typeConfig = INPUT_TYPES.find(t => t.value === editingInput.input_type);
+            return (
+              <div className="space-y-5">
+                <div className="flex items-center gap-2 p-3 rounded-xl bg-secondary">
+                  <span className="text-base">{typeConfig?.icon || "📄"}</span>
+                  <span className="text-sm font-medium text-foreground capitalize">{editingInput.input_type}</span>
+                </div>
+
+                <div>
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Título</Label>
+                  <Input value={editingInput.title || ""} className="bg-secondary border-border mt-1.5 rounded-xl"
+                    onChange={e => setEditingInput(prev => prev ? { ...prev, title: e.target.value } : null)} />
+                </div>
+
+                {editingInput.url && (
+                  <div>
+                    <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">URL</Label>
+                    <Input value={editingInput.url || ""} className="bg-secondary border-border mt-1.5 rounded-xl"
+                      onChange={e => setEditingInput(prev => prev ? { ...prev, url: e.target.value } : null)} />
+                  </div>
+                )}
+
+                {(editingInput.content !== null || !editingInput.url) && (
+                  <div>
+                    <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Contenido</Label>
+                    <Textarea value={editingInput.content || ""} className="bg-secondary border-border mt-1.5 rounded-xl"
+                      onChange={e => setEditingInput(prev => prev ? { ...prev, content: e.target.value } : null)}
+                      rows={8} />
+                  </div>
+                )}
+
+                <div className="flex gap-3">
+                  <Button variant="outline" className="flex-1 rounded-xl" onClick={() => setEditingInput(null)}>
+                    Cancelar
+                  </Button>
+                  <Button className="flex-1 bg-gradient-coral text-primary-foreground font-bold rounded-xl shadow-glow hover:shadow-glow-lg transition-shadow"
+                    onClick={async () => {
+                      if (!editingInput) return;
+                      const ok = await updateInput(editingInput.id, {
+                        title: editingInput.title,
+                        content: editingInput.content,
+                        url: editingInput.url,
+                      });
+                      if (ok) {
+                        toast.success("Insumo actualizado");
+                        setEditingInput(null);
+                      }
+                    }}>
+                    Guardar cambios
+                  </Button>
+                </div>
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
