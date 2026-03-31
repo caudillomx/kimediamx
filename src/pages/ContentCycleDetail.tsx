@@ -1056,7 +1056,8 @@ const ContentCycleDetail = () => {
                           return (
                             <motion.div key={inp.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
                               transition={{ delay: i * 0.03 }}>
-                              <Card className="p-4 bg-card border-border hover:border-primary/20 transition-colors group">
+                              <Card className="p-4 bg-card border-border hover:border-primary/20 transition-colors group cursor-pointer"
+                                onClick={() => setEditingInput(inp)}>
                                 <div className="flex items-start gap-3">
                                   <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center text-lg shrink-0">
                                     {typeConfig?.icon || "📄"}
@@ -1069,7 +1070,8 @@ const ContentCycleDetail = () => {
                                     {inp.content && <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">{inp.content}</p>}
                                     {inp.url && (
                                       <a href={inp.url} target="_blank" rel="noopener noreferrer"
-                                        className="text-xs text-primary hover:underline flex items-center gap-1 mt-1">
+                                        className="text-xs text-primary hover:underline flex items-center gap-1 mt-1"
+                                        onClick={e => e.stopPropagation()}>
                                         <LinkIcon className="w-3 h-3" /> {inp.url}
                                       </a>
                                     )}
@@ -1081,11 +1083,18 @@ const ContentCycleDetail = () => {
                                       </div>
                                     )}
                                   </div>
-                                  <Button variant="ghost" size="sm"
-                                    className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive rounded-xl"
-                                    onClick={() => removeInput(inp.id)}>
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </Button>
+                                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <Button variant="ghost" size="sm"
+                                      className="text-muted-foreground hover:text-foreground rounded-xl"
+                                      onClick={(e) => { e.stopPropagation(); setEditingInput(inp); }}>
+                                      <Edit3 className="w-3.5 h-3.5" />
+                                    </Button>
+                                    <Button variant="ghost" size="sm"
+                                      className="text-destructive hover:text-destructive rounded-xl"
+                                      onClick={(e) => { e.stopPropagation(); removeInput(inp.id); }}>
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </Button>
+                                  </div>
                                 </div>
                               </Card>
                             </motion.div>
