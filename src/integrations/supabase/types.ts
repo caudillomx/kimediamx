@@ -992,9 +992,11 @@ export type Database = {
           notes: string | null
           posting_frequency: string | null
           preferred_networks: string[] | null
+          reference_accounts: string | null
           restrictions: string | null
           target_audience: string | null
           updated_at: string
+          website_url: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -1012,9 +1014,11 @@ export type Database = {
           notes?: string | null
           posting_frequency?: string | null
           preferred_networks?: string[] | null
+          reference_accounts?: string | null
           restrictions?: string | null
           target_audience?: string | null
           updated_at?: string
+          website_url?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -1032,9 +1036,11 @@ export type Database = {
           notes?: string | null
           posting_frequency?: string | null
           preferred_networks?: string[] | null
+          reference_accounts?: string | null
           restrictions?: string | null
           target_audience?: string | null
           updated_at?: string
+          website_url?: string | null
         }
         Relationships: []
       }
