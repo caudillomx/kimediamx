@@ -889,6 +889,12 @@ const ContentEngine = () => {
                 className="mt-1.5 bg-secondary border-border rounded-xl" />
             </div>
             <div>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Sitio web</Label>
+              <Input value={(editData as any).website_url || ""} onChange={e => setEditData(d => ({ ...d, website_url: e.target.value } as any))}
+                placeholder="https://tusitio.com"
+                className="mt-1.5 bg-secondary border-border rounded-xl" />
+            </div>
+            <div>
               <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Referencias e inspiración</Label>
               <Textarea rows={3} value={(editData as any).reference_accounts || ""} onChange={e => setEditData(d => ({ ...d, reference_accounts: e.target.value } as any))}
                 placeholder="¿A quién admiras? Creadores, comunicadores, marcas cuyo estilo te inspira."
