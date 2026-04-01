@@ -146,7 +146,7 @@ const ContentEngine = () => {
   const [showImportKit, setShowImportKit] = useState(false);
   const [profileToDelete, setProfileToDelete] = useState<ContentProfile | null>(null);
   const [profileToEdit, setProfileToEdit] = useState<ContentProfile | null>(null);
-  const [editData, setEditData] = useState({ client_name: "", brand_tone: "", brand_essence: "", client_type: "calendarizado", content_pillars: [] as string[], preferred_networks: [] as string[], brandbook_url: "" as string | null, brandbook_file_name: "" as string | null });
+  const [editData, setEditData] = useState({ client_name: "", brand_tone: "", brand_essence: "", client_type: "calendarizado", content_pillars: [] as string[], preferred_networks: [] as string[], brandbook_url: "" as string | null, brandbook_file_name: "" as string | null, target_audience: "", restrictions: "", reference_accounts: "" });
   const [uploadingBrandbook, setUploadingBrandbook] = useState(false);
   const [editPillarInput, setEditPillarInput] = useState("");
   const [kitProfiles, setKitProfiles] = useState<any[]>([]);
