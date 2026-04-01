@@ -430,7 +430,7 @@ const ContentCycleDetail = () => {
       const generatedPieces = (data.data.pieces || []).map((p: any, i: number) => ({
         cycle_id: selectedCycleId,
         scheduled_date: p.scheduled_date,
-        network: p.network,
+        network: p.network || p.platform,
         format: p.format,
         pillar: p.pillar,
         objective: p.objective,
