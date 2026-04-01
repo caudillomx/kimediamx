@@ -4,16 +4,17 @@ import { Link } from "react-router-dom";
 import { BrandWelcomeStep, type BrandParticipantInfo } from "@/components/brand-kit/BrandWelcomeStep";
 import { BrandDiagnosticStep } from "@/components/brand-kit/BrandDiagnosticStep";
 import { BrandIdentityStep } from "@/components/brand-kit/BrandIdentityStep";
+import { ContentContextStep, type ContentContextData } from "@/components/brand-kit/ContentContextStep";
 import { BrandClosingStep } from "@/components/brand-kit/BrandClosingStep";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import kimediaLogo from "@/assets/kimedia-logo.png";
-import { Activity, Lightbulb, Sparkles, Star } from "lucide-react";
+import { Activity, Lightbulb, Sparkles, Layers, Star } from "lucide-react";
 
-type Step = "welcome" | "diagnostic" | "identity" | "closing";
-const stepOrder: Step[] = ["welcome", "diagnostic", "identity", "closing"];
-const STEP_ICONS = [Sparkles, Activity, Lightbulb, Star];
-const STEP_LABELS = ["Datos", "Diagnóstico", "Identidad", "Resumen"];
+type Step = "welcome" | "diagnostic" | "identity" | "context" | "closing";
+const stepOrder: Step[] = ["welcome", "diagnostic", "identity", "context", "closing"];
+const STEP_ICONS = [Sparkles, Activity, Lightbulb, Layers, Star];
+const STEP_LABELS = ["Datos", "Diagnóstico", "Identidad", "Contexto", "Resumen"];
 
 export default function KitMarcaPersonal() {
   const [step, setStep] = useState<Step>("welcome");
@@ -30,6 +31,7 @@ export default function KitMarcaPersonal() {
         full_name: info.fullName, email: info.email, profession: info.profession,
         industry: info.industry, social_handle: info.socialHandle,
         main_channel: info.mainChannel, approx_followers: info.approxFollowers, has_website: info.hasWebsite,
+        competitors: info.competitors || null,
       }).select("id").single();
       if (error) throw error;
       setProfileId(data.id);
@@ -54,6 +56,19 @@ export default function KitMarcaPersonal() {
       await supabase.from("brand_kit_profiles").update({
         value_proposition: data.valueProposition, target_audience: data.targetAudience,
         differentiator: data.differentiator, brand_tone: data.brandTone,
+      }).eq("id", profileId);
+    }
+    setStep("context");
+  };
+
+  const handleContext = async (data: ContentContextData) => {
+    if (profileId) {
+      await supabase.from("brand_kit_profiles").update({
+        content_pillars: data.contentPillars as any,
+        reference_accounts: data.referenceAccounts || null,
+        content_restrictions: data.contentRestrictions || null,
+        key_dates: data.keyDates || null,
+        preferred_formats: data.preferredFormats as any,
       }).eq("id", profileId);
     }
     setStep("closing");
@@ -105,6 +120,7 @@ export default function KitMarcaPersonal() {
             {step === "welcome" && <BrandWelcomeStep key="welcome" onNext={handleWelcome} />}
             {step === "diagnostic" && <BrandDiagnosticStep key="diagnostic" onNext={handleDiagnostic} />}
             {step === "identity" && <BrandIdentityStep key="identity" onNext={handleIdentity} />}
+            {step === "context" && <ContentContextStep key="context" onNext={handleContext} onBack={() => setStep("identity")} />}
             {step === "closing" && participantInfo && (
               <BrandClosingStep key="closing" profileId={profileId}
                 name={participantInfo.fullName} profession={participantInfo.profession}

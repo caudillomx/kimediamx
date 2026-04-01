@@ -5,15 +5,16 @@ import { PymeWelcomeStep, type PymeParticipantInfo } from "@/components/pyme-kit
 import { PymeDiagnosticStep } from "@/components/pyme-kit/PymeDiagnosticStep";
 import { PymeCompetitiveStep } from "@/components/pyme-kit/PymeCompetitiveStep";
 import { PymeIdentityStep } from "@/components/pyme-kit/PymeIdentityStep";
+import { ContentContextStep, type ContentContextData } from "@/components/brand-kit/ContentContextStep";
 import { PymeClosingStep } from "@/components/pyme-kit/PymeClosingStep";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import kimediaLogo from "@/assets/kimedia-logo.png";
-import { Building2, Activity, Search, Lightbulb, Star } from "lucide-react";
+import { Building2, Activity, Search, Lightbulb, Layers, Star } from "lucide-react";
 
-type Step = "welcome" | "diagnostic" | "competitive" | "identity" | "closing";
-const stepOrder: Step[] = ["welcome", "diagnostic", "competitive", "identity", "closing"];
-const STEP_ICONS = [Building2, Activity, Search, Lightbulb, Star];
+type Step = "welcome" | "diagnostic" | "competitive" | "identity" | "context" | "closing";
+const stepOrder: Step[] = ["welcome", "diagnostic", "competitive", "identity", "context", "closing"];
+const STEP_ICONS = [Building2, Activity, Search, Lightbulb, Layers, Star];
 
 export default function KitPyme() {
   const [step, setStep] = useState<Step>("welcome");
@@ -66,6 +67,19 @@ export default function KitPyme() {
         differentiator: data.differentiator, brand_tone: data.brandTone,
       }).eq("id", profileId);
     }
+    setStep("context");
+  };
+
+  const handleContext = async (data: ContentContextData) => {
+    if (profileId) {
+      await supabase.from("brand_kit_profiles").update({
+        content_pillars: data.contentPillars as any,
+        reference_accounts: data.referenceAccounts || null,
+        content_restrictions: data.contentRestrictions || null,
+        key_dates: data.keyDates || null,
+        preferred_formats: data.preferredFormats as any,
+      }).eq("id", profileId);
+    }
     setStep("closing");
   };
 
@@ -114,6 +128,7 @@ export default function KitPyme() {
             {step === "diagnostic" && <PymeDiagnosticStep key="diagnostic" onNext={handleDiagnostic} />}
             {step === "competitive" && <PymeCompetitiveStep key="competitive" onNext={handleCompetitive} />}
             {step === "identity" && <PymeIdentityStep key="identity" onNext={handleIdentity} />}
+            {step === "context" && <ContentContextStep key="context" onNext={handleContext} onBack={() => setStep("identity")} />}
             {step === "closing" && participantInfo && (
               <PymeClosingStep key="closing" profileId={profileId}
                 companyName={participantInfo.companyName} industry={participantInfo.industry}

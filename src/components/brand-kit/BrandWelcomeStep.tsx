@@ -16,6 +16,7 @@ export interface BrandParticipantInfo {
   mainChannel: string;
   approxFollowers: string;
   hasWebsite: boolean;
+  competitors: string;
 }
 
 interface BrandWelcomeStepProps {
