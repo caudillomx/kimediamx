@@ -457,6 +457,51 @@ async function callAI(systemPrompt: string, userPrompt: string, modelKey: string
   return null;
 }
 
+// ─── Quality Gate Prompt ──────────────────────────────────
+
+function buildQualityGatePrompt(profile: any, pieces: any[]) {
+  const systemPrompt = `Eres un editor senior de contenido digital. Tu trabajo es evaluar piezas de contenido contra criterios estrictos de calidad y devolver únicamente las que aprueban, reescribiendo las que fallan.
+
+CRITERIOS DE EVALUACIÓN (cada uno de 0 a 2):
+
+1. HOOK (0-2): ¿La primera línea detiene el scroll? ¿Es específica y provoca curiosidad o emoción?
+2. RELEVANCIA (0-2): ¿Es útil o interesante para la audiencia definida del cliente?
+3. ALINEACIÓN (0-2): ¿Refleja el tono de marca y los pilares del cliente?
+4. CTA (0-2): ¿El llamado a la acción es claro, específico y accionable?
+5. ORIGINALIDAD (0-2): ¿Evita frases genéricas y tiene punto de vista propio?
+
+SCORE MÍNIMO PARA APROBAR: 8/10
+
+Si una pieza no aprueba, reescríbela hasta que pase. Nunca devuelvas una pieza con score menor a 8.
+
+Responde SIEMPRE en JSON válido:
+{
+  "pieces": ["...misma estructura de entrada, con draft_copy mejorado si fue necesario..."],
+  "quality_report": [
+    {"piece_index": 0, "score": 9, "rewrote": false, "notes": "Hook fuerte, CTA claro"},
+    {"piece_index": 1, "score": 7, "rewrote": true, "notes": "Hook genérico, se reescribió con especificidad"}
+  ]
+}`;
+
+  const userPrompt = `Evalúa y mejora estas ${pieces.length} piezas para ${profile.client_name}.
+
+TONO DE MARCA: ${profile.brand_tone || "Profesional"}
+AUDIENCIA: ${profile.target_audience || "No especificada"}
+PILARES: ${(profile.content_pillars || []).join(", ") || "No definidos"}
+RESTRICCIONES: ${(profile as any).content_restrictions || profile.restrictions || "Ninguna"}
+
+PIEZAS A EVALUAR:
+${pieces.map((p: any, i: number) => `
+--- Pieza ${i} [${p.network} / ${p.format}] ---
+Hook/Primera línea: ${p.draft_copy?.split("\n")[0] || ""}
+Copy completo: ${p.draft_copy}
+CTA: ${p.cta}
+Pilar: ${p.pillar}
+`).join("\n")}`;
+
+  return { systemPrompt, userPrompt };
+}
+
 // ─── Main Handler ─────────────────────────────────────────
 
 serve(async (req) => {
