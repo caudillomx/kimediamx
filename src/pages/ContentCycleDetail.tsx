@@ -365,7 +365,29 @@ const ContentCycleDetail = () => {
     setShowAddInput(false);
   };
 
-  const handleGenerateGrid = async () => {
+  const handleImportUrl = async () => {
+    if (!importUrl || !selectedCycleId) return;
+    setImporting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("fetch-content-from-url", {
+        body: { url: importUrl, cycle_id: selectedCycleId, title: importTitle || undefined },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success("Insumo importado exitosamente desde la URL");
+      setImportUrl("");
+      setImportTitle("");
+      setShowImportUrl(false);
+      // Refresh inputs
+      window.location.reload();
+    } catch (e: any) {
+      toast.error(e.message || "Error al importar URL");
+    } finally {
+      setImporting(false);
+    }
+  };
+
+
     if (!selectedCycle) return;
     if (inputs.length === 0) {
       toast.error("Agrega al menos un insumo antes de generar la parrilla");
