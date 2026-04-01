@@ -1678,6 +1678,57 @@ const ContentCycleDetail = () => {
           })()}
         </DialogContent>
       </Dialog>
+
+      {/* ─── Import URL Dialog ─── */}
+      <Dialog open={showImportUrl} onOpenChange={setShowImportUrl}>
+        <DialogContent className="max-w-md bg-card border-border rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="font-display text-foreground flex items-center gap-2">
+              <Globe className="w-5 h-5 text-primary" /> Importar desde URL
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div>
+              <Label className="text-foreground text-sm font-medium">URL *</Label>
+              <Input
+                placeholder="https://ejemplo.com/articulo"
+                value={importUrl}
+                onChange={e => setImportUrl(e.target.value)}
+                className="mt-1.5 rounded-xl bg-secondary/50 border-border"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                El contenido se extraerá y procesará con IA automáticamente
+              </p>
+            </div>
+            <div>
+              <Label className="text-foreground text-sm font-medium">Título (opcional)</Label>
+              <Input
+                placeholder="Nombre descriptivo del insumo"
+                value={importTitle}
+                onChange={e => setImportTitle(e.target.value)}
+                className="mt-1.5 rounded-xl bg-secondary/50 border-border"
+              />
+            </div>
+            <Button
+              onClick={handleImportUrl}
+              disabled={!importUrl || importing}
+              className="w-full bg-gradient-coral text-primary-foreground font-bold rounded-xl h-11 shadow-glow hover:shadow-glow-lg transition-shadow"
+            >
+              {importing ? (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  Extrayendo contenido...
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4 mr-2" />
+                  Importar
+                </>
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
