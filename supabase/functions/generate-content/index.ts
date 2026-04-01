@@ -157,8 +157,14 @@ TONO DE MARCA: ${profile.brand_tone || "Profesional"}
 PILARES: ${(profile.content_pillars || []).join(", ") || "No definidos"}
 REDES: ${networks.join(", ")}
 FRECUENCIA: ${profile.posting_frequency || "3 veces por semana"}
-RESTRICCIONES: ${profile.restrictions || "Ninguna"}
+RESTRICCIONES: ${profile.restrictions || (profile as any).content_restrictions || "Ninguna"}
 ${profile.brand_essence ? `\nESENCIA DE MARCA / BRANDBOOK:\n${profile.brand_essence}` : ""}
+${(profile as any).content_pillars?.length > 0 ? `\nPILARES DE CONTENIDO DEFINIDOS:\n- ${((profile as any).content_pillars || []).join("\n- ")}` : ""}
+${(profile as any).reference_accounts ? `\nCUENTAS DE REFERENCIA O INSPIRACIÓN (adapta estilo y tono a estas referencias):\n${(profile as any).reference_accounts}` : ""}
+${(profile as any).content_restrictions ? `\nTEMAS, PALABRAS O ENFOQUES A EVITAR SIEMPRE:\n${(profile as any).content_restrictions}` : ""}
+${(profile as any).key_dates ? `\nFECHAS CLAVE Y TEMPORALIDAD DEL NEGOCIO:\n${(profile as any).key_dates}` : ""}
+${(profile as any).preferred_formats?.length > 0 ? `\nFORMATOS PREFERIDOS POR EL CLIENTE:\n${((profile as any).preferred_formats || []).join(", ")}` : ""}
+${(profile as any).competitors ? `\nCOMPETIDORES O REFERENTES DIRECTOS:\n${(profile as any).competitors}` : ""}
 
 PERIODO: ${cycle.start_date} a ${cycle.end_date}
 TIPO DE CICLO: ${cycle.cycle_type}
