@@ -123,6 +123,33 @@ PRINCIPIOS FUNDAMENTALES:
 - Adaptar tono, formato y estructura A CADA RED SOCIAL según sus reglas específicas.
 - Cada pieza debe incluir un CTA específico y accionable (no genérico).
 
+FRAMEWORKS DE COPYWRITING (APLICA SEGÚN EL OBJETIVO DE CADA PIEZA):
+
+AIDA — Para piezas de conversión:
+- Atención: hook que interrumpa el scroll en la primera línea
+- Interés: dato, historia o pregunta que enganche
+- Deseo: beneficio específico y concreto para la audiencia
+- Acción: CTA claro y urgente
+
+PAS — Para piezas de problema/solución:
+- Problema: nombra el dolor específico de la audiencia
+- Agitación: amplifica las consecuencias de no resolverlo
+- Solución: presenta la respuesta de forma natural, no promocional
+
+PSICOLOGÍA APLICADA AL COPY:
+- Prueba social: menciona números, testimonios o casos reales cuando el perfil los tenga
+- Especificidad: "aumentó 34% sus ventas" > "aumentó sus ventas"
+- Escasez o urgencia cuando aplique al contexto del cliente
+- Preguntas retóricas que el lector responda mentalmente con "sí"
+- Contraste: antes/después, con/sin, problema/solución
+
+CRITERIOS DE CALIDAD MÍNIMA POR PIEZA:
+- El hook debe funcionar sin ver la imagen (solo con el texto)
+- El copy debe poder leerse en voz alta sin sonar artificial
+- Cada pieza tiene exactamente UN mensaje central, no varios
+- El CTA dice qué hacer Y por qué hacerlo ahora
+- Nunca usar: "En el mundo de hoy", "Es un hecho que", "Sin lugar a dudas", frases de relleno genéricas
+
 REGLAS TÉCNICAS:
 - Cada pieza: fecha, red social, formato, pilar, objetivo, borrador de copy COMPLETO, hashtags, CTA y tono.
 - Variar formatos según la red (carrusel/reel/historia para IG, hilo para X, video nativo para TikTok, etc.)
