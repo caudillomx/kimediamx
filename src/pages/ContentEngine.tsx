@@ -936,6 +936,7 @@ const ContentEngine = () => {
                     target_audience: editData.target_audience,
                     restrictions: editData.restrictions,
                     reference_accounts: (editData as any).reference_accounts,
+                    website_url: (editData as any).website_url,
                   } as any);
                   setProfileToEdit(null);
                   toast({ title: "Perfil actualizado" });
