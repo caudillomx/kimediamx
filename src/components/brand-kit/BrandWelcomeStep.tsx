@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Sparkles, User, Briefcase, AtSign, Wifi, BarChart3, Mail, Globe, ChevronRight } from "lucide-react";
+import { Sparkles, User, Briefcase, AtSign, Wifi, BarChart3, Mail, Globe, ChevronRight, Users } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
