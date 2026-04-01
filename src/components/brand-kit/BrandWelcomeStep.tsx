@@ -161,6 +161,20 @@ export function BrandWelcomeStep({ onNext }: BrandWelcomeStepProps) {
               </Select>
             </div>
 
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground font-semibold">
+                <Users className="w-3.5 h-3.5" /> Competidores o referentes en tu industria
+              </Label>
+              <Input
+                value={form.competitors}
+                onChange={e => set("competitors", e.target.value)}
+                placeholder="¿Quiénes son tus principales competidores o referentes directos?"
+                className="bg-secondary border-border rounded-xl h-12 text-foreground placeholder:text-muted-foreground/60"
+                maxLength={200}
+              />
+              <p className="text-xs text-muted-foreground/60">Opcional. Separa con comas.</p>
+            </div>
+
             <Button
               type="button"
               onClick={() => setSection(1)}
