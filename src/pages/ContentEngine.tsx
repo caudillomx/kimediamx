@@ -926,6 +926,9 @@ const ContentEngine = () => {
                     client_type: editData.client_type,
                     content_pillars: editData.content_pillars,
                     preferred_networks: editData.preferred_networks,
+                    target_audience: editData.target_audience,
+                    restrictions: editData.restrictions,
+                    reference_accounts: (editData as any).reference_accounts,
                   } as any);
                   setProfileToEdit(null);
                   toast({ title: "Perfil actualizado" });
