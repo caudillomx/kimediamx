@@ -31,6 +31,7 @@ export function BrandWelcomeStep({ onNext }: BrandWelcomeStepProps) {
   const [form, setForm] = useState<BrandParticipantInfo>({
     fullName: "", email: "", profession: "", industry: "",
     socialHandle: "", mainChannel: "", approxFollowers: "", hasWebsite: false,
+    competitors: "",
   });
   const [section, setSection] = useState(0); // 0: personal, 1: digital
 
