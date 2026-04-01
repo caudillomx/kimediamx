@@ -473,6 +473,9 @@ const ContentEngine = () => {
                         preferred_networks: profile.preferred_networks || [],
                         brandbook_url: (profile as any).brandbook_url || null,
                         brandbook_file_name: (profile as any).brandbook_file_name || null,
+                        target_audience: profile.target_audience || "",
+                        restrictions: (profile as any).restrictions || "",
+                        reference_accounts: (profile as any).reference_accounts || "",
                       });
                       setEditPillarInput("");
                     }}
