@@ -146,7 +146,7 @@ const ContentEngine = () => {
   const [showImportKit, setShowImportKit] = useState(false);
   const [profileToDelete, setProfileToDelete] = useState<ContentProfile | null>(null);
   const [profileToEdit, setProfileToEdit] = useState<ContentProfile | null>(null);
-  const [editData, setEditData] = useState({ client_name: "", brand_tone: "", brand_essence: "", client_type: "calendarizado", content_pillars: [] as string[], preferred_networks: [] as string[], brandbook_url: "" as string | null, brandbook_file_name: "" as string | null });
+  const [editData, setEditData] = useState({ client_name: "", brand_tone: "", brand_essence: "", client_type: "calendarizado", content_pillars: [] as string[], preferred_networks: [] as string[], brandbook_url: "" as string | null, brandbook_file_name: "" as string | null, target_audience: "", restrictions: "", reference_accounts: "" });
   const [uploadingBrandbook, setUploadingBrandbook] = useState(false);
   const [editPillarInput, setEditPillarInput] = useState("");
   const [kitProfiles, setKitProfiles] = useState<any[]>([]);
@@ -473,6 +473,9 @@ const ContentEngine = () => {
                         preferred_networks: profile.preferred_networks || [],
                         brandbook_url: (profile as any).brandbook_url || null,
                         brandbook_file_name: (profile as any).brandbook_file_name || null,
+                        target_audience: profile.target_audience || "",
+                        restrictions: (profile as any).restrictions || "",
+                        reference_accounts: (profile as any).reference_accounts || "",
                       });
                       setEditPillarInput("");
                     }}
@@ -873,6 +876,24 @@ const ContentEngine = () => {
               </div>
             </div>
             <div>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Audiencia objetivo</Label>
+              <Textarea rows={3} value={editData.target_audience || ""} onChange={e => setEditData(d => ({ ...d, target_audience: e.target.value }))}
+                placeholder="¿A quién le hablas? Describe a tu audiencia ideal: quiénes son, qué buscan, qué los mueve."
+                className="mt-1.5 bg-secondary border-border rounded-xl" />
+            </div>
+            <div>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Temas o palabras a evitar</Label>
+              <Textarea rows={3} value={editData.restrictions || ""} onChange={e => setEditData(d => ({ ...d, restrictions: e.target.value }))}
+                placeholder="¿Qué NO quieres que aparezca en tu contenido? Temas, frases, tonos, enfoques."
+                className="mt-1.5 bg-secondary border-border rounded-xl" />
+            </div>
+            <div>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Referencias e inspiración</Label>
+              <Textarea rows={3} value={(editData as any).reference_accounts || ""} onChange={e => setEditData(d => ({ ...d, reference_accounts: e.target.value } as any))}
+                placeholder="¿A quién admiras? Creadores, comunicadores, marcas cuyo estilo te inspira."
+                className="mt-1.5 bg-secondary border-border rounded-xl" />
+            </div>
+            <div>
               <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Redes sociales</Label>
               <div className="flex flex-wrap gap-2 mt-1.5">
                 {NETWORKS.map(n => (
@@ -905,6 +926,9 @@ const ContentEngine = () => {
                     client_type: editData.client_type,
                     content_pillars: editData.content_pillars,
                     preferred_networks: editData.preferred_networks,
+                    target_audience: editData.target_audience,
+                    restrictions: editData.restrictions,
+                    reference_accounts: (editData as any).reference_accounts,
                   } as any);
                   setProfileToEdit(null);
                   toast({ title: "Perfil actualizado" });
