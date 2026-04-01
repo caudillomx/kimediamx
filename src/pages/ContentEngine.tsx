@@ -876,6 +876,24 @@ const ContentEngine = () => {
               </div>
             </div>
             <div>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Audiencia objetivo</Label>
+              <Textarea rows={3} value={editData.target_audience || ""} onChange={e => setEditData(d => ({ ...d, target_audience: e.target.value }))}
+                placeholder="¿A quién le hablas? Describe a tu audiencia ideal: quiénes son, qué buscan, qué los mueve."
+                className="mt-1.5 bg-secondary border-border rounded-xl" />
+            </div>
+            <div>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Temas o palabras a evitar</Label>
+              <Textarea rows={3} value={editData.restrictions || ""} onChange={e => setEditData(d => ({ ...d, restrictions: e.target.value }))}
+                placeholder="¿Qué NO quieres que aparezca en tu contenido? Temas, frases, tonos, enfoques."
+                className="mt-1.5 bg-secondary border-border rounded-xl" />
+            </div>
+            <div>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Referencias e inspiración</Label>
+              <Textarea rows={3} value={(editData as any).reference_accounts || ""} onChange={e => setEditData(d => ({ ...d, reference_accounts: e.target.value } as any))}
+                placeholder="¿A quién admiras? Creadores, comunicadores, marcas cuyo estilo te inspira."
+                className="mt-1.5 bg-secondary border-border rounded-xl" />
+            </div>
+            <div>
               <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Redes sociales</Label>
               <div className="flex flex-wrap gap-2 mt-1.5">
                 {NETWORKS.map(n => (
