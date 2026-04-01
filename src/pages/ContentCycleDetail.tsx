@@ -242,6 +242,10 @@ const ContentCycleDetail = () => {
   const [selectedModel, setSelectedModel] = useState("gemini-flash");
   const [showNewCycle, setShowNewCycle] = useState(false);
   const [showAddInput, setShowAddInput] = useState(false);
+  const [showImportUrl, setShowImportUrl] = useState(false);
+  const [importUrl, setImportUrl] = useState("");
+  const [importTitle, setImportTitle] = useState("");
+  const [importing, setImporting] = useState(false);
   const [editingInput, setEditingInput] = useState<ContentInput | null>(null);
   const [expandedPiece, setExpandedPiece] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("tendencias");
