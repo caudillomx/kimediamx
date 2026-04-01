@@ -387,7 +387,7 @@ const ContentCycleDetail = () => {
     }
   };
 
-
+  const handleGenerateGrid = async () => {
     if (!selectedCycle) return;
     if (inputs.length === 0) {
       toast.error("Agrega al menos un insumo antes de generar la parrilla");
