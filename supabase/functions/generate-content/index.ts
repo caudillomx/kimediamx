@@ -331,7 +331,7 @@ const MODEL_MAP: Record<string, ModelOption> = {
   "claude-haiku": { id: "claude-haiku-4-20250514", label: "Claude Haiku 4", provider: "anthropic" },
 };
 
-const DEFAULT_MODEL = "gemini-flash";
+const DEFAULT_MODEL = "claude-sonnet";
 
 async function callLovableAI(systemPrompt: string, userPrompt: string, apiKey: string, modelId: string) {
   const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
