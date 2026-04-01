@@ -477,7 +477,7 @@ const ContentEngine = () => {
                         restrictions: (profile as any).restrictions || "",
                         reference_accounts: (profile as any).reference_accounts || "",
                         website_url: (profile as any).website_url || "",
-                      });
+                      } as any);
                       setEditPillarInput("");
                     }}
                   />
