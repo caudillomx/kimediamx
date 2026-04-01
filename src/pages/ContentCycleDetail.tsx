@@ -1052,6 +1052,9 @@ const ContentCycleDetail = () => {
                         <Button variant="outline" size="sm" onClick={() => setShowAddInput(true)} className="rounded-xl">
                           <Plus className="w-3.5 h-3.5 mr-1" /> Agregar
                         </Button>
+                        <Button variant="outline" size="sm" onClick={() => setShowImportUrl(true)} className="rounded-xl">
+                          <Globe className="w-3.5 h-3.5 mr-1" /> Importar URL
+                        </Button>
                         {inputs.length > 0 && (
                           <Button onClick={handleGenerateGrid} disabled={generating}
                             className="bg-gradient-coral text-primary-foreground font-semibold rounded-xl shadow-glow hover:shadow-glow-lg transition-shadow" size="sm">
