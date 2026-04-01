@@ -538,6 +538,16 @@ serve(async (req) => {
       throw new Error("La IA no generó contenido. Intenta agregar insumos con más texto o contenido.");
     }
 
+    // Auto quality gate for generate_grid
+    if (action === "generate_grid" && result?.pieces?.length > 0) {
+      const { systemPrompt: qgSystem, userPrompt: qgUser } = buildQualityGatePrompt(profile, result.pieces);
+      const qgResult = await callAI(qgSystem, qgUser, modelKey);
+      if (qgResult?.pieces?.length > 0) {
+        result.pieces = qgResult.pieces;
+        result.quality_report = qgResult.quality_report;
+      }
+    }
+
     return new Response(JSON.stringify({ success: true, data: result, model_used: selectedModel.label }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
