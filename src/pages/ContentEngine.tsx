@@ -476,6 +476,7 @@ const ContentEngine = () => {
                         target_audience: profile.target_audience || "",
                         restrictions: (profile as any).restrictions || "",
                         reference_accounts: (profile as any).reference_accounts || "",
+                        website_url: (profile as any).website_url || "",
                       });
                       setEditPillarInput("");
                     }}
