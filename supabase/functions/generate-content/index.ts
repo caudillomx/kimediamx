@@ -523,6 +523,8 @@ serve(async (req) => {
       ({ systemPrompt, userPrompt } = buildAnalyzePrompt(profile, analytics));
     } else if (action === "review_pieces") {
       ({ systemPrompt, userPrompt } = buildReviewPrompt(profile, pieces));
+    } else if (action === "quality_gate") {
+      ({ systemPrompt, userPrompt } = buildQualityGatePrompt(profile, pieces));
     } else {
       throw new Error(`Acción no reconocida: ${action}`);
     }
