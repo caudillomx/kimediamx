@@ -299,6 +299,8 @@ export type Database = {
           consent_email: boolean
           consent_whatsapp: boolean
           content_grid: Json | null
+          content_pillars: Json | null
+          content_restrictions: string | null
           created_at: string
           diagnostic_level: string | null
           diagnostic_score: number | null
@@ -309,15 +311,18 @@ export type Database = {
           has_website: boolean | null
           id: string
           industry: string | null
+          key_dates: string | null
           kit_type: string
           main_channel: string | null
           market_position: string | null
           post_published: boolean
           post_text: string | null
           post_type: string | null
+          preferred_formats: Json | null
           profession: string
           profile_token: string | null
           publication_frequency: string | null
+          reference_accounts: string | null
           self_perception: string | null
           social_handle: string
           target_audience: string | null
@@ -336,6 +341,8 @@ export type Database = {
           consent_email?: boolean
           consent_whatsapp?: boolean
           content_grid?: Json | null
+          content_pillars?: Json | null
+          content_restrictions?: string | null
           created_at?: string
           diagnostic_level?: string | null
           diagnostic_score?: number | null
@@ -346,15 +353,18 @@ export type Database = {
           has_website?: boolean | null
           id?: string
           industry?: string | null
+          key_dates?: string | null
           kit_type?: string
           main_channel?: string | null
           market_position?: string | null
           post_published?: boolean
           post_text?: string | null
           post_type?: string | null
+          preferred_formats?: Json | null
           profession: string
           profile_token?: string | null
           publication_frequency?: string | null
+          reference_accounts?: string | null
           self_perception?: string | null
           social_handle: string
           target_audience?: string | null
@@ -373,6 +383,8 @@ export type Database = {
           consent_email?: boolean
           consent_whatsapp?: boolean
           content_grid?: Json | null
+          content_pillars?: Json | null
+          content_restrictions?: string | null
           created_at?: string
           diagnostic_level?: string | null
           diagnostic_score?: number | null
@@ -383,15 +395,18 @@ export type Database = {
           has_website?: boolean | null
           id?: string
           industry?: string | null
+          key_dates?: string | null
           kit_type?: string
           main_channel?: string | null
           market_position?: string | null
           post_published?: boolean
           post_text?: string | null
           post_type?: string | null
+          preferred_formats?: Json | null
           profession?: string
           profile_token?: string | null
           publication_frequency?: string | null
+          reference_accounts?: string | null
           self_perception?: string | null
           social_handle?: string
           target_audience?: string | null

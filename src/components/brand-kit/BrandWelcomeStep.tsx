@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Sparkles, User, Briefcase, AtSign, Wifi, BarChart3, Mail, Globe, ChevronRight } from "lucide-react";
+import { Sparkles, User, Briefcase, AtSign, Wifi, BarChart3, Mail, Globe, ChevronRight, Users } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -16,6 +16,7 @@ export interface BrandParticipantInfo {
   mainChannel: string;
   approxFollowers: string;
   hasWebsite: boolean;
+  competitors: string;
 }
 
 interface BrandWelcomeStepProps {
@@ -30,6 +31,7 @@ export function BrandWelcomeStep({ onNext }: BrandWelcomeStepProps) {
   const [form, setForm] = useState<BrandParticipantInfo>({
     fullName: "", email: "", profession: "", industry: "",
     socialHandle: "", mainChannel: "", approxFollowers: "", hasWebsite: false,
+    competitors: "",
   });
   const [section, setSection] = useState(0); // 0: personal, 1: digital
 
@@ -157,6 +159,20 @@ export function BrandWelcomeStep({ onNext }: BrandWelcomeStepProps) {
                   {industryOptions.map(i => <SelectItem key={i} value={i}>{i}</SelectItem>)}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground font-semibold">
+                <Users className="w-3.5 h-3.5" /> Competidores o referentes en tu industria
+              </Label>
+              <Input
+                value={form.competitors}
+                onChange={e => set("competitors", e.target.value)}
+                placeholder="¿Quiénes son tus principales competidores o referentes directos?"
+                className="bg-secondary border-border rounded-xl h-12 text-foreground placeholder:text-muted-foreground/60"
+                maxLength={200}
+              />
+              <p className="text-xs text-muted-foreground/60">Opcional. Separa con comas.</p>
             </div>
 
             <Button
