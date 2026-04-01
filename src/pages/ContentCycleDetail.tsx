@@ -242,6 +242,10 @@ const ContentCycleDetail = () => {
   const [selectedModel, setSelectedModel] = useState("gemini-flash");
   const [showNewCycle, setShowNewCycle] = useState(false);
   const [showAddInput, setShowAddInput] = useState(false);
+  const [showImportUrl, setShowImportUrl] = useState(false);
+  const [importUrl, setImportUrl] = useState("");
+  const [importTitle, setImportTitle] = useState("");
+  const [importing, setImporting] = useState(false);
   const [editingInput, setEditingInput] = useState<ContentInput | null>(null);
   const [expandedPiece, setExpandedPiece] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("tendencias");
@@ -361,7 +365,29 @@ const ContentCycleDetail = () => {
     setShowAddInput(false);
   };
 
-  const handleGenerateGrid = async () => {
+  const handleImportUrl = async () => {
+    if (!importUrl || !selectedCycleId) return;
+    setImporting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("fetch-content-from-url", {
+        body: { url: importUrl, cycle_id: selectedCycleId, title: importTitle || undefined },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success("Insumo importado exitosamente desde la URL");
+      setImportUrl("");
+      setImportTitle("");
+      setShowImportUrl(false);
+      // Refresh inputs
+      window.location.reload();
+    } catch (e: any) {
+      toast.error(e.message || "Error al importar URL");
+    } finally {
+      setImporting(false);
+    }
+  };
+
+
     if (!selectedCycle) return;
     if (inputs.length === 0) {
       toast.error("Agrega al menos un insumo antes de generar la parrilla");
@@ -1026,6 +1052,9 @@ const ContentCycleDetail = () => {
                         <Button variant="outline" size="sm" onClick={() => setShowAddInput(true)} className="rounded-xl">
                           <Plus className="w-3.5 h-3.5 mr-1" /> Agregar
                         </Button>
+                        <Button variant="outline" size="sm" onClick={() => setShowImportUrl(true)} className="rounded-xl">
+                          <Globe className="w-3.5 h-3.5 mr-1" /> Importar URL
+                        </Button>
                         {inputs.length > 0 && (
                           <Button onClick={handleGenerateGrid} disabled={generating}
                             className="bg-gradient-coral text-primary-foreground font-semibold rounded-xl shadow-glow hover:shadow-glow-lg transition-shadow" size="sm">
@@ -1647,6 +1676,57 @@ const ContentCycleDetail = () => {
               </div>
             );
           })()}
+        </DialogContent>
+      </Dialog>
+
+      {/* ─── Import URL Dialog ─── */}
+      <Dialog open={showImportUrl} onOpenChange={setShowImportUrl}>
+        <DialogContent className="max-w-md bg-card border-border rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="font-display text-foreground flex items-center gap-2">
+              <Globe className="w-5 h-5 text-primary" /> Importar desde URL
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div>
+              <Label className="text-foreground text-sm font-medium">URL *</Label>
+              <Input
+                placeholder="https://ejemplo.com/articulo"
+                value={importUrl}
+                onChange={e => setImportUrl(e.target.value)}
+                className="mt-1.5 rounded-xl bg-secondary/50 border-border"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                El contenido se extraerá y procesará con IA automáticamente
+              </p>
+            </div>
+            <div>
+              <Label className="text-foreground text-sm font-medium">Título (opcional)</Label>
+              <Input
+                placeholder="Nombre descriptivo del insumo"
+                value={importTitle}
+                onChange={e => setImportTitle(e.target.value)}
+                className="mt-1.5 rounded-xl bg-secondary/50 border-border"
+              />
+            </div>
+            <Button
+              onClick={handleImportUrl}
+              disabled={!importUrl || importing}
+              className="w-full bg-gradient-coral text-primary-foreground font-bold rounded-xl h-11 shadow-glow hover:shadow-glow-lg transition-shadow"
+            >
+              {importing ? (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  Extrayendo contenido...
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4 mr-2" />
+                  Importar
+                </>
+              )}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
