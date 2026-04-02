@@ -440,7 +440,7 @@ const ContentCycleDetail = () => {
         cycle_id: selectedCycleId,
         scheduled_date: p.scheduled_date,
         network: p.network || p.platform,
-        format: p.format,
+        format: p.format || p.type,
         pillar: p.pillar,
         objective: p.objective,
         draft_copy: p.draft_copy,
