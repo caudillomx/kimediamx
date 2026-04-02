@@ -212,6 +212,14 @@ const PieceCard = ({
                     </Button>
                   </div>
                 )}
+
+                {/* Delete button - always visible */}
+                <div className="flex justify-end pt-1">
+                  <Button onClick={(e) => { e.stopPropagation(); if (confirm("¿Eliminar esta pieza de la parrilla?")) onDelete(); }}
+                    variant="ghost" size="sm" className="text-xs text-muted-foreground hover:text-destructive rounded-xl">
+                    <Trash2 className="w-3.5 h-3.5 mr-1" /> Eliminar
+                  </Button>
+                </div>
               </div>
             </motion.div>
           )}
