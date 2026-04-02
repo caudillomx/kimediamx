@@ -65,7 +65,7 @@ const FLOW_STEPS = [
 // ─── Piece Card Component ─────────────────────────────────
 
 const PieceCard = ({
-  piece, expanded, onToggleExpand, onApprove, onReject, onUpdateCopy,
+  piece, expanded, onToggleExpand, onApprove, onReject, onUpdateCopy, onDelete,
 }: {
   piece: ContentPiece;
   expanded: boolean;
@@ -73,6 +73,7 @@ const PieceCard = ({
   onApprove: () => void;
   onReject: () => void;
   onUpdateCopy: (copy: string) => void;
+  onDelete: () => void;
 }) => {
   const [editing, setEditing] = useState(false);
   const [editCopy, setEditCopy] = useState(piece.draft_copy || "");
@@ -211,6 +212,14 @@ const PieceCard = ({
                     </Button>
                   </div>
                 )}
+
+                {/* Delete button - always visible */}
+                <div className="flex justify-end pt-1">
+                  <Button onClick={(e) => { e.stopPropagation(); if (confirm("¿Eliminar esta pieza de la parrilla?")) onDelete(); }}
+                    variant="ghost" size="sm" className="text-xs text-muted-foreground hover:text-destructive rounded-xl">
+                    <Trash2 className="w-3.5 h-3.5 mr-1" /> Eliminar
+                  </Button>
+                </div>
               </div>
             </motion.div>
           )}
@@ -229,7 +238,7 @@ const ContentCycleDetail = () => {
   const { profiles } = useContentEngine();
   const { cycles, createCycle, updateCycle } = useContentCycles(profileId || null);
   const [selectedCycleId, setSelectedCycleId] = useState<string | null>(null);
-  const { pieces, updatePiece, bulkInsertPieces } = useContentPieces(selectedCycleId);
+  const { pieces, updatePiece, deletePiece, bulkInsertPieces } = useContentPieces(selectedCycleId);
   const { learnings } = useContentLearnings(profileId || null);
   const { inputs, addInput, removeInput, updateInput } = useContentInputs(selectedCycleId);
   const { analytics, bulkInsert: bulkInsertAnalytics } = useContentAnalytics(profileId || null);
@@ -1214,6 +1223,7 @@ const ContentCycleDetail = () => {
                             onApprove={() => updatePiece(piece.id, { status: "aprobada" })}
                             onReject={() => updatePiece(piece.id, { status: "rechazada" })}
                             onUpdateCopy={(copy) => updatePiece(piece.id, { draft_copy: copy })}
+                            onDelete={() => deletePiece(piece.id)}
                           />
                         ))}
                       </div>
