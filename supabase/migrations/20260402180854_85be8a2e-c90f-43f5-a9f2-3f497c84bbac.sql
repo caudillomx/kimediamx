@@ -1,0 +1,1 @@
+CREATE POLICY "Authenticated can delete content_pieces" ON public.content_pieces FOR DELETE TO authenticated USING (true);
