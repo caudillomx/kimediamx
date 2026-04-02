@@ -1223,6 +1223,7 @@ const ContentCycleDetail = () => {
                             onApprove={() => updatePiece(piece.id, { status: "aprobada" })}
                             onReject={() => updatePiece(piece.id, { status: "rechazada" })}
                             onUpdateCopy={(copy) => updatePiece(piece.id, { draft_copy: copy })}
+                            onDelete={() => deletePiece(piece.id)}
                           />
                         ))}
                       </div>
