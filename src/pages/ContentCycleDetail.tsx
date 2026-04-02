@@ -450,7 +450,8 @@ const ContentCycleDetail = () => {
         status: "pendiente",
         sort_order: i,
       }));
-      await bulkInsertPieces(generatedPieces);
+      const insertOk = await bulkInsertPieces(generatedPieces);
+      if (!insertOk) throw new Error("Error insertando piezas en la base de datos");
       await updateCycle(selectedCycleId!, { status: "parrilla" });
       setActiveTab("parrilla");
       toast.success(`${generatedPieces.length} piezas generadas a partir de ${inputs.length} insumos`);
