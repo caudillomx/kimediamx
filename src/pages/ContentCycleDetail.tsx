@@ -436,17 +436,18 @@ const ContentCycleDetail = () => {
       if (data?.model_used) toast.info(`Modelo usado: ${data.model_used}`);
       if (error) throw error;
       if (!data?.success) throw new Error(data?.error || "Error generando parrilla");
+      console.log("Raw AI pieces:", JSON.stringify(data.data.pieces?.[0]));
       const generatedPieces = (data.data.pieces || []).map((p: any, i: number) => ({
         cycle_id: selectedCycleId,
-        scheduled_date: p.scheduled_date,
-        network: p.network || p.platform,
-        format: p.format || p.type,
-        pillar: p.pillar,
-        objective: p.objective,
-        draft_copy: p.draft_copy,
+        scheduled_date: p.scheduled_date || null,
+        network: p.network || p.platform || "instagram",
+        format: p.format || p.type || "texto",
+        pillar: p.pillar || null,
+        objective: p.objective || null,
+        draft_copy: p.draft_copy || p.hook || "",
         hashtags: p.hashtags || [],
-        cta: p.cta,
-        tone: p.tone,
+        cta: p.cta || null,
+        tone: p.tone || null,
         status: "pendiente",
         sort_order: i,
       }));
