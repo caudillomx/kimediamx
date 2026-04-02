@@ -281,6 +281,14 @@ export function useContentPieces(cycleId: string | null) {
     else fetchPieces();
   }, [fetchPieces]);
 
+  const deletePiece = useCallback(async (id: string) => {
+    const { error } = await supabase.from("content_pieces").delete().eq("id", id);
+    if (error) { toast.error("Error eliminando pieza"); return false; }
+    toast.success("Pieza eliminada");
+    fetchPieces();
+    return true;
+  }, [fetchPieces]);
+
   const bulkInsertPieces = useCallback(async (newPieces: Partial<ContentPiece>[]) => {
     const { error } = await supabase
       .from("content_pieces")
@@ -290,7 +298,7 @@ export function useContentPieces(cycleId: string | null) {
     return true;
   }, [fetchPieces]);
 
-  return { pieces, loading, fetchPieces, updatePiece, bulkInsertPieces };
+  return { pieces, loading, fetchPieces, updatePiece, deletePiece, bulkInsertPieces };
 }
 
 export function useContentLearnings(profileId: string | null) {

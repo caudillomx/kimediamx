@@ -65,7 +65,7 @@ const FLOW_STEPS = [
 // ─── Piece Card Component ─────────────────────────────────
 
 const PieceCard = ({
-  piece, expanded, onToggleExpand, onApprove, onReject, onUpdateCopy,
+  piece, expanded, onToggleExpand, onApprove, onReject, onUpdateCopy, onDelete,
 }: {
   piece: ContentPiece;
   expanded: boolean;
@@ -73,6 +73,7 @@ const PieceCard = ({
   onApprove: () => void;
   onReject: () => void;
   onUpdateCopy: (copy: string) => void;
+  onDelete: () => void;
 }) => {
   const [editing, setEditing] = useState(false);
   const [editCopy, setEditCopy] = useState(piece.draft_copy || "");
