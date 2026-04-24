@@ -19,6 +19,7 @@ import ContentCycleDetail from "./pages/ContentCycleDetail";
 import AuthPage from "./pages/AuthPage";
 import MyStrategy from "./pages/MyStrategy";
 import MyStrategyDetail from "./pages/MyStrategyDetail";
+import PropuestaPanYucatan from "./pages/PropuestaPanYucatan";
 
 const queryClient = new QueryClient();
 
@@ -45,6 +46,7 @@ const App = () => (
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/parrilla" element={<ContentEngine />} />
           <Route path="/parrilla/:profileId" element={<ContentCycleDetail />} />
+          <Route path="/propuesta-pan-yucatan" element={<PropuestaPanYucatan />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
