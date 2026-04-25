@@ -135,30 +135,38 @@ const PropuestaPanYucatan = () => {
     { icon: Target, label: "Modalidad", value: "Presencial · interactiva" },
   ];
 
-  const moments = [
+  const moments: TimelineItem[] = [
     {
       n: "01",
       title: "Diagnóstico colectivo",
       time: "15 min",
       desc: "Cada asistente identifica su nivel de madurez digital y los retos de comunicación política que enfrenta de cara a una campaña.",
+      tools: ["Quiz interactivo", "Tablero KiMedia"],
+      deliverable: "Su nivel de madurez digital y un plan de 3 acciones inmediatas.",
     },
     {
       n: "02",
       title: "IA aplicada a campaña",
       time: "35 min",
       desc: "Demostración práctica de las herramientas de inteligencia artificial que hoy potencian el trabajo de candidatos, candidatas y equipos: investigación, redacción, diseño y video.",
+      tools: ["ChatGPT", "Claude", "Midjourney", "Perplexity"],
+      deliverable: "Una pieza generada en vivo (post + imagen) con su propio tema.",
     },
     {
       n: "03",
       title: "Vocería con perspectiva de género",
       time: "35 min",
       desc: "Construcción de mensaje, vocería y narrativa con perspectiva de género, fortaleciendo el empoderamiento político de la mujer dentro de la estrategia de campaña.",
+      tools: ["Claude", "ElevenLabs", "Wizr"],
+      deliverable: "Un guion de vocería listo para entrevista o mitin.",
     },
     {
       n: "04",
       title: "Laboratorio en vivo",
       time: "30 min",
       desc: "Cada asistente crea, con apoyo de IA, una pieza real de campaña (post, guion o discurso) y recibe retroalimentación inmediata del equipo KiMedia.",
+      tools: ["ChatGPT", "Nano Banana", "Runway"],
+      deliverable: "Una pieza de campaña terminada y aprobada por el equipo KiMedia.",
     },
   ];
 
