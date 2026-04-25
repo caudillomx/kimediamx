@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { motion } from "framer-motion";
 import { Lock, Download, Calendar, MapPin, Clock, Users, Target, Sparkles, CheckCircle2, ArrowRight, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,8 @@ import { AiLiveDemo } from "@/components/propuesta/AiLiveDemo";
 import { InteractiveTimeline, type TimelineItem } from "@/components/propuesta/InteractiveTimeline";
 import { AiToolsStack } from "@/components/propuesta/AiToolsStack";
 import { AnimatedCounter } from "@/components/propuesta/AnimatedCounter";
+import { PropuestaPdfTemplate } from "@/components/propuesta/PropuestaPdfTemplate";
+import { toast } from "sonner";
 
 const STORAGE_KEY = "propuesta_pan_yucatan_access";
 const VALID_NAME = "pilar santos";
@@ -20,6 +22,8 @@ const PropuestaPanYucatan = () => {
   const [name, setName] = useState("");
   const [pass, setPass] = useState("");
   const [error, setError] = useState("");
+  const [generatingPdf, setGeneratingPdf] = useState(false);
+  const pdfRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (sessionStorage.getItem(STORAGE_KEY) === "1") setUnlocked(true);
