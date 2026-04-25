@@ -39,74 +39,83 @@ const PropuestaPanYucatan = () => {
 
   if (!unlocked) {
     return (
-      <div className="fixed inset-0 z-[9999] flex min-h-screen items-center justify-center overflow-y-auto bg-background bg-mesh px-6 py-10">
+      <div className="fixed inset-0 z-[9999] flex min-h-screen items-center justify-center overflow-y-auto bg-background px-6 py-10">
+        <div className="pointer-events-none absolute inset-0 bg-mesh opacity-35" />
+        <div className="pointer-events-none absolute inset-0 bg-glow opacity-40" />
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="w-full max-w-md my-auto"
+          className="relative z-10 my-auto w-full max-w-[760px]"
         >
           <form
             onSubmit={handleSubmit}
-            className="rounded-2xl border border-border bg-card/95 p-9 shadow-glow-lg backdrop-blur-xl"
+            className="relative overflow-hidden rounded-[28px] border border-border/80 bg-card px-7 py-7 shadow-glow-lg backdrop-blur-xl md:px-10 md:py-9"
           >
-            <div className="mb-6 flex items-center gap-2">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-coral">
-                <Lock className="h-5 w-5 text-primary-foreground" />
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-primary/10 to-transparent" />
+            <div className="relative z-10 grid gap-8 md:grid-cols-[1.05fr_0.95fr] md:items-end">
+              <div>
+                <div className="mb-6 flex items-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-coral shadow-glow">
+                    <Lock className="h-5 w-5 text-primary-foreground" />
+                  </div>
+                  <div className="text-[11px] font-semibold uppercase tracking-[2px] text-primary">
+                    KiMedia · Propuesta Confidencial
+                  </div>
+                </div>
+
+                <h1 className="mb-4 font-display text-4xl font-bold leading-[0.95] tracking-tight text-foreground md:text-5xl">
+                  Acceso restringido <span className="text-gradient-sunset">a destinataria</span>
+                </h1>
+                <p className="max-w-xl text-base leading-relaxed text-muted-foreground md:text-lg">
+                  Este documento es de uso exclusivo. Ingresa tu nombre y clave de acceso para continuar.
+                </p>
               </div>
-              <div className="text-[10px] font-semibold uppercase tracking-[2px] text-primary">
-                KiMedia · Propuesta Confidencial
+
+              <div className="space-y-4 rounded-2xl border border-border/70 bg-secondary/35 p-4 md:p-5">
+                <div>
+                  <Label htmlFor="name" className="mb-2 block text-[11px] font-medium uppercase tracking-[1.2px] text-muted-foreground">
+                    Nombre completo
+                  </Label>
+                  <Input
+                    id="name"
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    autoComplete="off"
+                    placeholder="Pilar Santos"
+                    className="h-14 rounded-xl border-border bg-background/80 px-4 text-base text-foreground placeholder:text-muted-foreground/70 focus-visible:ring-primary"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="pass" className="mb-2 block text-[11px] font-medium uppercase tracking-[1.2px] text-muted-foreground">
+                    Clave de acceso
+                  </Label>
+                  <Input
+                    id="pass"
+                    type="password"
+                    value={pass}
+                    onChange={(e) => setPass(e.target.value)}
+                    placeholder="••••••••"
+                    className="h-14 rounded-xl border-border bg-background/80 px-4 text-base text-foreground placeholder:text-muted-foreground/70 focus-visible:ring-primary"
+                  />
+                </div>
+
+                {error && (
+                  <div className="rounded-xl border border-destructive/40 bg-destructive/10 px-3 py-2.5 text-xs leading-relaxed text-destructive">
+                    {error}
+                  </div>
+                )}
+
+                <Button
+                  type="submit"
+                  className="h-14 w-full rounded-xl bg-gradient-coral text-base font-semibold shadow-glow transition-opacity hover:opacity-90"
+                >
+                  Ingresar al documento
+                  <ArrowRight className="ml-1 h-4 w-4" />
+                </Button>
               </div>
             </div>
-
-            <h1 className="mb-3 font-display text-3xl font-bold leading-tight text-foreground">
-              Acceso restringido <span className="text-gradient">a destinataria</span>
-            </h1>
-            <p className="mb-7 text-sm leading-relaxed text-muted-foreground">
-              Este documento es de uso exclusivo. Ingresa tu nombre y clave de acceso para continuar.
-            </p>
-
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="name" className="mb-1.5 block text-xs text-muted-foreground">
-                  Nombre completo
-                </Label>
-                <Input
-                  id="name"
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  autoComplete="off"
-                  className="bg-secondary text-foreground border-border"
-                />
-              </div>
-              <div>
-                <Label htmlFor="pass" className="mb-1.5 block text-xs text-muted-foreground">
-                  Clave de acceso
-                </Label>
-                <Input
-                  id="pass"
-                  type="password"
-                  value={pass}
-                  onChange={(e) => setPass(e.target.value)}
-                  className="bg-secondary text-foreground border-border"
-                />
-              </div>
-            </div>
-
-            {error && (
-              <div className="mt-4 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2.5 text-xs text-destructive">
-                {error}
-              </div>
-            )}
-
-            <Button
-              type="submit"
-              className="mt-6 h-12 w-full bg-gradient-coral text-base font-semibold shadow-glow hover:opacity-90"
-            >
-              Ingresar al documento
-              <ArrowRight className="ml-1 h-4 w-4" />
-            </Button>
           </form>
         </motion.div>
       </div>
