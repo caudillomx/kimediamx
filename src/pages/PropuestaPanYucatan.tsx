@@ -410,13 +410,30 @@ const PropuestaPanYucatan = () => {
           const loadingId = toast.loading("Generando PDF…");
           try {
             const html2pdf = (await import("html2pdf.js")).default;
+              // Wait for any embedded images (logo) to be ready
+              const imgs = pdfRef.current.querySelectorAll("img");
+              await Promise.all(
+                Array.from(imgs).map((img) =>
+                  img.complete && img.naturalWidth > 0
+                    ? Promise.resolve()
+                    : new Promise<void>((resolve) => {
+                        img.addEventListener("load", () => resolve(), { once: true });
+                        img.addEventListener("error", () => resolve(), { once: true });
+                      }),
+                ),
+              );
             const opts: any = {
               margin: 0,
               filename: "KiMedia_Propuesta_PAN_Yucatan_Motul_2026.pdf",
               image: { type: "jpeg", quality: 0.98 },
-              html2canvas: { scale: 2, backgroundColor: "#0B0F1A", useCORS: true },
+                html2canvas: {
+                  scale: 2,
+                  backgroundColor: "#0B0F1A",
+                  useCORS: true,
+                  windowWidth: 794,
+                },
               jsPDF: { unit: "pt", format: "a4", orientation: "portrait" },
-              pagebreak: { mode: ["css", "legacy"] },
+                pagebreak: { mode: ["css", "legacy"], avoid: [".pdf-no-break"] },
             };
             await html2pdf()
               .set(opts)
