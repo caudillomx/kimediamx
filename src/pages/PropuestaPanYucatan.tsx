@@ -216,6 +216,17 @@ const PropuestaPanYucatan = () => {
               <span className="text-gradient-sunset">e Inteligencia Artificial</span>{" "}
               <span className="text-foreground">Vol. 1</span>
             </h1>
+            <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-electric/40 bg-electric/10 px-3 py-1.5">
+              <motion.span
+                animate={{ scale: [1, 1.2, 1] }}
+                transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
+                className="flex h-2 w-2 rounded-full bg-electric"
+              />
+              <Zap className="h-3.5 w-3.5 text-electric" />
+              <span className="text-[10px] font-bold uppercase tracking-[1.8px] text-electric">
+                100% práctico · IA en vivo
+              </span>
+            </div>
           </div>
           <div className="min-w-[200px] text-right text-xs leading-loose text-muted-foreground">
             <div>Viernes 29 de mayo de 2026</div>
