@@ -410,16 +410,16 @@ const PropuestaPanYucatan = () => {
           const loadingId = toast.loading("Generando PDF…");
           try {
             const html2pdf = (await import("html2pdf.js")).default;
+            const opts: any = {
+              margin: 0,
+              filename: "KiMedia_Propuesta_PAN_Yucatan_Motul_2026.pdf",
+              image: { type: "jpeg", quality: 0.98 },
+              html2canvas: { scale: 2, backgroundColor: "#0B0F1A", useCORS: true },
+              jsPDF: { unit: "pt", format: "a4", orientation: "portrait" },
+              pagebreak: { mode: ["css", "legacy"] },
+            };
             await html2pdf()
-              .set({
-                margin: 0,
-                filename: "KiMedia_Propuesta_PAN_Yucatan_Motul_2026.pdf",
-                image: { type: "jpeg", quality: 0.98 },
-                html2canvas: { scale: 2, backgroundColor: "#0B0F1A", useCORS: true },
-                jsPDF: { unit: "pt", format: "a4", orientation: "portrait" },
-                // @ts-expect-error - pagebreak is supported at runtime
-                pagebreak: { mode: ["css", "legacy"] },
-              } as any)
+              .set(opts)
               .from(pdfRef.current)
               .save();
             toast.success("PDF descargado", { id: loadingId });
