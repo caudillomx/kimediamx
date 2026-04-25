@@ -409,36 +409,49 @@ const PropuestaPanYucatan = () => {
           setGeneratingPdf(true);
           const loadingId = toast.loading("Generando PDF…");
           try {
-            const html2pdf = (await import("html2pdf.js")).default;
-              // Wait for any embedded images (logo) to be ready
-              const imgs = pdfRef.current.querySelectorAll("img");
-              await Promise.all(
-                Array.from(imgs).map((img) =>
-                  img.complete && img.naturalWidth > 0
-                    ? Promise.resolve()
-                    : new Promise<void>((resolve) => {
-                        img.addEventListener("load", () => resolve(), { once: true });
-                        img.addEventListener("error", () => resolve(), { once: true });
-                      }),
-                ),
-              );
-            const opts: any = {
-              margin: 0,
-              filename: "KiMedia_Propuesta_PAN_Yucatan_Motul_2026.pdf",
-              image: { type: "jpeg", quality: 0.98 },
-                html2canvas: {
-                  scale: 2,
-                  backgroundColor: "#0B0F1A",
-                  useCORS: true,
-                  windowWidth: 794,
-                },
-              jsPDF: { unit: "pt", format: "a4", orientation: "portrait" },
-                pagebreak: { mode: ["css", "legacy"], avoid: [".pdf-no-break"] },
-            };
-            await html2pdf()
-              .set(opts)
-              .from(pdfRef.current)
-              .save();
+            // Render each page section to its own canvas — guarantees no blank pages.
+            const [{ default: html2canvas }, jsPDFModule] = await Promise.all([
+              import("html2canvas"),
+              import("jspdf"),
+            ]);
+            const { jsPDF } = jsPDFModule as any;
+
+            // Wait for embedded images (logo)
+            const imgs = pdfRef.current.querySelectorAll("img");
+            await Promise.all(
+              Array.from(imgs).map((img) =>
+                img.complete && img.naturalWidth > 0
+                  ? Promise.resolve()
+                  : new Promise<void>((resolve) => {
+                      img.addEventListener("load", () => resolve(), { once: true });
+                      img.addEventListener("error", () => resolve(), { once: true });
+                    }),
+              ),
+            );
+
+            const pageNodes = Array.from(
+              pdfRef.current.querySelectorAll<HTMLElement>("[data-pdf-page]"),
+            );
+
+            const pdf = new jsPDF({ unit: "pt", format: "a4", orientation: "portrait" });
+            const pageWpt = pdf.internal.pageSize.getWidth();
+            const pageHpt = pdf.internal.pageSize.getHeight();
+
+            for (let i = 0; i < pageNodes.length; i++) {
+              const canvas = await html2canvas(pageNodes[i], {
+                scale: 2,
+                backgroundColor: "#0B0F1A",
+                useCORS: true,
+                windowWidth: 794,
+                width: 794,
+                height: 1123,
+              });
+              const imgData = canvas.toDataURL("image/jpeg", 0.95);
+              if (i > 0) pdf.addPage();
+              pdf.addImage(imgData, "JPEG", 0, 0, pageWpt, pageHpt);
+            }
+
+            pdf.save("KiMedia_Propuesta_PAN_Yucatan_Motul_2026.pdf");
             toast.success("PDF descargado", { id: loadingId });
           } catch (e) {
             console.error(e);

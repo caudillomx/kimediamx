@@ -42,8 +42,6 @@ export const PropuestaPdfTemplate = forwardRef<HTMLDivElement, Props>(({ moments
       width: `${PAGE_W}px`,
       height: `${PAGE_H}px`,
       position: "relative" as const,
-      pageBreakAfter: "always" as const,
-      breakAfter: "page" as const,
       background: "#0B0F1A",
       overflow: "hidden" as const,
     },
@@ -166,7 +164,7 @@ export const PropuestaPdfTemplate = forwardRef<HTMLDivElement, Props>(({ moments
     children: React.ReactNode;
     isLast?: boolean;
   }) => (
-    <section style={isLast ? styles.pageLast : styles.page}>
+    <section data-pdf-page style={isLast ? styles.pageLast : styles.page}>
       <header style={styles.header}>
         <img
           src={logoUrl}
