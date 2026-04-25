@@ -410,4 +410,15 @@ const SectionTitle = ({ children, eyebrow }: { children: React.ReactNode; eyebro
   </div>
 );
 
+const CounterTile = ({ value, suffix, label }: { value: number; suffix?: string; label: string }) => (
+  <div className="text-center">
+    <div className="font-display text-4xl font-bold leading-none text-gradient-sunset md:text-5xl">
+      <AnimatedCounter value={value} suffix={suffix ?? ""} />
+    </div>
+    <div className="mt-2 text-[11px] font-semibold uppercase tracking-[1.5px] text-muted-foreground">
+      {label}
+    </div>
+  </div>
+);
+
 export default PropuestaPanYucatan;
