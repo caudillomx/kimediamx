@@ -172,7 +172,7 @@ export const PropuestaPdfTemplate = forwardRef<HTMLDivElement, Props>(({ moments
           src={logoUrl}
           alt="KiMedia"
           crossOrigin="anonymous"
-          style={{ height: "26px", width: "auto", display: "block" }}
+          style={{ height: "32px", width: "auto", maxWidth: "120px", objectFit: "contain", display: "block" }}
         />
         <div
           style={{
