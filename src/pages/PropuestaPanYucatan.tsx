@@ -123,38 +123,38 @@ const PropuestaPanYucatan = () => {
   }
 
   const logistics = [
-    { icon: Calendar, label: "Fecha", value: "Por confirmar" },
-    { icon: MapPin, label: "Sede", value: "Mérida, Yucatán" },
-    { icon: Clock, label: "Horario", value: "10:00 – 12:00 hrs" },
+    { icon: Calendar, label: "Fecha", value: "Viernes 29 de mayo de 2026" },
+    { icon: Clock, label: "Horario", value: "18:00 hrs" },
+    { icon: MapPin, label: "Sede", value: "Motul, Yucatán" },
     { icon: Clock, label: "Duración", value: "2 horas" },
-    { icon: Users, label: "Asistentes", value: "Hasta 25 personas" },
+    { icon: Users, label: "Asistentes", value: "≈ 150 personas" },
     { icon: Target, label: "Modalidad", value: "Presencial · interactiva" },
   ];
 
   const moments = [
     {
       n: "01",
-      title: "Quiz diagnóstico",
+      title: "Diagnóstico colectivo",
       time: "15 min",
-      desc: "Cada asistente identifica su nivel de madurez digital y comunicación política.",
+      desc: "Las asistentes identifican su nivel de madurez digital y los retos de comunicación política que enfrentan las mujeres en campaña.",
     },
     {
       n: "02",
-      title: "Tablero estratégico",
-      time: "30 min",
-      desc: "Mapeo de audiencia, mensaje y canales con marco metodológico KiMedia.",
+      title: "IA aplicada a campaña",
+      time: "35 min",
+      desc: "Demostración práctica de las herramientas de inteligencia artificial que hoy potencian el trabajo de candidatas y equipos: investigación, redacción, diseño y video.",
     },
     {
       n: "03",
-      title: "Generador con perspectiva de género",
+      title: "Empoderamiento político de la mujer",
       time: "35 min",
-      desc: "Uso de IA para crear contenido alineado al lenguaje incluyente y agenda PAN.",
+      desc: "Construcción de mensaje, vocería y narrativa con perspectiva de género. Encuadre alineado a la agenda del INE sobre participación política de las mujeres.",
     },
     {
       n: "04",
-      title: "Simulador de campaña",
+      title: "Laboratorio en vivo",
       time: "30 min",
-      desc: "Ensayo en vivo de escenarios reales con retroalimentación inmediata.",
+      desc: "Cada participante crea, con apoyo de IA, una pieza real de campaña (post, guion o discurso) y recibe retroalimentación inmediata del equipo KiMedia.",
     },
   ];
 
@@ -168,11 +168,11 @@ const PropuestaPanYucatan = () => {
   ];
 
   const includes = [
-    "Diseño y facilitación del taller (2 horas)",
+    "Diseño y facilitación del taller (2 horas) para ~150 asistentes",
     "Acceso al tablero digital con 4 módulos para cada asistente",
-    "Material editorial y guía de vocería personalizada",
-    "Sesión de seguimiento remota a los 15 días",
-    "Reporte ejecutivo de aprendizajes y recomendaciones",
+    "Material editorial y guía de vocería con perspectiva de género",
+    "Una sesión de asesoría personalizada posterior al taller",
+    "Reporte ejecutivo de aprendizajes y recomendaciones para la Secretaría",
   ];
 
   return (
@@ -206,11 +206,10 @@ const PropuestaPanYucatan = () => {
             </h1>
           </div>
           <div className="min-w-[200px] text-right text-xs leading-loose text-muted-foreground">
-            <div>Por confirmar</div>
-            <div>Mérida, Yucatán</div>
-            <div>10:00 – 12:00 hrs</div>
+            <div>Viernes 29 de mayo de 2026</div>
+            <div>18:00 hrs · Motul, Yucatán</div>
             <div>Duración: 2 hrs</div>
-            <div>Hasta 25 asistentes</div>
+            <div>≈ 150 asistentes</div>
             <Badge variant="outline" className="mt-2 border-electric/40 bg-electric/10 text-[10px] uppercase tracking-widest text-electric">
               Confidencial
             </Badge>
@@ -235,11 +234,13 @@ const PropuestaPanYucatan = () => {
 
         {/* INTRO */}
         <p className="mb-14 text-lg leading-relaxed text-foreground/90">
-          Esta propuesta presenta un taller intensivo diseñado específicamente para el equipo de la Secretaría
-          de Mujeres del PAN Yucatán. Su objetivo es <strong className="text-primary">fortalecer las capacidades de comunicación política</strong> a través
-          del uso aplicado de inteligencia artificial, con un enfoque editorial, ético y con perspectiva de
-          género. El resultado: vocerías más claras, contenido más estratégico y herramientas listas para
-          operar en campaña.
+          Esta propuesta presenta un curso de dos horas diseñado para{" "}
+          <strong className="text-primary">futuras candidatas y sus equipos de campaña</strong>. Su objetivo
+          es enseñar las herramientas que hoy ofrece la inteligencia artificial aplicada a la comunicación
+          política, con un encuadre alineado a la agenda del INE sobre{" "}
+          <strong className="text-primary">empoderamiento político de la mujer</strong>. El resultado:
+          vocerías más claras, contenido más estratégico y herramientas listas para operar en precampaña y
+          campaña.
         </p>
 
         {/* LOGISTICS GRID */}
@@ -303,18 +304,18 @@ const PropuestaPanYucatan = () => {
           Cada asistente recibe acceso a un tablero web con cuatro módulos diseñados para acompañar el taller
           y permitir uso continuo después de la sesión.
         </p>
-        <div className="mb-16 grid gap-4 md:grid-cols-2">
+        <div className="mb-16 grid gap-5 sm:grid-cols-2">
           {moments.map((m) => (
             <Card
               key={m.n}
-              className="group relative overflow-hidden border-border bg-card/60 p-6 transition-all hover:border-primary/40 hover:shadow-glow"
+              className="group relative flex h-full flex-col overflow-hidden border-border bg-card/60 p-6 transition-all hover:border-primary/40 hover:shadow-glow"
             >
-              <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-gradient-coral opacity-10 transition-opacity group-hover:opacity-20" />
-              <div className="relative">
+              <div className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-gradient-coral opacity-10 transition-opacity group-hover:opacity-20" />
+              <div className="relative flex h-full flex-col">
                 <div className="mb-3 text-[10px] font-bold uppercase tracking-[1.5px] text-primary">
                   Módulo {m.n}
                 </div>
-                <h3 className="mb-2 font-display text-lg font-bold">{m.title}</h3>
+                <h3 className="mb-2 font-display text-lg font-bold leading-snug">{m.title}</h3>
                 <p className="text-sm leading-relaxed text-muted-foreground">{m.desc}</p>
               </div>
             </Card>
