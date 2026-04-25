@@ -1,23 +1,15 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { motion } from "framer-motion";
+import { Lock, Download, Calendar, MapPin, Clock, Users, Target, Sparkles, CheckCircle2, ArrowRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 const STORAGE_KEY = "propuesta_pan_yucatan_access";
 const VALID_NAME = "pilar santos";
 const VALID_PASS = "pan2026";
-
-const colors = {
-  bg: "#0b0c10",
-  surface: "#13141a",
-  surface2: "#1c1d26",
-  blue: "#00c2ff",
-  orange: "#ff6b35",
-  gold: "#f5c842",
-  text: "#e8eaf0",
-  muted: "#8a8f9c",
-  border: "#2a2c38",
-};
-
-const fontHead = "'Syne', system-ui, sans-serif";
-const fontBody = "'DM Sans', system-ui, sans-serif";
 
 const PropuestaPanYucatan = () => {
   const [unlocked, setUnlocked] = useState(false);
@@ -27,15 +19,9 @@ const PropuestaPanYucatan = () => {
 
   useEffect(() => {
     if (sessionStorage.getItem(STORAGE_KEY) === "1") setUnlocked(true);
-    const link = document.createElement("link");
-    link.rel = "stylesheet";
-    link.href =
-      "https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600;700&display=swap";
-    document.head.appendChild(link);
     const prevTitle = document.title;
     document.title = "KiMedia — Propuesta Confidencial · PAN Yucatán";
     return () => {
-      document.head.removeChild(link);
       document.title = prevTitle;
     };
   }, []);
@@ -53,147 +39,87 @@ const PropuestaPanYucatan = () => {
 
   if (!unlocked) {
     return (
-      <div
-        style={{
-          position: "fixed",
-          inset: 0,
-          background: colors.bg,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: 24,
-          fontFamily: fontBody,
-          color: colors.text,
-          zIndex: 9999,
-        }}
-      >
-        <form
-          onSubmit={handleSubmit}
-          style={{
-            width: "100%",
-            maxWidth: 440,
-            background: colors.surface,
-            border: `1px solid ${colors.border}`,
-            borderRadius: 16,
-            padding: 36,
-          }}
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-background bg-mesh px-6">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="w-full max-w-md"
         >
-          <div
-            style={{
-              fontSize: 11,
-              letterSpacing: 2,
-              textTransform: "uppercase",
-              color: colors.blue,
-              marginBottom: 20,
-              fontWeight: 600,
-            }}
+          <form
+            onSubmit={handleSubmit}
+            className="glass-strong rounded-2xl p-9 shadow-glow-lg"
           >
-            KiMedia — Propuesta Confidencial
-          </div>
-          <h1
-            style={{
-              fontFamily: fontHead,
-              fontWeight: 800,
-              fontSize: 28,
-              lineHeight: 1.15,
-              margin: "0 0 12px",
-            }}
-          >
-            Acceso restringido a destinataria
-          </h1>
-          <p style={{ color: colors.muted, fontSize: 14, margin: "0 0 24px", lineHeight: 1.6 }}>
-            Este documento es de uso exclusivo. Ingresa tu nombre y clave de acceso para continuar.
-          </p>
-
-          <label style={{ display: "block", fontSize: 12, color: colors.muted, marginBottom: 6 }}>
-            Nombre completo
-          </label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            autoComplete="off"
-            style={{
-              width: "100%",
-              padding: "12px 14px",
-              background: colors.surface2,
-              border: `1px solid ${colors.border}`,
-              borderRadius: 8,
-              color: colors.text,
-              fontSize: 14,
-              fontFamily: fontBody,
-              marginBottom: 16,
-              boxSizing: "border-box",
-            }}
-          />
-
-          <label style={{ display: "block", fontSize: 12, color: colors.muted, marginBottom: 6 }}>
-            Clave de acceso
-          </label>
-          <input
-            type="password"
-            value={pass}
-            onChange={(e) => setPass(e.target.value)}
-            style={{
-              width: "100%",
-              padding: "12px 14px",
-              background: colors.surface2,
-              border: `1px solid ${colors.border}`,
-              borderRadius: 8,
-              color: colors.text,
-              fontSize: 14,
-              fontFamily: fontBody,
-              marginBottom: 20,
-              boxSizing: "border-box",
-            }}
-          />
-
-          {error && (
-            <div
-              style={{
-                background: "rgba(255,107,53,0.1)",
-                border: `1px solid ${colors.orange}`,
-                color: colors.orange,
-                padding: "10px 12px",
-                borderRadius: 8,
-                fontSize: 13,
-                marginBottom: 16,
-              }}
-            >
-              {error}
+            <div className="mb-6 flex items-center gap-2">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-coral">
+                <Lock className="h-5 w-5 text-primary-foreground" />
+              </div>
+              <div className="text-[10px] font-semibold uppercase tracking-[2px] text-primary">
+                KiMedia · Propuesta Confidencial
+              </div>
             </div>
-          )}
 
-          <button
-            type="submit"
-            style={{
-              width: "100%",
-              padding: "14px 18px",
-              background: colors.blue,
-              color: colors.bg,
-              border: "none",
-              borderRadius: 8,
-              fontSize: 14,
-              fontWeight: 700,
-              fontFamily: fontBody,
-              cursor: "pointer",
-              letterSpacing: 0.3,
-            }}
-          >
-            Ingresar al documento
-          </button>
-        </form>
+            <h1 className="mb-3 font-display text-3xl font-bold leading-tight text-foreground">
+              Acceso restringido <span className="text-gradient">a destinataria</span>
+            </h1>
+            <p className="mb-7 text-sm leading-relaxed text-muted-foreground">
+              Este documento es de uso exclusivo. Ingresa tu nombre y clave de acceso para continuar.
+            </p>
+
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="name" className="mb-1.5 block text-xs text-muted-foreground">
+                  Nombre completo
+                </Label>
+                <Input
+                  id="name"
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  autoComplete="off"
+                  className="bg-secondary"
+                />
+              </div>
+              <div>
+                <Label htmlFor="pass" className="mb-1.5 block text-xs text-muted-foreground">
+                  Clave de acceso
+                </Label>
+                <Input
+                  id="pass"
+                  type="password"
+                  value={pass}
+                  onChange={(e) => setPass(e.target.value)}
+                  className="bg-secondary"
+                />
+              </div>
+            </div>
+
+            {error && (
+              <div className="mt-4 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2.5 text-xs text-destructive">
+                {error}
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              className="mt-6 h-12 w-full bg-gradient-coral text-base font-semibold shadow-glow hover:opacity-90"
+            >
+              Ingresar al documento
+              <ArrowRight className="ml-1 h-4 w-4" />
+            </Button>
+          </form>
+        </motion.div>
       </div>
     );
   }
 
   const logistics = [
-    { label: "Fecha", value: "Por confirmar" },
-    { label: "Sede", value: "Mérida, Yucatán" },
-    { label: "Horario", value: "10:00 – 12:00 hrs" },
-    { label: "Duración", value: "2 horas" },
-    { label: "Asistentes", value: "Hasta 25 personas" },
-    { label: "Modalidad", value: "Presencial · interactiva" },
+    { icon: Calendar, label: "Fecha", value: "Por confirmar" },
+    { icon: MapPin, label: "Sede", value: "Mérida, Yucatán" },
+    { icon: Clock, label: "Horario", value: "10:00 – 12:00 hrs" },
+    { icon: Clock, label: "Duración", value: "2 horas" },
+    { icon: Users, label: "Asistentes", value: "Hasta 25 personas" },
+    { icon: Target, label: "Modalidad", value: "Presencial · interactiva" },
   ];
 
   const moments = [
@@ -232,402 +158,255 @@ const PropuestaPanYucatan = () => {
     "Análisis de datos",
   ];
 
+  const includes = [
+    "Diseño y facilitación del taller (2 horas)",
+    "Acceso al tablero digital con 4 módulos para cada asistente",
+    "Material editorial y guía de vocería personalizada",
+    "Sesión de seguimiento remota a los 15 días",
+    "Reporte ejecutivo de aprendizajes y recomendaciones",
+  ];
+
   return (
-    <div style={{ background: colors.bg, color: colors.text, fontFamily: fontBody, minHeight: "100vh" }}>
+    <div className="min-h-screen bg-background bg-mesh text-foreground">
       <style>{`
         @media print {
           .no-print { display: none !important; }
-          body { background: white !important; }
         }
       `}</style>
-      <div style={{ maxWidth: 860, margin: "0 auto", padding: "60px 24px 80px" }}>
+
+      <div className="mx-auto max-w-5xl px-6 py-16 md:py-20">
         {/* HEADER */}
-        <header
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            gap: 24,
-            paddingBottom: 28,
-            borderBottom: `1px solid ${colors.border}`,
-            marginBottom: 40,
-            flexWrap: "wrap",
-          }}
+        <motion.header
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="mb-12 flex flex-wrap items-start justify-between gap-6 border-b border-border pb-10"
         >
-          <div style={{ flex: "1 1 380px" }}>
-            <div
-              style={{
-                fontSize: 11,
-                letterSpacing: 2,
-                textTransform: "uppercase",
-                color: colors.blue,
-                marginBottom: 14,
-                fontWeight: 600,
-              }}
-            >
-              KiMedia · Propuesta de Taller
+          <div className="flex-1 min-w-[320px]">
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1.5">
+              <Sparkles className="h-3.5 w-3.5 text-primary" />
+              <span className="text-[10px] font-semibold uppercase tracking-[1.8px] text-primary">
+                KiMedia · Propuesta de Taller
+              </span>
             </div>
-            <h1
-              style={{
-                fontFamily: fontHead,
-                fontWeight: 800,
-                fontSize: 38,
-                lineHeight: 1.1,
-                margin: 0,
-                letterSpacing: -0.5,
-              }}
-            >
-              Comunicación Política e Inteligencia Artificial
-              <span style={{ color: colors.orange }}> Vol. 1</span>
+            <h1 className="font-display text-4xl font-bold leading-[1.05] tracking-tight md:text-5xl">
+              Comunicación Política
+              <br />
+              <span className="text-gradient-sunset">e Inteligencia Artificial</span>{" "}
+              <span className="text-foreground">Vol. 1</span>
             </h1>
           </div>
-          <div style={{ fontSize: 12, color: colors.muted, lineHeight: 1.9, textAlign: "right", minWidth: 200 }}>
+          <div className="min-w-[200px] text-right text-xs leading-loose text-muted-foreground">
             <div>Por confirmar</div>
             <div>Mérida, Yucatán</div>
             <div>10:00 – 12:00 hrs</div>
             <div>Duración: 2 hrs</div>
             <div>Hasta 25 asistentes</div>
-            <div
-              style={{
-                display: "inline-block",
-                marginTop: 8,
-                padding: "4px 10px",
-                background: "rgba(245,200,66,0.12)",
-                color: colors.gold,
-                borderRadius: 4,
-                fontSize: 10,
-                letterSpacing: 1.5,
-                textTransform: "uppercase",
-                fontWeight: 700,
-              }}
-            >
+            <Badge variant="outline" className="mt-2 border-electric/40 bg-electric/10 text-[10px] uppercase tracking-widest text-electric">
               Confidencial
-            </div>
+            </Badge>
           </div>
-        </header>
+        </motion.header>
 
         {/* ATTN */}
-        <div
-          style={{
-            borderLeft: `3px solid ${colors.blue}`,
-            padding: "14px 20px",
-            background: colors.surface,
-            marginBottom: 36,
-            borderRadius: "0 8px 8px 0",
-          }}
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="mb-10 overflow-hidden rounded-r-xl border-l-4 border-primary glass px-6 py-5"
         >
-          <div style={{ fontSize: 11, color: colors.muted, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 6 }}>
+          <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[1.5px] text-muted-foreground">
             Presentado a
           </div>
-          <div style={{ fontFamily: fontHead, fontWeight: 700, fontSize: 20 }}>Pilar Santos</div>
-          <div style={{ fontSize: 13, color: colors.muted, marginTop: 2 }}>
+          <div className="font-display text-2xl font-bold">Pilar Santos</div>
+          <div className="mt-1 text-sm text-muted-foreground">
             Secretaria de Mujeres · PAN Yucatán
           </div>
-        </div>
+        </motion.div>
 
         {/* INTRO */}
-        <p style={{ fontSize: 16, lineHeight: 1.7, color: colors.text, marginBottom: 48 }}>
+        <p className="mb-14 text-lg leading-relaxed text-foreground/90">
           Esta propuesta presenta un taller intensivo diseñado específicamente para el equipo de la Secretaría
-          de Mujeres del PAN Yucatán. Su objetivo es fortalecer las capacidades de comunicación política del
-          equipo a través del uso aplicado de inteligencia artificial, con un enfoque editorial, ético y con
-          perspectiva de género. El resultado: vocerías más claras, contenido más estratégico y herramientas
-          listas para operar en campaña.
+          de Mujeres del PAN Yucatán. Su objetivo es <strong className="text-primary">fortalecer las capacidades de comunicación política</strong> a través
+          del uso aplicado de inteligencia artificial, con un enfoque editorial, ético y con perspectiva de
+          género. El resultado: vocerías más claras, contenido más estratégico y herramientas listas para
+          operar en campaña.
         </p>
 
         {/* LOGISTICS GRID */}
-        <SectionTitle>Logística</SectionTitle>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-            gap: 14,
-            marginBottom: 56,
-          }}
-        >
-          {logistics.map((item) => (
-            <div
+        <SectionTitle eyebrow="Operación">Logística</SectionTitle>
+        <div className="mb-16 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {logistics.map((item, i) => (
+            <motion.div
               key={item.label}
-              style={{
-                background: colors.surface,
-                border: `1px solid ${colors.border}`,
-                padding: "18px 20px",
-                borderRadius: 10,
-              }}
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.4, delay: i * 0.05 }}
             >
-              <div
-                style={{
-                  fontSize: 10,
-                  color: colors.muted,
-                  letterSpacing: 1.5,
-                  textTransform: "uppercase",
-                  marginBottom: 6,
-                }}
-              >
-                {item.label}
-              </div>
-              <div style={{ fontSize: 15, fontWeight: 600 }}>{item.value}</div>
-            </div>
+              <Card className="h-full border-border bg-card/60 p-5 backdrop-blur transition-all hover:border-primary/40 hover:shadow-glow">
+                <item.icon className="mb-3 h-5 w-5 text-primary" />
+                <div className="mb-1 text-[10px] font-semibold uppercase tracking-[1.5px] text-muted-foreground">
+                  {item.label}
+                </div>
+                <div className="text-base font-semibold">{item.value}</div>
+              </Card>
+            </motion.div>
           ))}
         </div>
 
         {/* STRUCTURE */}
-        <SectionTitle>Estructura del taller</SectionTitle>
-        <div style={{ marginBottom: 24 }}>
+        <SectionTitle eyebrow="Programa">Estructura del taller</SectionTitle>
+        <div className="mb-6 space-y-3">
           {moments.map((m, i) => (
-            <div
+            <motion.div
               key={m.n}
-              style={{
-                display: "flex",
-                gap: 20,
-                padding: "20px 0",
-                borderBottom: i < moments.length - 1 ? `1px solid ${colors.border}` : "none",
-              }}
+              initial={{ opacity: 0, x: -20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.4, delay: i * 0.08 }}
             >
-              <div
-                style={{
-                  fontFamily: fontHead,
-                  fontWeight: 800,
-                  fontSize: 28,
-                  color: colors.blue,
-                  minWidth: 50,
-                  lineHeight: 1,
-                }}
-              >
-                {m.n}
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12, marginBottom: 6 }}>
-                  <div style={{ fontFamily: fontHead, fontWeight: 700, fontSize: 18 }}>{m.title}</div>
-                  <div style={{ fontSize: 12, color: colors.orange, fontWeight: 600, whiteSpace: "nowrap" }}>{m.time}</div>
+              <Card className="group flex gap-5 border-border bg-card/60 p-6 transition-all hover:border-primary/40">
+                <div className="font-display text-4xl font-bold leading-none text-gradient">
+                  {m.n}
                 </div>
-                <div style={{ fontSize: 14, color: colors.muted, lineHeight: 1.6 }}>{m.desc}</div>
-              </div>
-            </div>
+                <div className="flex-1">
+                  <div className="mb-1.5 flex items-baseline justify-between gap-3">
+                    <h3 className="font-display text-lg font-bold">{m.title}</h3>
+                    <Badge variant="outline" className="border-primary/40 bg-primary/10 text-primary">
+                      {m.time}
+                    </Badge>
+                  </div>
+                  <p className="text-sm leading-relaxed text-muted-foreground">{m.desc}</p>
+                </div>
+              </Card>
+            </motion.div>
           ))}
         </div>
-        <div
-          style={{
-            marginTop: 12,
-            marginBottom: 56,
-            padding: "14px 18px",
-            background: "rgba(0,194,255,0.06)",
-            border: `1px solid ${colors.border}`,
-            borderRadius: 8,
-            fontSize: 13,
-            color: colors.muted,
-          }}
-        >
-          <strong style={{ color: colors.text }}>Cierre · 10 min</strong> — Síntesis colectiva, plan de
-          acción individual y entrega de credenciales al tablero digital.
+        <div className="mb-16 rounded-xl border border-border bg-secondary/40 px-5 py-4 text-sm text-muted-foreground">
+          <strong className="text-foreground">Cierre · 10 min</strong> — Síntesis colectiva, plan de acción
+          individual y entrega de credenciales al tablero digital.
         </div>
 
         {/* DIGITAL TOOL */}
-        <SectionTitle>Herramienta digital del taller</SectionTitle>
-        <p style={{ fontSize: 14, color: colors.muted, marginBottom: 20, lineHeight: 1.7 }}>
+        <SectionTitle eyebrow="Plataforma">Herramienta digital del taller</SectionTitle>
+        <p className="mb-6 max-w-2xl text-base leading-relaxed text-muted-foreground">
           Cada asistente recibe acceso a un tablero web con cuatro módulos diseñados para acompañar el taller
           y permitir uso continuo después de la sesión.
         </p>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(2, 1fr)",
-            gap: 14,
-            marginBottom: 56,
-          }}
-        >
+        <div className="mb-16 grid gap-4 md:grid-cols-2">
           {moments.map((m) => (
-            <div
+            <Card
               key={m.n}
-              style={{
-                background: colors.surface,
-                border: `1px solid ${colors.border}`,
-                borderRadius: 10,
-                padding: 20,
-                minHeight: 130,
-              }}
+              className="group relative overflow-hidden border-border bg-card/60 p-6 transition-all hover:border-primary/40 hover:shadow-glow"
             >
-              <div style={{ fontSize: 11, color: colors.blue, fontWeight: 700, letterSpacing: 1.5, marginBottom: 10 }}>
-                MÓDULO {m.n}
+              <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-gradient-coral opacity-10 transition-opacity group-hover:opacity-20" />
+              <div className="relative">
+                <div className="mb-3 text-[10px] font-bold uppercase tracking-[1.5px] text-primary">
+                  Módulo {m.n}
+                </div>
+                <h3 className="mb-2 font-display text-lg font-bold">{m.title}</h3>
+                <p className="text-sm leading-relaxed text-muted-foreground">{m.desc}</p>
               </div>
-              <div style={{ fontFamily: fontHead, fontWeight: 700, fontSize: 16, marginBottom: 6 }}>
-                {m.title}
-              </div>
-              <div style={{ fontSize: 12, color: colors.muted, lineHeight: 1.6 }}>{m.desc}</div>
-            </div>
+            </Card>
           ))}
         </div>
 
         {/* ABOUT KIMEDIA */}
-        <SectionTitle>Sobre KiMedia</SectionTitle>
-        <p style={{ fontSize: 14, color: colors.muted, marginBottom: 20, lineHeight: 1.7 }}>
+        <SectionTitle eyebrow="Quiénes somos">Sobre KiMedia</SectionTitle>
+        <p className="mb-6 max-w-2xl text-base leading-relaxed text-muted-foreground">
           Casa de comunicación estratégica que combina narrativa editorial, inteligencia artificial y
           producción de contenido para liderazgos políticos, marcas e instituciones.
         </p>
-        <div
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: 10,
-            marginBottom: 56,
-          }}
-        >
+        <div className="mb-16 flex flex-wrap gap-2.5">
           {skills.map((s) => (
-            <div
+            <Badge
               key={s}
-              style={{
-                padding: "10px 16px",
-                background: colors.surface2,
-                border: `1px solid ${colors.border}`,
-                borderRadius: 999,
-                fontSize: 13,
-                fontWeight: 500,
-              }}
+              variant="outline"
+              className="border-border bg-secondary/60 px-4 py-2 text-sm font-medium hover:border-primary/40"
             >
               {s}
-            </div>
+            </Badge>
           ))}
         </div>
 
         {/* ANTECEDENTES */}
-        <div
-          style={{
-            borderLeft: `3px solid ${colors.gold}`,
-            padding: "18px 22px",
-            background: colors.surface,
-            borderRadius: "0 8px 8px 0",
-            marginBottom: 56,
-          }}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="mb-16 overflow-hidden rounded-r-xl border-l-4 border-electric glass px-6 py-5"
         >
-          <div style={{ fontSize: 11, color: colors.gold, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 10, fontWeight: 700 }}>
+          <div className="mb-2.5 text-[10px] font-bold uppercase tracking-[1.5px] text-electric">
             Antecedentes
           </div>
-          <p style={{ fontSize: 14, color: colors.text, lineHeight: 1.7, margin: 0 }}>
+          <p className="text-base leading-relaxed text-foreground/90">
             KiMedia ha desarrollado talleres similares para liderazgos del PAN en distintos estados. La
-            edición más reciente se llevó a cabo en <strong>Tequila, Jalisco el 18 de febrero de 2026</strong>,
-            con resultados de alta satisfacción y aplicación inmediata por parte de las y los asistentes.
+            edición más reciente se llevó a cabo en{" "}
+            <strong className="text-foreground">Tequila, Jalisco el 18 de febrero de 2026</strong>, con
+            resultados de alta satisfacción y aplicación inmediata por parte de las y los asistentes.
           </p>
-        </div>
+        </motion.div>
 
         {/* INVESTMENT */}
-        <SectionTitle>Inversión</SectionTitle>
-        <div
-          style={{
-            background: colors.surface,
-            border: `1px solid ${colors.border}`,
-            borderRadius: 12,
-            padding: 28,
-            marginBottom: 32,
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 22 }}>
-            <div style={{ fontFamily: fontHead, fontWeight: 800, fontSize: 40, color: colors.orange, lineHeight: 1 }}>
+        <SectionTitle eyebrow="Propuesta económica">Inversión</SectionTitle>
+        <Card className="mb-8 overflow-hidden border-border bg-gradient-to-br from-card via-card to-secondary/40 p-8">
+          <div className="mb-6 flex flex-wrap items-baseline gap-3">
+            <div className="font-display text-5xl font-bold leading-none text-gradient-sunset md:text-6xl">
               $50,000
             </div>
-            <div style={{ fontSize: 14, color: colors.muted, fontWeight: 600 }}>MXN + IVA</div>
+            <div className="text-base font-semibold text-muted-foreground">MXN + IVA</div>
           </div>
-          <div style={{ fontSize: 12, color: colors.muted, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 14, fontWeight: 600 }}>
+          <div className="mb-4 text-[10px] font-bold uppercase tracking-[1.5px] text-primary">
             Incluye
           </div>
-          <ul style={{ margin: 0, padding: 0, listStyle: "none" }}>
-            {[
-              "Diseño y facilitación del taller (2 horas)",
-              "Acceso al tablero digital con 4 módulos para cada asistente",
-              "Material editorial y guía de vocería personalizada",
-              "Sesión de seguimiento remota a los 15 días",
-              "Reporte ejecutivo de aprendizajes y recomendaciones",
-            ].map((item) => (
-              <li
-                key={item}
-                style={{
-                  fontSize: 14,
-                  padding: "10px 0",
-                  borderBottom: `1px solid ${colors.border}`,
-                  display: "flex",
-                  gap: 12,
-                  alignItems: "flex-start",
-                }}
-              >
-                <span style={{ color: colors.blue, fontWeight: 700 }}>—</span>
-                <span>{item}</span>
+          <ul className="space-y-3">
+            {includes.map((item) => (
+              <li key={item} className="flex items-start gap-3 border-b border-border/60 pb-3 last:border-0">
+                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                <span className="text-sm leading-relaxed">{item}</span>
               </li>
             ))}
           </ul>
-        </div>
+        </Card>
 
         {/* VIGENCIA */}
-        <div
-          style={{
-            padding: "16px 20px",
-            background: colors.surface2,
-            borderRadius: 8,
-            fontSize: 13,
-            color: colors.muted,
-            marginBottom: 56,
-          }}
-        >
-          <strong style={{ color: colors.text }}>Vigencia:</strong> Esta propuesta tiene una validez de
-          10 días naturales a partir de su recepción.
+        <div className="mb-14 rounded-xl border border-border bg-secondary/40 px-5 py-4 text-sm text-muted-foreground">
+          <strong className="text-foreground">Vigencia:</strong> Esta propuesta tiene una validez de 10 días
+          naturales a partir de su recepción.
         </div>
 
         {/* SIGNATURE */}
-        <div
-          style={{
-            paddingTop: 32,
-            borderTop: `1px solid ${colors.border}`,
-            fontSize: 13,
-            lineHeight: 1.8,
-          }}
-        >
-          <div style={{ fontFamily: fontHead, fontWeight: 700, fontSize: 18, color: colors.text }}>
-            Jesús Caudillo
-          </div>
-          <div style={{ color: colors.muted }}>Director Ejecutivo · KiMedia</div>
-          <div style={{ color: colors.muted, marginTop: 6 }}>
+        <div className="border-t border-border pt-8">
+          <div className="font-display text-xl font-bold">Jesús Caudillo</div>
+          <div className="text-sm text-muted-foreground">Director Ejecutivo · KiMedia</div>
+          <div className="mt-1.5 text-sm text-muted-foreground">
             hola@kimedia.mx · kimediamx.com
           </div>
         </div>
       </div>
 
       {/* PRINT BUTTON */}
-      <button
-        className="no-print"
+      <Button
         onClick={() => window.print()}
-        style={{
-          position: "fixed",
-          bottom: 24,
-          right: 24,
-          padding: "14px 22px",
-          background: colors.blue,
-          color: colors.bg,
-          border: "none",
-          borderRadius: 999,
-          fontSize: 13,
-          fontWeight: 700,
-          fontFamily: fontBody,
-          cursor: "pointer",
-          letterSpacing: 0.3,
-          boxShadow: "0 8px 24px rgba(0,194,255,0.35)",
-          zIndex: 100,
-        }}
+        className="no-print fixed bottom-6 right-6 z-50 h-12 rounded-full bg-gradient-coral px-6 font-semibold shadow-glow-lg hover:opacity-90"
       >
+        <Download className="mr-1 h-4 w-4" />
         Descargar PDF
-      </button>
+      </Button>
     </div>
   );
 };
 
-const SectionTitle = ({ children }: { children: React.ReactNode }) => (
-  <h2
-    style={{
-      fontFamily: fontHead,
-      fontWeight: 700,
-      fontSize: 22,
-      margin: "0 0 20px",
-      letterSpacing: -0.3,
-    }}
-  >
-    {children}
-  </h2>
+const SectionTitle = ({ children, eyebrow }: { children: React.ReactNode; eyebrow?: string }) => (
+  <div className="mb-6">
+    {eyebrow && (
+      <div className="mb-2 text-[10px] font-bold uppercase tracking-[1.8px] text-primary">
+        {eyebrow}
+      </div>
+    )}
+    <h2 className="font-display text-2xl font-bold tracking-tight md:text-3xl">{children}</h2>
+  </div>
 );
 
 export default PropuestaPanYucatan;
