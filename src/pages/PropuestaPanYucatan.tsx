@@ -417,8 +417,9 @@ const PropuestaPanYucatan = () => {
                 image: { type: "jpeg", quality: 0.98 },
                 html2canvas: { scale: 2, backgroundColor: "#0B0F1A", useCORS: true },
                 jsPDF: { unit: "pt", format: "a4", orientation: "portrait" },
+                // @ts-expect-error - pagebreak is supported at runtime
                 pagebreak: { mode: ["css", "legacy"] },
-              })
+              } as any)
               .from(pdfRef.current)
               .save();
             toast.success("PDF descargado", { id: loadingId });
