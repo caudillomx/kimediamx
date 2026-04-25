@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { motion } from "framer-motion";
 import { Lock, Download, Calendar, MapPin, Clock, Users, Target, Sparkles, CheckCircle2, ArrowRight, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,8 @@ import { AiLiveDemo } from "@/components/propuesta/AiLiveDemo";
 import { InteractiveTimeline, type TimelineItem } from "@/components/propuesta/InteractiveTimeline";
 import { AiToolsStack } from "@/components/propuesta/AiToolsStack";
 import { AnimatedCounter } from "@/components/propuesta/AnimatedCounter";
+import { PropuestaPdfTemplate } from "@/components/propuesta/PropuestaPdfTemplate";
+import { toast } from "sonner";
 
 const STORAGE_KEY = "propuesta_pan_yucatan_access";
 const VALID_NAME = "pilar santos";
@@ -20,6 +22,8 @@ const PropuestaPanYucatan = () => {
   const [name, setName] = useState("");
   const [pass, setPass] = useState("");
   const [error, setError] = useState("");
+  const [generatingPdf, setGeneratingPdf] = useState(false);
+  const pdfRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (sessionStorage.getItem(STORAGE_KEY) === "1") setUnlocked(true);
@@ -400,12 +404,53 @@ const PropuestaPanYucatan = () => {
 
       {/* PRINT BUTTON */}
       <Button
-        onClick={() => window.print()}
+        onClick={async () => {
+          if (generatingPdf || !pdfRef.current) return;
+          setGeneratingPdf(true);
+          const loadingId = toast.loading("Generando PDF…");
+          try {
+            const html2pdf = (await import("html2pdf.js")).default;
+            const opts: any = {
+              margin: 0,
+              filename: "KiMedia_Propuesta_PAN_Yucatan_Motul_2026.pdf",
+              image: { type: "jpeg", quality: 0.98 },
+              html2canvas: { scale: 2, backgroundColor: "#0B0F1A", useCORS: true },
+              jsPDF: { unit: "pt", format: "a4", orientation: "portrait" },
+              pagebreak: { mode: ["css", "legacy"] },
+            };
+            await html2pdf()
+              .set(opts)
+              .from(pdfRef.current)
+              .save();
+            toast.success("PDF descargado", { id: loadingId });
+          } catch (e) {
+            console.error(e);
+            toast.error("No se pudo generar el PDF", { id: loadingId });
+          } finally {
+            setGeneratingPdf(false);
+          }
+        }}
+        disabled={generatingPdf}
         className="no-print fixed bottom-6 right-6 z-50 h-12 rounded-full bg-gradient-coral px-6 font-semibold shadow-glow-lg hover:opacity-90"
       >
         <Download className="mr-1 h-4 w-4" />
-        Descargar PDF
+        {generatingPdf ? "Generando…" : "Descargar PDF"}
       </Button>
+
+      {/* Hidden printable template */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: "fixed",
+          left: "-10000px",
+          top: 0,
+          width: "794px",
+          pointerEvents: "none",
+          opacity: 0,
+        }}
+      >
+        <PropuestaPdfTemplate ref={pdfRef} moments={moments} includes={includes} />
+      </div>
     </div>
   );
 };
