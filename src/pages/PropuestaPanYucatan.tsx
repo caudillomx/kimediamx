@@ -1,11 +1,15 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { motion } from "framer-motion";
-import { Lock, Download, Calendar, MapPin, Clock, Users, Target, Sparkles, CheckCircle2, ArrowRight } from "lucide-react";
+import { Lock, Download, Calendar, MapPin, Clock, Users, Target, Sparkles, CheckCircle2, ArrowRight, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { AiLiveDemo } from "@/components/propuesta/AiLiveDemo";
+import { InteractiveTimeline, type TimelineItem } from "@/components/propuesta/InteractiveTimeline";
+import { AiToolsStack } from "@/components/propuesta/AiToolsStack";
+import { AnimatedCounter } from "@/components/propuesta/AnimatedCounter";
 
 const STORAGE_KEY = "propuesta_pan_yucatan_access";
 const VALID_NAME = "pilar santos";
