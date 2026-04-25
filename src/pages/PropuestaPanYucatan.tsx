@@ -253,6 +253,14 @@ const PropuestaPanYucatan = () => {
           listas para operar en precampaña y campaña.
         </p>
 
+        {/* IMPACT COUNTERS */}
+        <div className="mb-16 grid gap-4 rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 via-card to-electric/5 p-6 sm:grid-cols-4 md:p-8">
+          <CounterTile value={150} suffix="" label="Asistentes en sala" />
+          <CounterTile value={2} suffix=" hrs" label="De inmersión" />
+          <CounterTile value={8} suffix="+" label="Herramientas de IA" />
+          <CounterTile value={1} label="Pieza real por persona" />
+        </div>
+
         {/* LOGISTICS GRID */}
         <SectionTitle eyebrow="Operación">Logística</SectionTitle>
         <div className="mb-16 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -276,60 +284,33 @@ const PropuestaPanYucatan = () => {
         </div>
 
         {/* STRUCTURE */}
-        <SectionTitle eyebrow="Programa">Estructura del taller</SectionTitle>
-        <div className="mb-6 space-y-3">
-          {moments.map((m, i) => (
-            <motion.div
-              key={m.n}
-              initial={{ opacity: 0, x: -20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.4, delay: i * 0.08 }}
-            >
-              <Card className="group flex gap-5 border-border bg-card/60 p-6 transition-all hover:border-primary/40">
-                <div className="font-display text-4xl font-bold leading-none text-gradient">
-                  {m.n}
-                </div>
-                <div className="flex-1">
-                  <div className="mb-1.5 flex items-baseline justify-between gap-3">
-                    <h3 className="font-display text-lg font-bold">{m.title}</h3>
-                    <Badge variant="outline" className="border-primary/40 bg-primary/10 text-primary">
-                      {m.time}
-                    </Badge>
-                  </div>
-                  <p className="text-sm leading-relaxed text-muted-foreground">{m.desc}</p>
-                </div>
-              </Card>
-            </motion.div>
-          ))}
+        <SectionTitle eyebrow="Programa interactivo">Estructura del taller</SectionTitle>
+        <p className="mb-8 max-w-2xl text-base leading-relaxed text-muted-foreground">
+          Toca cada módulo para ver qué herramientas de IA se utilizan y qué entregable se lleva cada
+          asistente. Todo es <strong className="text-foreground">100% práctico</strong>: nada de teoría suelta.
+        </p>
+        <div className="mb-6">
+          <InteractiveTimeline items={moments} />
         </div>
         <div className="mb-16 rounded-xl border border-border bg-secondary/40 px-5 py-4 text-sm text-muted-foreground">
           <strong className="text-foreground">Cierre · 10 min</strong> — Síntesis colectiva, plan de acción
           individual y entrega de credenciales al tablero digital.
         </div>
 
-        {/* DIGITAL TOOL */}
-        <SectionTitle eyebrow="Plataforma">Herramienta digital del taller</SectionTitle>
+        {/* AI LIVE DEMO */}
+        <SectionTitle eyebrow="Pruébalo ahora">Demo en vivo de IA</SectionTitle>
+        <div className="mb-16 no-print">
+          <AiLiveDemo />
+        </div>
+
+        {/* AI STACK */}
+        <SectionTitle eyebrow="Stack del taller">Herramientas de IA que enseñamos</SectionTitle>
         <p className="mb-6 max-w-2xl text-base leading-relaxed text-muted-foreground">
-          Cada asistente recibe acceso a un tablero web con cuatro módulos diseñados para acompañar el taller
-          y permitir uso continuo después de la sesión.
+          Estas son las herramientas reales que cada asistente aprenderá a usar. Todas comerciales, todas
+          accesibles y todas demostradas en vivo durante el taller.
         </p>
-        <div className="mb-16 grid gap-5 sm:grid-cols-2">
-          {moments.map((m) => (
-            <Card
-              key={m.n}
-              className="group relative flex h-full flex-col overflow-hidden border-border bg-card/60 p-6 transition-all hover:border-primary/40 hover:shadow-glow"
-            >
-              <div className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-gradient-coral opacity-10 transition-opacity group-hover:opacity-20" />
-              <div className="relative flex h-full flex-col">
-                <div className="mb-3 text-[10px] font-bold uppercase tracking-[1.5px] text-primary">
-                  Módulo {m.n}
-                </div>
-                <h3 className="mb-2 font-display text-lg font-bold leading-snug">{m.title}</h3>
-                <p className="text-sm leading-relaxed text-muted-foreground">{m.desc}</p>
-              </div>
-            </Card>
-          ))}
+        <div className="mb-16">
+          <AiToolsStack />
         </div>
 
         {/* ABOUT KIMEDIA */}
