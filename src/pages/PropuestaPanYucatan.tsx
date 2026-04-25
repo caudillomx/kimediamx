@@ -39,16 +39,16 @@ const PropuestaPanYucatan = () => {
 
   if (!unlocked) {
     return (
-      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-background bg-mesh px-6">
+      <div className="fixed inset-0 z-[9999] flex min-h-screen items-center justify-center overflow-y-auto bg-background bg-mesh px-6 py-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="w-full max-w-md"
+          className="w-full max-w-md my-auto"
         >
           <form
             onSubmit={handleSubmit}
-            className="glass-strong rounded-2xl p-9 shadow-glow-lg"
+            className="rounded-2xl border border-border bg-card/95 p-9 shadow-glow-lg backdrop-blur-xl"
           >
             <div className="mb-6 flex items-center gap-2">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-coral">
@@ -77,7 +77,7 @@ const PropuestaPanYucatan = () => {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   autoComplete="off"
-                  className="bg-secondary"
+                  className="bg-secondary text-foreground border-border"
                 />
               </div>
               <div>
@@ -89,7 +89,7 @@ const PropuestaPanYucatan = () => {
                   type="password"
                   value={pass}
                   onChange={(e) => setPass(e.target.value)}
-                  className="bg-secondary"
+                  className="bg-secondary text-foreground border-border"
                 />
               </div>
             </div>
