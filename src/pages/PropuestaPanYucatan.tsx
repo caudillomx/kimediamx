@@ -136,25 +136,25 @@ const PropuestaPanYucatan = () => {
       n: "01",
       title: "Diagnóstico colectivo",
       time: "15 min",
-      desc: "Las asistentes identifican su nivel de madurez digital y los retos de comunicación política que enfrentan las mujeres en campaña.",
+      desc: "Cada asistente identifica su nivel de madurez digital y los retos de comunicación política que enfrenta de cara a una campaña.",
     },
     {
       n: "02",
       title: "IA aplicada a campaña",
       time: "35 min",
-      desc: "Demostración práctica de las herramientas de inteligencia artificial que hoy potencian el trabajo de candidatas y equipos: investigación, redacción, diseño y video.",
+      desc: "Demostración práctica de las herramientas de inteligencia artificial que hoy potencian el trabajo de candidatos, candidatas y equipos: investigación, redacción, diseño y video.",
     },
     {
       n: "03",
-      title: "Empoderamiento político de la mujer",
+      title: "Vocería con perspectiva de género",
       time: "35 min",
-      desc: "Construcción de mensaje, vocería y narrativa con perspectiva de género. Encuadre alineado a la agenda del INE sobre participación política de las mujeres.",
+      desc: "Construcción de mensaje, vocería y narrativa con perspectiva de género, fortaleciendo el empoderamiento político de la mujer dentro de la estrategia de campaña.",
     },
     {
       n: "04",
       title: "Laboratorio en vivo",
       time: "30 min",
-      desc: "Cada participante crea, con apoyo de IA, una pieza real de campaña (post, guion o discurso) y recibe retroalimentación inmediata del equipo KiMedia.",
+      desc: "Cada asistente crea, con apoyo de IA, una pieza real de campaña (post, guion o discurso) y recibe retroalimentación inmediata del equipo KiMedia.",
     },
   ];
 
@@ -235,12 +235,10 @@ const PropuestaPanYucatan = () => {
         {/* INTRO */}
         <p className="mb-14 text-lg leading-relaxed text-foreground/90">
           Esta propuesta presenta un curso de dos horas diseñado para{" "}
-          <strong className="text-primary">futuras candidatas y sus equipos de campaña</strong>. Su objetivo
-          es enseñar las herramientas que hoy ofrece la inteligencia artificial aplicada a la comunicación
-          política, con un encuadre alineado a la agenda del INE sobre{" "}
-          <strong className="text-primary">empoderamiento político de la mujer</strong>. El resultado:
-          vocerías más claras, contenido más estratégico y herramientas listas para operar en precampaña y
-          campaña.
+          <strong className="text-primary">futuros candidatos, futuras candidatas y sus equipos de campaña</strong>.
+          Su objetivo es enseñar las herramientas que hoy ofrece la inteligencia artificial aplicada a la
+          comunicación política. El resultado: vocerías más claras, contenido más estratégico y herramientas
+          listas para operar en precampaña y campaña.
         </p>
 
         {/* LOGISTICS GRID */}
