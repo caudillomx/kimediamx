@@ -354,8 +354,7 @@ export const PropuestaPdfTemplate = forwardRef<HTMLDivElement, Props>(({ moments
 
       {/* PAGE 4 — INVERSIÓN + FIRMA */}
       <PageChrome page={4} total={TOTAL} isLast>
-        <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-          <div>
+        <div>
             <div style={styles.eyebrow}>Propuesta económica</div>
             <h2 style={styles.h2}>Inversión</h2>
 
@@ -410,9 +409,7 @@ export const PropuestaPdfTemplate = forwardRef<HTMLDivElement, Props>(({ moments
                 </div>
               </div>
             </div>
-          </div>
 
-          <div style={{ marginTop: "auto" }}>
             <div
               style={{
                 ...styles.card,
@@ -465,7 +462,6 @@ export const PropuestaPdfTemplate = forwardRef<HTMLDivElement, Props>(({ moments
                 <div style={{ fontSize: "12px", color: "#fff", fontWeight: 600 }}>Abril 2026</div>
               </div>
             </div>
-          </div>
         </div>
       </PageChrome>
     </div>
