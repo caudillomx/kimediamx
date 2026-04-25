@@ -42,8 +42,6 @@ export const PropuestaPdfTemplate = forwardRef<HTMLDivElement, Props>(({ moments
       width: `${PAGE_W}px`,
       height: `${PAGE_H}px`,
       position: "relative" as const,
-      pageBreakAfter: "always" as const,
-      breakAfter: "page" as const,
       background: "#0B0F1A",
       overflow: "hidden" as const,
     },
