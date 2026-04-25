@@ -1,11 +1,15 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { motion } from "framer-motion";
-import { Lock, Download, Calendar, MapPin, Clock, Users, Target, Sparkles, CheckCircle2, ArrowRight } from "lucide-react";
+import { Lock, Download, Calendar, MapPin, Clock, Users, Target, Sparkles, CheckCircle2, ArrowRight, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { AiLiveDemo } from "@/components/propuesta/AiLiveDemo";
+import { InteractiveTimeline, type TimelineItem } from "@/components/propuesta/InteractiveTimeline";
+import { AiToolsStack } from "@/components/propuesta/AiToolsStack";
+import { AnimatedCounter } from "@/components/propuesta/AnimatedCounter";
 
 const STORAGE_KEY = "propuesta_pan_yucatan_access";
 const VALID_NAME = "pilar santos";
@@ -131,30 +135,38 @@ const PropuestaPanYucatan = () => {
     { icon: Target, label: "Modalidad", value: "Presencial · interactiva" },
   ];
 
-  const moments = [
+  const moments: TimelineItem[] = [
     {
       n: "01",
       title: "Diagnóstico colectivo",
       time: "15 min",
       desc: "Cada asistente identifica su nivel de madurez digital y los retos de comunicación política que enfrenta de cara a una campaña.",
+      tools: ["Quiz interactivo", "Tablero KiMedia"],
+      deliverable: "Su nivel de madurez digital y un plan de 3 acciones inmediatas.",
     },
     {
       n: "02",
       title: "IA aplicada a campaña",
       time: "35 min",
       desc: "Demostración práctica de las herramientas de inteligencia artificial que hoy potencian el trabajo de candidatos, candidatas y equipos: investigación, redacción, diseño y video.",
+      tools: ["ChatGPT", "Claude", "Midjourney", "Perplexity"],
+      deliverable: "Una pieza generada en vivo (post + imagen) con su propio tema.",
     },
     {
       n: "03",
       title: "Vocería con perspectiva de género",
       time: "35 min",
       desc: "Construcción de mensaje, vocería y narrativa con perspectiva de género, fortaleciendo el empoderamiento político de la mujer dentro de la estrategia de campaña.",
+      tools: ["Claude", "ElevenLabs", "Wizr"],
+      deliverable: "Un guion de vocería listo para entrevista o mitin.",
     },
     {
       n: "04",
       title: "Laboratorio en vivo",
       time: "30 min",
       desc: "Cada asistente crea, con apoyo de IA, una pieza real de campaña (post, guion o discurso) y recibe retroalimentación inmediata del equipo KiMedia.",
+      tools: ["ChatGPT", "Nano Banana", "Runway"],
+      deliverable: "Una pieza de campaña terminada y aprobada por el equipo KiMedia.",
     },
   ];
 
@@ -204,6 +216,17 @@ const PropuestaPanYucatan = () => {
               <span className="text-gradient-sunset">e Inteligencia Artificial</span>{" "}
               <span className="text-foreground">Vol. 1</span>
             </h1>
+            <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-electric/40 bg-electric/10 px-3 py-1.5">
+              <motion.span
+                animate={{ scale: [1, 1.2, 1] }}
+                transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
+                className="flex h-2 w-2 rounded-full bg-electric"
+              />
+              <Zap className="h-3.5 w-3.5 text-electric" />
+              <span className="text-[10px] font-bold uppercase tracking-[1.8px] text-electric">
+                100% práctico · IA en vivo
+              </span>
+            </div>
           </div>
           <div className="min-w-[200px] text-right text-xs leading-loose text-muted-foreground">
             <div>Viernes 29 de mayo de 2026</div>
@@ -241,6 +264,14 @@ const PropuestaPanYucatan = () => {
           listas para operar en precampaña y campaña.
         </p>
 
+        {/* IMPACT COUNTERS */}
+        <div className="mb-16 grid gap-4 rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 via-card to-electric/5 p-6 sm:grid-cols-4 md:p-8">
+          <CounterTile value={150} suffix="" label="Asistentes en sala" />
+          <CounterTile value={2} suffix=" hrs" label="De inmersión" />
+          <CounterTile value={8} suffix="+" label="Herramientas de IA" />
+          <CounterTile value={1} label="Pieza real por persona" />
+        </div>
+
         {/* LOGISTICS GRID */}
         <SectionTitle eyebrow="Operación">Logística</SectionTitle>
         <div className="mb-16 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -264,60 +295,33 @@ const PropuestaPanYucatan = () => {
         </div>
 
         {/* STRUCTURE */}
-        <SectionTitle eyebrow="Programa">Estructura del taller</SectionTitle>
-        <div className="mb-6 space-y-3">
-          {moments.map((m, i) => (
-            <motion.div
-              key={m.n}
-              initial={{ opacity: 0, x: -20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.4, delay: i * 0.08 }}
-            >
-              <Card className="group flex gap-5 border-border bg-card/60 p-6 transition-all hover:border-primary/40">
-                <div className="font-display text-4xl font-bold leading-none text-gradient">
-                  {m.n}
-                </div>
-                <div className="flex-1">
-                  <div className="mb-1.5 flex items-baseline justify-between gap-3">
-                    <h3 className="font-display text-lg font-bold">{m.title}</h3>
-                    <Badge variant="outline" className="border-primary/40 bg-primary/10 text-primary">
-                      {m.time}
-                    </Badge>
-                  </div>
-                  <p className="text-sm leading-relaxed text-muted-foreground">{m.desc}</p>
-                </div>
-              </Card>
-            </motion.div>
-          ))}
+        <SectionTitle eyebrow="Programa interactivo">Estructura del taller</SectionTitle>
+        <p className="mb-8 max-w-2xl text-base leading-relaxed text-muted-foreground">
+          Toca cada módulo para ver qué herramientas de IA se utilizan y qué entregable se lleva cada
+          asistente. Todo es <strong className="text-foreground">100% práctico</strong>: nada de teoría suelta.
+        </p>
+        <div className="mb-6">
+          <InteractiveTimeline items={moments} />
         </div>
         <div className="mb-16 rounded-xl border border-border bg-secondary/40 px-5 py-4 text-sm text-muted-foreground">
           <strong className="text-foreground">Cierre · 10 min</strong> — Síntesis colectiva, plan de acción
           individual y entrega de credenciales al tablero digital.
         </div>
 
-        {/* DIGITAL TOOL */}
-        <SectionTitle eyebrow="Plataforma">Herramienta digital del taller</SectionTitle>
+        {/* AI LIVE DEMO */}
+        <SectionTitle eyebrow="Pruébalo ahora">Demo en vivo de IA</SectionTitle>
+        <div className="mb-16 no-print">
+          <AiLiveDemo />
+        </div>
+
+        {/* AI STACK */}
+        <SectionTitle eyebrow="Stack del taller">Herramientas de IA que enseñamos</SectionTitle>
         <p className="mb-6 max-w-2xl text-base leading-relaxed text-muted-foreground">
-          Cada asistente recibe acceso a un tablero web con cuatro módulos diseñados para acompañar el taller
-          y permitir uso continuo después de la sesión.
+          Estas son las herramientas reales que cada asistente aprenderá a usar. Todas comerciales, todas
+          accesibles y todas demostradas en vivo durante el taller.
         </p>
-        <div className="mb-16 grid gap-5 sm:grid-cols-2">
-          {moments.map((m) => (
-            <Card
-              key={m.n}
-              className="group relative flex h-full flex-col overflow-hidden border-border bg-card/60 p-6 transition-all hover:border-primary/40 hover:shadow-glow"
-            >
-              <div className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-gradient-coral opacity-10 transition-opacity group-hover:opacity-20" />
-              <div className="relative flex h-full flex-col">
-                <div className="mb-3 text-[10px] font-bold uppercase tracking-[1.5px] text-primary">
-                  Módulo {m.n}
-                </div>
-                <h3 className="mb-2 font-display text-lg font-bold leading-snug">{m.title}</h3>
-                <p className="text-sm leading-relaxed text-muted-foreground">{m.desc}</p>
-              </div>
-            </Card>
-          ))}
+        <div className="mb-16">
+          <AiToolsStack />
         </div>
 
         {/* ABOUT KIMEDIA */}
@@ -414,6 +418,17 @@ const SectionTitle = ({ children, eyebrow }: { children: React.ReactNode; eyebro
       </div>
     )}
     <h2 className="font-display text-2xl font-bold tracking-tight md:text-3xl">{children}</h2>
+  </div>
+);
+
+const CounterTile = ({ value, suffix, label }: { value: number; suffix?: string; label: string }) => (
+  <div className="text-center">
+    <div className="font-display text-4xl font-bold leading-none text-gradient-sunset md:text-5xl">
+      <AnimatedCounter value={value} suffix={suffix ?? ""} />
+    </div>
+    <div className="mt-2 text-[11px] font-semibold uppercase tracking-[1.5px] text-muted-foreground">
+      {label}
+    </div>
   </div>
 );
 
