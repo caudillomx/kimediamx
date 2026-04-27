@@ -21,6 +21,7 @@ import MyStrategy from "./pages/MyStrategy";
 import MyStrategyDetail from "./pages/MyStrategyDetail";
 import PropuestaPanYucatan from "./pages/PropuestaPanYucatan";
 import CursoIaGobiernoGto from "./pages/CursoIaGobiernoGto";
+import CursoIaGobiernoGtoAdmin from "./pages/CursoIaGobiernoGtoAdmin";
 
 const queryClient = new QueryClient();
 
@@ -49,6 +50,7 @@ const App = () => (
           <Route path="/parrilla/:profileId" element={<ContentCycleDetail />} />
           <Route path="/propuesta-pan-yucatan" element={<PropuestaPanYucatan />} />
           <Route path="/curso/ia-gobierno-gto" element={<CursoIaGobiernoGto />} />
+          <Route path="/curso/ia-gobierno-gto/admin" element={<CursoIaGobiernoGtoAdmin />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
