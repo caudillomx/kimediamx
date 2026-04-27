@@ -187,7 +187,7 @@ const CursoIaGobiernoGto = () => {
 
   const saveBrief = async (data: BriefData) => {
     if (!sesion) return;
-    const { error } = await supabase
+    const { data: updated, error } = await supabase
       .from("gto_sesiones")
       .update({
         titular_nombre: data.titular_nombre,
@@ -201,22 +201,26 @@ const CursoIaGobiernoGto = () => {
         brief_mensajes_clave: data.brief_mensajes_clave,
         brief_tipo_texto: data.brief_tipo_texto,
       })
-      .eq("id", sesion.id);
+      .eq("id", sesion.id)
+      .select()
+      .single();
     if (error) {
       toast.error("No se pudo guardar el brief.");
       return;
     }
-    setSesion({ ...sesion, ...data } as any);
+    if (updated) setSesion(updated as Sesion);
     await advanceTo(3);
   };
 
   const saveCorpus = async (d: CorpusData) => {
     if (!sesion) return;
-    await supabase
+    const { data: updated } = await supabase
       .from("gto_sesiones")
       .update({ corpus_documentos: d.corpus_documentos, corpus_notas: d.corpus_notas })
-      .eq("id", sesion.id);
-    setSesion({ ...sesion, corpus_documentos: d.corpus_documentos, corpus_notas: d.corpus_notas });
+      .eq("id", sesion.id)
+      .select()
+      .single();
+    if (updated) setSesion(updated as Sesion);
     await advanceTo(4);
   };
 
