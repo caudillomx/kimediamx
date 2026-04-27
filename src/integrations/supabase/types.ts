@@ -1106,6 +1106,178 @@ export type Database = {
           },
         ]
       }
+      gto_dependencias: {
+        Row: {
+          access_code: string
+          contacto_email: string | null
+          contacto_enlace: string | null
+          contacto_telefono: string | null
+          created_at: string
+          id: string
+          nombre: string
+          siglas: string
+          sort_order: number
+        }
+        Insert: {
+          access_code: string
+          contacto_email?: string | null
+          contacto_enlace?: string | null
+          contacto_telefono?: string | null
+          created_at?: string
+          id?: string
+          nombre: string
+          siglas: string
+          sort_order?: number
+        }
+        Update: {
+          access_code?: string
+          contacto_email?: string | null
+          contacto_enlace?: string | null
+          contacto_telefono?: string | null
+          created_at?: string
+          id?: string
+          nombre?: string
+          siglas?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      gto_diagnostico_textos: {
+        Row: {
+          analizado_at: string | null
+          created_at: string
+          errores_detectados: Json | null
+          id: string
+          resumen_diagnostico: string | null
+          score_calidad: number | null
+          sesion_id: string
+          texto_original: string
+          titulo: string | null
+        }
+        Insert: {
+          analizado_at?: string | null
+          created_at?: string
+          errores_detectados?: Json | null
+          id?: string
+          resumen_diagnostico?: string | null
+          score_calidad?: number | null
+          sesion_id: string
+          texto_original: string
+          titulo?: string | null
+        }
+        Update: {
+          analizado_at?: string | null
+          created_at?: string
+          errores_detectados?: Json | null
+          id?: string
+          resumen_diagnostico?: string | null
+          score_calidad?: number | null
+          sesion_id?: string
+          texto_original?: string
+          titulo?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gto_diagnostico_textos_sesion_id_fkey"
+            columns: ["sesion_id"]
+            isOneToOne: false
+            referencedRelation: "gto_sesiones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gto_sesiones: {
+        Row: {
+          brief_audiencias: Json | null
+          brief_mensajes_clave: Json | null
+          brief_mision: string | null
+          brief_terminos_preferidos: Json | null
+          brief_terminos_prohibidos: Json | null
+          brief_tipo_texto: string | null
+          brief_tono: string | null
+          completed_at: string | null
+          compromiso_corpus_subido: boolean
+          compromiso_prompt_probado: boolean
+          compromiso_resultado_compartido: boolean
+          corpus_documentos: Json | null
+          corpus_notas: string | null
+          created_at: string
+          dependencia_id: string
+          estado: string
+          herramienta_ia: string | null
+          id: string
+          notas_kimedia: string | null
+          paso_actual: number
+          prompt_generado_at: string | null
+          prompt_sistema: string | null
+          titular_cargo: string | null
+          titular_nombre: string | null
+          updated_at: string
+        }
+        Insert: {
+          brief_audiencias?: Json | null
+          brief_mensajes_clave?: Json | null
+          brief_mision?: string | null
+          brief_terminos_preferidos?: Json | null
+          brief_terminos_prohibidos?: Json | null
+          brief_tipo_texto?: string | null
+          brief_tono?: string | null
+          completed_at?: string | null
+          compromiso_corpus_subido?: boolean
+          compromiso_prompt_probado?: boolean
+          compromiso_resultado_compartido?: boolean
+          corpus_documentos?: Json | null
+          corpus_notas?: string | null
+          created_at?: string
+          dependencia_id: string
+          estado?: string
+          herramienta_ia?: string | null
+          id?: string
+          notas_kimedia?: string | null
+          paso_actual?: number
+          prompt_generado_at?: string | null
+          prompt_sistema?: string | null
+          titular_cargo?: string | null
+          titular_nombre?: string | null
+          updated_at?: string
+        }
+        Update: {
+          brief_audiencias?: Json | null
+          brief_mensajes_clave?: Json | null
+          brief_mision?: string | null
+          brief_terminos_preferidos?: Json | null
+          brief_terminos_prohibidos?: Json | null
+          brief_tipo_texto?: string | null
+          brief_tono?: string | null
+          completed_at?: string | null
+          compromiso_corpus_subido?: boolean
+          compromiso_prompt_probado?: boolean
+          compromiso_resultado_compartido?: boolean
+          corpus_documentos?: Json | null
+          corpus_notas?: string | null
+          created_at?: string
+          dependencia_id?: string
+          estado?: string
+          herramienta_ia?: string | null
+          id?: string
+          notas_kimedia?: string | null
+          paso_actual?: number
+          prompt_generado_at?: string | null
+          prompt_sistema?: string | null
+          titular_cargo?: string | null
+          titular_nombre?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gto_sesiones_dependencia_id_fkey"
+            columns: ["dependencia_id"]
+            isOneToOne: true
+            referencedRelation: "gto_dependencias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       guide_registrations: {
         Row: {
           company_name: string | null
