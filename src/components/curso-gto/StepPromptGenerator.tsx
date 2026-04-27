@@ -185,6 +185,47 @@ export const StepPromptGenerator = ({ brief, herramienta, initialPrompt, onSaveP
             </div>
           </div>
 
+          {phase !== "idle" && (
+            <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-border bg-background/50 px-3 py-2 text-[11px]">
+              {phase === "connecting" && (
+                <>
+                  <Radio className="h-3.5 w-3.5 animate-pulse text-electric" />
+                  <span className="font-semibold text-electric">Conectando…</span>
+                </>
+              )}
+              {phase === "streaming" && (
+                <>
+                  <span className="relative flex h-2 w-2">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-magenta opacity-75" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-magenta" />
+                  </span>
+                  <span className="font-semibold text-magenta">Generando en vivo</span>
+                </>
+              )}
+              {phase === "done" && (
+                <>
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                  <span className="font-semibold text-emerald-500">Completado</span>
+                </>
+              )}
+              {phase === "error" && (
+                <>
+                  <AlertTriangle className="h-3.5 w-3.5 text-destructive" />
+                  <span className="font-semibold text-destructive">Error</span>
+                </>
+              )}
+              <span className="ml-auto flex items-center gap-3 font-mono text-muted-foreground">
+                <span className="inline-flex items-center gap-1">
+                  <Zap className="h-3 w-3" /> {tokens} tk
+                </span>
+                <span>{elapsed.toFixed(1)}s</span>
+                {phase === "streaming" && elapsed > 0 && (
+                  <span className="hidden sm:inline">{(tokens / Math.max(elapsed, 0.1)).toFixed(1)} tk/s</span>
+                )}
+              </span>
+            </div>
+          )}
+
           {!prompt && !streaming && (
             <div className="rounded-xl border border-dashed border-border bg-background/40 p-10 text-center text-sm text-muted-foreground">
               Pulsa <strong className="text-foreground">Generar prompt</strong> para componer en vivo el prompt
