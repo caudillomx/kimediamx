@@ -52,6 +52,12 @@ const CursoIaGobiernoGto = () => {
   const [step, setStep] = useState(0);
   const [highest, setHighest] = useState(0);
 
+  useEffect(() => {
+    document.title = dependencia
+      ? `${dependencia.siglas} · Curso IA · KiMedia`
+      : "Curso IA Gobierno GTO · KiMedia";
+  }, [dependencia]);
+
   // Auto-restore from localStorage
   useEffect(() => {
     (async () => {
