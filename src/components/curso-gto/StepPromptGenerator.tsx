@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Sparkles, ArrowRight, ArrowLeft, Copy, Download, RefreshCw, Loader2 } from "lucide-react";
+import { Sparkles, ArrowRight, ArrowLeft, Copy, Download, RefreshCw, Loader2, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -33,11 +33,13 @@ interface Props {
 export const StepPromptGenerator = ({ brief, herramienta, initialPrompt, onSavePrompt, onNext, onBack }: Props) => {
   const [prompt, setPrompt] = useState(initialPrompt || "");
   const [streaming, setStreaming] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const tool = HERRAMIENTAS_IA.find((h) => h.id === herramienta);
 
   const generate = async () => {
     setStreaming(true);
+    setError(null);
     setPrompt("");
     try {
       const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
@@ -49,7 +51,9 @@ export const StepPromptGenerator = ({ brief, herramienta, initialPrompt, onSaveP
       });
       if (!res.ok || !res.body) {
         const err = await res.json().catch(() => ({}));
-        toast.error(err.error || "No se pudo generar el prompt.");
+        const msg = err.error || `No se pudo generar el prompt (HTTP ${res.status}).`;
+        setError(msg);
+        toast.error(msg);
         setStreaming(false);
         return;
       }
@@ -77,11 +81,19 @@ export const StepPromptGenerator = ({ brief, herramienta, initialPrompt, onSaveP
           } catch {}
         }
       }
+      if (!acc) {
+        const msg = "El modelo no devolvió contenido. Intenta de nuevo.";
+        setError(msg);
+        toast.error(msg);
+        return;
+      }
       await onSavePrompt(acc);
       toast.success("Prompt generado y guardado.");
     } catch (e) {
       console.error(e);
-      toast.error("Error generando el prompt.");
+      const msg = e instanceof Error ? e.message : "Error generando el prompt.";
+      setError(msg);
+      toast.error("Error generando el prompt. Pulsa Reintentar.");
     } finally {
       setStreaming(false);
     }
@@ -151,6 +163,25 @@ export const StepPromptGenerator = ({ brief, herramienta, initialPrompt, onSaveP
             <div className="rounded-xl border border-dashed border-border bg-background/40 p-10 text-center text-sm text-muted-foreground">
               Pulsa <strong className="text-foreground">Generar prompt</strong> para componer en vivo el prompt
               de sistema de tu dependencia. El modelo lo construye con tu brief.
+            </div>
+          )}
+
+          {error && !streaming && (
+            <div className="mt-3 flex flex-col gap-3 rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                <div>
+                  <div className="font-semibold">El streaming falló</div>
+                  <div className="text-xs opacity-80">{error}</div>
+                </div>
+              </div>
+              <Button
+                size="sm"
+                onClick={generate}
+                className="shrink-0 rounded-lg bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                <RefreshCw className="mr-1 h-3 w-3" /> Reintentar
+              </Button>
             </div>
           )}
 
