@@ -1,5 +1,4 @@
 import { useEffect, useState, useCallback } from "react";
-import { Helmet } from "react-helmet-async";
 import { supabase } from "@/integrations/supabase/client";
 import { AccessGate } from "@/components/curso-gto/AccessGate";
 import { StepNav, STEPS } from "@/components/curso-gto/StepNav";
@@ -262,13 +261,7 @@ const CursoIaGobiernoGto = () => {
 
   if (!dependencia || !sesion) {
     return (
-      <>
-        <Helmet>
-          <title>Curso IA Gobierno GTO · KiMedia</title>
-          <meta name="description" content="Curso interno KiMedia para enlaces de comunicación del Gobierno del Estado de Guanajuato." />
-        </Helmet>
-        <AccessGate onValidate={validateCode} />
-      </>
+      <AccessGate onValidate={validateCode} />
     );
   }
 
@@ -290,11 +283,6 @@ const CursoIaGobiernoGto = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Helmet>
-        <title>{dependencia.siglas} · Curso IA · KiMedia</title>
-        <meta name="description" content={`Configuración de IA institucional para ${dependencia.nombre}.`} />
-      </Helmet>
-
       <div className="pointer-events-none fixed inset-0 bg-mesh opacity-25" />
       <div className="pointer-events-none fixed inset-0 bg-glow opacity-25" />
       <div className="relative">
