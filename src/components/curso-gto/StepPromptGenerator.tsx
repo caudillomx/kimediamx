@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { Sparkles, ArrowRight, ArrowLeft, Copy, Download, RefreshCw, Loader2, AlertTriangle } from "lucide-react";
+import { Sparkles, ArrowRight, ArrowLeft, Copy, Download, RefreshCw, Loader2, AlertTriangle, CheckCircle2, Radio, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -34,6 +34,20 @@ export const StepPromptGenerator = ({ brief, herramienta, initialPrompt, onSaveP
   const [prompt, setPrompt] = useState(initialPrompt || "");
   const [streaming, setStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [phase, setPhase] = useState<"idle" | "connecting" | "streaming" | "done" | "error">(
+    initialPrompt ? "done" : "idle"
+  );
+  const [tokens, setTokens] = useState(0);
+  const [elapsed, setElapsed] = useState(0);
+  const startRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (phase !== "connecting" && phase !== "streaming") return;
+    const id = setInterval(() => {
+      if (startRef.current) setElapsed((Date.now() - startRef.current) / 1000);
+    }, 100);
+    return () => clearInterval(id);
+  }, [phase]);
 
   const tool = HERRAMIENTAS_IA.find((h) => h.id === herramienta);
 
@@ -41,6 +55,10 @@ export const StepPromptGenerator = ({ brief, herramienta, initialPrompt, onSaveP
     setStreaming(true);
     setError(null);
     setPrompt("");
+    setTokens(0);
+    setElapsed(0);
+    setPhase("connecting");
+    startRef.current = Date.now();
     try {
       const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
       const url = `https://${projectId}.supabase.co/functions/v1/gto-generate-prompt`;
@@ -53,6 +71,7 @@ export const StepPromptGenerator = ({ brief, herramienta, initialPrompt, onSaveP
         const err = await res.json().catch(() => ({}));
         const msg = err.error || `No se pudo generar el prompt (HTTP ${res.status}).`;
         setError(msg);
+        setPhase("error");
         toast.error(msg);
         setStreaming(false);
         return;
@@ -61,6 +80,8 @@ export const StepPromptGenerator = ({ brief, herramienta, initialPrompt, onSaveP
       const decoder = new TextDecoder();
       let buffer = "";
       let acc = "";
+      let tokenCount = 0;
+      setPhase("streaming");
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -76,6 +97,8 @@ export const StepPromptGenerator = ({ brief, herramienta, initialPrompt, onSaveP
             const delta = parsed.choices?.[0]?.delta?.content;
             if (delta) {
               acc += delta;
+              tokenCount += 1;
+              setTokens(tokenCount);
               setPrompt(acc);
             }
           } catch {}
@@ -84,15 +107,18 @@ export const StepPromptGenerator = ({ brief, herramienta, initialPrompt, onSaveP
       if (!acc) {
         const msg = "El modelo no devolvió contenido. Intenta de nuevo.";
         setError(msg);
+        setPhase("error");
         toast.error(msg);
         return;
       }
       await onSavePrompt(acc);
+      setPhase("done");
       toast.success("Prompt generado y guardado.");
     } catch (e) {
       console.error(e);
       const msg = e instanceof Error ? e.message : "Error generando el prompt.";
       setError(msg);
+      setPhase("error");
       toast.error("Error generando el prompt. Pulsa Reintentar.");
     } finally {
       setStreaming(false);
