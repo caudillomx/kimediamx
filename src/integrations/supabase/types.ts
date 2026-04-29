@@ -1106,6 +1106,57 @@ export type Database = {
           },
         ]
       }
+      gto_corpus_uploads: {
+        Row: {
+          created_at: string
+          doc_tipo: string
+          file_name: string
+          file_size: number | null
+          id: string
+          mime_type: string | null
+          participante_id: string
+          sesion_id: string
+          storage_path: string
+        }
+        Insert: {
+          created_at?: string
+          doc_tipo: string
+          file_name: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          participante_id: string
+          sesion_id: string
+          storage_path: string
+        }
+        Update: {
+          created_at?: string
+          doc_tipo?: string
+          file_name?: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          participante_id?: string
+          sesion_id?: string
+          storage_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gto_corpus_uploads_participante_id_fkey"
+            columns: ["participante_id"]
+            isOneToOne: false
+            referencedRelation: "gto_participantes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gto_corpus_uploads_sesion_id_fkey"
+            columns: ["sesion_id"]
+            isOneToOne: false
+            referencedRelation: "gto_sesiones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       gto_deliverables: {
         Row: {
           consultant_name: string | null

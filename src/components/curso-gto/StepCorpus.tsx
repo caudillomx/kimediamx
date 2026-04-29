@@ -1,12 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { ArrowRight, ArrowLeft, FileText, CheckCircle2, Circle, FolderOpen } from "lucide-react";
+import { ArrowRight, ArrowLeft, FileText, CheckCircle2, Circle, FolderOpen, Upload, X, Loader2, Paperclip } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { CORPUS_DOCUMENTOS } from "./data";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export interface CorpusData {
   corpus_documentos: string[];
@@ -17,6 +19,8 @@ interface Props {
   initial: CorpusData;
   onSave: (d: CorpusData) => Promise<void>;
   onBack: () => void;
+  sesionId: string;
+  participanteId: string;
 }
 
 const PRIORIDAD_STYLE: Record<string, string> = {
@@ -25,13 +29,94 @@ const PRIORIDAD_STYLE: Record<string, string> = {
   opcional: "border-border bg-muted/40 text-muted-foreground",
 };
 
-export const StepCorpus = ({ initial, onSave, onBack }: Props) => {
+interface UploadRow {
+  id: string;
+  doc_tipo: string;
+  file_name: string;
+  storage_path: string;
+  file_size: number | null;
+  mime_type: string | null;
+}
+
+const MAX_SIZE = 20 * 1024 * 1024; // 20MB
+
+export const StepCorpus = ({ initial, onSave, onBack, sesionId, participanteId }: Props) => {
   const [docs, setDocs] = useState<string[]>(initial.corpus_documentos || []);
   const [notas, setNotas] = useState(initial.corpus_notas || "");
   const [saving, setSaving] = useState(false);
+  const [uploads, setUploads] = useState<UploadRow[]>([]);
+  const [uploadingFor, setUploadingFor] = useState<string | null>(null);
+  const fileInputs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("gto_corpus_uploads")
+        .select("*")
+        .eq("participante_id", participanteId)
+        .order("created_at", { ascending: false });
+      setUploads((data || []) as UploadRow[]);
+    })();
+  }, [participanteId]);
 
   const toggle = (id: string) =>
     setDocs((d) => (d.includes(id) ? d.filter((x) => x !== id) : [...d, id]));
+
+  const handleUpload = async (docId: string, file: File) => {
+    if (file.size > MAX_SIZE) {
+      toast.error("El archivo supera 20 MB.");
+      return;
+    }
+    setUploadingFor(docId);
+    try {
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const path = `${participanteId}/${docId}/${Date.now()}_${safeName}`;
+      const { error: upErr } = await supabase.storage
+        .from("gto-corpus")
+        .upload(path, file, { upsert: false });
+      if (upErr) throw upErr;
+      const { data: row, error: insErr } = await supabase
+        .from("gto_corpus_uploads")
+        .insert({
+          sesion_id: sesionId,
+          participante_id: participanteId,
+          doc_tipo: docId,
+          file_name: file.name,
+          storage_path: path,
+          file_size: file.size,
+          mime_type: file.type || null,
+        })
+        .select()
+        .single();
+      if (insErr) throw insErr;
+      setUploads((prev) => [row as UploadRow, ...prev]);
+      if (!docs.includes(docId)) setDocs((d) => [...d, docId]);
+      toast.success("Archivo subido.");
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e.message || "No se pudo subir el archivo.");
+    } finally {
+      setUploadingFor(null);
+    }
+  };
+
+  const handleDelete = async (row: UploadRow) => {
+    await supabase.storage.from("gto-corpus").remove([row.storage_path]);
+    await supabase.from("gto_corpus_uploads").delete().eq("id", row.id);
+    setUploads((prev) => prev.filter((u) => u.id !== row.id));
+    toast.success("Archivo eliminado.");
+  };
+
+  const handleDownload = async (row: UploadRow) => {
+    const { data, error } = await supabase.storage
+      .from("gto-corpus")
+      .createSignedUrl(row.storage_path, 60);
+    if (error || !data) {
+      toast.error("No se pudo abrir el archivo.");
+      return;
+    }
+    window.open(data.signedUrl, "_blank");
+  };
 
   const esenciales = CORPUS_DOCUMENTOS.filter((d) => d.prioridad === "esencial");
   const esencialesListos = esenciales.every((e) => docs.includes(e.id));
@@ -58,28 +143,37 @@ export const StepCorpus = ({ initial, onSave, onBack }: Props) => {
         Sin corpus, la IA <span className="text-gradient-sunset">inventa</span>
       </h2>
       <p className="mb-8 text-sm text-muted-foreground md:text-base">
-        Marca qué documentos ya tienes a la mano. Estos son los archivos que vas a subir a tu herramienta
-        de IA junto con el prompt de sistema. No hace falta cargarlos aquí: basta con que sepas dónde están.
+        Marca qué documentos ya tienes y, si quieres, súbelos aquí mismo. Cada archivo queda asociado a tu
+        participación para que puedas armar el ejercicio completo y descargarlos después en tu herramienta de IA.
+        Máx. 20 MB por archivo.
       </p>
 
       <div className="space-y-3">
         {CORPUS_DOCUMENTOS.map((doc) => {
           const checked = docs.includes(doc.id);
+          const filesForDoc = uploads.filter((u) => u.doc_tipo === doc.id);
+          const isUploading = uploadingFor === doc.id;
           return (
             <Card
               key={doc.id}
-              onClick={() => toggle(doc.id)}
               className={cn(
-                "cursor-pointer border-border bg-card/70 p-4 transition-all hover:border-primary/60 md:p-5",
+                "border-border bg-card/70 p-4 transition-all md:p-5",
                 checked && "border-primary/60 bg-primary/5 shadow-glow"
               )}
             >
               <div className="flex items-start gap-3">
-                {checked ? (
-                  <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
-                ) : (
-                  <Circle className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground/60" />
-                )}
+                <button
+                  type="button"
+                  onClick={() => toggle(doc.id)}
+                  className="mt-0.5 shrink-0"
+                  aria-label={checked ? "Desmarcar" : "Marcar"}
+                >
+                  {checked ? (
+                    <CheckCircle2 className="h-5 w-5 text-primary" />
+                  ) : (
+                    <Circle className="h-5 w-5 text-muted-foreground/60" />
+                  )}
+                </button>
                 <div className="flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <FileText className="h-4 w-4 text-muted-foreground" />
@@ -89,6 +183,71 @@ export const StepCorpus = ({ initial, onSave, onBack }: Props) => {
                     </Badge>
                   </div>
                   <p className="mt-1 text-xs text-muted-foreground md:text-sm">{doc.razon}</p>
+
+                  {filesForDoc.length > 0 && (
+                    <ul className="mt-3 space-y-1.5">
+                      {filesForDoc.map((f) => (
+                        <li
+                          key={f.id}
+                          className="flex items-center justify-between gap-2 rounded-lg border border-border bg-background/60 px-3 py-1.5"
+                        >
+                          <button
+                            type="button"
+                            onClick={() => handleDownload(f)}
+                            className="flex min-w-0 items-center gap-2 text-left text-xs hover:text-primary"
+                          >
+                            <Paperclip className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                            <span className="truncate">{f.file_name}</span>
+                            {f.file_size != null && (
+                              <span className="shrink-0 text-[10px] text-muted-foreground">
+                                {(f.file_size / 1024).toFixed(0)} KB
+                              </span>
+                            )}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(f)}
+                            className="text-muted-foreground hover:text-coral"
+                            aria-label="Eliminar"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  <div className="mt-3">
+                    <input
+                      ref={(el) => (fileInputs.current[doc.id] = el)}
+                      type="file"
+                      className="hidden"
+                      accept=".pdf,.doc,.docx,.txt,.md,.rtf,.odt,.xls,.xlsx,.csv,.ppt,.pptx"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) handleUpload(doc.id, f);
+                        e.target.value = "";
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={isUploading}
+                      onClick={() => fileInputs.current[doc.id]?.click()}
+                      className="rounded-lg text-xs"
+                    >
+                      {isUploading ? (
+                        <>
+                          <Loader2 className="mr-1 h-3 w-3 animate-spin" /> Subiendo…
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="mr-1 h-3 w-3" /> Subir archivo
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </div>
               </div>
             </Card>

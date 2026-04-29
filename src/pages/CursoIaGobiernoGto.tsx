@@ -488,6 +488,8 @@ const CursoIaGobiernoGto = () => {
               }}
               onSave={saveCorpus}
               onBack={() => advanceTo(2)}
+              sesionId={sesion.id}
+              participanteId={participante!.id}
             />
           </>
         )}
