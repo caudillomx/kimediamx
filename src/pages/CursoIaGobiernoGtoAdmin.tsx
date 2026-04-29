@@ -31,10 +31,12 @@ import {
   LogOut,
   Activity,
   Users,
+  Monitor,
 } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import { STEPS } from "@/components/curso-gto/StepNav";
+import { MirrorView } from "@/components/curso-gto/admin/MirrorView";
 
 interface Dependencia {
   id: string;
@@ -146,6 +148,7 @@ const CursoIaGobiernoGtoAdmin = () => {
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   const [selected, setSelected] = useState<Row | null>(null);
+  const [mirror, setMirror] = useState<Row | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -207,6 +210,12 @@ const CursoIaGobiernoGtoAdmin = () => {
     setRows(built);
     setLastRefresh(new Date());
     setLoading(false);
+    // Mantener fresca la vista espejo si está abierta
+    setMirror((prev) => {
+      if (!prev) return prev;
+      const updated = built.find((r) => r.dep.id === prev.dep.id);
+      return updated || prev;
+    });
   };
 
   useEffect(() => {
@@ -216,7 +225,7 @@ const CursoIaGobiernoGtoAdmin = () => {
 
   useEffect(() => {
     if (!isAdmin || !autoRefresh) return;
-    const t = setInterval(fetchAll, 10000);
+    const t = setInterval(fetchAll, 4000);
     return () => clearInterval(t);
   }, [isAdmin, autoRefresh]);
 
@@ -403,7 +412,7 @@ const CursoIaGobiernoGtoAdmin = () => {
                 onClick={() => setAutoRefresh((v) => !v)}
               >
                 <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${autoRefresh ? "animate-spin-slow" : ""}`} />
-                {autoRefresh ? "Auto 10s" : "Manual"}
+                {autoRefresh ? "Auto 4s" : "Manual"}
               </Button>
               <Button size="sm" variant="outline" onClick={fetchAll}>
                 <RefreshCw className="h-3.5 w-3.5" />
@@ -550,9 +559,24 @@ const CursoIaGobiernoGtoAdmin = () => {
                           {fmtRel(lastActivity)}
                         </TableCell>
                         <TableCell>
-                          <Button size="sm" variant="ghost" onClick={() => setSelected(r)}>
-                            <Eye className="h-3.5 w-3.5" />
-                          </Button>
+                          <div className="flex items-center gap-1 justify-end">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              title="Modo espejo"
+                              onClick={() => setMirror(r)}
+                            >
+                              <Monitor className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              title="Detalle"
+                              onClick={() => setSelected(r)}
+                            >
+                              <Eye className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     );
@@ -738,6 +762,16 @@ const CursoIaGobiernoGtoAdmin = () => {
           </DialogContent>
         </Dialog>
       </div>
+
+      {mirror && (
+        <MirrorView
+          dep={mirror.dep}
+          sesion={mirror.sesion as any}
+          participantes={mirror.participantes as any}
+          diagnosticos={mirror.diags as any}
+          onClose={() => setMirror(null)}
+        />
+      )}
     </div>
   );
 };
