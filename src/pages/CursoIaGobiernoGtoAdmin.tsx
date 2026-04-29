@@ -32,6 +32,9 @@ import {
   Activity,
   Users,
   Monitor,
+  Play,
+  Sparkles,
+  RotateCcw,
 } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
@@ -420,6 +423,77 @@ const CursoIaGobiernoGtoAdmin = () => {
               <Button size="sm" onClick={exportXLSX}>
                 <Download className="h-3.5 w-3.5 mr-1.5" />
                 Exportar XLSX
+              </Button>
+              <Button
+                size="sm"
+                className="bg-gradient-coral text-primary-foreground"
+                onClick={() =>
+                  window.open(
+                    "/curso/ia-gobierno-gto?demo=1&code=KIMEDIA-DEMO",
+                    "kimedia-demo",
+                    "noopener",
+                  )
+                }
+                title="Abrir el flujo del participante en modo demo (sandbox)"
+              >
+                <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+                Sandbox demo
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                title="Limpiar la sesión demo entre tandas (borra datos del sandbox)"
+                onClick={async () => {
+                  if (!confirm("¿Resetear el sandbox demo? Se borrarán brief, corpus, prompt, diagnósticos y participantes ficticios.")) return;
+                  const { data: dep } = await supabase
+                    .from("gto_dependencias")
+                    .select("id")
+                    .eq("siglas", "DEMO")
+                    .maybeSingle();
+                  if (!dep) {
+                    toast.error("No existe la dependencia DEMO.");
+                    return;
+                  }
+                  const { data: sess } = await supabase
+                    .from("gto_sesiones")
+                    .select("id")
+                    .eq("dependencia_id", dep.id);
+                  const ids = (sess || []).map((s: any) => s.id);
+                  if (ids.length) {
+                    await supabase.from("gto_diagnostico_textos").delete().in("sesion_id", ids);
+                    await supabase.from("gto_participantes").delete().in("sesion_id", ids);
+                    await supabase
+                      .from("gto_sesiones")
+                      .update({
+                        titular_nombre: null,
+                        titular_cargo: null,
+                        herramienta_ia: null,
+                        brief_mision: null,
+                        brief_audiencias: [],
+                        brief_tono: null,
+                        brief_terminos_prohibidos: [],
+                        brief_terminos_preferidos: [],
+                        brief_mensajes_clave: [],
+                        brief_tipo_texto: null,
+                        corpus_documentos: [],
+                        corpus_notas: null,
+                        prompt_sistema: null,
+                        prompt_generado_at: null,
+                        compromiso_corpus_subido: false,
+                        compromiso_prompt_probado: false,
+                        compromiso_resultado_compartido: false,
+                        notas_kimedia: null,
+                        paso_actual: 0,
+                        estado: "pendiente",
+                        completed_at: null,
+                      })
+                      .in("id", ids);
+                  }
+                  toast.success("Sandbox demo reseteado.");
+                  fetchAll();
+                }}
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
               </Button>
               <Button
                 size="sm"

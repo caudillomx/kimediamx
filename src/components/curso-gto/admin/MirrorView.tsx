@@ -11,6 +11,8 @@ import {
   CheckCircle2,
   Clock,
   ExternalLink,
+  Play,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -104,6 +106,7 @@ export const MirrorView = ({ dep, sesion, participantes, diagnosticos, onClose }
   // Capacitador navega libremente
   const [step, setStep] = useState<number>(sesion?.paso_actual ?? 0);
   const [participanteId, setParticipanteId] = useState<string>("__all__");
+  const isDemo = dep.siglas === "DEMO";
 
   // Sync inicial al paso actual de la sesión la primera vez
   useEffect(() => {
@@ -154,11 +157,38 @@ export const MirrorView = ({ dep, sesion, participantes, diagnosticos, onClose }
               <Activity className="h-3 w-3 text-emerald-500 animate-pulse" />
               Refresca cada 4s
             </div>
+            {isDemo && (
+              <Button
+                size="sm"
+                onClick={() =>
+                  window.open(
+                    `/curso/ia-gobierno-gto?demo=1&code=${encodeURIComponent(dep.access_code)}`,
+                    "kimedia-demo",
+                    "noopener",
+                  )
+                }
+                className="bg-gradient-coral text-primary-foreground"
+              >
+                <Play className="h-3.5 w-3.5 mr-1.5" />
+                Abrir flujo en vivo
+              </Button>
+            )}
             <Button size="sm" variant="ghost" onClick={onClose}>
               <X className="h-4 w-4 mr-1" /> Cerrar (Esc)
             </Button>
           </div>
         </div>
+
+        {isDemo && (
+          <div className="border-t border-amber-500/30 bg-amber-500/10">
+            <div className="mx-auto max-w-6xl px-4 md:px-6 py-2 flex items-center gap-2 text-[11px] text-amber-700 dark:text-amber-300">
+              <Sparkles className="h-3.5 w-3.5" />
+              <span>
+                <strong>Sandbox del capacitador.</strong> Abre el flujo en vivo en otra pestaña, proyéctalo y trabaja como demo. Lo que escribas ahí se verá aquí en menos de 4s. Esta dependencia no afecta a ninguna real.
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Stepper navegable libremente */}
         <div className="border-t border-border/40 bg-background/60">

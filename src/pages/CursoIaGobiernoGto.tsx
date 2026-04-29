@@ -70,6 +70,66 @@ const CursoIaGobiernoGto = () => {
   useEffect(() => {
     (async () => {
       try {
+        // Modo demo: ?demo=1&code=KIMEDIA-DEMO entra automáticamente como
+        // "Capacitador KiMedia" sin pasar por el AccessGate. Útil para
+        // proyectar el flujo en vivo durante las sesiones.
+        const params = new URLSearchParams(window.location.search);
+        if (params.get("demo") === "1") {
+          const code = params.get("code") || "KIMEDIA-DEMO";
+          const { data: dep } = await supabase
+            .from("gto_dependencias")
+            .select("*")
+            .eq("access_code", code)
+            .maybeSingle();
+          if (dep) {
+            const { data: existing } = await supabase
+              .from("gto_sesiones")
+              .select("*")
+              .eq("dependencia_id", dep.id)
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            let sess = existing;
+            if (!sess) {
+              const { data: created } = await supabase
+                .from("gto_sesiones")
+                .insert({ dependencia_id: dep.id, paso_actual: 0, estado: "en_curso" })
+                .select()
+                .single();
+              sess = created;
+            }
+            if (sess) {
+              const { data: createdPart } = await supabase
+                .from("gto_participantes")
+                .insert({
+                  sesion_id: sess.id,
+                  nombre: "Capacitador KiMedia (demo en vivo)",
+                  cargo: "Demo",
+                  email: "hola@kimedia.mx",
+                  ultimo_paso: 0,
+                })
+                .select()
+                .single();
+              if (createdPart) {
+                setDependencia(dep as Dependencia);
+                setSesion(sess as Sesion);
+                setParticipante({
+                  id: createdPart.id,
+                  nombre: createdPart.nombre,
+                  cargo: createdPart.cargo,
+                  email: createdPart.email,
+                });
+                setDiagnosticos([]);
+                setStep(0);
+                setHighest(sess.paso_actual ?? 0);
+                // No persistimos en localStorage para no contaminar uso normal
+                setBootLoading(false);
+                return;
+              }
+            }
+          }
+        }
+
         const stored = localStorage.getItem(STORAGE_KEY);
         if (!stored) {
           setBootLoading(false);
