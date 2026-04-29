@@ -22,6 +22,7 @@ import MyStrategyDetail from "./pages/MyStrategyDetail";
 import PropuestaPanYucatan from "./pages/PropuestaPanYucatan";
 import CursoIaGobiernoGto from "./pages/CursoIaGobiernoGto";
 import CursoIaGobiernoGtoAdmin from "./pages/CursoIaGobiernoGtoAdmin";
+import CursoGtoEntregables from "./pages/CursoGtoEntregables";
 
 const queryClient = new QueryClient();
 
@@ -51,6 +52,7 @@ const App = () => (
           <Route path="/propuesta-pan-yucatan" element={<PropuestaPanYucatan />} />
           <Route path="/curso/ia-gobierno-gto" element={<CursoIaGobiernoGto />} />
           <Route path="/curso/ia-gobierno-gto/admin" element={<CursoIaGobiernoGtoAdmin />} />
+          <Route path="/curso/ia-gobierno-gto/entregables" element={<CursoGtoEntregables />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
