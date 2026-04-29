@@ -50,11 +50,9 @@ export const StepCorpus = ({ initial, onSave, onBack, sesionId, participanteId }
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase
-        .from("gto_corpus_uploads")
-        .select("*")
-        .eq("participante_id", participanteId)
-        .order("created_at", { ascending: false });
+      const { data } = await supabase.rpc("gto_list_corpus_uploads", {
+        _participante_id: participanteId,
+      });
       setUploads((data || []) as UploadRow[]);
     })();
   }, [participanteId]);
@@ -101,8 +99,15 @@ export const StepCorpus = ({ initial, onSave, onBack, sesionId, participanteId }
   };
 
   const handleDelete = async (row: UploadRow) => {
+    const { error } = await supabase.rpc("gto_delete_corpus_upload", {
+      _upload_id: row.id,
+      _participante_id: participanteId,
+    });
+    if (error) {
+      toast.error("No se pudo eliminar el archivo.");
+      return;
+    }
     await supabase.storage.from("gto-corpus").remove([row.storage_path]);
-    await supabase.from("gto_corpus_uploads").delete().eq("id", row.id);
     setUploads((prev) => prev.filter((u) => u.id !== row.id));
     toast.success("Archivo eliminado.");
   };
