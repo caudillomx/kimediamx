@@ -215,6 +215,12 @@ const CursoIaGobiernoGtoAdmin = () => {
     setRows(built);
     setLastRefresh(new Date());
     setLoading(false);
+    // Mantener fresca la vista espejo si está abierta
+    setMirror((prev) => {
+      if (!prev) return prev;
+      const updated = built.find((r) => r.dep.id === prev.dep.id);
+      return updated || prev;
+    });
   };
 
   useEffect(() => {
