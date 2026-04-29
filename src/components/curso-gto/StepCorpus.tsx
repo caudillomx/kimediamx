@@ -204,7 +204,9 @@ export const StepCorpus = ({ initial, onSave, onBack, sesionId, participanteId }
       <p className="mb-8 text-sm text-muted-foreground md:text-base">
         Marca qué documentos ya tienes y, si quieres, súbelos aquí mismo. Cada archivo queda asociado a tu
         participación para que puedas armar el ejercicio completo y descargarlos después en tu herramienta de IA.
-        Máx. 20 MB por archivo.
+        <span className="mt-1 block text-xs text-muted-foreground/80">
+          Formatos permitidos: PDF, Word, Excel, PowerPoint, TXT, MD, CSV, RTF · Máx. 20 MB por archivo.
+        </span>
       </p>
 
       <div className="space-y-3">
