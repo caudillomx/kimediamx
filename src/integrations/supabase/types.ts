@@ -1148,6 +1148,8 @@ export type Database = {
           created_at: string
           errores_detectados: Json | null
           id: string
+          participante_id: string | null
+          participante_nombre: string | null
           resumen_diagnostico: string | null
           score_calidad: number | null
           sesion_id: string
@@ -1159,6 +1161,8 @@ export type Database = {
           created_at?: string
           errores_detectados?: Json | null
           id?: string
+          participante_id?: string | null
+          participante_nombre?: string | null
           resumen_diagnostico?: string | null
           score_calidad?: number | null
           sesion_id: string
@@ -1170,6 +1174,8 @@ export type Database = {
           created_at?: string
           errores_detectados?: Json | null
           id?: string
+          participante_id?: string | null
+          participante_nombre?: string | null
           resumen_diagnostico?: string | null
           score_calidad?: number | null
           sesion_id?: string
@@ -1178,7 +1184,58 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "gto_diagnostico_textos_participante_id_fkey"
+            columns: ["participante_id"]
+            isOneToOne: false
+            referencedRelation: "gto_participantes"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "gto_diagnostico_textos_sesion_id_fkey"
+            columns: ["sesion_id"]
+            isOneToOne: false
+            referencedRelation: "gto_sesiones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gto_participantes: {
+        Row: {
+          cargo: string | null
+          created_at: string
+          email: string | null
+          id: string
+          nombre: string
+          prompt_enviado: boolean
+          sesion_id: string
+          ultima_actividad: string
+          ultimo_paso: number
+        }
+        Insert: {
+          cargo?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          nombre: string
+          prompt_enviado?: boolean
+          sesion_id: string
+          ultima_actividad?: string
+          ultimo_paso?: number
+        }
+        Update: {
+          cargo?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          nombre?: string
+          prompt_enviado?: boolean
+          sesion_id?: string
+          ultima_actividad?: string
+          ultimo_paso?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gto_participantes_sesion_id_fkey"
             columns: ["sesion_id"]
             isOneToOne: false
             referencedRelation: "gto_sesiones"

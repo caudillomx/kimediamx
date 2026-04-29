@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { AccessGate } from "@/components/curso-gto/AccessGate";
+import { AccessGate, type ParticipantData } from "@/components/curso-gto/AccessGate";
 import { StepNav, STEPS } from "@/components/curso-gto/StepNav";
 import { StepWelcome } from "@/components/curso-gto/StepWelcome";
 import { StepDiagnostico } from "@/components/curso-gto/StepDiagnostico";
@@ -44,10 +44,18 @@ interface Sesion {
 
 const STORAGE_KEY = "gto_curso_session";
 
+interface Participante {
+  id: string;
+  nombre: string;
+  cargo: string | null;
+  email: string | null;
+}
+
 const CursoIaGobiernoGto = () => {
   const [bootLoading, setBootLoading] = useState(true);
   const [dependencia, setDependencia] = useState<Dependencia | null>(null);
   const [sesion, setSesion] = useState<Sesion | null>(null);
+  const [participante, setParticipante] = useState<Participante | null>(null);
   const [diagnosticos, setDiagnosticos] = useState<any[]>([]);
   const [step, setStep] = useState(0);
   const [highest, setHighest] = useState(0);
@@ -67,8 +75,8 @@ const CursoIaGobiernoGto = () => {
           setBootLoading(false);
           return;
         }
-        const { sesionId } = JSON.parse(stored);
-        if (!sesionId) {
+        const { sesionId, participanteId } = JSON.parse(stored);
+        if (!sesionId || !participanteId) {
           setBootLoading(false);
           return;
         }
@@ -91,14 +99,36 @@ const CursoIaGobiernoGto = () => {
           setBootLoading(false);
           return;
         }
+        const { data: part } = await supabase
+          .from("gto_participantes")
+          .select("*")
+          .eq("id", participanteId)
+          .maybeSingle();
+        if (!part) {
+          localStorage.removeItem(STORAGE_KEY);
+          setBootLoading(false);
+          return;
+        }
+        // Refresh activity timestamp
+        await supabase
+          .from("gto_participantes")
+          .update({ ultima_actividad: new Date().toISOString() })
+          .eq("id", part.id);
+
         const { data: diags } = await supabase
           .from("gto_diagnostico_textos")
           .select("*")
-          .eq("sesion_id", sesionId)
+          .eq("participante_id", part.id)
           .order("created_at", { ascending: false });
 
         setDependencia(dep as Dependencia);
         setSesion(s as Sesion);
+        setParticipante({
+          id: part.id,
+          nombre: part.nombre,
+          cargo: part.cargo,
+          email: part.email,
+        });
         setDiagnosticos(
           (diags || []).map((d: any) => ({
             id: d.id,
@@ -110,8 +140,9 @@ const CursoIaGobiernoGto = () => {
             terminos_prohibidos_sugeridos: [],
           }))
         );
-        setStep(s.paso_actual || 0);
-        setHighest(s.paso_actual || 0);
+        const lastStep = part.ultimo_paso ?? s.paso_actual ?? 0;
+        setStep(lastStep);
+        setHighest(lastStep);
       } catch (e) {
         console.error(e);
       } finally {
@@ -120,7 +151,17 @@ const CursoIaGobiernoGto = () => {
     })();
   }, []);
 
-  const validateCode = useCallback(async (code: string) => {
+  const checkCode = useCallback(async (code: string) => {
+    const { data: dep, error } = await supabase
+      .from("gto_dependencias")
+      .select("*")
+      .eq("access_code", code)
+      .maybeSingle();
+    if (error || !dep) return { ok: false, error: "Código no reconocido. Verifica con KiMedia." };
+    return { ok: true, dependenciaNombre: `${dep.siglas} · ${dep.nombre}` };
+  }, []);
+
+  const validateCode = useCallback(async (code: string, p: ParticipantData) => {
     const { data: dep, error } = await supabase
       .from("gto_dependencias")
       .select("*")
@@ -148,14 +189,34 @@ const CursoIaGobiernoGto = () => {
       sess = created;
     }
 
+    // Create participante for this person
+    const { data: createdPart, error: pErr } = await supabase
+      .from("gto_participantes")
+      .insert({
+        sesion_id: sess.id,
+        nombre: p.nombre,
+        cargo: p.cargo || null,
+        email: p.email || null,
+        ultimo_paso: 0,
+      })
+      .select()
+      .single();
+    if (pErr || !createdPart) return { ok: false, error: "No se pudo registrar al participante." };
+
     const { data: diags } = await supabase
       .from("gto_diagnostico_textos")
       .select("*")
-      .eq("sesion_id", sess.id)
+      .eq("participante_id", createdPart.id)
       .order("created_at", { ascending: false });
 
     setDependencia(dep as Dependencia);
     setSesion(sess as Sesion);
+    setParticipante({
+      id: createdPart.id,
+      nombre: createdPart.nombre,
+      cargo: createdPart.cargo,
+      email: createdPart.email,
+    });
     setDiagnosticos(
       (diags || []).map((d: any) => ({
         id: d.id,
@@ -167,18 +228,27 @@ const CursoIaGobiernoGto = () => {
         terminos_prohibidos_sugeridos: [],
       }))
     );
-    setStep(sess.paso_actual || 0);
-    setHighest(sess.paso_actual || 0);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ sesionId: sess.id }));
+    setStep(0);
+    setHighest(0);
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ sesionId: sess.id, participanteId: createdPart.id }),
+    );
     return { ok: true };
   }, []);
 
   const advanceTo = async (next: number) => {
-    if (!sesion) return;
+    if (!sesion || !participante) return;
     const newHighest = Math.max(highest, next);
     setStep(next);
     setHighest(newHighest);
-    if (next !== sesion.paso_actual) {
+    // Update participant progress + activity
+    await supabase
+      .from("gto_participantes")
+      .update({ ultimo_paso: newHighest, ultima_actividad: new Date().toISOString() })
+      .eq("id", participante.id);
+    // Bump shared session highest step (so admin sees furthest reached)
+    if (newHighest > (sesion.paso_actual || 0)) {
       await supabase.from("gto_sesiones").update({ paso_actual: newHighest }).eq("id", sesion.id);
       setSesion({ ...sesion, paso_actual: newHighest });
     }
@@ -271,7 +341,7 @@ const CursoIaGobiernoGto = () => {
 
   if (!dependencia || !sesion) {
     return (
-      <AccessGate onValidate={validateCode} />
+      <AccessGate onValidate={validateCode} onCheckCode={checkCode} />
     );
   }
 
@@ -303,8 +373,13 @@ const CursoIaGobiernoGto = () => {
             <div className="text-[11px] uppercase tracking-[1.5px] text-muted-foreground">
               <span className="font-bold text-foreground">{dependencia.siglas}</span> · {dependencia.nombre}
             </div>
-            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-              {STEPS[step]?.label}
+            <div className="flex items-center gap-3 text-[10px] uppercase tracking-wider text-muted-foreground">
+              {participante && (
+                <span className="hidden md:inline">
+                  👤 <span className="font-bold text-foreground">{participante.nombre}</span>
+                </span>
+              )}
+              <span>{STEPS[step]?.label}</span>
             </div>
           </div>
         </div>
@@ -319,6 +394,8 @@ const CursoIaGobiernoGto = () => {
         {step === 1 && (
           <StepDiagnostico
             sesionId={sesion.id}
+            participanteId={participante!.id}
+            participanteNombre={participante!.nombre}
             diagnosticos={diagnosticos}
             onAdded={(d) => setDiagnosticos((prev) => [d, ...prev])}
             onPropagateProhibidos={propagateProhibidos}

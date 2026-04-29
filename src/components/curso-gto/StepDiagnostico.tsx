@@ -25,6 +25,8 @@ interface DiagnosticoGuardado extends DiagnosticoResultado {
 
 interface Props {
   sesionId: string;
+  participanteId: string;
+  participanteNombre: string;
   diagnosticos: DiagnosticoGuardado[];
   onAdded: (d: DiagnosticoGuardado) => void;
   onPropagateProhibidos: (terminos: string[]) => void;
@@ -32,7 +34,7 @@ interface Props {
   onBack: () => void;
 }
 
-export const StepDiagnostico = ({ sesionId, diagnosticos, onAdded, onPropagateProhibidos, onNext, onBack }: Props) => {
+export const StepDiagnostico = ({ sesionId, participanteId, participanteNombre, diagnosticos, onAdded, onPropagateProhibidos, onNext, onBack }: Props) => {
   const [titulo, setTitulo] = useState("");
   const [texto, setTexto] = useState("");
   const [loading, setLoading] = useState(false);
@@ -55,6 +57,8 @@ export const StepDiagnostico = ({ sesionId, diagnosticos, onAdded, onPropagatePr
         .from("gto_diagnostico_textos")
         .insert({
           sesion_id: sesionId,
+          participante_id: participanteId,
+          participante_nombre: participanteNombre,
           titulo: titulo.trim() || "Texto sin título",
           texto_original: texto.trim(),
           errores_detectados: data.errores_detectados || [],

@@ -30,6 +30,7 @@ import {
   AlertCircle,
   LogOut,
   Activity,
+  Users,
 } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
@@ -76,6 +77,8 @@ interface Sesion {
 interface Diagnostico {
   id: string;
   sesion_id: string;
+  participante_id: string | null;
+  participante_nombre: string | null;
   titulo: string | null;
   texto_original: string;
   resumen_diagnostico: string | null;
@@ -84,10 +87,22 @@ interface Diagnostico {
   created_at: string;
 }
 
+interface Participante {
+  id: string;
+  sesion_id: string;
+  nombre: string;
+  cargo: string | null;
+  email: string | null;
+  ultimo_paso: number;
+  ultima_actividad: string;
+  created_at: string;
+}
+
 type Row = {
   dep: Dependencia;
   sesion: Sesion | null;
   diags: Diagnostico[];
+  participantes: Participante[];
 };
 
 const TOTAL_PASOS = 6; // 0..5
@@ -157,10 +172,11 @@ const CursoIaGobiernoGtoAdmin = () => {
   }, [navigate]);
 
   const fetchAll = async () => {
-    const [{ data: deps }, { data: sess }, { data: diags }] = await Promise.all([
+    const [{ data: deps }, { data: sess }, { data: diags }, { data: parts }] = await Promise.all([
       supabase.from("gto_dependencias").select("*").order("sort_order"),
       supabase.from("gto_sesiones").select("*").order("updated_at", { ascending: false }),
       supabase.from("gto_diagnostico_textos").select("*").order("created_at", { ascending: false }),
+      supabase.from("gto_participantes").select("*").order("ultima_actividad", { ascending: false }),
     ]);
     const sesByDep = new Map<string, Sesion>();
     (sess || []).forEach((s: any) => {
@@ -173,12 +189,19 @@ const CursoIaGobiernoGtoAdmin = () => {
       arr.push(d);
       diagsBySes.set(d.sesion_id, arr);
     });
+    const partsBySes = new Map<string, Participante[]>();
+    (parts || []).forEach((p: any) => {
+      const arr = partsBySes.get(p.sesion_id) || [];
+      arr.push(p);
+      partsBySes.set(p.sesion_id, arr);
+    });
     const built: Row[] = (deps || []).map((dep: any) => {
       const sesion = sesByDep.get(dep.id) || null;
       return {
         dep,
         sesion,
         diags: sesion ? diagsBySes.get(sesion.id) || [] : [],
+        participantes: sesion ? partsBySes.get(sesion.id) || [] : [],
       };
     });
     setRows(built);
@@ -214,14 +237,19 @@ const CursoIaGobiernoGtoAdmin = () => {
     const finalizadas = rows.filter((r) => r.sesion?.estado === "finalizada");
     const enCurso = iniciadas.filter((r) => r.sesion?.estado !== "finalizada");
     const activosAhora = rows.filter(
-      (r) => r.sesion && Date.now() - new Date(r.sesion.updated_at).getTime() < 5 * 60 * 1000,
+      (r) =>
+        r.participantes.some(
+          (p) => Date.now() - new Date(p.ultima_actividad).getTime() < 5 * 60 * 1000,
+        ),
     );
+    const totalParticipantes = rows.reduce((acc, r) => acc + r.participantes.length, 0);
     return {
       total: rows.length,
       iniciadas: iniciadas.length,
       enCurso: enCurso.length,
       finalizadas: finalizadas.length,
       activosAhora: activosAhora.length,
+      totalParticipantes,
     };
   }, [rows]);
 
@@ -241,6 +269,7 @@ const CursoIaGobiernoGtoAdmin = () => {
         Enlace: r.dep.contacto_enlace || "",
         Email: r.dep.contacto_email || "",
         Telefono: r.dep.contacto_telefono || "",
+        Participantes: r.participantes.length,
         Estado: s?.estado || "sin_iniciar",
         "Paso actual": s ? `${s.paso_actual + 1}/${TOTAL_PASOS} · ${STEPS[s.paso_actual]?.label || ""}` : "—",
         "Avance %": s ? Math.round(((s.paso_actual + 1) / TOTAL_PASOS) * 100) : 0,
@@ -267,6 +296,28 @@ const CursoIaGobiernoGtoAdmin = () => {
     });
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(resumen), "Resumen");
 
+    // Sheet: Participantes
+    const partsRows: any[] = [];
+    filtered.forEach((r) => {
+      r.participantes.forEach((p) => {
+        const pct = Math.round(((p.ultimo_paso + 1) / TOTAL_PASOS) * 100);
+        const diagsPersona = r.diags.filter((d) => d.participante_id === p.id);
+        partsRows.push({
+          Siglas: r.dep.siglas,
+          Dependencia: r.dep.nombre,
+          Nombre: p.nombre,
+          Cargo: p.cargo || "",
+          Email: p.email || "",
+          "Paso actual": STEPS[p.ultimo_paso]?.label || "",
+          "Avance %": pct,
+          "Diagnósticos": diagsPersona.length,
+          "Última actividad": fmtDate(p.ultima_actividad),
+          "Registrado": fmtDate(p.created_at),
+        });
+      });
+    });
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(partsRows), "Participantes");
+
     // Sheet 2: Diagnósticos
     const diagsRows: any[] = [];
     filtered.forEach((r) => {
@@ -274,6 +325,7 @@ const CursoIaGobiernoGtoAdmin = () => {
         diagsRows.push({
           Siglas: r.dep.siglas,
           Dependencia: r.dep.nombre,
+          Participante: d.participante_nombre || "",
           Titulo: d.titulo || "",
           Score: d.score_calidad ?? "",
           Errores: Array.isArray(d.errores_detectados)
@@ -376,8 +428,9 @@ const CursoIaGobiernoGtoAdmin = () => {
 
         <div className="mx-auto max-w-7xl px-4 md:px-6 py-6 space-y-6">
           {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
             <StatCard label="Dependencias" value={stats.total} />
+            <StatCard label="Participantes" value={stats.totalParticipantes} accent="electric" />
             <StatCard label="Iniciadas" value={stats.iniciadas} accent="amber" />
             <StatCard label="En curso" value={stats.enCurso} accent="amber" />
             <StatCard label="Finalizadas" value={stats.finalizadas} accent="emerald" />
@@ -407,6 +460,7 @@ const CursoIaGobiernoGtoAdmin = () => {
                   <TableRow className="bg-muted/30">
                     <TableHead>Dependencia</TableHead>
                     <TableHead>Enlace</TableHead>
+                    <TableHead className="text-center">Personas</TableHead>
                     <TableHead>Estado</TableHead>
                     <TableHead>Avance</TableHead>
                     <TableHead className="text-center">Diag.</TableHead>
@@ -424,7 +478,9 @@ const CursoIaGobiernoGtoAdmin = () => {
                       (s?.compromiso_corpus_subido ? 1 : 0) +
                       (s?.compromiso_prompt_probado ? 1 : 0) +
                       (s?.compromiso_resultado_compartido ? 1 : 0);
-                    const isActive = s && Date.now() - new Date(s.updated_at).getTime() < 5 * 60 * 1000;
+                    const lastActivity = r.participantes[0]?.ultima_actividad || s?.updated_at || null;
+                    const isActive =
+                      !!lastActivity && Date.now() - new Date(lastActivity).getTime() < 5 * 60 * 1000;
                     return (
                       <TableRow key={r.dep.id} className={isActive ? "bg-emerald-500/5" : ""}>
                         <TableCell>
@@ -448,6 +504,16 @@ const CursoIaGobiernoGtoAdmin = () => {
                             </div>
                           ) : (
                             <span className="text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {r.participantes.length > 0 ? (
+                            <Badge variant="outline" className="font-mono">
+                              <Users className="h-3 w-3 mr-1" />
+                              {r.participantes.length}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">—</span>
                           )}
                         </TableCell>
                         <TableCell>{stateBadge(s?.estado || "pendiente", s?.paso_actual || 0)}</TableCell>
@@ -481,7 +547,7 @@ const CursoIaGobiernoGtoAdmin = () => {
                         </TableCell>
                         <TableCell className="text-center text-xs font-mono">{compr}/3</TableCell>
                         <TableCell className="text-xs text-muted-foreground">
-                          {fmtRel(s?.updated_at || null)}
+                          {fmtRel(lastActivity)}
                         </TableCell>
                         <TableCell>
                           <Button size="sm" variant="ghost" onClick={() => setSelected(r)}>
@@ -493,7 +559,7 @@ const CursoIaGobiernoGtoAdmin = () => {
                   })}
                   {filtered.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
+                      <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
                         Sin resultados.
                       </TableCell>
                     </TableRow>
@@ -518,6 +584,9 @@ const CursoIaGobiernoGtoAdmin = () => {
                 <Tabs defaultValue="resumen">
                   <TabsList>
                     <TabsTrigger value="resumen">Resumen</TabsTrigger>
+                    <TabsTrigger value="personas">
+                      Personas ({selected.participantes.length})
+                    </TabsTrigger>
                     <TabsTrigger value="brief">Brief</TabsTrigger>
                     <TabsTrigger value="corpus">Corpus</TabsTrigger>
                     <TabsTrigger value="prompt">Prompt</TabsTrigger>
@@ -538,6 +607,46 @@ const CursoIaGobiernoGtoAdmin = () => {
                     <Field label="Última actividad" value={fmtDate(selected.sesion?.updated_at || null)} />
                     <Field label="Finalizada" value={fmtDate(selected.sesion?.completed_at || null)} />
                     <Field label="Notas KiMedia" value={selected.sesion?.notas_kimedia} />
+                  </TabsContent>
+
+                  <TabsContent value="personas" className="space-y-2">
+                    {selected.participantes.length === 0 && (
+                      <p className="text-sm text-muted-foreground py-8 text-center">
+                        Aún nadie ha entrado con este código.
+                      </p>
+                    )}
+                    {selected.participantes.map((p) => {
+                      const pct = Math.round(((p.ultimo_paso + 1) / TOTAL_PASOS) * 100);
+                      const isActive = Date.now() - new Date(p.ultima_actividad).getTime() < 5 * 60 * 1000;
+                      const diagsPersona = selected.diags.filter((d) => d.participante_id === p.id).length;
+                      return (
+                        <div
+                          key={p.id}
+                          className={`border border-border/40 rounded-md p-3 ${isActive ? "bg-emerald-500/5 border-emerald-500/30" : "bg-card/30"}`}
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                {isActive && <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />}
+                                <span className="font-semibold text-sm truncate">{p.nombre}</span>
+                              </div>
+                              <div className="text-[11px] text-muted-foreground truncate">
+                                {p.cargo || "—"} · {p.email || "sin email"}
+                              </div>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                                {STEPS[p.ultimo_paso]?.label}
+                              </div>
+                              <div className="font-mono text-xs">{pct}% · {diagsPersona} diag.</div>
+                              <div className="text-[10px] text-muted-foreground">
+                                {fmtRel(p.ultima_actividad)}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </TabsContent>
 
                   <TabsContent value="brief" className="space-y-3 text-sm">
@@ -598,7 +707,14 @@ const CursoIaGobiernoGtoAdmin = () => {
                     {selected.diags.map((d) => (
                       <div key={d.id} className="border border-border/40 rounded-md p-3 space-y-2 bg-card/30">
                         <div className="flex items-center justify-between">
-                          <div className="font-semibold text-sm">{d.titulo || "Sin título"}</div>
+                          <div className="min-w-0">
+                            <div className="font-semibold text-sm truncate">{d.titulo || "Sin título"}</div>
+                            {d.participante_nombre && (
+                              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                                👤 {d.participante_nombre}
+                              </div>
+                            )}
+                          </div>
                           <Badge variant="outline" className="font-mono">
                             Score: {d.score_calidad ?? "—"}/10
                           </Badge>
