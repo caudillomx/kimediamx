@@ -35,6 +35,7 @@ import {
   Play,
   Sparkles,
   RotateCcw,
+  FileText,
 } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
@@ -504,6 +505,14 @@ const CursoIaGobiernoGtoAdmin = () => {
                 }}
               >
                 <LogOut className="h-3.5 w-3.5" />
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => navigate("/curso/ia-gobierno-gto/entregables")}
+              >
+                <FileText className="h-3.5 w-3.5 mr-1.5" />
+                Entregables
               </Button>
             </div>
           </div>
