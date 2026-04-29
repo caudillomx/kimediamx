@@ -409,7 +409,7 @@ const CursoIaGobiernoGtoAdmin = () => {
                 onClick={() => setAutoRefresh((v) => !v)}
               >
                 <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${autoRefresh ? "animate-spin-slow" : ""}`} />
-                {autoRefresh ? "Auto 10s" : "Manual"}
+                {autoRefresh ? "Auto 4s" : "Manual"}
               </Button>
               <Button size="sm" variant="outline" onClick={fetchAll}>
                 <RefreshCw className="h-3.5 w-3.5" />
