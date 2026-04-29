@@ -269,6 +269,7 @@ const CursoIaGobiernoGtoAdmin = () => {
         Enlace: r.dep.contacto_enlace || "",
         Email: r.dep.contacto_email || "",
         Telefono: r.dep.contacto_telefono || "",
+        Participantes: r.participantes.length,
         Estado: s?.estado || "sin_iniciar",
         "Paso actual": s ? `${s.paso_actual + 1}/${TOTAL_PASOS} · ${STEPS[s.paso_actual]?.label || ""}` : "—",
         "Avance %": s ? Math.round(((s.paso_actual + 1) / TOTAL_PASOS) * 100) : 0,
@@ -295,6 +296,28 @@ const CursoIaGobiernoGtoAdmin = () => {
     });
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(resumen), "Resumen");
 
+    // Sheet: Participantes
+    const partsRows: any[] = [];
+    filtered.forEach((r) => {
+      r.participantes.forEach((p) => {
+        const pct = Math.round(((p.ultimo_paso + 1) / TOTAL_PASOS) * 100);
+        const diagsPersona = r.diags.filter((d) => d.participante_id === p.id);
+        partsRows.push({
+          Siglas: r.dep.siglas,
+          Dependencia: r.dep.nombre,
+          Nombre: p.nombre,
+          Cargo: p.cargo || "",
+          Email: p.email || "",
+          "Paso actual": STEPS[p.ultimo_paso]?.label || "",
+          "Avance %": pct,
+          "Diagnósticos": diagsPersona.length,
+          "Última actividad": fmtDate(p.ultima_actividad),
+          "Registrado": fmtDate(p.created_at),
+        });
+      });
+    });
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(partsRows), "Participantes");
+
     // Sheet 2: Diagnósticos
     const diagsRows: any[] = [];
     filtered.forEach((r) => {
@@ -302,6 +325,7 @@ const CursoIaGobiernoGtoAdmin = () => {
         diagsRows.push({
           Siglas: r.dep.siglas,
           Dependencia: r.dep.nombre,
+          Participante: d.participante_nombre || "",
           Titulo: d.titulo || "",
           Score: d.score_calidad ?? "",
           Errores: Array.isArray(d.errores_detectados)
