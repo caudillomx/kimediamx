@@ -39,6 +39,59 @@ interface UploadRow {
 }
 
 const MAX_SIZE = 20 * 1024 * 1024; // 20MB
+const MIN_SIZE = 100; // 100 bytes — evita archivos vacíos o corruptos
+
+// Tipos permitidos: documentos de texto, ofimática y datos. Se valida por
+// extensión y por MIME (cuando el navegador lo provee) para evitar bypass.
+const ALLOWED_EXTENSIONS = [
+  "pdf", "doc", "docx", "txt", "md", "rtf", "odt",
+  "xls", "xlsx", "csv", "ppt", "pptx",
+] as const;
+
+const ALLOWED_MIME_PREFIXES = [
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument",
+  "application/vnd.oasis.opendocument",
+  "application/vnd.ms-excel",
+  "application/vnd.ms-powerpoint",
+  "application/rtf",
+  "text/plain",
+  "text/markdown",
+  "text/csv",
+  "text/rtf",
+];
+
+const ACCEPT_ATTR = ALLOWED_EXTENSIONS.map((e) => `.${e}`).join(",");
+
+const formatBytes = (n: number) => {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(0)} KB`;
+  return `${(n / 1024 / 1024).toFixed(1)} MB`;
+};
+
+const validateFile = (file: File): string | null => {
+  if (!file.name || file.name.length > 200) {
+    return "El nombre del archivo no es válido (máx. 200 caracteres).";
+  }
+  if (file.size === 0) {
+    return "El archivo está vacío.";
+  }
+  if (file.size < MIN_SIZE) {
+    return "El archivo es demasiado pequeño o está dañado.";
+  }
+  if (file.size > MAX_SIZE) {
+    return `El archivo pesa ${formatBytes(file.size)}. El máximo permitido es 20 MB.`;
+  }
+  const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+  if (!ALLOWED_EXTENSIONS.includes(ext as any)) {
+    return `Formato no permitido (.${ext || "?"}). Usa PDF, Word, Excel, PowerPoint, TXT, MD, CSV o RTF.`;
+  }
+  if (file.type && !ALLOWED_MIME_PREFIXES.some((p) => file.type.startsWith(p))) {
+    return "El tipo de archivo no coincide con un documento permitido.";
+  }
+  return null;
+};
 
 export const StepCorpus = ({ initial, onSave, onBack, sesionId, participanteId }: Props) => {
   const [docs, setDocs] = useState<string[]>(initial.corpus_documentos || []);
@@ -61,8 +114,9 @@ export const StepCorpus = ({ initial, onSave, onBack, sesionId, participanteId }
     setDocs((d) => (d.includes(id) ? d.filter((x) => x !== id) : [...d, id]));
 
   const handleUpload = async (docId: string, file: File) => {
-    if (file.size > MAX_SIZE) {
-      toast.error("El archivo supera 20 MB.");
+    const err = validateFile(file);
+    if (err) {
+      toast.error(err);
       return;
     }
     setUploadingFor(docId);
