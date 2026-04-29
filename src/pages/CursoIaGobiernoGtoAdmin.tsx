@@ -41,6 +41,7 @@ import {
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import { STEPS } from "@/components/curso-gto/StepNav";
+import { MirrorView } from "@/components/curso-gto/admin/MirrorView";
 
 interface Dependencia {
   id: string;
@@ -152,6 +153,7 @@ const CursoIaGobiernoGtoAdmin = () => {
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   const [selected, setSelected] = useState<Row | null>(null);
+  const [mirror, setMirror] = useState<Row | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
