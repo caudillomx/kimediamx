@@ -31,6 +31,12 @@ import {
   LogOut,
   Activity,
   Users,
+  Monitor,
+  ChevronLeft,
+  ChevronRight,
+  X,
+  Lock,
+  User,
 } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
@@ -216,7 +222,7 @@ const CursoIaGobiernoGtoAdmin = () => {
 
   useEffect(() => {
     if (!isAdmin || !autoRefresh) return;
-    const t = setInterval(fetchAll, 10000);
+    const t = setInterval(fetchAll, 4000);
     return () => clearInterval(t);
   }, [isAdmin, autoRefresh]);
 
