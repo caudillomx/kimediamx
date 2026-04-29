@@ -283,7 +283,7 @@ export const StepCorpus = ({ initial, onSave, onBack, sesionId, participanteId }
                       ref={(el) => (fileInputs.current[doc.id] = el)}
                       type="file"
                       className="hidden"
-                      accept=".pdf,.doc,.docx,.txt,.md,.rtf,.odt,.xls,.xlsx,.csv,.ppt,.pptx"
+                      accept={ACCEPT_ATTR}
                       onChange={(e) => {
                         const f = e.target.files?.[0];
                         if (f) handleUpload(doc.id, f);
