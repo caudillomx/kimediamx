@@ -2013,6 +2013,26 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      gto_delete_corpus_upload: {
+        Args: { _participante_id: string; _upload_id: string }
+        Returns: {
+          storage_path: string
+        }[]
+      }
+      gto_list_corpus_uploads: {
+        Args: { _participante_id: string }
+        Returns: {
+          created_at: string
+          doc_tipo: string
+          file_name: string
+          file_size: number
+          id: string
+          mime_type: string
+          participante_id: string
+          sesion_id: string
+          storage_path: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
