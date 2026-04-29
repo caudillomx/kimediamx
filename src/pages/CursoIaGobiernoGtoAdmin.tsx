@@ -558,9 +558,24 @@ const CursoIaGobiernoGtoAdmin = () => {
                           {fmtRel(lastActivity)}
                         </TableCell>
                         <TableCell>
-                          <Button size="sm" variant="ghost" onClick={() => setSelected(r)}>
-                            <Eye className="h-3.5 w-3.5" />
-                          </Button>
+                          <div className="flex items-center gap-1 justify-end">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              title="Modo espejo"
+                              onClick={() => setMirror(r)}
+                            >
+                              <Monitor className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              title="Detalle"
+                              onClick={() => setSelected(r)}
+                            >
+                              <Eye className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     );
