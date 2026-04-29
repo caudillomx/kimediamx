@@ -1106,6 +1106,63 @@ export type Database = {
           },
         ]
       }
+      gto_deliverables: {
+        Row: {
+          consultant_name: string | null
+          created_at: string
+          created_by: string | null
+          deliverable_type: string
+          delivered_at: string | null
+          dependencia_id: string | null
+          file_name: string | null
+          file_url: string | null
+          generated_content: Json | null
+          id: string
+          notes: string | null
+          period_month: number
+          period_year: number
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          consultant_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          deliverable_type: string
+          delivered_at?: string | null
+          dependencia_id?: string | null
+          file_name?: string | null
+          file_url?: string | null
+          generated_content?: Json | null
+          id?: string
+          notes?: string | null
+          period_month: number
+          period_year: number
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          consultant_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          deliverable_type?: string
+          delivered_at?: string | null
+          dependencia_id?: string | null
+          file_name?: string | null
+          file_url?: string | null
+          generated_content?: Json | null
+          id?: string
+          notes?: string | null
+          period_month?: number
+          period_year?: number
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       gto_dependencias: {
         Row: {
           access_code: string
@@ -1198,6 +1255,63 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      gto_mcn_scores: {
+        Row: {
+          analisis_riesgos: number | null
+          areas_mejora: string | null
+          computed_by: string | null
+          coordinacion: number | null
+          created_at: string
+          created_by: string | null
+          dependencia_id: string
+          deteccion_temprana: number | null
+          fortalezas: string | null
+          id: string
+          observaciones: Json | null
+          period_month: number
+          period_year: number
+          tiempo_respuesta: number | null
+          trazabilidad: number | null
+          updated_at: string
+        }
+        Insert: {
+          analisis_riesgos?: number | null
+          areas_mejora?: string | null
+          computed_by?: string | null
+          coordinacion?: number | null
+          created_at?: string
+          created_by?: string | null
+          dependencia_id: string
+          deteccion_temprana?: number | null
+          fortalezas?: string | null
+          id?: string
+          observaciones?: Json | null
+          period_month: number
+          period_year: number
+          tiempo_respuesta?: number | null
+          trazabilidad?: number | null
+          updated_at?: string
+        }
+        Update: {
+          analisis_riesgos?: number | null
+          areas_mejora?: string | null
+          computed_by?: string | null
+          coordinacion?: number | null
+          created_at?: string
+          created_by?: string | null
+          dependencia_id?: string
+          deteccion_temprana?: number | null
+          fortalezas?: string | null
+          id?: string
+          observaciones?: Json | null
+          period_month?: number
+          period_year?: number
+          tiempo_respuesta?: number | null
+          trazabilidad?: number | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       gto_participantes: {
         Row: {
@@ -1334,6 +1448,87 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      gto_training_sessions: {
+        Row: {
+          ai_extracted: Json | null
+          ai_extracted_at: string | null
+          attendee_count: number | null
+          attendees: Json | null
+          created_at: string
+          created_by: string | null
+          dependencia_id: string
+          duration_minutes: number | null
+          facilitator: string | null
+          fireflies_meeting_id: string | null
+          fireflies_url: string | null
+          id: string
+          modality: string | null
+          notes: string | null
+          objective: string | null
+          result_description: string | null
+          result_type: string | null
+          sesion_id: string | null
+          session_date: string
+          session_type: string
+          topic: string | null
+          transcript_summary: string | null
+          transcript_text: string | null
+          updated_at: string
+        }
+        Insert: {
+          ai_extracted?: Json | null
+          ai_extracted_at?: string | null
+          attendee_count?: number | null
+          attendees?: Json | null
+          created_at?: string
+          created_by?: string | null
+          dependencia_id: string
+          duration_minutes?: number | null
+          facilitator?: string | null
+          fireflies_meeting_id?: string | null
+          fireflies_url?: string | null
+          id?: string
+          modality?: string | null
+          notes?: string | null
+          objective?: string | null
+          result_description?: string | null
+          result_type?: string | null
+          sesion_id?: string | null
+          session_date?: string
+          session_type?: string
+          topic?: string | null
+          transcript_summary?: string | null
+          transcript_text?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ai_extracted?: Json | null
+          ai_extracted_at?: string | null
+          attendee_count?: number | null
+          attendees?: Json | null
+          created_at?: string
+          created_by?: string | null
+          dependencia_id?: string
+          duration_minutes?: number | null
+          facilitator?: string | null
+          fireflies_meeting_id?: string | null
+          fireflies_url?: string | null
+          id?: string
+          modality?: string | null
+          notes?: string | null
+          objective?: string | null
+          result_description?: string | null
+          result_type?: string | null
+          sesion_id?: string | null
+          session_date?: string
+          session_type?: string
+          topic?: string | null
+          transcript_summary?: string | null
+          transcript_text?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       guide_registrations: {
         Row: {
