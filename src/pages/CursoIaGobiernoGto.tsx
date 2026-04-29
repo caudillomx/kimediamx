@@ -59,6 +59,7 @@ const CursoIaGobiernoGto = () => {
   const [diagnosticos, setDiagnosticos] = useState<any[]>([]);
   const [step, setStep] = useState(0);
   const [highest, setHighest] = useState(0);
+  const [isDemoMode, setIsDemoMode] = useState(false);
 
   useEffect(() => {
     document.title = dependencia
@@ -75,6 +76,7 @@ const CursoIaGobiernoGto = () => {
         // proyectar el flujo en vivo durante las sesiones.
         const params = new URLSearchParams(window.location.search);
         if (params.get("demo") === "1") {
+          setIsDemoMode(true);
           const code = params.get("code") || "KIMEDIA-DEMO";
           const { data: dep } = await supabase
             .from("gto_dependencias")
@@ -121,7 +123,7 @@ const CursoIaGobiernoGto = () => {
                 });
                 setDiagnosticos([]);
                 setStep(0);
-                setHighest(sess.paso_actual ?? 0);
+                setHighest(STEPS.length - 1);
                 // No persistimos en localStorage para no contaminar uso normal
                 setBootLoading(false);
                 return;
