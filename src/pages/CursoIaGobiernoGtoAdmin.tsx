@@ -767,6 +767,16 @@ const CursoIaGobiernoGtoAdmin = () => {
           </DialogContent>
         </Dialog>
       </div>
+
+      {mirror && (
+        <MirrorView
+          dep={mirror.dep}
+          sesion={mirror.sesion as any}
+          participantes={mirror.participantes as any}
+          diagnosticos={mirror.diags as any}
+          onClose={() => setMirror(null)}
+        />
+      )}
     </div>
   );
 };
