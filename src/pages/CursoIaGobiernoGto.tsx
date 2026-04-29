@@ -8,6 +8,7 @@ import { StepBrief, type BriefData } from "@/components/curso-gto/StepBrief";
 import { StepCorpus, type CorpusData } from "@/components/curso-gto/StepCorpus";
 import { StepPromptGenerator } from "@/components/curso-gto/StepPromptGenerator";
 import { StepCompromisos, type CompromisosData } from "@/components/curso-gto/StepCompromisos";
+import { StepTheoryBlock } from "@/components/curso-gto/StepTheoryBlock";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -447,70 +448,88 @@ const CursoIaGobiernoGto = () => {
         </div>
 
         {step === 0 && (
-          <StepWelcome
-            dependenciaNombre={dependencia.nombre}
-            dependenciaSiglas={dependencia.siglas}
-            onContinue={() => advanceTo(1)}
-          />
+          <>
+            <StepTheoryBlock step={0} defaultOpen={isDemoMode} />
+            <StepWelcome
+              dependenciaNombre={dependencia.nombre}
+              dependenciaSiglas={dependencia.siglas}
+              onContinue={() => advanceTo(1)}
+            />
+          </>
         )}
         {step === 1 && (
-          <StepDiagnostico
-            sesionId={sesion.id}
-            participanteId={participante!.id}
-            participanteNombre={participante!.nombre}
-            diagnosticos={diagnosticos}
-            onAdded={(d) => setDiagnosticos((prev) => [d, ...prev])}
-            onPropagateProhibidos={propagateProhibidos}
-            onNext={() => advanceTo(2)}
-            onBack={() => advanceTo(0)}
-          />
+          <>
+            <StepTheoryBlock step={1} defaultOpen={isDemoMode} />
+            <StepDiagnostico
+              sesionId={sesion.id}
+              participanteId={participante!.id}
+              participanteNombre={participante!.nombre}
+              diagnosticos={diagnosticos}
+              onAdded={(d) => setDiagnosticos((prev) => [d, ...prev])}
+              onPropagateProhibidos={propagateProhibidos}
+              onNext={() => advanceTo(2)}
+              onBack={() => advanceTo(0)}
+            />
+          </>
         )}
         {step === 2 && (
-          <StepBrief initial={briefInitial} onSave={saveBrief} onBack={() => advanceTo(1)} />
+          <>
+            <StepTheoryBlock step={2} defaultOpen={isDemoMode} />
+            <StepBrief initial={briefInitial} onSave={saveBrief} onBack={() => advanceTo(1)} />
+          </>
         )}
         {step === 3 && (
-          <StepCorpus
-            initial={{
-              corpus_documentos: (sesion.corpus_documentos as string[]) || [],
-              corpus_notas: sesion.corpus_notas || "",
-            }}
-            onSave={saveCorpus}
-            onBack={() => advanceTo(2)}
-          />
+          <>
+            <StepTheoryBlock step={3} defaultOpen={isDemoMode} />
+            <StepCorpus
+              initial={{
+                corpus_documentos: (sesion.corpus_documentos as string[]) || [],
+                corpus_notas: sesion.corpus_notas || "",
+              }}
+              onSave={saveCorpus}
+              onBack={() => advanceTo(2)}
+            />
+          </>
         )}
         {step === 4 && (
-          <StepPromptGenerator
-            brief={{
-              dependencia_nombre: dependencia.nombre,
-              titular_nombre: briefInitial.titular_nombre,
-              titular_cargo: briefInitial.titular_cargo,
-              brief_mision: briefInitial.brief_mision,
-              brief_audiencias: briefInitial.brief_audiencias,
-              brief_tono: briefInitial.brief_tono,
-              brief_terminos_prohibidos: briefInitial.brief_terminos_prohibidos,
-              brief_terminos_preferidos: briefInitial.brief_terminos_preferidos,
-              brief_mensajes_clave: briefInitial.brief_mensajes_clave,
-              brief_tipo_texto: briefInitial.brief_tipo_texto,
-            }}
-            herramienta={briefInitial.herramienta_ia}
-            initialPrompt={sesion.prompt_sistema || ""}
-            onSavePrompt={savePrompt}
-            onNext={() => advanceTo(5)}
-            onBack={() => advanceTo(3)}
-          />
+          <>
+            <StepTheoryBlock step={4} defaultOpen={isDemoMode} />
+            <StepPromptGenerator
+              brief={{
+                dependencia_nombre: dependencia.nombre,
+                titular_nombre: briefInitial.titular_nombre,
+                titular_cargo: briefInitial.titular_cargo,
+                brief_mision: briefInitial.brief_mision,
+                brief_audiencias: briefInitial.brief_audiencias,
+                brief_tono: briefInitial.brief_tono,
+                brief_terminos_prohibidos: briefInitial.brief_terminos_prohibidos,
+                brief_terminos_preferidos: briefInitial.brief_terminos_preferidos,
+                brief_mensajes_clave: briefInitial.brief_mensajes_clave,
+                brief_tipo_texto: briefInitial.brief_tipo_texto,
+              }}
+              herramienta={briefInitial.herramienta_ia}
+              initialPrompt={sesion.prompt_sistema || ""}
+              onSavePrompt={savePrompt}
+              onNext={() => advanceTo(5)}
+              onBack={() => advanceTo(3)}
+            />
+          </>
         )}
         {step === 5 && (
-          <StepCompromisos
-            initial={{
-              compromiso_corpus_subido: sesion.compromiso_corpus_subido,
-              compromiso_prompt_probado: sesion.compromiso_prompt_probado,
-              compromiso_resultado_compartido: sesion.compromiso_resultado_compartido,
-              notas_kimedia: sesion.notas_kimedia || "",
-            }}
-            dependenciaNombre={dependencia.nombre}
-            onSave={saveCompromisos}
-            onBack={() => advanceTo(4)}
-          />
+          <>
+            <StepTheoryBlock step={5} defaultOpen={isDemoMode} />
+            <StepCompromisos
+              initial={{
+                compromiso_corpus_subido: sesion.compromiso_corpus_subido,
+                compromiso_prompt_probado: sesion.compromiso_prompt_probado,
+                compromiso_resultado_compartido: sesion.compromiso_resultado_compartido,
+                notas_kimedia: sesion.notas_kimedia || "",
+              }}
+              dependenciaNombre={dependencia.nombre}
+              onSave={saveCompromisos}
+              onBack={() => advanceTo(4)}
+            />
+          </>
         )}
 
         <footer className="border-t border-border/40 py-6 text-center text-[11px] text-muted-foreground">
