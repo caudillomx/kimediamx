@@ -1,10 +1,11 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { motion } from "framer-motion";
 import { ClientObjective, WeeklyMilestone } from "@/hooks/useObjectivesData";
 import { ActionItem } from "@/hooks/useOperationsData";
 import { Check, ChevronDown, ChevronRight, Target, AlertCircle, CheckCircle2, Circle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ObjectivesViewProps {
   objectives: ClientObjective[];
@@ -28,6 +29,18 @@ const ObjectivesView = ({ objectives, actionItems, onToggleMilestone, onSelectIt
   const [filterClient, setFilterClient] = useState<string | null>(null);
   const [viewScope, setViewScope] = useState<"week" | "month" | "all">("month");
   const [hideEmpty, setHideEmpty] = useState(true);
+  const [activeClients, setActiveClients] = useState<Set<string> | null>(null);
+
+  useEffect(() => {
+    supabase.from("clients").select("name,is_active").then(({ data }) => {
+      if (data) {
+        setActiveClients(new Set(data.filter(c => c.is_active).map(c => c.name.trim().toLowerCase())));
+      }
+    });
+  }, []);
+
+  const isActiveClient = (name: string) =>
+    !activeClients || activeClients.has(name.trim().toLowerCase());
 
   const current = getCurrentWeek();
 
@@ -46,6 +59,7 @@ const ObjectivesView = ({ objectives, actionItems, onToggleMilestone, onSelectIt
     // Group objectives by client
     objectives.forEach(obj => {
       if (filterClient && obj.client_name !== filterClient) return;
+      if (!isActiveClient(obj.client_name)) return;
       const existing = groups.get(obj.client_name);
       if (existing) {
         existing.objectives.push(obj);
@@ -61,6 +75,7 @@ const ObjectivesView = ({ objectives, actionItems, onToggleMilestone, onSelectIt
     // Also include clients that have action items but no objectives
     actionItems.forEach(item => {
       if (!item.client || (filterClient && item.client !== filterClient)) return;
+      if (!isActiveClient(item.client)) return;
       if (!groups.has(item.client) && item.status !== "completado" && item.status !== "cancelado") {
         groups.set(item.client, {
           priority: 0,
@@ -81,11 +96,13 @@ const ObjectivesView = ({ objectives, actionItems, onToggleMilestone, onSelectIt
     }
 
     return entries.sort((a, b) => b[1].priority - a[1].priority);
-  }, [objectives, actionItems, filterClient, viewScope, hideEmpty, current.month, current.week]);
+  }, [objectives, actionItems, filterClient, viewScope, hideEmpty, current.month, current.week, activeClients]);
 
   const clientNames = useMemo(() =>
-    [...new Set([...objectives.map(o => o.client_name), ...actionItems.map(i => i.client).filter(Boolean) as string[]])].sort(),
-    [objectives, actionItems]
+    [...new Set([...objectives.map(o => o.client_name), ...actionItems.map(i => i.client).filter(Boolean) as string[]])]
+      .filter(isActiveClient)
+      .sort(),
+    [objectives, actionItems, activeClients]
   );
 
   const toggleClient = (name: string) => {
