@@ -1106,6 +1106,114 @@ export type Database = {
           },
         ]
       }
+      fireflies_filter_rules: {
+        Row: {
+          client_name: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          match_field: string | null
+          notes: string | null
+          pattern: string
+          rule_type: string
+        }
+        Insert: {
+          client_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          match_field?: string | null
+          notes?: string | null
+          pattern: string
+          rule_type: string
+        }
+        Update: {
+          client_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          match_field?: string | null
+          notes?: string | null
+          pattern?: string
+          rule_type?: string
+        }
+        Relationships: []
+      }
+      fireflies_meetings: {
+        Row: {
+          assigned_client: string | null
+          created_at: string
+          duration_seconds: number | null
+          exclusion_reason: string | null
+          fireflies_id: string
+          host_email: string | null
+          id: string
+          imported_minute_id: string | null
+          matched_rule_id: string | null
+          meeting_date: string | null
+          organizer_email: string | null
+          participants: string[] | null
+          review_status: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          suggested_client: string | null
+          summary_overview: string | null
+          summary_short: string | null
+          title: string
+          transcript_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          assigned_client?: string | null
+          created_at?: string
+          duration_seconds?: number | null
+          exclusion_reason?: string | null
+          fireflies_id: string
+          host_email?: string | null
+          id?: string
+          imported_minute_id?: string | null
+          matched_rule_id?: string | null
+          meeting_date?: string | null
+          organizer_email?: string | null
+          participants?: string[] | null
+          review_status?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          suggested_client?: string | null
+          summary_overview?: string | null
+          summary_short?: string | null
+          title: string
+          transcript_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          assigned_client?: string | null
+          created_at?: string
+          duration_seconds?: number | null
+          exclusion_reason?: string | null
+          fireflies_id?: string
+          host_email?: string | null
+          id?: string
+          imported_minute_id?: string | null
+          matched_rule_id?: string | null
+          meeting_date?: string | null
+          organizer_email?: string | null
+          participants?: string[] | null
+          review_status?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          suggested_client?: string | null
+          summary_overview?: string | null
+          summary_short?: string | null
+          title?: string
+          transcript_url?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       gto_corpus_uploads: {
         Row: {
           created_at: string
@@ -1660,6 +1768,7 @@ export type Database = {
         Row: {
           created_at: string
           file_name: string | null
+          fireflies_meeting_id: string | null
           id: string
           meeting_date: string
           parsed: boolean
@@ -1670,6 +1779,7 @@ export type Database = {
         Insert: {
           created_at?: string
           file_name?: string | null
+          fireflies_meeting_id?: string | null
           id?: string
           meeting_date?: string
           parsed?: boolean
@@ -1680,6 +1790,7 @@ export type Database = {
         Update: {
           created_at?: string
           file_name?: string | null
+          fireflies_meeting_id?: string | null
           id?: string
           meeting_date?: string
           parsed?: boolean
@@ -1687,7 +1798,15 @@ export type Database = {
           title?: string
           uploaded_by?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "minutes_fireflies_meeting_id_fkey"
+            columns: ["fireflies_meeting_id"]
+            isOneToOne: false
+            referencedRelation: "fireflies_meetings"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       participants: {
         Row: {
