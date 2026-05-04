@@ -21,6 +21,7 @@ import PersonView from "@/components/operations/PersonView";
 import ClientView from "@/components/operations/ClientView";
 import CalendarView from "@/components/operations/CalendarView";
 import ObjectivesView from "@/components/operations/ObjectivesView";
+import FirefliesInbox from "@/components/operations/FirefliesInbox";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -28,11 +29,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   LayoutGrid, List, Plus, Search, LogOut, RefreshCw, Filter, X,
   Users, Building2, CalendarDays, TrendingUp, MessageSquare, Sun, Moon, Target,
-  Grid3X3,
+  Grid3X3, Inbox,
 } from "lucide-react";
 import { CATEGORIES, CLIENTS } from "@/hooks/useOperationsData";
 
-type ViewMode = "kanban" | "list" | "person" | "client" | "calendar" | "pipeline" | "interactions" | "objectives" | "content";
+type ViewMode = "kanban" | "list" | "person" | "client" | "calendar" | "pipeline" | "interactions" | "objectives" | "content" | "fireflies";
 
 const VIEW_TABS = [
   { value: "kanban" as ViewMode, label: "Kanban", icon: LayoutGrid },
@@ -44,6 +45,7 @@ const VIEW_TABS = [
   { value: "pipeline" as ViewMode, label: "Pipeline", icon: TrendingUp },
   { value: "interactions" as ViewMode, label: "Externos", icon: MessageSquare },
   { value: "content" as ViewMode, label: "Parrilla", icon: Grid3X3 },
+  { value: "fireflies" as ViewMode, label: "Fireflies", icon: Inbox },
 ];
 
 const OperationsDashboard = () => {
@@ -105,7 +107,7 @@ const OperationsDashboard = () => {
   };
 
   const activeFilters = [filterMember, filterCategory, filterClient, searchQuery].filter(Boolean).length;
-  const showFilters = !["pipeline", "person", "client", "interactions", "objectives", "content"].includes(viewMode);
+  const showFilters = !["pipeline", "person", "client", "interactions", "objectives", "content", "fireflies"].includes(viewMode);
 
   return (
     <div className="min-h-screen bg-background relative">
@@ -163,7 +165,7 @@ const OperationsDashboard = () => {
             ))}
           </div>
 
-          {!["pipeline", "interactions", "objectives", "content"].includes(viewMode) && (
+          {!["pipeline", "interactions", "objectives", "content", "fireflies"].includes(viewMode) && (
             <Button
               onClick={() => { setSelectedItem(null); setIsNewItem(true); }}
               className="bg-gradient-coral text-primary-foreground font-semibold ml-auto"
@@ -279,6 +281,10 @@ const OperationsDashboard = () => {
                   <Grid3X3 className="w-4 h-4 mr-1.5" /> Ir al Motor de Contenido
                 </Button>
               </Card>
+            </motion.div>
+          ) : viewMode === "fireflies" ? (
+            <motion.div key="fireflies" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <FirefliesInbox onImported={refetch} />
             </motion.div>
           ) : null}
         </AnimatePresence>
