@@ -90,7 +90,7 @@ Deno.serve(async (req) => {
       const title = (t.title || "").toLowerCase();
       const host = (t.host_email || t.organizer_email || "").toLowerCase();
       const participants: string[] = (t.participants || []).map((p: string) => (p || "").toLowerCase());
-      const durationSec = Number(t.duration) || 0;
+      const durationSec = Math.round(Number(t.duration) || 0);
       const meetingDate = t.date ? new Date(Number(t.date)).toISOString() : null;
 
       let status = "needs_review";
