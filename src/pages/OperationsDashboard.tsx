@@ -288,6 +288,10 @@ const OperationsDashboard = () => {
             <motion.div key="fireflies" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               <FirefliesInbox onImported={refetch} />
             </motion.div>
+          ) : viewMode === "catalog" ? (
+            <motion.div key="catalog" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <ClientsManager />
+            </motion.div>
           ) : null}
         </AnimatePresence>
 
