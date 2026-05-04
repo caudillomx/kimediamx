@@ -97,16 +97,27 @@ Deno.serve(async (req) => {
     const clientList = clientNames.join(", ");
 
     // 3. AI extraction with sensitivity filter
+    const titleLower = (t.title || "").toLowerCase();
+    const isWeekly = /semanal|weekly|seguimiento|status|standup|stand[- ]up|retro|interno|kimedia/.test(titleLower);
+
     const aiPrompt = `Eres un asistente que extrae tareas de minutas de KiMedia.
 
 Equipo interno: ${teamList}.
 Contactos externos: ${contactsList}.
 Clientes conocidos: ${clientList}.
 
-REGLAS:
-- Resuelve apodos (Mara, Fili, Nava) y nombres cortos de cliente (Tinver=Actinver, Diluvio=El Diluvio, Doria=Mario Doria - Urólogo, MID=MID Clinic) a sus nombres completos.
-- DESCARTA tareas que mencionen sueldos, evaluaciones de desempeño, datos personales, asuntos médicos, o información financiera privada del equipo. NO las incluyas en el array.
-- Cliente sugerido para esta minuta: ${client || "no especificado"}.
+CONTEXTO DE ESTA REUNIÓN:
+- Título: "${t.title}"
+- Tipo detectado: ${isWeekly ? "REUNIÓN INTERNA / SEGUIMIENTO SEMANAL — se hablan MÚLTIPLES clientes en una sola sesión." : "Reunión específica"}
+- Cliente sugerido por el usuario: ${client || "ninguno (no asumir un solo cliente)"}.
+
+REGLAS CRÍTICAS:
+- Si la reunión es de seguimiento semanal o interna, NO asignes el mismo cliente a todas las tareas. Cada tarea debe tener el cliente que corresponda al bloque de la transcripción donde se habla de ella. Si una tarea es operativa interna (sin cliente claro), pon client=null.
+- Detecta cambios de tema en la transcripción ("ahora con X cliente", "pasando a Y", "sobre Z") para asignar correctamente el cliente de cada tarea.
+- Resuelve apodos del equipo (Mara, Fili, Nava, etc.) a nombres completos del listado.
+- Resuelve nombres cortos de cliente a sus nombres completos del listado de clientes conocidos (ej. Tinver→Actinver, Diluvio→El Diluvio, Doria→Mario Doria - Urólogo, MID→MID Clinic). Solo usa nombres que estén en el listado.
+- DESCARTA tareas que mencionen sueldos, evaluaciones de desempeño, datos personales, asuntos médicos privados, o información financiera privada del equipo.
+- Una tarea por acción concreta. No agrupes varias acciones en una sola descripción.
 
 Devuelve SOLO un JSON array. Cada tarea: { description, responsible_name (string|null), client (string|null), category (tarea|llamada|evento|cotizacion|reporte|prospecto|proyecto), priority (alta|media|baja), due_date (YYYY-MM-DD|null) }`;
 
@@ -146,12 +157,15 @@ Devuelve SOLO un JSON array. Cada tarea: { description, responsible_name (string
       const member = (teamMembers || []).find((m: any) =>
         m.full_name.toLowerCase() === (task.responsible_name || "").toLowerCase()
       );
+      // En reuniones semanales/internas no forzamos el cliente sugerido como fallback:
+      // respetamos lo que detectó la IA (incluso null) para no contaminar tareas multi-cliente.
+      const finalClient = isWeekly ? (task.client || null) : (task.client || client || null);
       return {
         minute_id: minute.id,
         description: task.description || "Sin descripción",
         responsible_id: member?.id || null,
         responsible_name: task.responsible_name || null,
-        client: task.client || client || null,
+        client: finalClient,
         category: task.category || "tarea",
         priority: task.priority || "media",
         due_date: task.due_date || null,
