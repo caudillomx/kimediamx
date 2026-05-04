@@ -56,6 +56,7 @@ export const CATEGORIES = [
 export const STATUSES = [
   { value: "pendiente", label: "Pendiente", color: "electric" },
   { value: "en_progreso", label: "En progreso", color: "cyan" },
+  { value: "bloqueado", label: "Bloqueado", color: "magenta" },
   { value: "revision", label: "En revisión", color: "magenta" },
   { value: "completado", label: "Completado", color: "lime" },
   { value: "cancelado", label: "Cancelado", color: "destructive" },
