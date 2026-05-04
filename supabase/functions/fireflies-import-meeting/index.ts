@@ -118,7 +118,7 @@ Devuelve SOLO un JSON array. Cada tarea: { description, responsible_name (string
         model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: aiPrompt },
-          { role: "user", content: `Título: ${t.title}\nFecha: ${t.date}\nResumen: ${t.summary?.overview || ""}\nAction items Fireflies: ${(t.summary?.action_items || []).join("\n")}\n\nTranscripción (con speakers):\n${fullTranscript.slice(0, 20000)}` },
+          { role: "user", content: `Título: ${t.title}\nFecha: ${t.date}\nResumen: ${t.summary?.overview || ""}\nAction items Fireflies: ${Array.isArray(t.summary?.action_items) ? t.summary.action_items.join("\n") : (t.summary?.action_items || "")}\n\nTranscripción (con speakers):\n${fullTranscript.slice(0, 20000)}` },
         ],
         temperature: 0.1,
       }),
