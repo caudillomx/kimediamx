@@ -16,9 +16,10 @@ interface ActionItemModalProps {
   onSave: (id: string, updates: Partial<ActionItem>) => void;
   onCreate?: (item: Omit<ActionItem, "id" | "created_at" | "updated_at">) => void;
   isNew?: boolean;
+  prefillClient?: string | null;
 }
 
-const ActionItemModal = ({ item, teamMembers, open, onClose, onSave, onCreate, isNew }: ActionItemModalProps) => {
+const ActionItemModal = ({ item, teamMembers, open, onClose, onSave, onCreate, isNew, prefillClient }: ActionItemModalProps) => {
   const [form, setForm] = useState({
     description: "",
     responsible_id: "" as string | null,
@@ -32,7 +33,7 @@ const ActionItemModal = ({ item, teamMembers, open, onClose, onSave, onCreate, i
   });
 
   useEffect(() => {
-    if (item) {
+    if (item && !isNew) {
       setForm({
         description: item.description,
         responsible_id: item.responsible_id,
@@ -54,10 +55,10 @@ const ActionItemModal = ({ item, teamMembers, open, onClose, onSave, onCreate, i
         priority: "media",
         due_date: null,
         notes: null,
-        client: null,
+        client: prefillClient || null,
       });
     }
-  }, [item, open]);
+  }, [item, open, isNew, prefillClient]);
 
   const handleResponsibleChange = (memberId: string) => {
     const member = teamMembers.find(m => m.id === memberId);
