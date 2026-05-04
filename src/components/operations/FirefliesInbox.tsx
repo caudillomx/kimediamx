@@ -142,6 +142,23 @@ const FirefliesInbox = ({ onImported }: { onImported?: () => void }) => {
     }
   };
 
+  const handleReactivate = async (m: Meeting) => {
+    setBusyId(m.id);
+    try {
+      await supabase.from("fireflies_meetings").update({
+        review_status: "needs_review",
+        exclusion_reason: null,
+        reviewed_at: new Date().toISOString(),
+      }).eq("id", m.id);
+      toast.success("Movida a Por revisar");
+      await fetchAll();
+    } catch (e: any) {
+      toast.error(e?.message || "Error");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   const handleAddRule = async () => {
     if (!newRulePattern.trim()) return;
     const payload: any = {
@@ -279,6 +296,32 @@ const FirefliesInbox = ({ onImported }: { onImported?: () => void }) => {
                       </Button>
                       <Button size="sm" variant="ghost" disabled={busyId === m.id} onClick={() => handleExclude(m, true)} title="Excluye esta reunión y agrega una regla para excluir similares">
                         Excluir y aprender
+                      </Button>
+                    </div>
+                  )}
+
+                  {s === "excluded" && (
+                    <div className="flex items-center gap-2 flex-wrap pt-1">
+                      <Select defaultValue={m.suggested_client || "_none"} onValueChange={(v) => (m as any).__client = v === "_none" ? null : v}>
+                        <SelectTrigger className="w-[200px] h-9 bg-secondary border-border text-xs">
+                          <SelectValue placeholder="Asignar cliente" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="_none">Sin cliente</SelectItem>
+                          {CLIENTS.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        size="sm"
+                        disabled={busyId === m.id}
+                        onClick={() => handleImport(m, ((m as any).__client ?? m.suggested_client) || null)}
+                        className="bg-gradient-coral text-primary-foreground font-semibold"
+                      >
+                        {busyId === m.id ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5 mr-1" />}
+                        Importar de todos modos
+                      </Button>
+                      <Button size="sm" variant="outline" disabled={busyId === m.id} onClick={() => handleReactivate(m)}>
+                        <RefreshCw className="w-3.5 h-3.5 mr-1" /> Mover a Por revisar
                       </Button>
                     </div>
                   )}
