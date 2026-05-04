@@ -40,7 +40,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { meetingId, client = null } = await req.json();
+    const { meetingId, client = null, preview = false } = await req.json();
     if (!meetingId) {
       return new Response(JSON.stringify({ error: "meetingId required" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -50,7 +50,9 @@ Deno.serve(async (req) => {
     const { data: meeting, error: mErr } = await admin
       .from("fireflies_meetings").select("*").eq("id", meetingId).maybeSingle();
     if (mErr || !meeting) throw new Error("Meeting not found");
-    if (meeting.review_status === "excluded") throw new Error("Meeting is excluded");
+    if (!preview && meeting.review_status === "excluded") {
+      throw new Error("Meeting is excluded");
+    }
 
     // 1. Fetch full transcript with sentences
     const ffQuery = `
@@ -159,8 +161,21 @@ Devuelve SOLO un JSON array. Cada tarea: { description, responsible_name (string
     });
 
     if (resolved.length) {
+      if (preview) {
+        return new Response(
+          JSON.stringify({ success: true, preview: true, tasks: resolved, transcriptPreview: fullTranscript.slice(0, 2000) }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
       const { error: aiErr } = await admin.from("action_items").insert(resolved);
       if (aiErr) throw aiErr;
+    }
+
+    if (preview) {
+      return new Response(
+        JSON.stringify({ success: true, preview: true, tasks: [], transcriptPreview: fullTranscript.slice(0, 2000) }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     // 6. Mark meeting as imported

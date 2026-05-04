@@ -11,10 +11,13 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { motion } from "framer-motion";
 import {
   RefreshCw, Inbox, CheckCircle2, XCircle, ExternalLink, Clock, Users,
-  Sparkles, Shield, Plus, Trash2, Loader2,
+  Sparkles, Shield, Plus, Trash2, Loader2, Eye,
 } from "lucide-react";
 import { toast } from "sonner";
 import { CLIENTS } from "@/hooks/useOperationsData";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
+} from "@/components/ui/dialog";
 
 type Meeting = {
   id: string;
@@ -59,6 +62,10 @@ const FirefliesInbox = ({ onImported }: { onImported?: () => void }) => {
   const [syncing, setSyncing] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [tab, setTab] = useState<string>("needs_review");
+  const [previewState, setPreviewState] = useState<{
+    open: boolean; meeting: Meeting | null; client: string | null;
+    loading: boolean; tasks: any[]; transcriptPreview: string;
+  }>({ open: false, meeting: null, client: null, loading: false, tasks: [], transcriptPreview: "" });
   // New rule form
   const [newRuleType, setNewRuleType] = useState("title_blacklist");
   const [newRulePattern, setNewRulePattern] = useState("");
@@ -109,6 +116,28 @@ const FirefliesInbox = ({ onImported }: { onImported?: () => void }) => {
     } finally {
       setBusyId(null);
     }
+  };
+
+  const handlePreview = async (m: Meeting, client: string | null) => {
+    setPreviewState({ open: true, meeting: m, client, loading: true, tasks: [], transcriptPreview: "" });
+    try {
+      const { data, error } = await supabase.functions.invoke("fireflies-import-meeting", {
+        body: { meetingId: m.id, client, preview: true },
+      });
+      if (error) throw error;
+      setPreviewState(s => ({ ...s, loading: false, tasks: data.tasks || [], transcriptPreview: data.transcriptPreview || "" }));
+    } catch (e: any) {
+      toast.error(`No se pudo generar preview: ${e?.message || "desconocido"}`);
+      setPreviewState(s => ({ ...s, open: false, loading: false }));
+    }
+  };
+
+  const confirmImportFromPreview = async () => {
+    if (!previewState.meeting) return;
+    const m = previewState.meeting;
+    const client = previewState.client;
+    setPreviewState(s => ({ ...s, open: false }));
+    await handleImport(m, client);
   };
 
   const handleExclude = async (m: Meeting, learnPattern = false) => {
@@ -284,6 +313,14 @@ const FirefliesInbox = ({ onImported }: { onImported?: () => void }) => {
                       </Select>
                       <Button
                         size="sm"
+                        variant="outline"
+                        disabled={busyId === m.id}
+                        onClick={() => handlePreview(m, ((m as any).__client ?? m.suggested_client) || null)}
+                      >
+                        <Eye className="w-3.5 h-3.5 mr-1" /> Preview tareas
+                      </Button>
+                      <Button
+                        size="sm"
                         disabled={busyId === m.id}
                         onClick={() => handleImport(m, ((m as any).__client ?? m.suggested_client) || null)}
                         className="bg-gradient-coral text-primary-foreground font-semibold"
@@ -311,6 +348,14 @@ const FirefliesInbox = ({ onImported }: { onImported?: () => void }) => {
                           {CLIENTS.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                         </SelectContent>
                       </Select>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={busyId === m.id}
+                        onClick={() => handlePreview(m, ((m as any).__client ?? m.suggested_client) || null)}
+                      >
+                        <Eye className="w-3.5 h-3.5 mr-1" /> Preview tareas
+                      </Button>
                       <Button
                         size="sm"
                         disabled={busyId === m.id}
@@ -399,6 +444,64 @@ const FirefliesInbox = ({ onImported }: { onImported?: () => void }) => {
           </div>
         </TabsContent>
       </Tabs>
+
+      <Dialog open={previewState.open} onOpenChange={(o) => setPreviewState(s => ({ ...s, open: o }))}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="w-4 h-4 text-coral" /> Preview de tareas
+            </DialogTitle>
+            <DialogDescription>
+              {previewState.meeting?.title}
+              {previewState.client && <span className="ml-2 text-cyan">· cliente: {previewState.client}</span>}
+              <span className="block mt-1 text-xs">No se ha guardado nada todavía.</span>
+            </DialogDescription>
+          </DialogHeader>
+
+          {previewState.loading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-5 h-5 animate-spin text-coral" />
+              <span className="ml-2 text-sm text-muted-foreground">La IA está leyendo el transcript…</span>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-xs text-muted-foreground">
+                {previewState.tasks.length === 0
+                  ? "La IA no encontró tareas accionables (o las descartó por sensibilidad)."
+                  : `${previewState.tasks.length} tareas detectadas:`}
+              </p>
+              <div className="space-y-2">
+                {previewState.tasks.map((t, i) => (
+                  <Card key={i} className="p-3 bg-secondary/40 border-border">
+                    <p className="text-sm text-foreground">{t.description}</p>
+                    <div className="flex items-center gap-2 flex-wrap mt-1.5 text-xs text-muted-foreground">
+                      {t.responsible_name && <Badge variant="outline" className="text-xs">👤 {t.responsible_name}</Badge>}
+                      {t.client && <Badge variant="outline" className="text-xs border-cyan/40 text-cyan">{t.client}</Badge>}
+                      <Badge variant="outline" className="text-xs">{t.category}</Badge>
+                      <Badge variant="outline" className="text-xs">{t.priority}</Badge>
+                      {t.due_date && <span>· vence {t.due_date}</span>}
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2">
+            <Button variant="ghost" onClick={() => setPreviewState(s => ({ ...s, open: false }))}>
+              Cancelar
+            </Button>
+            <Button
+              disabled={previewState.loading}
+              onClick={confirmImportFromPreview}
+              className="bg-gradient-coral text-primary-foreground font-semibold"
+            >
+              <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
+              Confirmar e importar {previewState.tasks.length > 0 && `(${previewState.tasks.length})`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
