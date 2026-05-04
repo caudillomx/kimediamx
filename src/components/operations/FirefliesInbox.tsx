@@ -300,6 +300,32 @@ const FirefliesInbox = ({ onImported }: { onImported?: () => void }) => {
                     </div>
                   )}
 
+                  {s === "excluded" && (
+                    <div className="flex items-center gap-2 flex-wrap pt-1">
+                      <Select defaultValue={m.suggested_client || "_none"} onValueChange={(v) => (m as any).__client = v === "_none" ? null : v}>
+                        <SelectTrigger className="w-[200px] h-9 bg-secondary border-border text-xs">
+                          <SelectValue placeholder="Asignar cliente" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="_none">Sin cliente</SelectItem>
+                          {CLIENTS.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        size="sm"
+                        disabled={busyId === m.id}
+                        onClick={() => handleImport(m, ((m as any).__client ?? m.suggested_client) || null)}
+                        className="bg-gradient-coral text-primary-foreground font-semibold"
+                      >
+                        {busyId === m.id ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5 mr-1" />}
+                        Importar de todos modos
+                      </Button>
+                      <Button size="sm" variant="outline" disabled={busyId === m.id} onClick={() => handleReactivate(m)}>
+                        <RefreshCw className="w-3.5 h-3.5 mr-1" /> Mover a Por revisar
+                      </Button>
+                    </div>
+                  )}
+
                   {s === "imported" && (
                     <p className="text-xs text-lime">
                       ✓ Importada como minuta {m.assigned_client ? `· cliente: ${m.assigned_client}` : ""}
