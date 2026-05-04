@@ -50,9 +50,8 @@ Deno.serve(async (req) => {
     const { data: meeting, error: mErr } = await admin
       .from("fireflies_meetings").select("*").eq("id", meetingId).maybeSingle();
     if (mErr || !meeting) throw new Error("Meeting not found");
-    if (!preview && meeting.review_status === "excluded") {
-      throw new Error("Meeting is excluded");
-    }
+    // Note: excluded meetings can still be imported when user explicitly clicks
+    // "Importar de todos modos" or previews. No hard block here.
 
     // 1. Fetch full transcript with sentences
     const ffQuery = `
