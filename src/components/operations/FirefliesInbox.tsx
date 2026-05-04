@@ -142,6 +142,23 @@ const FirefliesInbox = ({ onImported }: { onImported?: () => void }) => {
     }
   };
 
+  const handleReactivate = async (m: Meeting) => {
+    setBusyId(m.id);
+    try {
+      await supabase.from("fireflies_meetings").update({
+        review_status: "needs_review",
+        exclusion_reason: null,
+        reviewed_at: new Date().toISOString(),
+      }).eq("id", m.id);
+      toast.success("Movida a Por revisar");
+      await fetchAll();
+    } catch (e: any) {
+      toast.error(e?.message || "Error");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   const handleAddRule = async () => {
     if (!newRulePattern.trim()) return;
     const payload: any = {
