@@ -22,6 +22,7 @@ import ClientView from "@/components/operations/ClientView";
 import CalendarView from "@/components/operations/CalendarView";
 import ObjectivesView from "@/components/operations/ObjectivesView";
 import FirefliesInbox from "@/components/operations/FirefliesInbox";
+import ClientsManager from "@/components/operations/ClientsManager";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -29,11 +30,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   LayoutGrid, List, Plus, Search, LogOut, RefreshCw, Filter, X,
   Users, Building2, CalendarDays, TrendingUp, MessageSquare, Sun, Moon, Target,
-  Grid3X3, Inbox,
+  Grid3X3, Inbox, BookUser,
 } from "lucide-react";
 import { CATEGORIES, CLIENTS } from "@/hooks/useOperationsData";
 
-type ViewMode = "kanban" | "list" | "person" | "client" | "calendar" | "pipeline" | "interactions" | "objectives" | "content" | "fireflies";
+type ViewMode = "kanban" | "list" | "person" | "client" | "calendar" | "pipeline" | "interactions" | "objectives" | "content" | "fireflies" | "catalog";
 
 const VIEW_TABS = [
   { value: "kanban" as ViewMode, label: "Kanban", icon: LayoutGrid },
@@ -46,6 +47,7 @@ const VIEW_TABS = [
   { value: "interactions" as ViewMode, label: "Externos", icon: MessageSquare },
   { value: "content" as ViewMode, label: "Parrilla", icon: Grid3X3 },
   { value: "fireflies" as ViewMode, label: "Fireflies", icon: Inbox },
+  { value: "catalog" as ViewMode, label: "Catálogo", icon: BookUser },
 ];
 
 const OperationsDashboard = () => {
@@ -285,6 +287,10 @@ const OperationsDashboard = () => {
           ) : viewMode === "fireflies" ? (
             <motion.div key="fireflies" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               <FirefliesInbox onImported={refetch} />
+            </motion.div>
+          ) : viewMode === "catalog" ? (
+            <motion.div key="catalog" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <ClientsManager />
             </motion.div>
           ) : null}
         </AnimatePresence>
