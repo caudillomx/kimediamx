@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { ActionItem, TeamMember, STATUSES, CATEGORIES, PRIORITIES } from "@/hooks/useOperationsData";
-import { Clock, User, Tag, AlertCircle, GripVertical, ChevronDown, ChevronUp, CheckCircle2, Circle } from "lucide-react";
+import { Clock, User, Tag, AlertCircle, ChevronDown, ChevronUp, CheckCircle2, Circle, Archive, X } from "lucide-react";
 import { useState } from "react";
 import { format, isPast, isToday } from "date-fns";
 import { es } from "date-fns/locale";
@@ -15,6 +15,7 @@ interface KanbanBoardProps {
 const statusColors: Record<string, string> = {
   pendiente: "border-l-[hsl(45,100%,55%)]",
   en_progreso: "border-l-cyan",
+  bloqueado: "border-l-magenta",
   revision: "border-l-magenta",
   completado: "border-l-lime",
   cancelado: "border-l-muted-foreground",
@@ -23,6 +24,7 @@ const statusColors: Record<string, string> = {
 const statusBgGlow: Record<string, string> = {
   pendiente: "from-[hsl(45,100%,55%)] to-transparent",
   en_progreso: "from-cyan to-transparent",
+  bloqueado: "from-magenta to-transparent",
   revision: "from-magenta to-transparent",
   completado: "from-lime to-transparent",
   cancelado: "from-muted to-transparent",
@@ -30,8 +32,11 @@ const statusBgGlow: Record<string, string> = {
 
 const KanbanBoard = ({ items, teamMembers, onUpdateItem, onSelectItem }: KanbanBoardProps) => {
   const [collapsedColumns, setCollapsedColumns] = useState<Set<string>>(new Set());
+  const [showArchive, setShowArchive] = useState(false);
 
-  const activeStatuses = STATUSES.filter(s => s.value !== "cancelado");
+  const ACTIVE = ["pendiente", "en_progreso", "bloqueado"];
+  const activeStatuses = STATUSES.filter(s => ACTIVE.includes(s.value));
+  const completedItems = items.filter(i => i.status === "completado");
 
   const toggleColumn = (status: string) => {
     setCollapsedColumns(prev => {
@@ -50,8 +55,20 @@ const KanbanBoard = ({ items, teamMembers, onUpdateItem, onSelectItem }: KanbanB
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 min-h-[500px]">
-      {activeStatuses.map((status) => {
+    <>
+      <div className="flex justify-end mb-3">
+        <button
+          onClick={() => setShowArchive(true)}
+          className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg glass hover:bg-secondary/60 transition-colors text-muted-foreground"
+        >
+          <Archive className="w-3.5 h-3.5" />
+          Ver completadas
+          <span className="font-mono bg-lime/15 text-lime px-1.5 py-0.5 rounded">{completedItems.length}</span>
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 min-h-[500px]">
+        {activeStatuses.map((status) => {
         const columnItems = items.filter(i => i.status === status.value);
         const isCollapsed = collapsedColumns.has(status.value);
 
@@ -103,8 +120,65 @@ const KanbanBoard = ({ items, teamMembers, onUpdateItem, onSelectItem }: KanbanB
             </AnimatePresence>
           </div>
         );
-      })}
-    </div>
+        })}
+      </div>
+
+      {/* Archive modal */}
+      <AnimatePresence>
+        {showArchive && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4"
+            onClick={() => setShowArchive(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="glass rounded-2xl w-full max-w-3xl max-h-[80vh] flex flex-col"
+            >
+              <div className="flex items-center justify-between p-4 border-b border-border/50">
+                <div className="flex items-center gap-2">
+                  <Archive className="w-4 h-4 text-lime" />
+                  <h3 className="font-display font-semibold text-foreground">Historial de completadas</h3>
+                  <span className="text-xs font-mono bg-secondary px-2 py-0.5 rounded-full text-muted-foreground">
+                    {completedItems.length}
+                  </span>
+                </div>
+                <button
+                  onClick={() => setShowArchive(false)}
+                  className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="overflow-y-auto p-4 flex flex-col gap-2">
+                {completedItems.length === 0 ? (
+                  <p className="text-center text-sm text-muted-foreground py-8">Aún no hay tareas completadas.</p>
+                ) : (
+                  completedItems
+                    .slice()
+                    .sort((a, b) => (b.completed_at || "").localeCompare(a.completed_at || ""))
+                    .map((item, idx) => (
+                      <KanbanCard
+                        key={item.id}
+                        item={item}
+                        index={idx}
+                        teamMembers={teamMembers}
+                        onSelect={() => { onSelectItem(item); setShowArchive(false); }}
+                        onStatusChange={handleStatusChange}
+                      />
+                    ))
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   );
 };
 
