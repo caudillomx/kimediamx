@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
@@ -7,65 +7,83 @@ import { useThemeToggle } from "@/hooks/useThemeToggle";
 import { useDealsData, Deal } from "@/hooks/useDealsData";
 import { useInteractionsData, Interaction } from "@/hooks/useInteractionsData";
 import { useObjectivesData } from "@/hooks/useObjectivesData";
-import InteractionsView from "@/components/operations/InteractionsView";
-import InteractionModal from "@/components/operations/InteractionModal";
-import StatsBar from "@/components/operations/StatsBar";
+import TodayHome from "@/components/operations/TodayHome";
+import ClientsHub from "@/components/operations/ClientsHub";
+import ClientDetail from "@/components/operations/ClientDetail";
 import KanbanBoard from "@/components/operations/KanbanBoard";
 import ListView from "@/components/operations/ListView";
-import TeamPulse from "@/components/operations/TeamPulse";
-import MinuteUploader from "@/components/operations/MinuteUploader";
-import ActionItemModal from "@/components/operations/ActionItemModal";
-import PipelineBoard from "@/components/operations/PipelineBoard";
-import DealModal from "@/components/operations/DealModal";
 import PersonView from "@/components/operations/PersonView";
-import ClientView from "@/components/operations/ClientView";
 import CalendarView from "@/components/operations/CalendarView";
+import PipelineBoard from "@/components/operations/PipelineBoard";
+import InteractionsView from "@/components/operations/InteractionsView";
 import ObjectivesView from "@/components/operations/ObjectivesView";
 import FirefliesInbox from "@/components/operations/FirefliesInbox";
 import ClientsManager from "@/components/operations/ClientsManager";
+import MinuteUploader from "@/components/operations/MinuteUploader";
+import ActionItemModal from "@/components/operations/ActionItemModal";
+import DealModal from "@/components/operations/DealModal";
+import InteractionModal from "@/components/operations/InteractionModal";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   LayoutGrid, List, Plus, Search, LogOut, RefreshCw, Filter, X,
   Users, Building2, CalendarDays, TrendingUp, MessageSquare, Sun, Moon, Target,
-  Grid3X3, Inbox, BookUser,
+  Inbox, BookUser, Home, Briefcase, Settings,
 } from "lucide-react";
 import { CATEGORIES, CLIENTS } from "@/hooks/useOperationsData";
 
-type ViewMode = "kanban" | "list" | "person" | "client" | "calendar" | "pipeline" | "interactions" | "objectives" | "content" | "fireflies" | "catalog";
+type Section = "hoy" | "trabajo" | "clientes" | "entradas";
+type WorkView = "kanban" | "list" | "person" | "calendar" | "pipeline" | "interactions";
+type ClientesView = "hub" | "objectives" | "catalog";
 
-const VIEW_TABS = [
-  { value: "kanban" as ViewMode, label: "Kanban", icon: LayoutGrid },
-  { value: "list" as ViewMode, label: "Lista", icon: List },
-  { value: "objectives" as ViewMode, label: "Objetivos", icon: Target },
-  { value: "person" as ViewMode, label: "Equipo", icon: Users },
-  { value: "client" as ViewMode, label: "Clientes", icon: Building2 },
-  { value: "calendar" as ViewMode, label: "Calendario", icon: CalendarDays },
-  { value: "pipeline" as ViewMode, label: "Pipeline", icon: TrendingUp },
-  { value: "interactions" as ViewMode, label: "Externos", icon: MessageSquare },
-  { value: "content" as ViewMode, label: "Parrilla", icon: Grid3X3 },
-  { value: "fireflies" as ViewMode, label: "Fireflies", icon: Inbox },
-  { value: "catalog" as ViewMode, label: "Catálogo", icon: BookUser },
+const SECTION_TABS: { value: Section; label: string; icon: any }[] = [
+  { value: "hoy", label: "Hoy", icon: Home },
+  { value: "trabajo", label: "Trabajo", icon: Briefcase },
+  { value: "clientes", label: "Clientes", icon: Users },
+  { value: "entradas", label: "Entradas", icon: Inbox },
+];
+
+const WORK_VIEWS: { value: WorkView; label: string; icon: any }[] = [
+  { value: "kanban", label: "Kanban", icon: LayoutGrid },
+  { value: "list", label: "Lista", icon: List },
+  { value: "person", label: "Por persona", icon: Users },
+  { value: "calendar", label: "Calendario", icon: CalendarDays },
+  { value: "pipeline", label: "Pipeline", icon: TrendingUp },
+  { value: "interactions", label: "Interacciones", icon: MessageSquare },
+];
+
+const CLIENTES_VIEWS: { value: ClientesView; label: string; icon: any }[] = [
+  { value: "hub", label: "Lista", icon: Building2 },
+  { value: "objectives", label: "Objetivos 2026", icon: Target },
+  { value: "catalog", label: "Catálogo", icon: BookUser },
 ];
 
 const OperationsDashboard = () => {
   const navigate = useNavigate();
-  const { actionItems, teamMembers, minutes, loading, updateActionItem, createActionItem, refetch } = useOperationsData();
+  const { actionItems, teamMembers, loading, updateActionItem, createActionItem, refetch } = useOperationsData();
   const { theme, toggle: toggleTheme, isDark } = useThemeToggle();
   const { deals, createDeal, updateDeal, refetch: refetchDeals } = useDealsData();
   const { interactions, createInteraction, updateInteraction, refetch: refetchInteractions } = useInteractionsData();
-  const { objectives, loading: loadingObjectives, refetch: refetchObjectives, toggleMilestone } = useObjectivesData();
+  const { objectives, refetch: refetchObjectives, toggleMilestone } = useObjectivesData();
   const [session, setSession] = useState<any>(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
-  const [viewMode, setViewMode] = useState<ViewMode>("kanban");
+
+  const [section, setSection] = useState<Section>("hoy");
+  const [workView, setWorkView] = useState<WorkView>("kanban");
+  const [clientesView, setClientesView] = useState<ClientesView>("hub");
+
   const [selectedItem, setSelectedItem] = useState<ActionItem | null>(null);
   const [isNewItem, setIsNewItem] = useState(false);
+  const [prefillClient, setPrefillClient] = useState<string | null>(null);
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
   const [isNewDeal, setIsNewDeal] = useState(false);
   const [selectedInteraction, setSelectedInteraction] = useState<Interaction | null>(null);
   const [isNewInteraction, setIsNewInteraction] = useState(false);
+
+  const [openClient, setOpenClient] = useState<string | null>(null);
+  const [firefliesPending, setFirefliesPending] = useState(0);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [filterMember, setFilterMember] = useState<string | null>(null);
   const [filterCategory, setFilterCategory] = useState<string | null>(null);
@@ -77,15 +95,57 @@ const OperationsDashboard = () => {
       setCheckingAuth(false);
       if (!session) navigate("/admin/operaciones/login");
     });
-
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setCheckingAuth(false);
       if (!session) navigate("/admin/operaciones/login");
     });
-
     return () => subscription.unsubscribe();
   }, [navigate]);
+
+  // Fireflies pending count
+  useEffect(() => {
+    const load = async () => {
+      const { count } = await supabase
+        .from("fireflies_meetings")
+        .select("id", { count: "exact", head: true })
+        .eq("review_status", "needs_review");
+      setFirefliesPending(count || 0);
+    };
+    load();
+    const ch = supabase
+      .channel("ff_count")
+      .on("postgres_changes", { event: "*", schema: "public", table: "fireflies_meetings" }, load)
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, []);
+
+  const filteredItems = useMemo(() => actionItems.filter(item => {
+    if (searchQuery && !item.description.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+    if (filterMember && item.responsible_name !== filterMember) return false;
+    if (filterCategory && item.category !== filterCategory) return false;
+    if (filterClient && item.client !== filterClient) return false;
+    return true;
+  }), [actionItems, searchQuery, filterMember, filterCategory, filterClient]);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate("/admin/operaciones/login");
+  };
+
+  const openNewItem = (clientName?: string) => {
+    setSelectedItem(null);
+    setPrefillClient(clientName || null);
+    setIsNewItem(true);
+  };
+  const openNewDeal = (clientName?: string) => {
+    setSelectedDeal(clientName ? ({ client_name: clientName } as any) : null);
+    setIsNewDeal(true);
+  };
+  const openNewInteraction = (clientName?: string) => {
+    setSelectedInteraction(clientName ? ({ client_name: clientName } as any) : null);
+    setIsNewInteraction(true);
+  };
 
   if (checkingAuth) {
     return (
@@ -95,21 +155,8 @@ const OperationsDashboard = () => {
     );
   }
 
-  const filtered = actionItems.filter(item => {
-    if (searchQuery && !item.description.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-    if (filterMember && item.responsible_name !== filterMember) return false;
-    if (filterCategory && item.category !== filterCategory) return false;
-    if (filterClient && item.client !== filterClient) return false;
-    return true;
-  });
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate("/admin/operaciones/login");
-  };
-
+  const showWorkFilters = section === "trabajo" && ["kanban", "list", "calendar"].includes(workView);
   const activeFilters = [filterMember, filterCategory, filterClient, searchQuery].filter(Boolean).length;
-  const showFilters = !["pipeline", "person", "client", "interactions", "objectives", "content", "fireflies"].includes(viewMode);
 
   return (
     <div className="min-h-screen bg-background relative">
@@ -123,108 +170,113 @@ const OperationsDashboard = () => {
               Operaciones <span className="text-gradient">KiMedia</span>
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
-              {filtered.length} actividades · {deals.length} oportunidades · {interactions.length} interacciones
+              {actionItems.filter(i => !["completado","cancelado"].includes(i.status)).length} tareas activas ·
+              {" "}{deals.filter(d => !["cerrado_ganado","cerrado_perdido"].includes(d.stage)).length} oportunidades
+              {firefliesPending > 0 && <> · <span className="text-coral">{firefliesPending} minutas por revisar</span></>}
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={toggleTheme} className="text-muted-foreground hover:text-foreground">
-              {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => { refetch(); refetchDeals(); refetchInteractions(); refetchObjectives(); }} className="text-muted-foreground hover:text-foreground">
-              <RefreshCw className="w-4 h-4" />
-            </Button>
-            <Button variant="ghost" size="sm" onClick={handleLogout} className="text-muted-foreground hover:text-foreground">
-              <LogOut className="w-4 h-4" />
-            </Button>
+            <Button variant="ghost" size="sm" onClick={toggleTheme}><span className="sr-only">Tema</span>{isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}</Button>
+            <Button variant="ghost" size="sm" onClick={() => { refetch(); refetchDeals(); refetchInteractions(); refetchObjectives(); }}><RefreshCw className="w-4 h-4" /></Button>
+            <Button variant="ghost" size="sm" onClick={handleLogout}><LogOut className="w-4 h-4" /></Button>
           </div>
         </motion.div>
 
-        {/* Stats */}
-        <StatsBar items={actionItems} />
-
-        {/* Team + Upload row */}
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
-          <TeamPulse items={actionItems} teamMembers={teamMembers} onFilterByMember={setFilterMember} activeMember={filterMember} />
-          <MinuteUploader onUploaded={refetch} />
+        {/* Section tabs (top-level navigation) */}
+        <div className="flex items-center gap-2 border-b border-border">
+          {SECTION_TABS.map(tab => (
+            <button
+              key={tab.value}
+              onClick={() => setSection(tab.value)}
+              className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-all ${
+                section === tab.value
+                  ? "border-coral text-foreground"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <tab.icon className="w-4 h-4" />
+              {tab.label}
+              {tab.value === "entradas" && firefliesPending > 0 && (
+                <span className="ml-1 text-[10px] bg-coral text-primary-foreground px-1.5 py-0.5 rounded-full">
+                  {firefliesPending}
+                </span>
+              )}
+            </button>
+          ))}
         </div>
 
-        {/* View tabs */}
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center bg-secondary rounded-lg p-1 gap-0.5">
-            {VIEW_TABS.map(tab => (
+        {/* Sub-views per section */}
+        {section === "trabajo" && (
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center bg-secondary rounded-lg p-1 gap-0.5">
+              {WORK_VIEWS.map(v => (
+                <button
+                  key={v.value}
+                  onClick={() => setWorkView(v.value)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                    workView === v.value ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <v.icon className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">{v.label}</span>
+                </button>
+              ))}
+            </div>
+            {!["pipeline", "interactions"].includes(workView) && (
+              <Button onClick={() => openNewItem()} className="bg-gradient-coral text-primary-foreground font-semibold ml-auto">
+                <Plus className="w-4 h-4 mr-1.5" /> Nueva tarea
+              </Button>
+            )}
+          </div>
+        )}
+
+        {section === "clientes" && (
+          <div className="flex items-center bg-secondary rounded-lg p-1 gap-0.5 w-fit">
+            {CLIENTES_VIEWS.map(v => (
               <button
-                key={tab.value}
-                onClick={() => setViewMode(tab.value)}
+                key={v.value}
+                onClick={() => setClientesView(v.value)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                  viewMode === tab.value
-                    ? "bg-card text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
+                  clientesView === v.value ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                <tab.icon className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">{tab.label}</span>
+                <v.icon className="w-3.5 h-3.5" /> {v.label}
               </button>
             ))}
           </div>
+        )}
 
-          {!["pipeline", "interactions", "objectives", "content", "fireflies"].includes(viewMode) && (
-            <Button
-              onClick={() => { setSelectedItem(null); setIsNewItem(true); }}
-              className="bg-gradient-coral text-primary-foreground font-semibold ml-auto"
-            >
-              <Plus className="w-4 h-4 mr-1.5" />
-              Nueva
-            </Button>
-          )}
-        </div>
-
-        {/* Filters (only for task views) */}
-        {showFilters && (
+        {/* Filters only for task views */}
+        {showWorkFilters && (
           <div className="flex flex-wrap items-center gap-3">
             <div className="relative flex-1 min-w-[200px] max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Buscar actividades..."
-                className="pl-10 bg-secondary border-border"
-              />
+              <Input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Buscar tareas..." className="pl-10 bg-card border-border" />
             </div>
-
-            <Select value={filterCategory || "all"} onValueChange={(v) => setFilterCategory(v === "all" ? null : v)}>
-              <SelectTrigger className="w-[140px] bg-secondary border-border">
-                <Filter className="w-3.5 h-3.5 mr-1.5" />
-                <SelectValue placeholder="Categoría" />
-              </SelectTrigger>
+            <Select value={filterCategory || "all"} onValueChange={v => setFilterCategory(v === "all" ? null : v)}>
+              <SelectTrigger className="w-[140px] bg-card border-border"><Filter className="w-3.5 h-3.5 mr-1.5" /><SelectValue placeholder="Categoría" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas</SelectItem>
-                {CATEGORIES.map(c => (
-                  <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
-                ))}
+                {CATEGORIES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
               </SelectContent>
             </Select>
-
-            <Select value={filterClient || "all"} onValueChange={(v) => setFilterClient(v === "all" ? null : v)}>
-              <SelectTrigger className="w-[180px] bg-secondary border-border">
-                <SelectValue placeholder="Cliente" />
-              </SelectTrigger>
+            <Select value={filterClient || "all"} onValueChange={v => setFilterClient(v === "all" ? null : v)}>
+              <SelectTrigger className="w-[180px] bg-card border-border"><SelectValue placeholder="Cliente" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos los clientes</SelectItem>
-                {CLIENTS.map(c => (
-                  <SelectItem key={c} value={c}>{c}</SelectItem>
-                ))}
+                {CLIENTS.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
               </SelectContent>
             </Select>
-
+            <Select value={filterMember || "all"} onValueChange={v => setFilterMember(v === "all" ? null : v)}>
+              <SelectTrigger className="w-[180px] bg-card border-border"><SelectValue placeholder="Responsable" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                {teamMembers.map(m => <SelectItem key={m.id} value={m.full_name}>{m.full_name}</SelectItem>)}
+              </SelectContent>
+            </Select>
             {activeFilters > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => { setSearchQuery(""); setFilterMember(null); setFilterCategory(null); setFilterClient(null); }}
-                className="text-muted-foreground"
-              >
-                <X className="w-3.5 h-3.5 mr-1" />
-                Limpiar
+              <Button variant="ghost" size="sm" onClick={() => { setSearchQuery(""); setFilterMember(null); setFilterCategory(null); setFilterClient(null); }}>
+                <X className="w-3.5 h-3.5 mr-1" /> Limpiar
               </Button>
             )}
           </div>
@@ -236,77 +288,80 @@ const OperationsDashboard = () => {
             <motion.div key="loading" className="flex items-center justify-center py-20">
               <RefreshCw className="w-6 h-6 text-coral animate-spin" />
             </motion.div>
-          ) : viewMode === "kanban" ? (
-            <motion.div key="kanban" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <KanbanBoard items={filtered} teamMembers={teamMembers} onUpdateItem={updateActionItem} onSelectItem={(item) => { setSelectedItem(item); setIsNewItem(false); }} />
-            </motion.div>
-          ) : viewMode === "list" ? (
-            <motion.div key="list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <ListView items={filtered} teamMembers={teamMembers} onSelectItem={(item) => { setSelectedItem(item); setIsNewItem(false); }} onUpdateItem={updateActionItem} />
-            </motion.div>
-          ) : viewMode === "person" ? (
-            <motion.div key="person" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <PersonView items={actionItems} teamMembers={teamMembers} onSelectItem={(item) => { setSelectedItem(item); setIsNewItem(false); }} />
-            </motion.div>
-          ) : viewMode === "client" ? (
-            <motion.div key="client" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <ClientView items={actionItems} deals={deals} onSelectItem={(item) => { setSelectedItem(item); setIsNewItem(false); }} onFilterByClient={(client) => { setFilterClient(client); setViewMode("kanban"); }} />
-            </motion.div>
-          ) : viewMode === "calendar" ? (
-            <motion.div key="calendar" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <CalendarView items={filtered} teamMembers={teamMembers} onSelectItem={(item) => { setSelectedItem(item); setIsNewItem(false); }} />
-            </motion.div>
-          ) : viewMode === "pipeline" ? (
-            <motion.div key="pipeline" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <PipelineBoard deals={deals} teamMembers={teamMembers} onSelectDeal={(deal) => { setSelectedDeal(deal); setIsNewDeal(false); }} onUpdateDeal={updateDeal} onNewDeal={() => { setSelectedDeal(null); setIsNewDeal(true); }} />
-            </motion.div>
-          ) : viewMode === "interactions" ? (
-            <motion.div key="interactions" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <InteractionsView
-                interactions={interactions}
-                onSelectInteraction={(i) => { setSelectedInteraction(i); setIsNewInteraction(false); }}
-                onNewInteraction={() => { setSelectedInteraction(null); setIsNewInteraction(true); }}
-                onToggleFollowUp={(id, done) => updateInteraction(id, { follow_up_done: done })}
+          ) : section === "hoy" ? (
+            <motion.div key="hoy" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <TodayHome
+                items={actionItems}
+                teamMembers={teamMembers}
+                deals={deals}
+                objectives={objectives}
+                firefliesPending={firefliesPending}
+                onSelectItem={(it) => { setSelectedItem(it); setIsNewItem(false); }}
+                onGoTo={(s) => setSection(s)}
               />
             </motion.div>
-          ) : viewMode === "objectives" ? (
-            <motion.div key="objectives" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <ObjectivesView objectives={objectives} actionItems={actionItems} onToggleMilestone={toggleMilestone} onSelectItem={(item) => { setSelectedItem(item); setIsNewItem(false); }} />
+          ) : section === "trabajo" ? (
+            <motion.div key={`trabajo-${workView}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              {workView === "kanban" && <KanbanBoard items={filteredItems} teamMembers={teamMembers} onUpdateItem={updateActionItem} onSelectItem={(i) => { setSelectedItem(i); setIsNewItem(false); }} />}
+              {workView === "list" && <ListView items={filteredItems} teamMembers={teamMembers} onSelectItem={(i) => { setSelectedItem(i); setIsNewItem(false); }} onUpdateItem={updateActionItem} />}
+              {workView === "person" && <PersonView items={actionItems} teamMembers={teamMembers} onSelectItem={(i) => { setSelectedItem(i); setIsNewItem(false); }} />}
+              {workView === "calendar" && <CalendarView items={filteredItems} teamMembers={teamMembers} onSelectItem={(i) => { setSelectedItem(i); setIsNewItem(false); }} />}
+              {workView === "pipeline" && <PipelineBoard deals={deals} teamMembers={teamMembers} onSelectDeal={(d) => { setSelectedDeal(d); setIsNewDeal(false); }} onUpdateDeal={updateDeal} onNewDeal={() => openNewDeal()} />}
+              {workView === "interactions" && <InteractionsView interactions={interactions} onSelectInteraction={(i) => { setSelectedInteraction(i); setIsNewInteraction(false); }} onNewInteraction={() => openNewInteraction()} onToggleFollowUp={(id, done) => updateInteraction(id, { follow_up_done: done })} />}
             </motion.div>
-          ) : viewMode === "content" ? (
-            <motion.div key="content" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <Card className="p-8 text-center bg-card border-border">
-                <Grid3X3 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-foreground mb-2">Motor de Contenido</h3>
-                <p className="text-sm text-muted-foreground mb-4">Planea, ejecuta y evalúa parrillas de contenido por cliente</p>
-                <Button onClick={() => navigate("/parrilla")} className="bg-gradient-coral text-primary-foreground font-semibold">
-                  <Grid3X3 className="w-4 h-4 mr-1.5" /> Ir al Motor de Contenido
-                </Button>
-              </Card>
+          ) : section === "clientes" ? (
+            <motion.div key={`clientes-${clientesView}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              {clientesView === "hub" && (
+                <ClientsHub
+                  items={actionItems}
+                  deals={deals}
+                  objectives={objectives}
+                  interactions={interactions}
+                  onOpenClient={setOpenClient}
+                />
+              )}
+              {clientesView === "objectives" && (
+                <ObjectivesView objectives={objectives} actionItems={actionItems} onToggleMilestone={toggleMilestone} onSelectItem={(i) => { setSelectedItem(i); setIsNewItem(false); }} />
+              )}
+              {clientesView === "catalog" && <ClientsManager />}
             </motion.div>
-          ) : viewMode === "fireflies" ? (
-            <motion.div key="fireflies" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+          ) : section === "entradas" ? (
+            <motion.div key="entradas" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-4">
+              <MinuteUploader onUploaded={refetch} />
               <FirefliesInbox onImported={refetch} />
-            </motion.div>
-          ) : viewMode === "catalog" ? (
-            <motion.div key="catalog" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <ClientsManager />
             </motion.div>
           ) : null}
         </AnimatePresence>
 
-        {/* Action Item Modal */}
+        {/* Client detail dialog */}
+        <ClientDetail
+          clientName={openClient}
+          open={!!openClient}
+          onClose={() => setOpenClient(null)}
+          items={actionItems}
+          deals={deals}
+          interactions={interactions}
+          objectives={objectives}
+          teamMembers={teamMembers}
+          onSelectItem={(i) => { setOpenClient(null); setSelectedItem(i); setIsNewItem(false); }}
+          onNewItem={(c) => { setOpenClient(null); openNewItem(c); }}
+          onSelectDeal={(d) => { setOpenClient(null); setSelectedDeal(d); setIsNewDeal(false); }}
+          onNewDeal={(c) => { setOpenClient(null); openNewDeal(c); }}
+          onSelectInteraction={(i) => { setOpenClient(null); setSelectedInteraction(i); setIsNewInteraction(false); }}
+          onNewInteraction={(c) => { setOpenClient(null); openNewInteraction(c); }}
+          onToggleMilestone={toggleMilestone}
+        />
+
+        {/* Modals */}
         <ActionItemModal
-          item={isNewItem ? null : selectedItem}
+          item={isNewItem ? (prefillClient ? ({ client: prefillClient } as any) : null) : selectedItem}
           teamMembers={teamMembers}
           open={!!selectedItem || isNewItem}
-          onClose={() => { setSelectedItem(null); setIsNewItem(false); }}
+          onClose={() => { setSelectedItem(null); setIsNewItem(false); setPrefillClient(null); }}
           onSave={updateActionItem}
           onCreate={createActionItem}
           isNew={isNewItem}
         />
-
-        {/* Deal Modal */}
         <DealModal
           deal={isNewDeal ? null : selectedDeal}
           teamMembers={teamMembers}
@@ -316,8 +371,6 @@ const OperationsDashboard = () => {
           onCreate={createDeal}
           isNew={isNewDeal}
         />
-
-        {/* Interaction Modal */}
         <InteractionModal
           interaction={isNewInteraction ? null : selectedInteraction}
           open={!!selectedInteraction || isNewInteraction}
