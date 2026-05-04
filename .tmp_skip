@@ -1,0 +1,6 @@
+---
+name: Fireflies Inbox
+description: Bandeja de revisión para reuniones traídas de Fireflies con filtros configurables (hosts, keywords, mapping) antes de generar action_items
+type: feature
+---
+Bandeja en /admin/operaciones (tab "Fireflies") que sincroniza meetings de Fireflies vía edge function `fireflies-sync-inbox`. Cada meeting pasa por reglas (`fireflies_filter_rules`): host_whitelist, title_blacklist, client_mapping, min_duration. Resultado: needs_review | approved (auto-import candidate) | excluded. Edge function `fireflies-import-meeting` toma una meeting aprobada, descarga transcript con speakers, lo manda a Gemini con instrucción de descartar tareas sensibles (sueldos, RH, médico), crea minute y action_items. Tabla `fireflies_meetings` evita duplicados por unique fireflies_id; `minutes.fireflies_meeting_id` enlaza el origen.
