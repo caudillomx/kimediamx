@@ -81,6 +81,7 @@ export type Database = {
         Row: {
           category: string
           client: string | null
+          client_id: string | null
           completed_at: string | null
           created_at: string
           description: string
@@ -88,6 +89,7 @@ export type Database = {
           id: string
           minute_id: string | null
           notes: string | null
+          objective_id: string | null
           priority: string
           responsible_id: string | null
           responsible_name: string | null
@@ -97,6 +99,7 @@ export type Database = {
         Insert: {
           category?: string
           client?: string | null
+          client_id?: string | null
           completed_at?: string | null
           created_at?: string
           description: string
@@ -104,6 +107,7 @@ export type Database = {
           id?: string
           minute_id?: string | null
           notes?: string | null
+          objective_id?: string | null
           priority?: string
           responsible_id?: string | null
           responsible_name?: string | null
@@ -113,6 +117,7 @@ export type Database = {
         Update: {
           category?: string
           client?: string | null
+          client_id?: string | null
           completed_at?: string | null
           created_at?: string
           description?: string
@@ -120,6 +125,7 @@ export type Database = {
           id?: string
           minute_id?: string | null
           notes?: string | null
+          objective_id?: string | null
           priority?: string
           responsible_id?: string | null
           responsible_name?: string | null
@@ -128,10 +134,24 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "action_items_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "action_items_minute_id_fkey"
             columns: ["minute_id"]
             isOneToOne: false
             referencedRelation: "minutes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "action_items_objective_id_fkey"
+            columns: ["objective_id"]
+            isOneToOne: false
+            referencedRelation: "client_objectives"
             referencedColumns: ["id"]
           },
           {
@@ -1076,6 +1096,7 @@ export type Database = {
       }
       deals: {
         Row: {
+          client_id: string | null
           client_name: string
           closed_date: string | null
           contact_name: string | null
@@ -1093,6 +1114,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          client_id?: string | null
           client_name: string
           closed_date?: string | null
           contact_name?: string | null
@@ -1110,6 +1132,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          client_id?: string | null
           client_name?: string
           closed_date?: string | null
           contact_name?: string | null
@@ -1127,6 +1150,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "deals_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "deals_responsible_id_fkey"
             columns: ["responsible_id"]
@@ -1751,6 +1781,7 @@ export type Database = {
       }
       interactions: {
         Row: {
+          client_id: string | null
           client_name: string
           contact_name: string
           created_at: string
@@ -1765,6 +1796,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          client_id?: string | null
           client_name: string
           contact_name: string
           created_at?: string
@@ -1779,6 +1811,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          client_id?: string | null
           client_name?: string
           contact_name?: string
           created_at?: string
@@ -1792,7 +1825,15 @@ export type Database = {
           subject?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "interactions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       minutes: {
         Row: {
