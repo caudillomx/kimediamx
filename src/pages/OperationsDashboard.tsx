@@ -354,7 +354,8 @@ const OperationsDashboard = () => {
 
         {/* Modals */}
         <ActionItemModal
-          item={isNewItem ? (prefillClient ? ({ client: prefillClient } as any) : null) : selectedItem}
+          item={isNewItem ? null : selectedItem}
+          prefillClient={prefillClient}
           teamMembers={teamMembers}
           open={!!selectedItem || isNewItem}
           onClose={() => { setSelectedItem(null); setIsNewItem(false); setPrefillClient(null); }}
