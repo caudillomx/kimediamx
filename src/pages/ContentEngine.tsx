@@ -137,6 +137,7 @@ const ClientCard = ({ profile, onClick, onDelete, onEdit }: { profile: ContentPr
 const ContentEngine = () => {
   const navigate = useNavigate();
   const { profiles, loading, fetchProfiles, createProfile, updateProfile, deleteProfile } = useContentEngine();
+  const { clients, createClient } = useClientsData();
   const { isDark, toggle: toggleTheme } = useThemeToggle();
   const [session, setSession] = useState<any>(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
