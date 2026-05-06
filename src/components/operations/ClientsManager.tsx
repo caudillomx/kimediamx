@@ -5,6 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Plus, Pencil, Power, Merge, X, Save, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { CLIENT_TYPE_META } from "@/hooks/useClientsData";
+
+const TYPE_OPTIONS = ["activo", "probono", "prospecto", "inactivo"] as const;
 
 interface Client {
   id: string;
@@ -12,6 +15,8 @@ interface Client {
   is_active: boolean;
   aliases: string[];
   notes: string | null;
+  client_type?: string;
+  is_probono?: boolean;
 }
 
 export default function ClientsManager() {
@@ -40,6 +45,8 @@ export default function ClientsManager() {
       is_active: editing.is_active,
       aliases: editing.aliases.filter(a => a.trim()),
       notes: editing.notes,
+      client_type: editing.client_type || "activo",
+      is_probono: !!editing.is_probono,
     };
     if (isNew) {
       const { error } = await supabase.from("clients").insert(payload);
@@ -102,7 +109,7 @@ export default function ClientsManager() {
           <h2 className="font-display text-xl font-bold text-foreground">Catálogo de clientes</h2>
           <p className="text-xs text-muted-foreground">Activos aparecen en filtros y selectores. Inactivos se conservan para historial.</p>
         </div>
-        <Button onClick={() => { setIsNew(true); setEditing({ id: "", name: "", is_active: true, aliases: [], notes: "" }); }} className="bg-gradient-coral text-primary-foreground">
+        <Button onClick={() => { setIsNew(true); setEditing({ id: "", name: "", is_active: true, aliases: [], notes: "", client_type: "activo", is_probono: false }); }} className="bg-gradient-coral text-primary-foreground">
           <Plus className="w-4 h-4 mr-1.5" /> Nuevo
         </Button>
       </div>
@@ -119,6 +126,14 @@ export default function ClientsManager() {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <h3 className="font-semibold text-foreground truncate">{c.name}</h3>
+                    {c.client_type && (
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded border ${CLIENT_TYPE_META[c.client_type]?.badgeClass || "bg-muted text-muted-foreground border-border"}`}>
+                        {CLIENT_TYPE_META[c.client_type]?.label || c.client_type}
+                      </span>
+                    )}
+                    {c.is_probono && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded border bg-blue-500/15 text-blue-600 border-blue-500/30">PRO BONO</span>
+                    )}
                     {!c.is_active && <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">inactivo</span>}
                   </div>
                   {c.aliases.length > 0 && (
@@ -172,6 +187,22 @@ export default function ClientsManager() {
                 <label className="text-xs text-muted-foreground">Notas</label>
                 <Input value={editing.notes || ""} onChange={e => setEditing({ ...editing, notes: e.target.value })} />
               </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Tipo</label>
+                <select
+                  className="w-full p-2 rounded border border-border bg-background text-foreground text-sm"
+                  value={editing.client_type || "activo"}
+                  onChange={e => setEditing({ ...editing, client_type: e.target.value })}
+                >
+                  {TYPE_OPTIONS.map(t => (
+                    <option key={t} value={t}>{CLIENT_TYPE_META[t]?.label || t}</option>
+                  ))}
+                </select>
+              </div>
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={!!editing.is_probono} onChange={e => setEditing({ ...editing, is_probono: e.target.checked })} />
+                Pro bono
+              </label>
               <label className="flex items-center gap-2 text-sm">
                 <input type="checkbox" checked={editing.is_active} onChange={e => setEditing({ ...editing, is_active: e.target.checked })} />
                 Activo
