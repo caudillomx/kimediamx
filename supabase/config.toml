@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.propuesta-ai-demo]
 verify_jwt = false
+
+[functions.gto-access]
+verify_jwt = false

@@ -1274,6 +1274,33 @@ export type Database = {
         }
         Relationships: []
       }
+      gto_access_log: {
+        Row: {
+          code_attempt: string | null
+          created_at: string
+          id: string
+          ip: string | null
+          reason: string | null
+          success: boolean
+        }
+        Insert: {
+          code_attempt?: string | null
+          created_at?: string
+          id?: string
+          ip?: string | null
+          reason?: string | null
+          success?: boolean
+        }
+        Update: {
+          code_attempt?: string | null
+          created_at?: string
+          id?: string
+          ip?: string | null
+          reason?: string | null
+          success?: boolean
+        }
+        Relationships: []
+      }
       gto_corpus_uploads: {
         Row: {
           created_at: string
@@ -2203,6 +2230,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      gto_bootstrap_session: {
+        Args: { _participante_id: string; _sesion_id: string }
+        Returns: Json
+      }
       gto_delete_corpus_upload: {
         Args: { _participante_id: string; _upload_id: string }
         Returns: {
@@ -2223,6 +2254,7 @@ export type Database = {
           storage_path: string
         }[]
       }
+      gto_validate_access_code: { Args: { _code: string }; Returns: Json }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

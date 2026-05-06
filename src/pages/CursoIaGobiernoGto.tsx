@@ -79,57 +79,24 @@ const CursoIaGobiernoGto = () => {
         if (params.get("demo") === "1") {
           setIsDemoMode(true);
           const code = params.get("code") || "KIMEDIA-DEMO";
-          const { data: dep } = await supabase
-            .from("gto_dependencias")
-            .select("*")
-            .eq("access_code", code)
-            .maybeSingle();
-          if (dep) {
-            const { data: existing } = await supabase
-              .from("gto_sesiones")
-              .select("*")
-              .eq("dependencia_id", dep.id)
-              .order("created_at", { ascending: false })
-              .limit(1)
-              .maybeSingle();
-            let sess = existing;
-            if (!sess) {
-              const { data: created } = await supabase
-                .from("gto_sesiones")
-                .insert({ dependencia_id: dep.id, paso_actual: 0, estado: "en_curso" })
-                .select()
-                .single();
-              sess = created;
-            }
-            if (sess) {
-              const { data: createdPart } = await supabase
-                .from("gto_participantes")
-                .insert({
-                  sesion_id: sess.id,
-                  nombre: "Capacitador KiMedia (demo en vivo)",
-                  cargo: "Demo",
-                  email: "hola@kimedia.mx",
-                  ultimo_paso: 0,
-                })
-                .select()
-                .single();
-              if (createdPart) {
-                setDependencia(dep as Dependencia);
-                setSesion(sess as Sesion);
-                setParticipante({
-                  id: createdPart.id,
-                  nombre: createdPart.nombre,
-                  cargo: createdPart.cargo,
-                  email: createdPart.email,
-                });
-                setDiagnosticos([]);
-                setStep(0);
-                setHighest(STEPS.length - 1);
-                // No persistimos en localStorage para no contaminar uso normal
-                setBootLoading(false);
-                return;
-              }
-            }
+          const { data: r } = await supabase.functions.invoke("gto-access", {
+            body: {
+              code,
+              mode: "enter",
+              participant_name: "Capacitador KiMedia (demo en vivo)",
+              participant_cargo: "Demo",
+              participant_email: "hola@kimedia.mx",
+            },
+          });
+          if (r?.ok && r.sesion && r.participante && r.dependencia) {
+            setDependencia({ ...r.dependencia, access_code: "" } as Dependencia);
+            setSesion(r.sesion as Sesion);
+            setParticipante(r.participante);
+            setDiagnosticos([]);
+            setStep(0);
+            setHighest(STEPS.length - 1);
+            setBootLoading(false);
+            return;
           }
         }
 
@@ -143,35 +110,19 @@ const CursoIaGobiernoGto = () => {
           setBootLoading(false);
           return;
         }
-        const { data: s } = await supabase
-          .from("gto_sesiones")
-          .select("*")
-          .eq("id", sesionId)
-          .maybeSingle();
-        if (!s) {
+        const { data: boot } = await supabase.rpc("gto_bootstrap_session", {
+          _sesion_id: sesionId,
+          _participante_id: participanteId,
+        });
+        const b = boot as any;
+        if (!b?.valid) {
           localStorage.removeItem(STORAGE_KEY);
           setBootLoading(false);
           return;
         }
-        const { data: dep } = await supabase
-          .from("gto_dependencias")
-          .select("*")
-          .eq("id", s.dependencia_id)
-          .maybeSingle();
-        if (!dep) {
-          setBootLoading(false);
-          return;
-        }
-        const { data: part } = await supabase
-          .from("gto_participantes")
-          .select("*")
-          .eq("id", participanteId)
-          .maybeSingle();
-        if (!part) {
-          localStorage.removeItem(STORAGE_KEY);
-          setBootLoading(false);
-          return;
-        }
+        const s = b.sesion;
+        const dep = { ...b.dependencia, access_code: "" };
+        const part = b.participante;
         // Refresh activity timestamp
         await supabase
           .from("gto_participantes")
@@ -215,56 +166,31 @@ const CursoIaGobiernoGto = () => {
   }, []);
 
   const checkCode = useCallback(async (code: string) => {
-    const { data: dep, error } = await supabase
-      .from("gto_dependencias")
-      .select("*")
-      .eq("access_code", code)
-      .maybeSingle();
-    if (error || !dep) return { ok: false, error: "Código no reconocido. Verifica con KiMedia." };
-    return { ok: true, dependenciaNombre: `${dep.siglas} · ${dep.nombre}` };
+    const { data, error } = await supabase.functions.invoke("gto-access", {
+      body: { code, mode: "check" },
+    });
+    if (error || !data?.ok || !data?.dependencia) {
+      return { ok: false, error: data?.error || "Código no reconocido. Verifica con KiMedia." };
+    }
+    return { ok: true, dependenciaNombre: `${data.dependencia.siglas} · ${data.dependencia.nombre}` };
   }, []);
 
   const validateCode = useCallback(async (code: string, p: ParticipantData) => {
-    const { data: dep, error } = await supabase
-      .from("gto_dependencias")
-      .select("*")
-      .eq("access_code", code)
-      .maybeSingle();
-    if (error || !dep) return { ok: false, error: "Código no reconocido. Verifica con KiMedia." };
-
-    // Reuse existing session for that dependency or create new
-    const { data: existing } = await supabase
-      .from("gto_sesiones")
-      .select("*")
-      .eq("dependencia_id", dep.id)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    let sess = existing;
-    if (!sess) {
-      const { data: created, error: e2 } = await supabase
-        .from("gto_sesiones")
-        .insert({ dependencia_id: dep.id, paso_actual: 0, estado: "en_curso" })
-        .select()
-        .single();
-      if (e2 || !created) return { ok: false, error: "No se pudo iniciar la sesión." };
-      sess = created;
+    const { data, error } = await supabase.functions.invoke("gto-access", {
+      body: {
+        code,
+        mode: "enter",
+        participant_name: p.nombre,
+        participant_cargo: p.cargo,
+        participant_email: p.email,
+      },
+    });
+    if (error || !data?.ok || !data?.sesion || !data?.participante || !data?.dependencia) {
+      return { ok: false, error: data?.error || "No se pudo iniciar la sesión." };
     }
-
-    // Create participante for this person
-    const { data: createdPart, error: pErr } = await supabase
-      .from("gto_participantes")
-      .insert({
-        sesion_id: sess.id,
-        nombre: p.nombre,
-        cargo: p.cargo || null,
-        email: p.email || null,
-        ultimo_paso: 0,
-      })
-      .select()
-      .single();
-    if (pErr || !createdPart) return { ok: false, error: "No se pudo registrar al participante." };
+    const sess = data.sesion;
+    const dep = { ...data.dependencia, access_code: "" };
+    const createdPart = data.participante;
 
     const { data: diags } = await supabase
       .from("gto_diagnostico_textos")
@@ -320,40 +246,38 @@ const CursoIaGobiernoGto = () => {
 
   const saveBrief = async (data: BriefData) => {
     if (!sesion) return;
-    const { data: updated, error } = await supabase
+    const patch = {
+      titular_nombre: data.titular_nombre,
+      titular_cargo: data.titular_cargo,
+      herramienta_ia: data.herramienta_ia,
+      brief_mision: data.brief_mision,
+      brief_audiencias: data.brief_audiencias,
+      brief_tono: data.brief_tono,
+      brief_terminos_prohibidos: data.brief_terminos_prohibidos,
+      brief_terminos_preferidos: data.brief_terminos_preferidos,
+      brief_mensajes_clave: data.brief_mensajes_clave,
+      brief_tipo_texto: data.brief_tipo_texto,
+    };
+    const { error } = await supabase
       .from("gto_sesiones")
-      .update({
-        titular_nombre: data.titular_nombre,
-        titular_cargo: data.titular_cargo,
-        herramienta_ia: data.herramienta_ia,
-        brief_mision: data.brief_mision,
-        brief_audiencias: data.brief_audiencias,
-        brief_tono: data.brief_tono,
-        brief_terminos_prohibidos: data.brief_terminos_prohibidos,
-        brief_terminos_preferidos: data.brief_terminos_preferidos,
-        brief_mensajes_clave: data.brief_mensajes_clave,
-        brief_tipo_texto: data.brief_tipo_texto,
-      })
-      .eq("id", sesion.id)
-      .select()
-      .single();
+      .update(patch)
+      .eq("id", sesion.id);
     if (error) {
       toast.error("No se pudo guardar el brief.");
       return;
     }
-    if (updated) setSesion(updated as Sesion);
+    setSesion({ ...sesion, ...patch } as Sesion);
     await advanceTo(3);
   };
 
   const saveCorpus = async (d: CorpusData) => {
     if (!sesion) return;
-    const { data: updated } = await supabase
+    const patch = { corpus_documentos: d.corpus_documentos, corpus_notas: d.corpus_notas };
+    await supabase
       .from("gto_sesiones")
-      .update({ corpus_documentos: d.corpus_documentos, corpus_notas: d.corpus_notas })
-      .eq("id", sesion.id)
-      .select()
-      .single();
-    if (updated) setSesion(updated as Sesion);
+      .update(patch)
+      .eq("id", sesion.id);
+    setSesion({ ...sesion, ...patch } as Sesion);
     await advanceTo(4);
   };
 
