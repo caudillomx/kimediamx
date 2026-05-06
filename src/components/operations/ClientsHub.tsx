@@ -8,8 +8,9 @@ import { Interaction } from "@/hooks/useInteractionsData";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, Target, CheckSquare, TrendingUp, MessageSquare, AlertTriangle } from "lucide-react";
+import { Search, Target, CheckSquare, TrendingUp, MessageSquare, AlertTriangle, ArrowRight } from "lucide-react";
 import { isPast, parseISO } from "date-fns";
+import { useNavigate } from "react-router-dom";
 
 interface Props {
   items: ActionItem[];
@@ -22,6 +23,7 @@ interface Props {
 type ClientRow = { id: string; name: string; is_active: boolean };
 
 const ClientsHub = ({ items, deals, objectives, interactions, onOpenClient }: Props) => {
+  const navigate = useNavigate();
   const [clients, setClients] = useState<ClientRow[]>([]);
   const [search, setSearch] = useState("");
 
@@ -131,6 +133,15 @@ const ClientsHub = ({ items, deals, objectives, interactions, onOpenClient }: Pr
                   <div className="flex items-center gap-1.5 text-muted-foreground">
                     <MessageSquare className="w-3 h-3" /> {s.interactions}
                   </div>
+                </div>
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={(e) => { e.stopPropagation(); navigate(`/admin/cliente/${c.id}`); }}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); navigate(`/admin/cliente/${c.id}`); } }}
+                  className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline cursor-pointer"
+                >
+                  Workspace <ArrowRight className="w-3 h-3" />
                 </div>
               </Card>
             </motion.button>

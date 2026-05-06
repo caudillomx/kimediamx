@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { CLIENTS } from "@/hooks/useOperationsData";
+import { addCorpusEntryIfNew } from "@/hooks/useClientCorpus";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
@@ -109,6 +110,31 @@ const FirefliesInbox = ({ onImported }: { onImported?: () => void }) => {
       });
       if (error) throw error;
       toast.success(`Importada · ${data.taskCount} tareas extraídas`);
+      // Auto-feed corpus
+      try {
+        const clientName = client || m.assigned_client;
+        if (clientName) {
+          const { data: c } = await supabase
+            .from("clients").select("id").eq("name", clientName).maybeSingle();
+          if (c?.id) {
+            const dateLabel = m.meeting_date
+              ? new Date(m.meeting_date).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" })
+              : "";
+            const res = await addCorpusEntryIfNew({
+              client_id: c.id,
+              entry_type: "minuta",
+              title: `${m.title}${dateLabel ? ` · ${dateLabel}` : ""}`,
+              content: m.summary_overview || m.summary_short || null,
+              source_url: m.transcript_url || null,
+              source_reference: m.fireflies_id,
+              tags: ["fireflies"],
+            });
+            if (res.created) toast.success(`Minuta agregada al corpus de ${clientName}`);
+          }
+        }
+      } catch (corpusErr) {
+        console.error("[corpus] auto-feed failed", corpusErr);
+      }
       await fetchAll();
       onImported?.();
     } catch (e: any) {

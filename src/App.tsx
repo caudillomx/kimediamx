@@ -23,6 +23,7 @@ import PropuestaPanYucatan from "./pages/PropuestaPanYucatan";
 import CursoIaGobiernoGto from "./pages/CursoIaGobiernoGto";
 import CursoIaGobiernoGtoAdmin from "./pages/CursoIaGobiernoGtoAdmin";
 import CursoGtoEntregables from "./pages/CursoGtoEntregables";
+import ClientWorkspace from "./pages/ClientWorkspace";
 
 const queryClient = new QueryClient();
 
@@ -46,6 +47,7 @@ const App = () => (
           <Route path="/mi-estrategia/:profileId" element={<MyStrategyDetail />} />
           <Route path="/admin/operaciones/login" element={<OperationsLogin />} />
           <Route path="/admin/operaciones" element={<OperationsDashboard />} />
+          <Route path="/admin/cliente/:clientId" element={<ClientWorkspace />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/parrilla" element={<ContentEngine />} />
           <Route path="/parrilla/:profileId" element={<ContentCycleDetail />} />
