@@ -12,12 +12,14 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   ArrowLeft, Plus, Trash2, FileText, Link2, Notebook, Mic, BookOpen,
-  Upload, ChevronDown, ChevronUp, ExternalLink,
+  Upload, ChevronDown, ChevronUp, ExternalLink, Megaphone,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { useAdsProposals } from "@/hooks/useAdsProposals";
+import { AdsProposalBuilder } from "@/components/ads/AdsProposalBuilder";
 
 const TYPE_META: Record<string, { label: string; icon: any }> = {
   nota:       { label: "Nota",       icon: Notebook },
@@ -33,6 +35,8 @@ const ClientWorkspace = () => {
   const [checkingAuth, setCheckingAuth] = useState(true);
   const { clients, loading: clientsLoading } = useClientsData();
   const { entries, loading: corpusLoading, addEntry, deleteEntry } = useClientCorpus(clientId);
+  const { proposals: adsProposals, loading: adsLoading } = useAdsProposals(clientId);
+  const [adsBuilderOpen, setAdsBuilderOpen] = useState(false);
 
   const client = useMemo<Client | undefined>(
     () => clients.find(c => c.id === clientId),
@@ -151,6 +155,7 @@ const ClientWorkspace = () => {
               <TabsTrigger value="corpus">Corpus</TabsTrigger>
               <TabsTrigger value="profile">Perfil editorial</TabsTrigger>
               <TabsTrigger value="activity">Actividad reciente</TabsTrigger>
+              <TabsTrigger value="ads">Campañas de Ads</TabsTrigger>
             </TabsList>
 
             <TabsContent value="corpus" className="space-y-3">
@@ -207,9 +212,57 @@ const ClientWorkspace = () => {
                 ))}
               </Card>
             </TabsContent>
+
+            <TabsContent value="ads" className="space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">
+                  {adsLoading ? "Cargando…" : `${adsProposals.length} propuesta${adsProposals.length === 1 ? "" : "s"}`}
+                </p>
+                <Button size="sm" onClick={() => setAdsBuilderOpen(true)}>
+                  <Plus className="w-4 h-4 mr-1" /> Nueva propuesta
+                </Button>
+              </div>
+              {adsProposals.length === 0 && !adsLoading ? (
+                <Card className="p-8 text-center text-sm text-muted-foreground">
+                  No hay campañas de ads para este cliente.
+                </Card>
+              ) : (
+                <div className="space-y-2">
+                  {adsProposals.map(p => (
+                    <Card key={p.id} className="p-3 hover:bg-muted/40 transition cursor-pointer"
+                      onClick={() => navigate(`/admin/propuesta/${p.id}`)}>
+                      <div className="flex items-center gap-3">
+                        <Megaphone className="w-4 h-4 text-primary" />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h4 className="font-semibold text-sm truncate">{p.title}</h4>
+                            <Badge variant="outline" className="text-[10px] capitalize">{p.status}</Badge>
+                            {(p.platforms || []).map(pl => (
+                              <Badge key={pl} variant="outline" className="text-[10px] capitalize">{pl}</Badge>
+                            ))}
+                          </div>
+                          <p className="text-[11px] text-muted-foreground mt-0.5">
+                            {p.budget_total ? `${new Intl.NumberFormat("es-MX", { style: "currency", currency: p.budget_currency || "MXN", maximumFractionDigits: 0 }).format(p.budget_total)} · ` : ""}
+                            {p.flight_start || "—"} → {p.flight_end || "—"}
+                          </p>
+                        </div>
+                        <ExternalLink className="w-4 h-4 text-muted-foreground" />
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
           </Tabs>
         </section>
       </main>
+
+      <AdsProposalBuilder
+        open={adsBuilderOpen}
+        onOpenChange={setAdsBuilderOpen}
+        clientId={client.id}
+        clientName={client.name}
+      />
     </div>
   );
 };
