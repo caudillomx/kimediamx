@@ -695,30 +695,45 @@ export type Database = {
       clients: {
         Row: {
           aliases: string[]
+          client_type: string
           created_at: string
           id: string
+          industry: string | null
           is_active: boolean
+          is_probono: boolean
+          logo_url: string | null
           name: string
           notes: string | null
           updated_at: string
+          website_url: string | null
         }
         Insert: {
           aliases?: string[]
+          client_type?: string
           created_at?: string
           id?: string
+          industry?: string | null
           is_active?: boolean
+          is_probono?: boolean
+          logo_url?: string | null
           name: string
           notes?: string | null
           updated_at?: string
+          website_url?: string | null
         }
         Update: {
           aliases?: string[]
+          client_type?: string
           created_at?: string
           id?: string
+          industry?: string | null
           is_active?: boolean
+          is_probono?: boolean
+          logo_url?: string | null
           name?: string
           notes?: string | null
           updated_at?: string
+          website_url?: string | null
         }
         Relationships: []
       }
@@ -1032,6 +1047,7 @@ export type Database = {
           brand_tone: string | null
           brandbook_file_name: string | null
           brandbook_url: string | null
+          client_id: string | null
           client_name: string
           client_type: string | null
           content_pillars: string[] | null
@@ -1054,6 +1070,7 @@ export type Database = {
           brand_tone?: string | null
           brandbook_file_name?: string | null
           brandbook_url?: string | null
+          client_id?: string | null
           client_name: string
           client_type?: string | null
           content_pillars?: string[] | null
@@ -1076,6 +1093,7 @@ export type Database = {
           brand_tone?: string | null
           brandbook_file_name?: string | null
           brandbook_url?: string | null
+          client_id?: string | null
           client_name?: string
           client_type?: string | null
           content_pillars?: string[] | null
@@ -1092,7 +1110,15 @@ export type Database = {
           updated_at?: string
           website_url?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "content_profiles_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       deals: {
         Row: {

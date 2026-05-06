@@ -19,6 +19,8 @@ export type ActionItem = {
   updated_at: string;
 };
 
+// TODO: replace with useClientsData() — kept here as a static fallback so existing
+// consumers (modals, filters) don't break until they migrate to the dynamic catalog.
 export const CLIENTS = [
   "Guanajuato", "Actinver", "El Diluvio", "Padre Sada",
   "Mario Doria - Urólogo", "MID Clinic", "FIMEME", "KiMedia",
