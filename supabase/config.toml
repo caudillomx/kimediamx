@@ -23,3 +23,7 @@ verify_jwt = false
 
 [functions.gto-access]
 verify_jwt = false
+
+[functions.generate-ads-proposal]
+verify_jwt = true
+

@@ -287,6 +287,158 @@ export type Database = {
           },
         ]
       }
+      ads_proposal_performance: {
+        Row: {
+          clicks: number | null
+          client_id: string
+          conversions: number | null
+          cpc: number | null
+          cpm: number | null
+          created_at: string
+          ctr: number | null
+          currency: string | null
+          id: string
+          impressions: number | null
+          notes: string | null
+          period_end: string | null
+          period_start: string | null
+          platform: string
+          proposal_id: string | null
+          raw_metrics: Json | null
+          reach: number | null
+          roas: number | null
+          spend: number | null
+        }
+        Insert: {
+          clicks?: number | null
+          client_id: string
+          conversions?: number | null
+          cpc?: number | null
+          cpm?: number | null
+          created_at?: string
+          ctr?: number | null
+          currency?: string | null
+          id?: string
+          impressions?: number | null
+          notes?: string | null
+          period_end?: string | null
+          period_start?: string | null
+          platform: string
+          proposal_id?: string | null
+          raw_metrics?: Json | null
+          reach?: number | null
+          roas?: number | null
+          spend?: number | null
+        }
+        Update: {
+          clicks?: number | null
+          client_id?: string
+          conversions?: number | null
+          cpc?: number | null
+          cpm?: number | null
+          created_at?: string
+          ctr?: number | null
+          currency?: string | null
+          id?: string
+          impressions?: number | null
+          notes?: string | null
+          period_end?: string | null
+          period_start?: string | null
+          platform?: string
+          proposal_id?: string | null
+          raw_metrics?: Json | null
+          reach?: number | null
+          roas?: number | null
+          spend?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ads_proposal_performance_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ads_proposal_performance_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "ads_proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ads_proposals: {
+        Row: {
+          approved_at: string | null
+          budget_currency: string | null
+          budget_total: number | null
+          business_objective: string | null
+          campaign_objectives: string[] | null
+          client_id: string
+          created_at: string
+          flight_end: string | null
+          flight_start: string | null
+          generated_at: string | null
+          id: string
+          internal_brief: Json | null
+          platforms: string[]
+          proposal_data: Json | null
+          status: string
+          target_audience_brief: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          budget_currency?: string | null
+          budget_total?: number | null
+          business_objective?: string | null
+          campaign_objectives?: string[] | null
+          client_id: string
+          created_at?: string
+          flight_end?: string | null
+          flight_start?: string | null
+          generated_at?: string | null
+          id?: string
+          internal_brief?: Json | null
+          platforms?: string[]
+          proposal_data?: Json | null
+          status?: string
+          target_audience_brief?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          budget_currency?: string | null
+          budget_total?: number | null
+          business_objective?: string | null
+          campaign_objectives?: string[] | null
+          client_id?: string
+          created_at?: string
+          flight_end?: string | null
+          flight_start?: string | null
+          generated_at?: string | null
+          id?: string
+          internal_brief?: Json | null
+          platforms?: string[]
+          proposal_data?: Json | null
+          status?: string
+          target_audience_brief?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ads_proposals_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       app_settings: {
         Row: {
           id: string
