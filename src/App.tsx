@@ -24,6 +24,7 @@ import CursoIaGobiernoGto from "./pages/CursoIaGobiernoGto";
 import CursoIaGobiernoGtoAdmin from "./pages/CursoIaGobiernoGtoAdmin";
 import CursoGtoEntregables from "./pages/CursoGtoEntregables";
 import ClientWorkspace from "./pages/ClientWorkspace";
+import AdsProposalView from "./pages/AdsProposalView";
 
 const queryClient = new QueryClient();
 
@@ -48,6 +49,7 @@ const App = () => (
           <Route path="/admin/operaciones/login" element={<OperationsLogin />} />
           <Route path="/admin/operaciones" element={<OperationsDashboard />} />
           <Route path="/admin/cliente/:clientId" element={<ClientWorkspace />} />
+          <Route path="/admin/propuesta/:proposalId" element={<AdsProposalView />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/parrilla" element={<ContentEngine />} />
           <Route path="/parrilla/:profileId" element={<ContentCycleDetail />} />
