@@ -19,7 +19,7 @@ import {
   Calendar, Layers, Download, Users, Trash2, Pencil, Camera,
   Upload, FileText, X, Flame, Loader2, Send,
 } from "lucide-react";
-import { CLIENTS } from "@/hooks/useOperationsData";
+import { useClientsData } from "@/hooks/useClientsData";
 
 const NETWORKS = ["Instagram", "Facebook", "X", "LinkedIn", "TikTok"];
 const TONES = ["Profesional", "Cercano", "Inspirador", "Educativo", "Disruptivo", "Formal"];
@@ -248,7 +248,13 @@ const ContentEngine = () => {
 
   const handleCreateProfile = async () => {
     if (!newProfile.client_name) return;
-    const result = await createProfile(newProfile);
+    // Resolve / create client_id from canonical catalog
+    const name = newProfile.client_name.trim();
+    let client = clients.find(c => c.name.toLowerCase() === name.toLowerCase());
+    if (!client) {
+      client = await createClient({ name });
+    }
+    const result = await createProfile({ ...newProfile, client_id: client?.id ?? null } as any);
     if (result) {
       setShowNewProfile(false);
       setIsCustomClient(false);
@@ -509,7 +515,11 @@ const ContentEngine = () => {
                 }}
                 className="w-full mt-1.5 rounded-xl border border-border bg-secondary px-3 py-2.5 text-sm text-foreground focus:ring-2 focus:ring-primary/30 transition-shadow">
                 <option value="">Seleccionar...</option>
-                {CLIENTS.map(c => <option key={c} value={c}>{c}</option>)}
+                {clients.map(c => (
+                  <option key={c.id} value={c.name}>
+                    {c.name}{c.is_probono ? "  ·  PRO BONO" : ""}
+                  </option>
+                ))}
                 <option value="__custom__">+ Otro cliente</option>
               </select>
               {isCustomClient && (
