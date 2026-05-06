@@ -59,7 +59,7 @@ export function AdsProposalBuilder({
       const [c, p, perf] = await Promise.all([
         supabase.from("client_corpus").select("id", { count: "exact", head: true }).eq("client_id", clientId),
         supabase.from("content_profiles").select("id").eq("client_id", clientId),
-      , supabase.from("ads_proposal_performance").select("id", { count: "exact", head: true }).eq("client_id", clientId),
+        supabase.from("ads_proposal_performance").select("id", { count: "exact", head: true }).eq("client_id", clientId),
       ]);
       const profileIds = (p.data || []).map((x: any) => x.id);
       let cycles = 0;
