@@ -470,6 +470,59 @@ export type Database = {
         }
         Relationships: []
       }
+      client_corpus: {
+        Row: {
+          client_id: string
+          content: string | null
+          created_at: string
+          entry_type: string
+          file_name: string | null
+          file_url: string | null
+          id: string
+          source_reference: string | null
+          source_url: string | null
+          tags: string[]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          content?: string | null
+          created_at?: string
+          entry_type: string
+          file_name?: string | null
+          file_url?: string | null
+          id?: string
+          source_reference?: string | null
+          source_url?: string | null
+          tags?: string[]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          content?: string | null
+          created_at?: string
+          entry_type?: string
+          file_name?: string | null
+          file_url?: string | null
+          id?: string
+          source_reference?: string | null
+          source_url?: string | null
+          tags?: string[]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_corpus_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_objectives: {
         Row: {
           business_unit: string | null
