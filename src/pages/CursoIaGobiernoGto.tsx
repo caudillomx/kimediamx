@@ -11,6 +11,8 @@ import { StepCompromisos, type CompromisosData } from "@/components/curso-gto/St
 import { StepTheoryBlock } from "@/components/curso-gto/StepTheoryBlock";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 
 interface Dependencia {
   id: string;
@@ -52,6 +54,14 @@ interface Participante {
   email: string | null;
 }
 
+interface ResumeCandidate {
+  dependencia: Dependencia;
+  sesion: Sesion;
+  participante: Participante;
+  diagnosticos: any[];
+  step: number;
+}
+
 const CursoIaGobiernoGto = () => {
   const [bootLoading, setBootLoading] = useState(true);
   const [dependencia, setDependencia] = useState<Dependencia | null>(null);
@@ -61,6 +71,7 @@ const CursoIaGobiernoGto = () => {
   const [step, setStep] = useState(0);
   const [highest, setHighest] = useState(0);
   const [isDemoMode, setIsDemoMode] = useState(false);
+  const [resumeCandidate, setResumeCandidate] = useState<ResumeCandidate | null>(null);
 
   useEffect(() => {
     document.title = dependencia
@@ -135,28 +146,28 @@ const CursoIaGobiernoGto = () => {
           .eq("participante_id", part.id)
           .order("created_at", { ascending: false });
 
-        setDependencia(dep as Dependencia);
-        setSesion(s as Sesion);
-        setParticipante({
-          id: part.id,
-          nombre: part.nombre,
-          cargo: part.cargo,
-          email: part.email,
-        });
-        setDiagnosticos(
-          (diags || []).map((d: any) => ({
-            id: d.id,
-            titulo: d.titulo,
-            texto_original: d.texto_original,
-            resumen: d.resumen_diagnostico,
-            score_calidad: d.score_calidad,
-            errores_detectados: d.errores_detectados || [],
-            terminos_prohibidos_sugeridos: [],
-          }))
-        );
+        const mappedDiagnosticos = (diags || []).map((d: any) => ({
+          id: d.id,
+          titulo: d.titulo,
+          texto_original: d.texto_original,
+          resumen: d.resumen_diagnostico,
+          score_calidad: d.score_calidad,
+          errores_detectados: d.errores_detectados || [],
+          terminos_prohibidos_sugeridos: [],
+        }));
         const lastStep = part.ultimo_paso ?? s.paso_actual ?? 0;
-        setStep(lastStep);
-        setHighest(lastStep);
+        setResumeCandidate({
+          dependencia: dep as Dependencia,
+          sesion: s as Sesion,
+          participante: {
+            id: part.id,
+            nombre: part.nombre,
+            cargo: part.cargo,
+            email: part.email,
+          },
+          diagnosticos: mappedDiagnosticos,
+          step: lastStep,
+        });
       } catch (e) {
         console.error(e);
       } finally {
@@ -217,8 +228,9 @@ const CursoIaGobiernoGto = () => {
         terminos_prohibidos_sugeridos: [],
       }))
     );
-    setStep(0);
-    setHighest(0);
+    const resumedStep = Number(createdPart.ultimo_paso ?? sess.paso_actual ?? 0);
+    setStep(resumedStep);
+    setHighest(resumedStep);
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({ sesionId: sess.id, participanteId: createdPart.id }),
@@ -228,8 +240,9 @@ const CursoIaGobiernoGto = () => {
 
   const advanceTo = async (next: number) => {
     if (!sesion || !participante) return;
-    const newHighest = Math.max(highest, next);
-    setStep(next);
+    const cappedNext = Math.min(next, highest + 1);
+    const newHighest = Math.max(highest, cappedNext);
+    setStep(cappedNext);
     setHighest(newHighest);
     // Update participant progress + activity
     await supabase
@@ -242,6 +255,31 @@ const CursoIaGobiernoGto = () => {
       setSesion({ ...sesion, paso_actual: newHighest });
     }
     window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const resumeStoredSession = () => {
+    if (!resumeCandidate) return;
+    setDependencia(resumeCandidate.dependencia);
+    setSesion(resumeCandidate.sesion);
+    setParticipante(resumeCandidate.participante);
+    setDiagnosticos(resumeCandidate.diagnosticos);
+    setStep(resumeCandidate.step);
+    setHighest(resumeCandidate.step);
+    setResumeCandidate(null);
+  };
+
+  const resetStoredSession = (notify = false) => {
+    localStorage.removeItem(STORAGE_KEY);
+    setResumeCandidate(null);
+    setDependencia(null);
+    setSesion(null);
+    setParticipante(null);
+    setDiagnosticos([]);
+    setStep(0);
+    setHighest(0);
+    if (notify) {
+      toast.success("Sesión anterior cerrada. Ya puedes entrar con otro código.");
+    }
   };
 
   const saveBrief = async (data: BriefData) => {
@@ -326,6 +364,40 @@ const CursoIaGobiernoGto = () => {
     );
   }
 
+  if (resumeCandidate && !dependencia && !sesion) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background px-6 py-10">
+        <div className="pointer-events-none absolute inset-0 bg-mesh opacity-35" />
+        <div className="pointer-events-none absolute inset-0 bg-glow opacity-40" />
+        <Card className="relative z-10 w-full max-w-2xl border-border bg-card/90 p-7 shadow-glow-lg md:p-8">
+          <div className="mb-2 text-[10px] font-bold uppercase tracking-[1.5px] text-electric">
+            Sesión previa detectada
+          </div>
+          <h1 className="mb-3 font-display text-3xl font-bold leading-tight md:text-4xl">
+            ¿Quieres continuar como <span className="text-gradient-sunset">{resumeCandidate.participante.nombre}</span>?
+          </h1>
+          <p className="mb-6 text-sm text-muted-foreground md:text-base">
+            Detectamos progreso guardado para <strong className="text-foreground">{resumeCandidate.dependencia.siglas}</strong>.
+            Si este equipo es compartido, conviene entrar con otro código en lugar de continuar la sesión anterior.
+          </p>
+          <div className="mb-6 rounded-xl border border-border bg-background/50 p-4 text-sm text-muted-foreground">
+            <div><strong className="text-foreground">Dependencia:</strong> {resumeCandidate.dependencia.nombre}</div>
+            <div><strong className="text-foreground">Email:</strong> {resumeCandidate.participante.email || "Sin email"}</div>
+            <div><strong className="text-foreground">Paso guardado:</strong> {STEPS[resumeCandidate.step]?.label || "Inicio"}</div>
+          </div>
+          <div className="flex flex-wrap justify-between gap-3">
+            <Button variant="outline" onClick={() => resetStoredSession(true)} className="rounded-xl">
+              Entrar con otro código
+            </Button>
+            <Button onClick={resumeStoredSession} className="rounded-xl bg-gradient-coral font-semibold shadow-glow">
+              Continuar sesión
+            </Button>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
   if (!dependencia || !sesion) {
     return (
       <AccessGate onValidate={validateCode} onCheckCode={checkCode} />
@@ -353,7 +425,7 @@ const CursoIaGobiernoGto = () => {
       <div className="pointer-events-none fixed inset-0 bg-mesh opacity-25" />
       <div className="pointer-events-none fixed inset-0 bg-glow opacity-25" />
       <div className="relative">
-        <StepNav current={step} highest={highest} onJump={(s) => setStep(s)} />
+        <StepNav current={step} highest={highest} onJump={(s) => setStep(Math.min(s, highest))} />
 
         <div className="border-b border-border/40 bg-card/40 backdrop-blur">
           <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-2 md:px-6">
@@ -366,6 +438,9 @@ const CursoIaGobiernoGto = () => {
                   👤 <span className="font-bold text-foreground">{participante.nombre}</span>
                 </span>
               )}
+              <Button variant="ghost" size="sm" onClick={() => resetStoredSession(true)} className="h-7 px-2 text-[10px] uppercase tracking-wider">
+                Cambiar participante
+              </Button>
               <span>{STEPS[step]?.label}</span>
             </div>
           </div>
