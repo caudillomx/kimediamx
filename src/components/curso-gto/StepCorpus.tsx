@@ -139,9 +139,16 @@ export const StepCorpus = ({ initial, onSave, onBack, sesionId, participanteId }
           mime_type: file.type || null,
         })
         .select()
-        .single();
+        .maybeSingle();
       if (insErr) throw insErr;
-      setUploads((prev) => [row as UploadRow, ...prev]);
+      if (row) {
+        setUploads((prev) => [row as UploadRow, ...prev]);
+      } else {
+        const { data: refreshed } = await supabase.rpc("gto_list_corpus_uploads", {
+          _participante_id: participanteId,
+        });
+        setUploads((refreshed || []) as UploadRow[]);
+      }
       if (!docs.includes(docId)) setDocs((d) => [...d, docId]);
       toast.success("Archivo subido.");
     } catch (e: any) {
