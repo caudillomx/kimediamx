@@ -217,8 +217,9 @@ const CursoIaGobiernoGto = () => {
         terminos_prohibidos_sugeridos: [],
       }))
     );
-    setStep(0);
-    setHighest(0);
+    const resumedStep = Number(createdPart.ultimo_paso ?? sess.paso_actual ?? 0);
+    setStep(resumedStep);
+    setHighest(resumedStep);
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({ sesionId: sess.id, participanteId: createdPart.id }),
@@ -228,8 +229,9 @@ const CursoIaGobiernoGto = () => {
 
   const advanceTo = async (next: number) => {
     if (!sesion || !participante) return;
-    const newHighest = Math.max(highest, next);
-    setStep(next);
+    const cappedNext = Math.min(next, highest + 1);
+    const newHighest = Math.max(highest, cappedNext);
+    setStep(cappedNext);
     setHighest(newHighest);
     // Update participant progress + activity
     await supabase
@@ -353,7 +355,7 @@ const CursoIaGobiernoGto = () => {
       <div className="pointer-events-none fixed inset-0 bg-mesh opacity-25" />
       <div className="pointer-events-none fixed inset-0 bg-glow opacity-25" />
       <div className="relative">
-        <StepNav current={step} highest={highest} onJump={(s) => setStep(s)} />
+        <StepNav current={step} highest={highest} onJump={(s) => setStep(Math.min(s, highest))} />
 
         <div className="border-b border-border/40 bg-card/40 backdrop-blur">
           <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-2 md:px-6">
