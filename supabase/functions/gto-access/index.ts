@@ -144,23 +144,60 @@ Deno.serve(async (req) => {
       sess = created;
     }
 
-    const { data: createdPart, error: pErr } = await admin
+    const { data: existingParticipant } = await admin
       .from("gto_participantes")
-      .insert({
-        sesion_id: sess.id,
-        nombre: participant_name,
-        cargo: participant_cargo || null,
-        email: participant_email,
-        ultimo_paso: 0,
-      })
-      .select()
-      .single();
-    if (pErr || !createdPart) {
-      await logAttempt(ip, code, false, "participant_create_failed");
-      return new Response(JSON.stringify({ error: "No se pudo registrar al participante." }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      .select("id, nombre, cargo, email, ultimo_paso")
+      .eq("sesion_id", sess.id)
+      .eq("email", participant_email)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    let createdPart = existingParticipant;
+
+    if (createdPart) {
+      const { data: updatedParticipant, error: updateErr } = await admin
+        .from("gto_participantes")
+        .update({
+          nombre: participant_name,
+          cargo: participant_cargo || null,
+          ultima_actividad: new Date().toISOString(),
+        })
+        .eq("id", createdPart.id)
+        .select("id, nombre, cargo, email, ultimo_paso")
+        .single();
+
+      if (updateErr || !updatedParticipant) {
+        await logAttempt(ip, code, false, "participant_resume_failed");
+        return new Response(JSON.stringify({ error: "No se pudo retomar la sesión." }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      createdPart = updatedParticipant;
+    } else {
+      const { data: insertedParticipant, error: pErr } = await admin
+        .from("gto_participantes")
+        .insert({
+          sesion_id: sess.id,
+          nombre: participant_name,
+          cargo: participant_cargo || null,
+          email: participant_email,
+          ultimo_paso: 0,
+          ultima_actividad: new Date().toISOString(),
+        })
+        .select("id, nombre, cargo, email, ultimo_paso")
+        .single();
+      if (pErr || !insertedParticipant) {
+        await logAttempt(ip, code, false, "participant_create_failed");
+        return new Response(JSON.stringify({ error: "No se pudo registrar al participante." }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      createdPart = insertedParticipant;
     }
 
     await logAttempt(ip, code, true, "enter");
@@ -173,6 +210,7 @@ Deno.serve(async (req) => {
           nombre: createdPart.nombre,
           cargo: createdPart.cargo,
           email: createdPart.email,
+          ultimo_paso: createdPart.ultimo_paso ?? 0,
         },
         dependencia: { id: dep.id, nombre: dep.nombre, siglas: dep.siglas },
       }),
