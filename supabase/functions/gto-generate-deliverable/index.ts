@@ -434,6 +434,7 @@ Reglas:
 - Si "simulacro_sessions" está vacío, devuelve "simulacros": [] y aclara en conclusion_avance que en este ciclo no se ejecutaron simulacros formales.
 - Si AMBOS están vacíos, devuelve los tres arreglos vacíos y en conclusion_avance escribe: "No se realizaron entrenamientos ni simulacros formales en el ciclo. Las sesiones registradas fueron consultorías 1:1."
 - En recomendaciones_siguiente_mes sugiere 2-3 simulacros pertinentes para esta dependencia con base en entrenamiento_sessions, consultoria_sessions y bitacora_curso.
+- En cada entrenamiento, el campo "areas" debe listar nombres y cargos detectados explícitamente en el transcript_excerpt (presentaciones tipo "soy X, jefe de Y"). Si no logras identificarlos con seguridad, deja "areas" vacío ("") y reporta sólo el conteo en "asistentes". No inventes nombres.
 
 Devuelve JSON:
 {
