@@ -416,6 +416,7 @@ function renderHtml(
       <p>${esc(g.observaciones_globales)}</p>
       <h2>4. Conclusión técnica</h2>
       <p>${esc(g.conclusion_tecnica)}</p>
+      ${renderEvidenciaAdopcion(g)}
     `;
   } else if (t === "resumen_consultorias") {
     body = `
@@ -461,6 +462,7 @@ function renderHtml(
           <tr><td>${esc(r.dimension)}</td><td>${esc(r.recomendacion)}</td></tr>
         `).join("")}
       </table>
+      ${renderEvidenciaAdopcion(g)}
     `;
   } else if (t === "bitacora_simulacros") {
     body = `
@@ -518,6 +520,17 @@ function renderHtml(
 function esc(v: any): string {
   if (v === null || v === undefined || v === "") return '<span class="placeholder">[pendiente]</span>';
   return String(v).replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c] as string));
+}
+
+function renderEvidenciaAdopcion(g: any): string {
+  const e = g?.evidencia_adopcion;
+  if (!e) return "";
+  const items = Array.isArray(e.items) ? e.items : [];
+  return `
+    <h2>Evidencia de adopción (curso IA)</h2>
+    <p>${esc(e.resumen)}</p>
+    ${items.length ? `<ul>${items.map((i: string) => `<li>${esc(i)}</li>`).join("")}</ul>` : ""}
+  `;
 }
 
 /**
