@@ -572,7 +572,7 @@ function FfRow({
     <TableRow>
       <TableCell className="text-xs">{new Date(Number(t.date)).toLocaleDateString("es-MX")}</TableCell>
       <TableCell className="text-sm max-w-sm truncate">{t.title}</TableCell>
-      <TableCell>{t.duration ? `${Math.round(t.duration / 60)} min` : "—"}</TableCell>
+      <TableCell>{t.duration ? `${Math.round(Number(t.duration))} min` : "—"}</TableCell>
       <TableCell>
         <Select value={dep} onValueChange={setDep}>
           <SelectTrigger className="w-44 h-8"><SelectValue placeholder="Dependencia" /></SelectTrigger>

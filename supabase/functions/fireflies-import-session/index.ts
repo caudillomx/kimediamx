@@ -161,7 +161,7 @@ Si la sesión NO es simulacro, deja "simulacro" como null. Si un dato no está, 
 
     // 3. Insert training session
     const durationMin = t.duration
-      ? Math.round(Number(t.duration) / 60)
+      ? Math.round(Number(t.duration))
       : null;
     const sessionDate = t.date
       ? new Date(Number(t.date)).toISOString().split("T")[0]
