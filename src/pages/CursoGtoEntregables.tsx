@@ -115,6 +115,11 @@ export default function CursoGtoEntregables() {
   const [genType, setGenType] = useState<string>("registro_consultorias");
   const [genDep, setGenDep] = useState<string>("");
   const [generating, setGenerating] = useState(false);
+  const [bulkRunning, setBulkRunning] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number; current: string }>({
+    done: 0, total: 0, current: "",
+  });
+  const [bulkErrors, setBulkErrors] = useState<string[]>([]);
 
   const [previewHtml, setPreviewHtml] = useState<string | null>(null);
   const [previewTitle, setPreviewTitle] = useState<string>("");
@@ -269,6 +274,62 @@ export default function CursoGtoEntregables() {
       toast.error(`Error: ${e?.message ?? "desconocido"}`);
     } finally {
       setGenerating(false);
+    }
+  };
+
+  // Genera TODOS los entregables del mes: por dependencia (registro, MCN, bitácora)
+  // + uno consolidado (resumen). Corre secuencial para no saturar la IA.
+  const generateAllDeliverables = async () => {
+    if (deps.length === 0) {
+      toast.error("No hay dependencias cargadas.");
+      return;
+    }
+    const perDepTypes = ["registro_consultorias", "reporte_mcn", "bitacora_simulacros"];
+    const total = deps.length * perDepTypes.length + 1; // +1 resumen consolidado
+    setBulkRunning(true);
+    setBulkErrors([]);
+    setBulkProgress({ done: 0, total, current: "Preparando…" });
+    let done = 0;
+    const errors: string[] = [];
+
+    const runOne = async (type: string, depId: string | null, label: string) => {
+      setBulkProgress({ done, total, current: label });
+      try {
+        const { data, error } = await supabase.functions.invoke("gto-generate-deliverable", {
+          body: {
+            deliverableType: type,
+            dependenciaId: depId,
+            year, month,
+            consultantName: "KiMedia",
+          },
+        });
+        if (error) throw error;
+        if ((data as any)?.error) throw new Error((data as any).error);
+      } catch (e: any) {
+        errors.push(`${label}: ${e?.message ?? "desconocido"}`);
+      } finally {
+        done += 1;
+        setBulkProgress({ done, total, current: label });
+      }
+    };
+
+    for (const dep of deps) {
+      for (const type of perDepTypes) {
+        const label = `${DELIVERABLE_LABELS[type]} · ${dep.siglas}`;
+        // eslint-disable-next-line no-await-in-loop
+        await runOne(type, dep.id, label);
+      }
+    }
+    // Resumen consolidado al final
+    await runOne("resumen_consultorias", null, DELIVERABLE_LABELS.resumen_consultorias);
+
+    setBulkErrors(errors);
+    setBulkRunning(false);
+    await fetchData();
+    if (errors.length === 0) {
+      toast.success(`Listo: ${total} entregables generados`);
+    } else {
+      toast.warning(`Generados ${total - errors.length}/${total}. ${errors.length} con error.`);
     }
   };
 
