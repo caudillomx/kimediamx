@@ -204,20 +204,30 @@ export default function CursoGtoEntregables() {
 
   const importTranscript = async (
     transcriptId: string,
-    dependenciaId: string,
+    dependenciaIds: string[],
     sessionType: string,
   ) => {
-    if (!dependenciaId) {
-      toast.error("Selecciona la dependencia primero.");
+    if (!dependenciaIds.length) {
+      toast.error("Selecciona al menos una dependencia.");
       return;
     }
     setImportingId(transcriptId);
     try {
-      const { data, error } = await supabase.functions.invoke("fireflies-import-session", {
-        body: { transcriptId, dependenciaId, sessionType },
-      });
-      if (error) throw error;
-      toast.success("Sesión importada y datos extraídos por IA");
+      const results = await Promise.allSettled(
+        dependenciaIds.map((depId) =>
+          supabase.functions.invoke("fireflies-import-session", {
+            body: { transcriptId, dependenciaId: depId, sessionType },
+          })
+        )
+      );
+      const failed = results.filter((r) => r.status === "rejected" || (r as any).value?.error);
+      const ok = results.length - failed.length;
+      if (ok > 0) {
+        toast.success(`Sesión importada para ${ok} dependencia${ok === 1 ? "" : "s"}`);
+      }
+      if (failed.length) {
+        toast.error(`${failed.length} dependencia(s) fallaron al importar`);
+      }
       fetchData();
     } catch (e: any) {
       toast.error(`Error al importar: ${e?.message ?? "desconocido"}`);
