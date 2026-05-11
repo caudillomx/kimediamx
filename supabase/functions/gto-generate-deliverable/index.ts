@@ -440,7 +440,6 @@ Devuelve JSON:
   "resumen_ejecutivo": "...",
   "entrenamientos": [
     {"fecha":"","duracion":"","modalidad":"","instructor":"","areas":"","asistentes":N,"objetivo":"","competencias":["..."],"evidencias":"","observaciones":""}
-    /* En "areas" puedes listar nombres/cargos detectados en el transcript separados por coma. Si no se identifican con seguridad, déjalo vacío y reporta solo "asistentes":N. */
   ],
   "simulacros": [
     {"fecha":"","tipo":"","duracion":"","dependencia":"","integrantes":N,
