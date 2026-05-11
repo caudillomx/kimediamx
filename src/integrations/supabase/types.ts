@@ -1733,6 +1733,159 @@ export type Database = {
           },
         ]
       }
+      gto_entregables_mensuales: {
+        Row: {
+          contenido: Json
+          created_at: string
+          delivered_at: string | null
+          dependencia_id: string
+          generated_at: string | null
+          generated_by: string | null
+          id: string
+          notes: string | null
+          pdf_path: string | null
+          pdf_url: string | null
+          period_month: number
+          period_year: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          contenido?: Json
+          created_at?: string
+          delivered_at?: string | null
+          dependencia_id: string
+          generated_at?: string | null
+          generated_by?: string | null
+          id?: string
+          notes?: string | null
+          pdf_path?: string | null
+          pdf_url?: string | null
+          period_month: number
+          period_year: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          contenido?: Json
+          created_at?: string
+          delivered_at?: string | null
+          dependencia_id?: string
+          generated_at?: string | null
+          generated_by?: string | null
+          id?: string
+          notes?: string | null
+          pdf_path?: string | null
+          pdf_url?: string | null
+          period_month?: number
+          period_year?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      gto_entregables_participante: {
+        Row: {
+          contenido: Json
+          created_at: string
+          delivered_at: string | null
+          dependencia_id: string | null
+          generated_at: string | null
+          generated_by: string | null
+          id: string
+          notes: string | null
+          participante_id: string
+          pdf_path: string | null
+          pdf_url: string | null
+          sesion_ids: string[] | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          contenido?: Json
+          created_at?: string
+          delivered_at?: string | null
+          dependencia_id?: string | null
+          generated_at?: string | null
+          generated_by?: string | null
+          id?: string
+          notes?: string | null
+          participante_id: string
+          pdf_path?: string | null
+          pdf_url?: string | null
+          sesion_ids?: string[] | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          contenido?: Json
+          created_at?: string
+          delivered_at?: string | null
+          dependencia_id?: string | null
+          generated_at?: string | null
+          generated_by?: string | null
+          id?: string
+          notes?: string | null
+          participante_id?: string
+          pdf_path?: string | null
+          pdf_url?: string | null
+          sesion_ids?: string[] | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      gto_entregables_sesion: {
+        Row: {
+          contenido: Json
+          created_at: string
+          delivered_at: string | null
+          dependencia_id: string | null
+          generated_at: string | null
+          generated_by: string | null
+          id: string
+          notes: string | null
+          pdf_path: string | null
+          pdf_url: string | null
+          sesion_id: string
+          status: string
+          transcripcion_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          contenido?: Json
+          created_at?: string
+          delivered_at?: string | null
+          dependencia_id?: string | null
+          generated_at?: string | null
+          generated_by?: string | null
+          id?: string
+          notes?: string | null
+          pdf_path?: string | null
+          pdf_url?: string | null
+          sesion_id: string
+          status?: string
+          transcripcion_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          contenido?: Json
+          created_at?: string
+          delivered_at?: string | null
+          dependencia_id?: string | null
+          generated_at?: string | null
+          generated_by?: string | null
+          id?: string
+          notes?: string | null
+          pdf_path?: string | null
+          pdf_url?: string | null
+          sesion_id?: string
+          status?: string
+          transcripcion_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       gto_mcn_scores: {
         Row: {
           analisis_riesgos: number | null
@@ -1833,6 +1986,63 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      gto_sesion_transcripciones: {
+        Row: {
+          agenda_real: Json | null
+          citas_clave: Json | null
+          created_at: string
+          created_by: string | null
+          duracion_min: number | null
+          fireflies_id: string | null
+          id: string
+          meeting_date: string | null
+          participantes_detectados: Json | null
+          processed_at: string | null
+          sesion_id: string
+          summary_overview: string | null
+          temas_cubiertos: Json | null
+          titulo: string
+          transcript_text: string | null
+          updated_at: string
+        }
+        Insert: {
+          agenda_real?: Json | null
+          citas_clave?: Json | null
+          created_at?: string
+          created_by?: string | null
+          duracion_min?: number | null
+          fireflies_id?: string | null
+          id?: string
+          meeting_date?: string | null
+          participantes_detectados?: Json | null
+          processed_at?: string | null
+          sesion_id: string
+          summary_overview?: string | null
+          temas_cubiertos?: Json | null
+          titulo: string
+          transcript_text?: string | null
+          updated_at?: string
+        }
+        Update: {
+          agenda_real?: Json | null
+          citas_clave?: Json | null
+          created_at?: string
+          created_by?: string | null
+          duracion_min?: number | null
+          fireflies_id?: string | null
+          id?: string
+          meeting_date?: string | null
+          participantes_detectados?: Json | null
+          processed_at?: string | null
+          sesion_id?: string
+          summary_overview?: string | null
+          temas_cubiertos?: Json | null
+          titulo?: string
+          transcript_text?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       gto_sesiones: {
         Row: {
