@@ -106,6 +106,7 @@ export default function CursoGtoEntregables() {
 
   const [ffLoading, setFfLoading] = useState(false);
   const [ffList, setFfList] = useState<FFTranscript[]>([]);
+  const [ffRange, setFfRange] = useState<"month" | "90d" | "6m" | "all">("6m");
   const [importingId, setImportingId] = useState<string | null>(null);
 
   const [genType, setGenType] = useState<string>("registro_consultorias");
@@ -175,9 +176,19 @@ export default function CursoGtoEntregables() {
   const loadFireflies = async () => {
     setFfLoading(true);
     try {
-      const fromDate = new Date(year, month - 1, 1).toISOString();
+      let fromDate: string | null = null;
+      let toDate: string | null = null;
+      const today = new Date();
+      if (ffRange === "month") {
+        fromDate = new Date(year, month - 1, 1).toISOString();
+        toDate = new Date(year, month, 0, 23, 59, 59).toISOString();
+      } else if (ffRange === "90d") {
+        fromDate = new Date(today.getTime() - 90 * 86400000).toISOString();
+      } else if (ffRange === "6m") {
+        fromDate = new Date(today.getFullYear(), today.getMonth() - 6, 1).toISOString();
+      }
       const { data, error } = await supabase.functions.invoke("fireflies-list-meetings", {
-        body: { limit: 50, fromDate },
+        body: { limit: 300, fromDate, toDate },
       });
       if (error) throw error;
       setFfList((data as any)?.transcripts ?? []);
@@ -404,10 +415,27 @@ export default function CursoGtoEntregables() {
                 <CardDescription>Trae transcripciones desde tu cuenta Fireflies y la IA extrae datos para el formato.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <Button onClick={loadFireflies} disabled={ffLoading}>
-                  {ffLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
-                  Listar reuniones del mes
-                </Button>
+                <div className="flex flex-wrap items-end gap-3">
+                  <div className="space-y-1">
+                    <Label>Rango</Label>
+                    <Select value={ffRange} onValueChange={(v) => setFfRange(v as any)}>
+                      <SelectTrigger className="w-56"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="month">Mes seleccionado ({MONTHS[month - 1]} {year})</SelectItem>
+                        <SelectItem value="90d">Últimos 90 días</SelectItem>
+                        <SelectItem value="6m">Últimos 6 meses</SelectItem>
+                        <SelectItem value="all">Todas (sin filtro)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button onClick={loadFireflies} disabled={ffLoading}>
+                    {ffLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+                    Listar reuniones
+                  </Button>
+                  {ffList.length > 0 && (
+                    <span className="text-xs text-muted-foreground">{ffList.length} reuniones</span>
+                  )}
+                </div>
                 {ffList.length > 0 && (
                   <Table>
                     <TableHeader>

@@ -46,11 +46,13 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { limit = 25, fromDate } = await req.json().catch(() => ({}));
+    const { limit = 200, fromDate, toDate } = await req.json().catch(() => ({}));
+    const PAGE_SIZE = 50;
+    const CAP = Math.min(Number(limit) || 50, 500);
 
     const query = `
-      query Transcripts($limit: Int, $fromDate: DateTime) {
-        transcripts(limit: $limit, fromDate: $fromDate) {
+      query Transcripts($limit: Int, $skip: Int, $fromDate: DateTime, $toDate: DateTime) {
+        transcripts(limit: $limit, skip: $skip, fromDate: $fromDate, toDate: $toDate) {
           id
           title
           date
@@ -64,27 +66,41 @@ Deno.serve(async (req) => {
       }
     `;
 
-    const ffRes = await fetch(`${GATEWAY_URL}/graphql`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "X-Connection-Api-Key": FIREFLIES_API_KEY,
-      },
-      body: JSON.stringify({
-        query,
-        variables: { limit, fromDate: fromDate ?? null },
-      }),
-    });
-    const ffData = await ffRes.json();
-    if (!ffRes.ok || ffData.errors) {
-      throw new Error(
-        `Fireflies error [${ffRes.status}]: ${JSON.stringify(ffData)}`
-      );
+    const all: any[] = [];
+    let skip = 0;
+    while (all.length < CAP) {
+      const pageLimit = Math.min(PAGE_SIZE, CAP - all.length);
+      const ffRes = await fetch(`${GATEWAY_URL}/graphql`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "X-Connection-Api-Key": FIREFLIES_API_KEY,
+        },
+        body: JSON.stringify({
+          query,
+          variables: {
+            limit: pageLimit,
+            skip,
+            fromDate: fromDate ?? null,
+            toDate: toDate ?? null,
+          },
+        }),
+      });
+      const ffData = await ffRes.json();
+      if (!ffRes.ok || ffData.errors) {
+        throw new Error(
+          `Fireflies error [${ffRes.status}]: ${JSON.stringify(ffData)}`
+        );
+      }
+      const page = ffData.data?.transcripts ?? [];
+      all.push(...page);
+      if (page.length < pageLimit) break;
+      skip += pageLimit;
     }
 
     return new Response(
-      JSON.stringify({ transcripts: ffData.data?.transcripts ?? [] }),
+      JSON.stringify({ transcripts: all }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err: any) {
