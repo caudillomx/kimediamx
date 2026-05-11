@@ -604,22 +604,51 @@ function FfRow({
   t: FFTranscript;
   deps: Dependencia[];
   importing: boolean;
-  onImport: (id: string, depId: string, type: string) => void;
+  onImport: (id: string, depIds: string[], type: string) => void;
 }) {
-  const [dep, setDep] = useState("");
+  const [selDeps, setSelDeps] = useState<string[]>([]);
   const [type, setType] = useState("consultoria");
+  const toggleDep = (id: string) =>
+    setSelDeps((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
+  const labels = selDeps
+    .map((id) => deps.find((d) => d.id === id)?.siglas)
+    .filter(Boolean) as string[];
   return (
     <TableRow>
       <TableCell className="text-xs">{new Date(Number(t.date)).toLocaleDateString("es-MX")}</TableCell>
       <TableCell className="text-sm max-w-sm truncate">{t.title}</TableCell>
       <TableCell>{t.duration ? `${Math.round(Number(t.duration))} min` : "—"}</TableCell>
       <TableCell>
-        <Select value={dep} onValueChange={setDep}>
-          <SelectTrigger className="w-44 h-8"><SelectValue placeholder="Dependencia" /></SelectTrigger>
-          <SelectContent>
-            {deps.map((d) => <SelectItem key={d.id} value={d.id}>{d.siglas}</SelectItem>)}
-          </SelectContent>
-        </Select>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm" className="w-56 h-8 justify-start font-normal">
+              <span className="truncate">
+                {labels.length === 0
+                  ? "Dependencia(s)"
+                  : labels.length <= 2
+                  ? labels.join(", ")
+                  : `${labels.length} dependencias`}
+              </span>
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-64 p-2 max-h-72 overflow-y-auto" align="start">
+            <div className="space-y-1">
+              {deps.map((d) => (
+                <label
+                  key={d.id}
+                  className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-accent cursor-pointer text-sm"
+                >
+                  <Checkbox
+                    checked={selDeps.includes(d.id)}
+                    onCheckedChange={() => toggleDep(d.id)}
+                  />
+                  <span className="font-medium">{d.siglas}</span>
+                  <span className="text-muted-foreground text-xs truncate">{d.nombre}</span>
+                </label>
+              ))}
+            </div>
+          </PopoverContent>
+        </Popover>
       </TableCell>
       <TableCell>
         <Select value={type} onValueChange={setType}>
@@ -632,8 +661,8 @@ function FfRow({
         </Select>
       </TableCell>
       <TableCell>
-        <Button size="sm" disabled={!dep || importing} onClick={() => onImport(t.id, dep, type)}>
-          {importing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Importar"}
+        <Button size="sm" disabled={!selDeps.length || importing} onClick={() => onImport(t.id, selDeps, type)}>
+          {importing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : `Importar${selDeps.length > 1 ? ` (${selDeps.length})` : ""}`}
         </Button>
       </TableCell>
     </TableRow>
