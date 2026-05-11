@@ -642,19 +642,19 @@ export default function CursoGtoEntregables() {
                 <div className="border-t border-border pt-4 mt-2 space-y-2">
                   <div className="flex items-center justify-between flex-wrap gap-2">
                     <div>
-                      <p className="text-sm font-medium">Generar TODOS los entregables del mes</p>
+                      <p className="text-sm font-medium">Generar TODOS los entregables del ciclo</p>
                       <p className="text-xs text-muted-foreground">
-                        {deps.length} dependencias × 3 entregables + 1 resumen consolidado = {deps.length * 3 + 1} archivos.
-                        Corre secuencial; puede tardar varios minutos.
+                        Recalcula MCN (IA) por dependencia + {deps.length} × 3 entregables + 1 resumen consolidado.
+                        Usa el ciclo completo (no divide por mes). Puede tardar varios minutos.
                       </p>
                     </div>
                     <Button
-                      onClick={generateAllDeliverables}
+                      onClick={() => generateAllDeliverables({ wholeCycle: true, recomputeMcn: true })}
                       disabled={bulkRunning || generating || deps.length === 0}
                       variant="default"
                     >
                       {bulkRunning ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
-                      Generar todos
+                      MCN + Entregables (ciclo)
                     </Button>
                   </div>
                   {bulkRunning && (
