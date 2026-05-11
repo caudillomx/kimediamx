@@ -60,6 +60,7 @@ Deno.serve(async (req) => {
     const dependenciaId: string | undefined = body?.dependenciaId;
     const year: number = Number(body?.year);
     const month: number = Number(body?.month);
+    const wholeCycle: boolean = !!body?.wholeCycle;
     if (!dependenciaId || !year || !month) {
       return new Response(
         JSON.stringify({ error: "dependenciaId, year, month requeridos" }),
@@ -87,13 +88,22 @@ Deno.serve(async (req) => {
     }
 
     // 2) Sesiones Fireflies del mes
-    const { data: sessions } = await admin
+    let sessionsQ = admin
       .from("gto_training_sessions")
       .select("*")
       .eq("dependencia_id", dependenciaId)
-      .gte("session_date", periodStart)
-      .lte("session_date", periodEnd)
       .order("session_date", { ascending: true });
+    if (!wholeCycle) {
+      sessionsQ = sessionsQ.gte("session_date", periodStart).lte("session_date", periodEnd);
+    }
+    const { data: rawSessions } = await sessionsQ;
+    const seen = new Set<string>();
+    const sessions = (rawSessions ?? []).filter((s: any) => {
+      const k = s.fireflies_meeting_id || s.id;
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
 
     // 3) MCN previo (mes anterior) y actual (para auditoría)
     const prevMonth = month === 1 ? 12 : month - 1;
@@ -137,7 +147,7 @@ Deno.serve(async (req) => {
     }
 
     // 5) Construir contexto resumido para la IA
-    const sessionsForAI = (sessions ?? []).map((s: any) => ({
+    const sessionsForAI = sessions.map((s: any) => ({
       session_date: s.session_date,
       session_type: s.session_type,
       topic: s.topic,
@@ -145,7 +155,7 @@ Deno.serve(async (req) => {
       attendee_count: s.attendee_count,
       key_decisions: s.key_decisions,
       pending_actions: s.pending_actions,
-      extracted_excerpt: typeof s.transcript === "string" ? s.transcript.slice(0, 6000) : null,
+      extracted_excerpt: typeof s.transcript === "string" ? s.transcript.slice(0, 9000) : null,
       summary: s.summary,
     }));
 
@@ -313,6 +323,7 @@ REGLAS DURAS:
           tools: [tool],
           tool_choice: { type: "function", function: { name: "score_mcn" } },
           temperature: 0.2,
+          max_tokens: 6144,
         }),
       }
     );

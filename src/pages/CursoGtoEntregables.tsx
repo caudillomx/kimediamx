@@ -259,6 +259,7 @@ export default function CursoGtoEntregables() {
           deliverableType: genType,
           dependenciaId: genType === "resumen_consultorias" ? null : genDep,
           year, month,
+          wholeCycle: true,
           consultantName: "KiMedia",
         },
       });
@@ -279,18 +280,38 @@ export default function CursoGtoEntregables() {
 
   // Genera TODOS los entregables del mes: por dependencia (registro, MCN, bitácora)
   // + uno consolidado (resumen). Corre secuencial para no saturar la IA.
-  const generateAllDeliverables = async () => {
+  const generateAllDeliverables = async (opts: { wholeCycle?: boolean; recomputeMcn?: boolean } = {}) => {
+    const wholeCycle = opts.wholeCycle ?? true;
+    const recomputeMcn = opts.recomputeMcn ?? true;
     if (deps.length === 0) {
       toast.error("No hay dependencias cargadas.");
       return;
     }
     const perDepTypes = ["registro_consultorias", "reporte_mcn", "bitacora_simulacros"];
-    const total = deps.length * perDepTypes.length + 1; // +1 resumen consolidado
+    const mcnSteps = recomputeMcn ? deps.length : 0;
+    const total = mcnSteps + deps.length * perDepTypes.length + 1; // +1 resumen consolidado
     setBulkRunning(true);
     setBulkErrors([]);
     setBulkProgress({ done: 0, total, current: "Preparando…" });
     let done = 0;
     const errors: string[] = [];
+
+    const runMcn = async (dep: Dependencia) => {
+      const label = `Calcular MCN · ${dep.siglas}`;
+      setBulkProgress({ done, total, current: label });
+      try {
+        const { data, error } = await supabase.functions.invoke("gto-compute-mcn", {
+          body: { dependenciaId: dep.id, year, month, wholeCycle },
+        });
+        if (error) throw error;
+        if ((data as any)?.error) throw new Error((data as any).error);
+      } catch (e: any) {
+        errors.push(`${label}: ${e?.message ?? "desconocido"}`);
+      } finally {
+        done += 1;
+        setBulkProgress({ done, total, current: label });
+      }
+    };
 
     const runOne = async (type: string, depId: string | null, label: string) => {
       setBulkProgress({ done, total, current: label });
@@ -300,6 +321,7 @@ export default function CursoGtoEntregables() {
             deliverableType: type,
             dependenciaId: depId,
             year, month,
+            wholeCycle,
             consultantName: "KiMedia",
           },
         });
@@ -312,6 +334,13 @@ export default function CursoGtoEntregables() {
         setBulkProgress({ done, total, current: label });
       }
     };
+
+    if (recomputeMcn) {
+      for (const dep of deps) {
+        // eslint-disable-next-line no-await-in-loop
+        await runMcn(dep);
+      }
+    }
 
     for (const dep of deps) {
       for (const type of perDepTypes) {
@@ -614,19 +643,19 @@ export default function CursoGtoEntregables() {
                 <div className="border-t border-border pt-4 mt-2 space-y-2">
                   <div className="flex items-center justify-between flex-wrap gap-2">
                     <div>
-                      <p className="text-sm font-medium">Generar TODOS los entregables del mes</p>
+                      <p className="text-sm font-medium">Generar TODOS los entregables del ciclo</p>
                       <p className="text-xs text-muted-foreground">
-                        {deps.length} dependencias × 3 entregables + 1 resumen consolidado = {deps.length * 3 + 1} archivos.
-                        Corre secuencial; puede tardar varios minutos.
+                        Recalcula MCN (IA) por dependencia + {deps.length} × 3 entregables + 1 resumen consolidado.
+                        Usa el ciclo completo (no divide por mes). Puede tardar varios minutos.
                       </p>
                     </div>
                     <Button
-                      onClick={generateAllDeliverables}
+                      onClick={() => generateAllDeliverables({ wholeCycle: true, recomputeMcn: true })}
                       disabled={bulkRunning || generating || deps.length === 0}
                       variant="default"
                     >
                       {bulkRunning ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
-                      Generar todos
+                      MCN + Entregables (ciclo)
                     </Button>
                   </div>
                   {bulkRunning && (
@@ -853,7 +882,7 @@ function McnEditor({
     setComputing(true);
     try {
       const { data, error } = await supabase.functions.invoke("gto-compute-mcn", {
-        body: { dependenciaId: depId, year, month },
+        body: { dependenciaId: depId, year, month, wholeCycle: true },
       });
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);

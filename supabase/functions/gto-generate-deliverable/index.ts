@@ -55,12 +55,14 @@ Deno.serve(async (req) => {
       year,
       month,
       consultantName = "KiMedia",
+      wholeCycle = false,
     } = (await req.json()) as {
       deliverableType: DeliverableType;
       dependenciaId?: string;
       year: number;
       month: number;
       consultantName?: string;
+      wholeCycle?: boolean;
     };
 
     if (!deliverableType || !year || !month) {
@@ -90,15 +92,33 @@ Deno.serve(async (req) => {
       dep = data;
     }
 
-    // Load training sessions of the period
+    // Load training sessions of the period (or full cycle when wholeCycle=true)
     let sessionsQuery = admin
       .from("gto_training_sessions")
       .select("*")
-      .gte("session_date", periodStart)
-      .lte("session_date", periodEnd)
       .order("session_date", { ascending: true });
+    if (!wholeCycle) {
+      sessionsQuery = sessionsQuery
+        .gte("session_date", periodStart)
+        .lte("session_date", periodEnd);
+    }
     if (dependenciaId) sessionsQuery = sessionsQuery.eq("dependencia_id", dependenciaId);
-    const { data: sessions } = await sessionsQuery;
+    const { data: rawSessions } = await sessionsQuery;
+
+    // Dedupe por fireflies_meeting_id (una misma reunión puede estar enlazada a varias dependencias)
+    const seen = new Set<string>();
+    const sessions = (rawSessions ?? []).filter((s: any) => {
+      const k = s.fireflies_meeting_id || s.id;
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
+
+    // Split por tipo (útil para entregables y para detectar vacíos)
+    const consultoriaSessions = sessions.filter((s: any) => s.session_type === "consultoria");
+    const simulacroSessions = sessions.filter((s: any) =>
+      s.session_type === "simulacro" || s.session_type === "entrenamiento"
+    );
 
     // Load all dependencias for resumen / reporte global if needed
     const { data: allDeps } = await admin
@@ -114,6 +134,18 @@ Deno.serve(async (req) => {
       .eq("period_month", month);
     if (dependenciaId) mcnQuery = mcnQuery.eq("dependencia_id", dependenciaId);
     const { data: mcnCurrent } = await mcnQuery;
+    // Si no hay del mes seleccionado, busca el MCN más reciente (cuando wholeCycle=true o ciclos cortos)
+    let mcnEffective = mcnCurrent ?? [];
+    if ((mcnEffective?.length ?? 0) === 0) {
+      let fallback = admin
+        .from("gto_mcn_scores")
+        .select("*")
+        .order("computed_at", { ascending: false })
+        .limit(50);
+      if (dependenciaId) fallback = fallback.eq("dependencia_id", dependenciaId);
+      const { data: f } = await fallback;
+      mcnEffective = f ?? [];
+    }
 
     const prevMonth = month === 1 ? 12 : month - 1;
     const prevYear = month === 1 ? year - 1 : year;
@@ -135,28 +167,35 @@ Deno.serve(async (req) => {
       dependencia: dep,
       year,
       month,
+      wholeCycle,
       monthName: new Date(year, month - 1, 1).toLocaleDateString("es-MX", {
         month: "long",
         year: "numeric",
       }),
+      periodo_label: wholeCycle
+        ? "Ciclo completo de capacitación (abril–mayo 2026)"
+        : new Date(year, month - 1, 1).toLocaleDateString("es-MX", { month: "long", year: "numeric" }),
       consultantName,
-      sessions: sessions ?? [],
-      mcnCurrent: mcnCurrent ?? [],
+      sessions_total: sessions.length,
+      consultoria_sessions: consultoriaSessions.map(slimSession),
+      simulacro_sessions: simulacroSessions.map(slimSession),
+      mcnCurrent: mcnEffective,
       mcnPrev: mcnPrev ?? [],
       depMap: Array.from(depMap.values()),
       bitacora_curso: bitacora,
     };
 
-    const systemPrompt = `Eres consultor senior de KiMedia. Generas entregables institucionales formales en español de México sobre gobernabilidad narrativa.
+    const systemPrompt = `Eres consultor senior de KiMedia. Generas entregables institucionales formales en español de México sobre gobernabilidad narrativa para el Gobierno de Guanajuato.
 
-Reglas estrictas:
-- NO inventes datos. Si falta información, escribe "[pendiente]" para que el consultor lo complete.
-- Tono profesional, claro, sin floritura.
-- Usa los datos exactos del contexto (nombres, fechas, calificaciones).
-- Si en el contexto viene "bitacora_curso", úsala como evidencia adicional de adopción
-  (corpus subido por la dependencia, diagnósticos realizados, herramienta IA elegida,
-  compromisos cumplidos) y reflejala en la sección correspondiente del entregable.
-- Devuelves SOLO JSON con la estructura solicitada según el tipo de entregable.`;
+REGLAS DURAS:
+- NUNCA inventes datos. Si no hay evidencia, deja el campo vacío ("") o el arreglo vacío ([]). NO uses "[pendiente]" salvo en bullets explícitos del consultor.
+- Usa SOLO el contexto. Cita transcript (frase textual entre comillas + fecha) cuando lo uses como evidencia.
+- El ciclo de capacitación fue una intervención única solicitada por el Gobierno de Guanajuato; NO dividas por mes calendario salvo que se pida. Usa el "periodo_label" como referencia.
+- Si un arreglo (consultorias / simulacros / entrenamientos) no tiene sesiones en el contexto, devuélvelo vacío []. NO inventes filas placebo.
+- Para cada consultoría: extrae 3–6 recomendaciones específicas citando frase del transcript. Para "asesoria_descripcion" da 3–5 líneas reales, no slogans.
+- "bitacora_curso" es evidencia adicional de adopción real (corpus subido, diagnósticos, brief del titular, herramienta IA, compromisos). Úsala literalmente; si está vacía, declara que no hay adopción registrada.
+- Tono profesional, técnico, sin floritura. Español MX.
+- Devuelves SOLO JSON válido con la estructura solicitada.`;
 
     const userPrompt = buildUserPrompt(deliverableType, context);
 
@@ -169,13 +208,14 @@ Reglas estrictas:
           Authorization: `Bearer ${LOVABLE_API_KEY}`,
         },
         body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
+          model: "google/gemini-2.5-pro",
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: userPrompt },
           ],
           response_format: { type: "json_object" },
-          temperature: 0.3,
+          temperature: 0.2,
+          max_tokens: 8192,
         }),
       }
     );
@@ -262,22 +302,42 @@ function titleFor(t: DeliverableType): string {
   }
 }
 
+function slimSession(s: any) {
+  return {
+    id: s.id,
+    fecha: s.session_date,
+    tipo: s.session_type,
+    tema: s.topic,
+    duracion_min: s.duration_minutes,
+    asistentes: s.attendee_count,
+    participantes: s.attendees ?? s.participants ?? null,
+    decisiones_clave: s.key_decisions,
+    pendientes: s.pending_actions,
+    resumen: s.summary,
+    transcript_excerpt: typeof s.transcript === "string" ? s.transcript.slice(0, 8000) : null,
+  };
+}
+
 function buildUserPrompt(t: DeliverableType, ctx: any): string {
   const base = `CONTEXTO (datos reales del sistema):\n${JSON.stringify(ctx, null, 2)}\n\n`;
   switch (t) {
     case "registro_consultorias":
       return (
         base +
-        `Genera el contenido para el "Registro Sistematizado de Consultorías Especializadas 1:1 por Dependencia" del mes ${ctx.monthName} para la dependencia ${ctx.dependencia?.nombre}.
+        `Genera el contenido para el "Registro Sistematizado de Consultorías 1:1" del ciclo (${ctx.periodo_label}) para la dependencia ${ctx.dependencia?.nombre}.
+
+Usa EXCLUSIVAMENTE las sesiones de "consultoria_sessions" del contexto. Si ese arreglo está vacío, devuelve "consultorias": [] y marca observaciones_globales con la nota: "Sin consultorías 1:1 registradas en el ciclo."
+
+Para cada consultoría debes citar al menos 2 frases textuales del transcript_excerpt entre comillas (en "asesoria_descripcion" o "recomendaciones"). Si el transcript está vacío, omite las comillas pero deja el campo con resumen breve apoyado en summary/decisiones_clave/pendientes.
 
 Devuelve JSON con:
 {
   "resumen_ejecutivo": "máx 10 líneas",
-  "consultorias": [ // una por cada session de tipo consultoria
+  "consultorias": [
     {
       "persona": "...", "cargo": "...", "fecha": "...", "duracion": "...", "modalidad": "...",
-      "tema_coyuntural": "...", "asesoria_descripcion": "...",
-      "recomendaciones": ["...","...","..."],
+      "tema_coyuntural": "...", "asesoria_descripcion": "3-5 líneas reales con cita textual",
+      "recomendaciones": ["3-6 bullets accionables, específicos al caso"],
       "resultado_tipo": "...", "resultado_descripcion": "...",
       "evidencias": ["bitacora_individual","recomendaciones_escritas"]
     }
@@ -285,28 +345,31 @@ Devuelve JSON con:
   "observaciones_globales": "patrones, riesgos transversales, aprendizajes",
   "conclusion_tecnica": "...",
   "evidencia_adopcion": {
-    "resumen": "2-3 líneas describiendo qué hizo la dependencia en el panel del curso (corpus subido, diagnósticos, herramienta IA elegida, compromisos cumplidos). Si bitacora_curso está vacío, escribe '[pendiente]'.",
-    "items": ["bullet con dato concreto + fecha", "..."]
+    "resumen": "2-3 líneas sobre adopción real del curso de IA. Si bitacora_curso está vacío, escribe: 'No se registró actividad de la dependencia en el panel del curso.'",
+    "items": ["bullet con dato concreto + fecha"]
   }
 }`
       );
     case "resumen_consultorias":
       return (
         base +
-        `Genera la "Sistematización Mensual Consolidada de Consultorías" del mes ${ctx.monthName}.
+        `Genera la "Sistematización Consolidada de Consultorías" del ciclo (${ctx.periodo_label}). Usa SOLO consultoria_sessions de TODAS las dependencias presentes en el contexto.
 
 Devuelve JSON:
 {
   "filas": [
     {"dependencia":"...","personas":"...","tema":"...","fecha":"...","duracion":"...","resultado":"...","evidencias":"..."}
-  ]
+  ],
+  "conclusion": "2-4 líneas que sinteticen patrones del ciclo (qué temas dominaron, qué dependencias salieron mejor preparadas)."
 }
-Una fila por cada session de tipo consultoria de TODAS las dependencias del mes.`
+Una fila por cada consultoría real; si no hay, devuelve filas: [].`
       );
     case "reporte_mcn":
       return (
         base +
-        `Genera el "Reporte Mensual MCN" del mes ${ctx.monthName}${ctx.dependencia ? ` para ${ctx.dependencia.nombre}` : " (consolidado global)"}.
+        `Genera el "Reporte MCN del ciclo" (${ctx.periodo_label})${ctx.dependencia ? ` para ${ctx.dependencia.nombre}` : " (consolidado global)"}.
+
+IMPORTANTE: Usa los scores reales que vienen en mcnCurrent (campo 'evidence' incluye las citas que justifican cada puntaje). NO inventes números: si una dimensión viene null, deja mes_actual: null y marca observación como "Sin evidencia suficiente".
 
 Las 5 dimensiones MCN son:
 1. Detección temprana de señales
@@ -328,8 +391,8 @@ Devuelve JSON:
   "recomendaciones_transversales": ["...","..."],
   "recomendaciones_dimension": [{"dimension":"...","recomendacion":"..."}],
   "evidencia_adopcion": {
-    "resumen": "Cómo la dependencia está aplicando lo aprendido en el curso de IA (corpus, diagnósticos, herramienta elegida). Si no hay datos, '[pendiente]'.",
-    "items": ["bullet con dato concreto + fecha", "..."]
+    "resumen": "Cómo la dependencia está aplicando lo aprendido en el curso. Si bitacora_curso vacía: 'No se registró actividad en el panel del curso.'",
+    "items": ["bullet con dato concreto + fecha"]
   }
 }
 
@@ -338,7 +401,12 @@ Usa mcnCurrent y mcnPrev del contexto. Si una dimensión no tiene calificación 
     case "bitacora_simulacros":
       return (
         base +
-        `Genera la "Bitácora Mensual de Entrenamientos y Simulacros" del mes ${ctx.monthName} para ${ctx.dependencia?.nombre ?? "todas las dependencias"}.
+        `Genera la "Bitácora de Entrenamientos y Simulacros" del ciclo (${ctx.periodo_label}) para ${ctx.dependencia?.nombre ?? "todas las dependencias"}.
+
+Usa EXCLUSIVAMENTE simulacro_sessions del contexto. Si está vacío:
+- devuelve "entrenamientos": [], "simulacros": [], "comparativo_evolutivo": []
+- escribe en conclusion_avance: "No se realizaron simulacros ni entrenamientos formales en el ciclo. Las sesiones registradas fueron consultorías 1:1."
+- en recomendaciones_siguiente_mes sugiere 2-3 simulacros pertinentes para esta dependencia con base en consultoria_sessions y bitacora_curso.
 
 Devuelve JSON:
 {
@@ -393,11 +461,12 @@ function renderHtml(
   `;
   let body = "";
   if (t === "registro_consultorias") {
+    const cons = Array.isArray(g.consultorias) ? g.consultorias : [];
     body = `
       <h2>1. Resumen Ejecutivo</h2>
       <p>${esc(g.resumen_ejecutivo)}</p>
       <h2>2. Registro Individual de Consultorías 1:1</h2>
-      ${(g.consultorias ?? []).map((c: any, i: number) => `
+      ${cons.length === 0 ? `<p class="placeholder">Sin consultorías 1:1 registradas en el ciclo para esta dependencia.</p>` : cons.map((c: any, i: number) => `
         <h3>Consultoría ${i + 1}</h3>
         <table>
           <tr><th>Persona(s) atendida(s)</th><td>${esc(c.persona)}</td></tr>
@@ -419,17 +488,19 @@ function renderHtml(
       ${renderEvidenciaAdopcion(g)}
     `;
   } else if (t === "resumen_consultorias") {
+    const filas = Array.isArray(g.filas) ? g.filas : [];
     body = `
       <h2>Sistematización Mensual Consolidada de Consultorías</h2>
-      <table>
+      ${filas.length === 0 ? `<p class="placeholder">No hay consultorías 1:1 registradas en el ciclo.</p>` : `<table>
         <tr><th>Dependencia</th><th>Persona(s)</th><th>Tema</th><th>Fecha</th><th>Duración</th><th>Resultado</th><th>Evidencias</th></tr>
-        ${(g.filas ?? []).map((f: any) => `
+        ${filas.map((f: any) => `
           <tr>
             <td>${esc(f.dependencia)}</td><td>${esc(f.personas)}</td><td>${esc(f.tema)}</td>
             <td>${esc(f.fecha)}</td><td>${esc(f.duracion)}</td><td>${esc(f.resultado)}</td><td>${esc(f.evidencias)}</td>
           </tr>
         `).join("")}
-      </table>
+      </table>`}
+      ${g.conclusion ? `<h2>Conclusión del ciclo</h2><p>${esc(g.conclusion)}</p>` : ""}
     `;
   } else if (t === "reporte_mcn") {
     body = `
@@ -465,11 +536,16 @@ function renderHtml(
       ${renderEvidenciaAdopcion(g)}
     `;
   } else if (t === "bitacora_simulacros") {
+    const ents = Array.isArray(g.entrenamientos) ? g.entrenamientos : [];
+    const sims = Array.isArray(g.simulacros) ? g.simulacros : [];
+    const comps = Array.isArray(g.comparativo_evolutivo) ? g.comparativo_evolutivo : [];
+    const isEmpty = ents.length === 0 && sims.length === 0;
     body = `
       <h2>1. Resumen Ejecutivo</h2>
       <p>${esc(g.resumen_ejecutivo)}</p>
-      <h2>2. Bitácoras de Entrenamiento</h2>
-      ${(g.entrenamientos ?? []).map((e: any, i: number) => `
+      ${isEmpty ? `<p class="placeholder">No se realizaron simulacros ni entrenamientos formales en este ciclo para esta dependencia.</p>` : ""}
+      ${ents.length ? `<h2>2. Bitácoras de Entrenamiento</h2>` : ""}
+      ${ents.map((e: any, i: number) => `
         <h3>Entrenamiento ${i + 1}</h3>
         <table>
           <tr><th>Fecha</th><td>${esc(e.fecha)}</td></tr>
@@ -484,8 +560,8 @@ function renderHtml(
         <p><strong>Evidencias:</strong> ${esc(e.evidencias)}</p>
         <p><strong>Observaciones del facilitador:</strong> ${esc(e.observaciones)}</p>
       `).join("")}
-      <h2>3. Bitácoras de Simulacro</h2>
-      ${(g.simulacros ?? []).map((s: any, i: number) => `
+      ${sims.length ? `<h2>3. Bitácoras de Simulacro</h2>` : ""}
+      ${sims.map((s: any, i: number) => `
         <h3>Simulacro ${i + 1}</h3>
         <table>
           <tr><th>Fecha</th><td>${esc(s.fecha)}</td></tr>
@@ -500,16 +576,16 @@ function renderHtml(
         <p><strong>Retroalimentación:</strong> ${esc(s.retroalimentacion)}</p>
         <p><strong>Segunda vuelta:</strong> ${esc(s.segunda_vuelta?.tiempo)} — ${esc(s.segunda_vuelta?.mensaje)} (¿mejoró?: ${esc(s.segunda_vuelta?.mejora)})</p>
       `).join("")}
-      <h2>4. Comparativo evolutivo mensual</h2>
+      ${comps.length ? `<h2>4. Comparativo evolutivo</h2>
       <table>
         <tr><th>Competencia</th><th>Mes anterior</th><th>Mes actual</th><th>Variación</th></tr>
-        ${(g.comparativo_evolutivo ?? []).map((c: any) => `
+        ${comps.map((c: any) => `
           <tr><td>${esc(c.competencia)}</td><td>${esc(c.mes_anterior)}</td><td>${esc(c.mes_actual)}</td><td>${esc(c.variacion)}</td></tr>
         `).join("")}
-      </table>
-      <h2>5. Conclusión del avance narrativo</h2>
+      </table>` : ""}
+      <h2>${comps.length ? 5 : (ents.length || sims.length ? 4 : 2)}. Conclusión del avance narrativo</h2>
       <p>${esc(g.conclusion_avance)}</p>
-      <h2>6. Recomendaciones para el siguiente mes</h2>
+      <h2>${comps.length ? 6 : (ents.length || sims.length ? 5 : 3)}. Recomendaciones siguientes</h2>
       <ul>${(g.recomendaciones_siguiente_mes ?? []).map((r: string) => `<li>${esc(r)}</li>`).join("")}</ul>
     `;
   }
