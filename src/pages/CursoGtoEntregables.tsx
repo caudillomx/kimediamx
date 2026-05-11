@@ -279,18 +279,38 @@ export default function CursoGtoEntregables() {
 
   // Genera TODOS los entregables del mes: por dependencia (registro, MCN, bitácora)
   // + uno consolidado (resumen). Corre secuencial para no saturar la IA.
-  const generateAllDeliverables = async () => {
+  const generateAllDeliverables = async (opts: { wholeCycle?: boolean; recomputeMcn?: boolean } = {}) => {
+    const wholeCycle = opts.wholeCycle ?? true;
+    const recomputeMcn = opts.recomputeMcn ?? true;
     if (deps.length === 0) {
       toast.error("No hay dependencias cargadas.");
       return;
     }
     const perDepTypes = ["registro_consultorias", "reporte_mcn", "bitacora_simulacros"];
-    const total = deps.length * perDepTypes.length + 1; // +1 resumen consolidado
+    const mcnSteps = recomputeMcn ? deps.length : 0;
+    const total = mcnSteps + deps.length * perDepTypes.length + 1; // +1 resumen consolidado
     setBulkRunning(true);
     setBulkErrors([]);
     setBulkProgress({ done: 0, total, current: "Preparando…" });
     let done = 0;
     const errors: string[] = [];
+
+    const runMcn = async (dep: Dependencia) => {
+      const label = `Calcular MCN · ${dep.siglas}`;
+      setBulkProgress({ done, total, current: label });
+      try {
+        const { data, error } = await supabase.functions.invoke("gto-compute-mcn", {
+          body: { dependenciaId: dep.id, year, month, wholeCycle },
+        });
+        if (error) throw error;
+        if ((data as any)?.error) throw new Error((data as any).error);
+      } catch (e: any) {
+        errors.push(`${label}: ${e?.message ?? "desconocido"}`);
+      } finally {
+        done += 1;
+        setBulkProgress({ done, total, current: label });
+      }
+    };
 
     const runOne = async (type: string, depId: string | null, label: string) => {
       setBulkProgress({ done, total, current: label });
@@ -300,6 +320,7 @@ export default function CursoGtoEntregables() {
             deliverableType: type,
             dependenciaId: depId,
             year, month,
+            wholeCycle,
             consultantName: "KiMedia",
           },
         });
@@ -312,6 +333,13 @@ export default function CursoGtoEntregables() {
         setBulkProgress({ done, total, current: label });
       }
     };
+
+    if (recomputeMcn) {
+      for (const dep of deps) {
+        // eslint-disable-next-line no-await-in-loop
+        await runMcn(dep);
+      }
+    }
 
     for (const dep of deps) {
       for (const type of perDepTypes) {
