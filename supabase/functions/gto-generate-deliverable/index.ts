@@ -283,7 +283,11 @@ Devuelve JSON con:
     }
   ],
   "observaciones_globales": "patrones, riesgos transversales, aprendizajes",
-  "conclusion_tecnica": "..."
+  "conclusion_tecnica": "...",
+  "evidencia_adopcion": {
+    "resumen": "2-3 líneas describiendo qué hizo la dependencia en el panel del curso (corpus subido, diagnósticos, herramienta IA elegida, compromisos cumplidos). Si bitacora_curso está vacío, escribe '[pendiente]'.",
+    "items": ["bullet con dato concreto + fecha", "..."]
+  }
 }`
       );
     case "resumen_consultorias":
@@ -322,7 +326,11 @@ Devuelve JSON:
   "tendencia_global": {"mejoraron":N,"empeoraron":N,"total":N,"lectura":"..."},
   "hallazgos": ["...","...","...","..."],
   "recomendaciones_transversales": ["...","..."],
-  "recomendaciones_dimension": [{"dimension":"...","recomendacion":"..."}]
+  "recomendaciones_dimension": [{"dimension":"...","recomendacion":"..."}],
+  "evidencia_adopcion": {
+    "resumen": "Cómo la dependencia está aplicando lo aprendido en el curso de IA (corpus, diagnósticos, herramienta elegida). Si no hay datos, '[pendiente]'.",
+    "items": ["bullet con dato concreto + fecha", "..."]
+  }
 }
 
 Usa mcnCurrent y mcnPrev del contexto. Si una dimensión no tiene calificación previa, deja mes_anterior:null.`
