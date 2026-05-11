@@ -611,6 +611,52 @@ export default function CursoGtoEntregables() {
                 <p className="text-xs text-muted-foreground">
                   La IA usa: sesiones del mes ({sessions.length}), calificaciones MCN, brief y diagnósticos del curso. Si falta data, escribirá <code>[pendiente]</code>.
                 </p>
+                <div className="border-t border-border pt-4 mt-2 space-y-2">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div>
+                      <p className="text-sm font-medium">Generar TODOS los entregables del mes</p>
+                      <p className="text-xs text-muted-foreground">
+                        {deps.length} dependencias × 3 entregables + 1 resumen consolidado = {deps.length * 3 + 1} archivos.
+                        Corre secuencial; puede tardar varios minutos.
+                      </p>
+                    </div>
+                    <Button
+                      onClick={generateAllDeliverables}
+                      disabled={bulkRunning || generating || deps.length === 0}
+                      variant="default"
+                    >
+                      {bulkRunning ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
+                      Generar todos
+                    </Button>
+                  </div>
+                  {bulkRunning && (
+                    <div className="space-y-1">
+                      <div className="h-2 w-full bg-muted rounded overflow-hidden">
+                        <div
+                          className="h-full bg-coral transition-all"
+                          style={{ width: `${bulkProgress.total ? (bulkProgress.done / bulkProgress.total) * 100 : 0}%` }}
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {bulkProgress.done}/{bulkProgress.total} · {bulkProgress.current}
+                      </p>
+                    </div>
+                  )}
+                  {!bulkRunning && bulkProgress.total > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      Última ejecución: {bulkProgress.done}/{bulkProgress.total} completados
+                      {bulkErrors.length > 0 ? ` · ${bulkErrors.length} con error` : " · sin errores"}.
+                    </p>
+                  )}
+                  {bulkErrors.length > 0 && (
+                    <details className="text-xs">
+                      <summary className="cursor-pointer text-destructive">Ver errores ({bulkErrors.length})</summary>
+                      <ul className="mt-1 list-disc list-inside text-muted-foreground space-y-0.5">
+                        {bulkErrors.map((e, i) => <li key={i}>{e}</li>)}
+                      </ul>
+                    </details>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
