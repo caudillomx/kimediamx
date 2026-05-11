@@ -461,11 +461,12 @@ function renderHtml(
   `;
   let body = "";
   if (t === "registro_consultorias") {
+    const cons = Array.isArray(g.consultorias) ? g.consultorias : [];
     body = `
       <h2>1. Resumen Ejecutivo</h2>
       <p>${esc(g.resumen_ejecutivo)}</p>
       <h2>2. Registro Individual de Consultorías 1:1</h2>
-      ${(g.consultorias ?? []).map((c: any, i: number) => `
+      ${cons.length === 0 ? `<p class="placeholder">Sin consultorías 1:1 registradas en el ciclo para esta dependencia.</p>` : cons.map((c: any, i: number) => `
         <h3>Consultoría ${i + 1}</h3>
         <table>
           <tr><th>Persona(s) atendida(s)</th><td>${esc(c.persona)}</td></tr>
@@ -487,17 +488,19 @@ function renderHtml(
       ${renderEvidenciaAdopcion(g)}
     `;
   } else if (t === "resumen_consultorias") {
+    const filas = Array.isArray(g.filas) ? g.filas : [];
     body = `
       <h2>Sistematización Mensual Consolidada de Consultorías</h2>
-      <table>
+      ${filas.length === 0 ? `<p class="placeholder">No hay consultorías 1:1 registradas en el ciclo.</p>` : `<table>
         <tr><th>Dependencia</th><th>Persona(s)</th><th>Tema</th><th>Fecha</th><th>Duración</th><th>Resultado</th><th>Evidencias</th></tr>
-        ${(g.filas ?? []).map((f: any) => `
+        ${filas.map((f: any) => `
           <tr>
             <td>${esc(f.dependencia)}</td><td>${esc(f.personas)}</td><td>${esc(f.tema)}</td>
             <td>${esc(f.fecha)}</td><td>${esc(f.duracion)}</td><td>${esc(f.resultado)}</td><td>${esc(f.evidencias)}</td>
           </tr>
         `).join("")}
-      </table>
+      </table>`}
+      ${g.conclusion ? `<h2>Conclusión del ciclo</h2><p>${esc(g.conclusion)}</p>` : ""}
     `;
   } else if (t === "reporte_mcn") {
     body = `
@@ -533,11 +536,16 @@ function renderHtml(
       ${renderEvidenciaAdopcion(g)}
     `;
   } else if (t === "bitacora_simulacros") {
+    const ents = Array.isArray(g.entrenamientos) ? g.entrenamientos : [];
+    const sims = Array.isArray(g.simulacros) ? g.simulacros : [];
+    const comps = Array.isArray(g.comparativo_evolutivo) ? g.comparativo_evolutivo : [];
+    const isEmpty = ents.length === 0 && sims.length === 0;
     body = `
       <h2>1. Resumen Ejecutivo</h2>
       <p>${esc(g.resumen_ejecutivo)}</p>
-      <h2>2. Bitácoras de Entrenamiento</h2>
-      ${(g.entrenamientos ?? []).map((e: any, i: number) => `
+      ${isEmpty ? `<p class="placeholder">No se realizaron simulacros ni entrenamientos formales en este ciclo para esta dependencia.</p>` : ""}
+      ${ents.length ? `<h2>2. Bitácoras de Entrenamiento</h2>` : ""}
+      ${ents.map((e: any, i: number) => `
         <h3>Entrenamiento ${i + 1}</h3>
         <table>
           <tr><th>Fecha</th><td>${esc(e.fecha)}</td></tr>
@@ -552,8 +560,8 @@ function renderHtml(
         <p><strong>Evidencias:</strong> ${esc(e.evidencias)}</p>
         <p><strong>Observaciones del facilitador:</strong> ${esc(e.observaciones)}</p>
       `).join("")}
-      <h2>3. Bitácoras de Simulacro</h2>
-      ${(g.simulacros ?? []).map((s: any, i: number) => `
+      ${sims.length ? `<h2>3. Bitácoras de Simulacro</h2>` : ""}
+      ${sims.map((s: any, i: number) => `
         <h3>Simulacro ${i + 1}</h3>
         <table>
           <tr><th>Fecha</th><td>${esc(s.fecha)}</td></tr>
@@ -568,16 +576,16 @@ function renderHtml(
         <p><strong>Retroalimentación:</strong> ${esc(s.retroalimentacion)}</p>
         <p><strong>Segunda vuelta:</strong> ${esc(s.segunda_vuelta?.tiempo)} — ${esc(s.segunda_vuelta?.mensaje)} (¿mejoró?: ${esc(s.segunda_vuelta?.mejora)})</p>
       `).join("")}
-      <h2>4. Comparativo evolutivo mensual</h2>
+      ${comps.length ? `<h2>4. Comparativo evolutivo</h2>
       <table>
         <tr><th>Competencia</th><th>Mes anterior</th><th>Mes actual</th><th>Variación</th></tr>
-        ${(g.comparativo_evolutivo ?? []).map((c: any) => `
+        ${comps.map((c: any) => `
           <tr><td>${esc(c.competencia)}</td><td>${esc(c.mes_anterior)}</td><td>${esc(c.mes_actual)}</td><td>${esc(c.variacion)}</td></tr>
         `).join("")}
-      </table>
-      <h2>5. Conclusión del avance narrativo</h2>
+      </table>` : ""}
+      <h2>${comps.length ? 5 : (ents.length || sims.length ? 4 : 2)}. Conclusión del avance narrativo</h2>
       <p>${esc(g.conclusion_avance)}</p>
-      <h2>6. Recomendaciones para el siguiente mes</h2>
+      <h2>${comps.length ? 6 : (ents.length || sims.length ? 5 : 3)}. Recomendaciones siguientes</h2>
       <ul>${(g.recomendaciones_siguiente_mes ?? []).map((r: string) => `<li>${esc(r)}</li>`).join("")}</ul>
     `;
   }
