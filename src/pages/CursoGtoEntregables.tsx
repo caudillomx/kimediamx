@@ -204,29 +204,24 @@ export default function CursoGtoEntregables() {
 
   const importTranscript = async (
     transcriptId: string,
-    dependenciaIds: string[],
     sessionType: string,
   ) => {
-    if (!dependenciaIds.length) {
-      toast.error("Selecciona al menos una dependencia.");
-      return;
-    }
     setImportingId(transcriptId);
     try {
-      const results = await Promise.allSettled(
-        dependenciaIds.map((depId) =>
-          supabase.functions.invoke("fireflies-import-session", {
-            body: { transcriptId, dependenciaId: depId, sessionType },
-          })
-        )
-      );
-      const failed = results.filter((r) => r.status === "rejected" || (r as any).value?.error);
-      const ok = results.length - failed.length;
-      if (ok > 0) {
-        toast.success(`Sesión importada para ${ok} dependencia${ok === 1 ? "" : "s"}`);
-      }
-      if (failed.length) {
-        toast.error(`${failed.length} dependencia(s) fallaron al importar`);
+      const { data, error } = await supabase.functions.invoke("fireflies-import-session", {
+        body: { transcriptId, sessionType },
+      });
+      if (error) throw error;
+      const d = data as any;
+      if (d?.requiresManual) {
+        toast.warning("La IA no identificó dependencias. Importa manualmente desde la base de datos o reasigna después.");
+      } else {
+        const detected: string[] = d?.dependencias_detectadas ?? [];
+        toast.success(
+          detected.length
+            ? `Importado para: ${detected.join(", ")}`
+            : "Sesión importada"
+        );
       }
       fetchData();
     } catch (e: any) {
