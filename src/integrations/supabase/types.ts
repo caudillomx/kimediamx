@@ -1737,12 +1737,14 @@ export type Database = {
         Row: {
           analisis_riesgos: number | null
           areas_mejora: string | null
+          computed_at: string | null
           computed_by: string | null
           coordinacion: number | null
           created_at: string
           created_by: string | null
           dependencia_id: string
           deteccion_temprana: number | null
+          evidence: Json | null
           fortalezas: string | null
           id: string
           observaciones: Json | null
@@ -1755,12 +1757,14 @@ export type Database = {
         Insert: {
           analisis_riesgos?: number | null
           areas_mejora?: string | null
+          computed_at?: string | null
           computed_by?: string | null
           coordinacion?: number | null
           created_at?: string
           created_by?: string | null
           dependencia_id: string
           deteccion_temprana?: number | null
+          evidence?: Json | null
           fortalezas?: string | null
           id?: string
           observaciones?: Json | null
@@ -1773,12 +1777,14 @@ export type Database = {
         Update: {
           analisis_riesgos?: number | null
           areas_mejora?: string | null
+          computed_at?: string | null
           computed_by?: string | null
           coordinacion?: number | null
           created_at?: string
           created_by?: string | null
           dependencia_id?: string
           deteccion_temprana?: number | null
+          evidence?: Json | null
           fortalezas?: string | null
           id?: string
           observaciones?: Json | null

@@ -126,6 +126,9 @@ Deno.serve(async (req) => {
       mcnPrevQuery = mcnPrevQuery.eq("dependencia_id", dependenciaId);
     const { data: mcnPrev } = await mcnPrevQuery;
 
+    // Bitácoras del curso por dependencia (evidencia de adopción)
+    const bitacora = await loadBitacoraCurso(admin, dependenciaId ?? null);
+
     // Build context for AI
     const context = {
       deliverableType,
@@ -141,6 +144,7 @@ Deno.serve(async (req) => {
       mcnCurrent: mcnCurrent ?? [],
       mcnPrev: mcnPrev ?? [],
       depMap: Array.from(depMap.values()),
+      bitacora_curso: bitacora,
     };
 
     const systemPrompt = `Eres consultor senior de KiMedia. Generas entregables institucionales formales en español de México sobre gobernabilidad narrativa.
@@ -149,6 +153,9 @@ Reglas estrictas:
 - NO inventes datos. Si falta información, escribe "[pendiente]" para que el consultor lo complete.
 - Tono profesional, claro, sin floritura.
 - Usa los datos exactos del contexto (nombres, fechas, calificaciones).
+- Si en el contexto viene "bitacora_curso", úsala como evidencia adicional de adopción
+  (corpus subido por la dependencia, diagnósticos realizados, herramienta IA elegida,
+  compromisos cumplidos) y reflejala en la sección correspondiente del entregable.
 - Devuelves SOLO JSON con la estructura solicitada según el tipo de entregable.`;
 
     const userPrompt = buildUserPrompt(deliverableType, context);
@@ -276,7 +283,11 @@ Devuelve JSON con:
     }
   ],
   "observaciones_globales": "patrones, riesgos transversales, aprendizajes",
-  "conclusion_tecnica": "..."
+  "conclusion_tecnica": "...",
+  "evidencia_adopcion": {
+    "resumen": "2-3 líneas describiendo qué hizo la dependencia en el panel del curso (corpus subido, diagnósticos, herramienta IA elegida, compromisos cumplidos). Si bitacora_curso está vacío, escribe '[pendiente]'.",
+    "items": ["bullet con dato concreto + fecha", "..."]
+  }
 }`
       );
     case "resumen_consultorias":
@@ -315,7 +326,11 @@ Devuelve JSON:
   "tendencia_global": {"mejoraron":N,"empeoraron":N,"total":N,"lectura":"..."},
   "hallazgos": ["...","...","...","..."],
   "recomendaciones_transversales": ["...","..."],
-  "recomendaciones_dimension": [{"dimension":"...","recomendacion":"..."}]
+  "recomendaciones_dimension": [{"dimension":"...","recomendacion":"..."}],
+  "evidencia_adopcion": {
+    "resumen": "Cómo la dependencia está aplicando lo aprendido en el curso de IA (corpus, diagnósticos, herramienta elegida). Si no hay datos, '[pendiente]'.",
+    "items": ["bullet con dato concreto + fecha", "..."]
+  }
 }
 
 Usa mcnCurrent y mcnPrev del contexto. Si una dimensión no tiene calificación previa, deja mes_anterior:null.`
@@ -401,6 +416,7 @@ function renderHtml(
       <p>${esc(g.observaciones_globales)}</p>
       <h2>4. Conclusión técnica</h2>
       <p>${esc(g.conclusion_tecnica)}</p>
+      ${renderEvidenciaAdopcion(g)}
     `;
   } else if (t === "resumen_consultorias") {
     body = `
@@ -446,6 +462,7 @@ function renderHtml(
           <tr><td>${esc(r.dimension)}</td><td>${esc(r.recomendacion)}</td></tr>
         `).join("")}
       </table>
+      ${renderEvidenciaAdopcion(g)}
     `;
   } else if (t === "bitacora_simulacros") {
     body = `
@@ -503,4 +520,90 @@ function renderHtml(
 function esc(v: any): string {
   if (v === null || v === undefined || v === "") return '<span class="placeholder">[pendiente]</span>';
   return String(v).replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c] as string));
+}
+
+function renderEvidenciaAdopcion(g: any): string {
+  const e = g?.evidencia_adopcion;
+  if (!e) return "";
+  const items = Array.isArray(e.items) ? e.items : [];
+  return `
+    <h2>Evidencia de adopción (curso IA)</h2>
+    <p>${esc(e.resumen)}</p>
+    ${items.length ? `<ul>${items.map((i: string) => `<li>${esc(i)}</li>`).join("")}</ul>` : ""}
+  `;
+}
+
+/**
+ * Carga la bitácora del curso (sesiones del panel del participante, corpus subido,
+ * diagnósticos hechos y compromisos cumplidos) para una dependencia o para todas.
+ * Devuelve un objeto resumido pensado para meter al prompt sin saturar tokens.
+ */
+async function loadBitacoraCurso(admin: any, dependenciaId: string | null) {
+  let sesionesQ = admin.from("gto_sesiones").select("*");
+  if (dependenciaId) sesionesQ = sesionesQ.eq("dependencia_id", dependenciaId);
+  const { data: cursoSesiones } = await sesionesQ;
+  const ids = (cursoSesiones ?? []).map((s: any) => s.id);
+  if (ids.length === 0) {
+    return {
+      curso_sesiones: [],
+      participantes_count: 0,
+      corpus_count: 0,
+      diagnosticos_count: 0,
+      corpus_resumen: [],
+      diagnosticos_resumen: [],
+    };
+  }
+  const [{ data: p }, { data: c }, { data: d }] = await Promise.all([
+    admin
+      .from("gto_participantes")
+      .select("id, sesion_id, nombre, cargo, ultimo_paso, ultima_actividad")
+      .in("sesion_id", ids),
+    admin
+      .from("gto_corpus_uploads")
+      .select("id, sesion_id, participante_id, doc_tipo, file_name, created_at")
+      .in("sesion_id", ids),
+    admin
+      .from("gto_diagnostico_textos")
+      .select("id, sesion_id, participante_nombre, titulo, score_calidad, errores_detectados, analizado_at")
+      .in("sesion_id", ids),
+  ]);
+  return {
+    curso_sesiones: (cursoSesiones ?? []).map((s: any) => ({
+      titular_nombre: s.titular_nombre,
+      titular_cargo: s.titular_cargo,
+      herramienta_ia: s.herramienta_ia,
+      estado: s.estado,
+      paso_actual: s.paso_actual,
+      brief: {
+        mision: s.brief_mision,
+        tono: s.brief_tono,
+        audiencias: s.brief_audiencias,
+        tipo_texto: s.brief_tipo_texto,
+        terminos_preferidos: s.brief_terminos_preferidos,
+        terminos_prohibidos: s.brief_terminos_prohibidos,
+      },
+      compromisos: {
+        corpus_subido: s.compromiso_corpus_subido,
+        prompt_probado: s.compromiso_prompt_probado,
+        resultado_compartido: s.compromiso_resultado_compartido,
+      },
+      prompt_generado_at: s.prompt_generado_at,
+      completed_at: s.completed_at,
+    })),
+    participantes_count: (p ?? []).length,
+    corpus_count: (c ?? []).length,
+    diagnosticos_count: (d ?? []).length,
+    corpus_resumen: (c ?? []).slice(0, 30).map((x: any) => ({
+      doc_tipo: x.doc_tipo,
+      file_name: x.file_name,
+      created_at: x.created_at,
+    })),
+    diagnosticos_resumen: (d ?? []).slice(0, 20).map((x: any) => ({
+      titulo: x.titulo,
+      participante: x.participante_nombre,
+      score: x.score_calidad,
+      errores: Array.isArray(x.errores_detectados) ? x.errores_detectados.length : null,
+      analizado_at: x.analizado_at,
+    })),
+  };
 }
