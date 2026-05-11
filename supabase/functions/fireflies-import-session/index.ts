@@ -50,13 +50,14 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const {
       transcriptId,
-      dependenciaId,
+      dependenciaId,           // optional override (manual assignment)
+      dependenciaIds,          // optional override (manual multi-assignment)
       sessionType = "consultoria",
       sesionId = null,
     } = body ?? {};
-    if (!transcriptId || !dependenciaId) {
+    if (!transcriptId) {
       return new Response(
-        JSON.stringify({ error: "transcriptId and dependenciaId required" }),
+        JSON.stringify({ error: "transcriptId required" }),
         {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -98,13 +99,25 @@ Deno.serve(async (req) => {
       .map((s: any) => `${s.speaker_name}: ${s.text}`)
       .join("\n");
 
-    // 2. Extract structured data with Lovable AI
+    // 2. Load dependencias catalog so AI can detect which ones appear
+    const { data: depsCatalog } = await admin
+      .from("gto_dependencias")
+      .select("id, nombre, siglas");
+    const depsList = (depsCatalog ?? [])
+      .map((d) => `${d.siglas} — ${d.nombre}`)
+      .join("\n");
+
+    // 3. Extract structured data + detect dependencias with Lovable AI
     const systemPrompt = `Eres analista de KiMedia. Extraes datos estructurados de transcripciones de capacitaciones gubernamentales sobre IA y comunicación institucional.
 
 Tipo de sesión: ${sessionType} (consultoria | entrenamiento | simulacro).
 
+CATÁLOGO OFICIAL DE DEPENDENCIAS GTO (usa estas siglas EXACTAS):
+${depsList}
+
 Devuelve SOLO JSON válido con este shape:
 {
+  "dependencias_detectadas": ["SIGLA", "..."],
   "topic": "tema coyuntural tratado, 1 frase",
   "objective": "objetivo de la sesión, 1 frase",
   "attendees": [{"nombre": "...", "cargo": "..."}],
@@ -123,6 +136,11 @@ Devuelve SOLO JSON válido con este shape:
     "retroalimentacion": "..."
   }
 }
+
+REGLAS para "dependencias_detectadas":
+- Identifica TODAS las dependencias del catálogo que se mencionan, presentan o trabajan en la sesión (por nombre completo, siglas, o porque sus integrantes participan).
+- Usa SOLO siglas del catálogo. Si ninguna dependencia es claramente identificable, devuelve [].
+- NO inventes siglas que no estén en el catálogo.
 
 Si la sesión NO es simulacro, deja "simulacro" como null. Si un dato no está, usa null o []. NO inventes nada que no esté en la transcripción.`;
 
@@ -159,7 +177,36 @@ Si la sesión NO es simulacro, deja "simulacro" como null. Si un dato no está, 
       console.error("AI JSON parse failed", e);
     }
 
-    // 3. Insert training session
+    // 4. Resolve dependencias to insert
+    const overrideIds: string[] = Array.isArray(dependenciaIds)
+      ? dependenciaIds
+      : dependenciaId
+      ? [dependenciaId]
+      : [];
+    let finalDepIds: string[] = overrideIds;
+    let detectedSiglas: string[] = Array.isArray(extracted.dependencias_detectadas)
+      ? extracted.dependencias_detectadas
+      : [];
+    if (!finalDepIds.length && detectedSiglas.length) {
+      const matched = (depsCatalog ?? []).filter((d) =>
+        detectedSiglas.includes(d.siglas)
+      );
+      finalDepIds = matched.map((d) => d.id);
+    }
+
+    if (!finalDepIds.length) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          requiresManual: true,
+          message: "La IA no identificó dependencias en la transcripción. Asígnala manualmente.",
+          ai_extracted: extracted,
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // 5. Insert one training session per dependencia
     const durationMin = t.duration
       ? Math.round(Number(t.duration))
       : null;
@@ -167,38 +214,48 @@ Si la sesión NO es simulacro, deja "simulacro" como null. Si un dato no está, 
       ? new Date(Number(t.date)).toISOString().split("T")[0]
       : new Date().toISOString().split("T")[0];
 
+    const rows = finalDepIds.map((depId) => ({
+      dependencia_id: depId,
+      sesion_id: sesionId,
+      session_type: sessionType,
+      session_date: sessionDate,
+      duration_minutes: durationMin,
+      modality: extracted.modality ?? "virtual",
+      attendees: extracted.attendees ?? [],
+      attendee_count: (extracted.attendees ?? []).length,
+      facilitator: extracted.facilitator ?? null,
+      topic: extracted.topic ?? t.title,
+      objective: extracted.objective ?? null,
+      fireflies_meeting_id: t.id,
+      fireflies_url: t.transcript_url ?? null,
+      transcript_text: fullTranscript,
+      transcript_summary: t.summary?.overview ?? null,
+      ai_extracted: extracted,
+      ai_extracted_at: new Date().toISOString(),
+      result_type: extracted.resultado_tipo ?? null,
+      result_description: extracted.resultado_descripcion ?? null,
+      notes: extracted.observaciones_facilitador ?? null,
+      created_by: userData.user.id,
+    }));
+
     const { data: inserted, error: insertErr } = await admin
       .from("gto_training_sessions")
-      .insert({
-        dependencia_id: dependenciaId,
-        sesion_id: sesionId,
-        session_type: sessionType,
-        session_date: sessionDate,
-        duration_minutes: durationMin,
-        modality: extracted.modality ?? "virtual",
-        attendees: extracted.attendees ?? [],
-        attendee_count: (extracted.attendees ?? []).length,
-        facilitator: extracted.facilitator ?? null,
-        topic: extracted.topic ?? t.title,
-        objective: extracted.objective ?? null,
-        fireflies_meeting_id: t.id,
-        fireflies_url: t.transcript_url ?? null,
-        transcript_text: fullTranscript,
-        transcript_summary: t.summary?.overview ?? null,
-        ai_extracted: extracted,
-        ai_extracted_at: new Date().toISOString(),
-        result_type: extracted.resultado_tipo ?? null,
-        result_description: extracted.resultado_descripcion ?? null,
-        notes: extracted.observaciones_facilitador ?? null,
-        created_by: userData.user.id,
-      })
-      .select()
-      .single();
+      .insert(rows)
+      .select();
 
     if (insertErr) throw insertErr;
 
+    const detected = (depsCatalog ?? [])
+      .filter((d) => finalDepIds.includes(d.id))
+      .map((d) => d.siglas);
+
     return new Response(
-      JSON.stringify({ success: true, session: inserted }),
+      JSON.stringify({
+        success: true,
+        sessions: inserted,
+        dependencias_detectadas: detected,
+        source: overrideIds.length ? "manual" : "ai",
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err: any) {
