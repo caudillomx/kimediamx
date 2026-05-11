@@ -105,6 +105,7 @@ export default function CursoGtoEntregables() {
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [filterDep, setFilterDep] = useState<string>("all");
+  const [sessRange, setSessRange] = useState<"month" | "90d" | "6m" | "all">("all");
 
   const [ffLoading, setFfLoading] = useState(false);
   const [ffList, setFfList] = useState<FFTranscript[]>([]);
@@ -141,13 +142,22 @@ export default function CursoGtoEntregables() {
   }, [navigate]);
 
   const fetchData = async () => {
-    const periodStart = new Date(year, month - 1, 1).toISOString().split("T")[0];
-    const periodEnd = new Date(year, month, 0).toISOString().split("T")[0];
+    let sessQ = supabase.from("gto_training_sessions").select("*")
+      .order("session_date", { ascending: false });
+    if (sessRange === "month") {
+      const s = new Date(year, month - 1, 1).toISOString().split("T")[0];
+      const e = new Date(year, month, 0).toISOString().split("T")[0];
+      sessQ = sessQ.gte("session_date", s).lte("session_date", e);
+    } else if (sessRange === "90d") {
+      const s = new Date(); s.setDate(s.getDate() - 90);
+      sessQ = sessQ.gte("session_date", s.toISOString().split("T")[0]);
+    } else if (sessRange === "6m") {
+      const s = new Date(); s.setMonth(s.getMonth() - 6);
+      sessQ = sessQ.gte("session_date", s.toISOString().split("T")[0]);
+    }
     const [{ data: d1 }, { data: d2 }, { data: d3 }] = await Promise.all([
       supabase.from("gto_dependencias").select("id, nombre, siglas").order("sort_order"),
-      supabase.from("gto_training_sessions").select("*")
-        .gte("session_date", periodStart).lte("session_date", periodEnd)
-        .order("session_date", { ascending: false }),
+      sessQ,
       supabase.from("gto_deliverables").select("*")
         .eq("period_year", year).eq("period_month", month)
         .order("created_at", { ascending: false }),
@@ -161,7 +171,7 @@ export default function CursoGtoEntregables() {
     if (!isAdmin) return;
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAdmin, year, month]);
+  }, [isAdmin, year, month, sessRange]);
 
   const filteredSessions = useMemo(() => {
     if (filterDep === "all") return sessions;
@@ -361,18 +371,37 @@ export default function CursoGtoEntregables() {
             <Card>
               <CardHeader className="flex-row items-center justify-between">
                 <div>
-                  <CardTitle>Sesiones registradas en {MONTHS[month - 1]} {year}</CardTitle>
+                  <CardTitle>
+                    {sessRange === "month"
+                      ? `Sesiones registradas en ${MONTHS[month - 1]} ${year}`
+                      : sessRange === "all"
+                        ? "Todas las sesiones registradas"
+                        : sessRange === "90d"
+                          ? "Sesiones de los últimos 90 días"
+                          : "Sesiones de los últimos 6 meses"}
+                  </CardTitle>
                   <CardDescription>{sessions.length} sesiones totales</CardDescription>
                 </div>
-                <Select value={filterDep} onValueChange={setFilterDep}>
-                  <SelectTrigger className="w-64"><SelectValue placeholder="Filtrar dependencia" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas</SelectItem>
-                    {deps.map((d) => (
-                      <SelectItem key={d.id} value={d.id}>{d.siglas} · {d.nombre}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex items-center gap-2">
+                  <Select value={sessRange} onValueChange={(v: "month" | "90d" | "6m" | "all") => setSessRange(v)}>
+                    <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="month">Mes seleccionado</SelectItem>
+                      <SelectItem value="90d">Últimos 90 días</SelectItem>
+                      <SelectItem value="6m">Últimos 6 meses</SelectItem>
+                      <SelectItem value="all">Todas</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select value={filterDep} onValueChange={setFilterDep}>
+                    <SelectTrigger className="w-64"><SelectValue placeholder="Filtrar dependencia" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas las dependencias</SelectItem>
+                      {deps.map((d) => (
+                        <SelectItem key={d.id} value={d.id}>{d.siglas} · {d.nombre}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </CardHeader>
               <CardContent>
                 <Table>
