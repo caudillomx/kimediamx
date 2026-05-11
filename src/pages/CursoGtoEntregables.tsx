@@ -882,7 +882,7 @@ function McnEditor({
     setComputing(true);
     try {
       const { data, error } = await supabase.functions.invoke("gto-compute-mcn", {
-        body: { dependenciaId: depId, year, month },
+        body: { dependenciaId: depId, year, month, wholeCycle: true },
       });
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
