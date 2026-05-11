@@ -204,29 +204,24 @@ export default function CursoGtoEntregables() {
 
   const importTranscript = async (
     transcriptId: string,
-    dependenciaIds: string[],
     sessionType: string,
   ) => {
-    if (!dependenciaIds.length) {
-      toast.error("Selecciona al menos una dependencia.");
-      return;
-    }
     setImportingId(transcriptId);
     try {
-      const results = await Promise.allSettled(
-        dependenciaIds.map((depId) =>
-          supabase.functions.invoke("fireflies-import-session", {
-            body: { transcriptId, dependenciaId: depId, sessionType },
-          })
-        )
-      );
-      const failed = results.filter((r) => r.status === "rejected" || (r as any).value?.error);
-      const ok = results.length - failed.length;
-      if (ok > 0) {
-        toast.success(`Sesión importada para ${ok} dependencia${ok === 1 ? "" : "s"}`);
-      }
-      if (failed.length) {
-        toast.error(`${failed.length} dependencia(s) fallaron al importar`);
+      const { data, error } = await supabase.functions.invoke("fireflies-import-session", {
+        body: { transcriptId, sessionType },
+      });
+      if (error) throw error;
+      const d = data as any;
+      if (d?.requiresManual) {
+        toast.warning("La IA no identificó dependencias. Importa manualmente desde la base de datos o reasigna después.");
+      } else {
+        const detected: string[] = d?.dependencias_detectadas ?? [];
+        toast.success(
+          detected.length
+            ? `Importado para: ${detected.join(", ")}`
+            : "Sesión importada"
+        );
       }
       fetchData();
     } catch (e: any) {
@@ -455,7 +450,6 @@ export default function CursoGtoEntregables() {
                         <TableHead>Fecha</TableHead>
                         <TableHead>Reunión</TableHead>
                         <TableHead>Duración</TableHead>
-                        <TableHead>Dependencia</TableHead>
                         <TableHead>Tipo</TableHead>
                         <TableHead></TableHead>
                       </TableRow>
@@ -465,7 +459,6 @@ export default function CursoGtoEntregables() {
                         <FfRow
                           key={t.id}
                           t={t}
-                          deps={deps}
                           importing={importingId === t.id}
                           onImport={importTranscript}
                         />
@@ -599,57 +592,18 @@ export default function CursoGtoEntregables() {
 
 /* ================ Sub: Fireflies row with dep selector ================ */
 function FfRow({
-  t, deps, importing, onImport,
+  t, importing, onImport,
 }: {
   t: FFTranscript;
-  deps: Dependencia[];
   importing: boolean;
-  onImport: (id: string, depIds: string[], type: string) => void;
+  onImport: (id: string, type: string) => void;
 }) {
-  const [selDeps, setSelDeps] = useState<string[]>([]);
   const [type, setType] = useState("consultoria");
-  const toggleDep = (id: string) =>
-    setSelDeps((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
-  const labels = selDeps
-    .map((id) => deps.find((d) => d.id === id)?.siglas)
-    .filter(Boolean) as string[];
   return (
     <TableRow>
       <TableCell className="text-xs">{new Date(Number(t.date)).toLocaleDateString("es-MX")}</TableCell>
       <TableCell className="text-sm max-w-sm truncate">{t.title}</TableCell>
       <TableCell>{t.duration ? `${Math.round(Number(t.duration))} min` : "—"}</TableCell>
-      <TableCell>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" size="sm" className="w-56 h-8 justify-start font-normal">
-              <span className="truncate">
-                {labels.length === 0
-                  ? "Dependencia(s)"
-                  : labels.length <= 2
-                  ? labels.join(", ")
-                  : `${labels.length} dependencias`}
-              </span>
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-64 p-2 max-h-72 overflow-y-auto" align="start">
-            <div className="space-y-1">
-              {deps.map((d) => (
-                <label
-                  key={d.id}
-                  className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-accent cursor-pointer text-sm"
-                >
-                  <Checkbox
-                    checked={selDeps.includes(d.id)}
-                    onCheckedChange={() => toggleDep(d.id)}
-                  />
-                  <span className="font-medium">{d.siglas}</span>
-                  <span className="text-muted-foreground text-xs truncate">{d.nombre}</span>
-                </label>
-              ))}
-            </div>
-          </PopoverContent>
-        </Popover>
-      </TableCell>
       <TableCell>
         <Select value={type} onValueChange={setType}>
           <SelectTrigger className="w-36 h-8"><SelectValue /></SelectTrigger>
@@ -661,8 +615,8 @@ function FfRow({
         </Select>
       </TableCell>
       <TableCell>
-        <Button size="sm" disabled={!selDeps.length || importing} onClick={() => onImport(t.id, selDeps, type)}>
-          {importing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : `Importar${selDeps.length > 1 ? ` (${selDeps.length})` : ""}`}
+        <Button size="sm" disabled={importing} onClick={() => onImport(t.id, type)}>
+          {importing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Importar"}
         </Button>
       </TableCell>
     </TableRow>
