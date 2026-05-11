@@ -126,6 +126,9 @@ Deno.serve(async (req) => {
       mcnPrevQuery = mcnPrevQuery.eq("dependencia_id", dependenciaId);
     const { data: mcnPrev } = await mcnPrevQuery;
 
+    // Bitácoras del curso por dependencia (evidencia de adopción)
+    const bitacora = await loadBitacoraCurso(admin, dependenciaId ?? null);
+
     // Build context for AI
     const context = {
       deliverableType,
@@ -141,6 +144,7 @@ Deno.serve(async (req) => {
       mcnCurrent: mcnCurrent ?? [],
       mcnPrev: mcnPrev ?? [],
       depMap: Array.from(depMap.values()),
+      bitacora_curso: bitacora,
     };
 
     const systemPrompt = `Eres consultor senior de KiMedia. Generas entregables institucionales formales en español de México sobre gobernabilidad narrativa.
@@ -149,6 +153,9 @@ Reglas estrictas:
 - NO inventes datos. Si falta información, escribe "[pendiente]" para que el consultor lo complete.
 - Tono profesional, claro, sin floritura.
 - Usa los datos exactos del contexto (nombres, fechas, calificaciones).
+- Si en el contexto viene "bitacora_curso", úsala como evidencia adicional de adopción
+  (corpus subido por la dependencia, diagnósticos realizados, herramienta IA elegida,
+  compromisos cumplidos) y reflejala en la sección correspondiente del entregable.
 - Devuelves SOLO JSON con la estructura solicitada según el tipo de entregable.`;
 
     const userPrompt = buildUserPrompt(deliverableType, context);
