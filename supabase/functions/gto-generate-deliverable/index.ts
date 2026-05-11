@@ -353,6 +353,8 @@ Usa EXCLUSIVAMENTE las sesiones de "consultoria_sessions" del contexto. Si ese a
 
 Para cada consultoría debes citar al menos 2 frases textuales del transcript_excerpt entre comillas (en "asesoria_descripcion" o "recomendaciones"). Si el transcript está vacío, omite las comillas pero deja el campo con resumen breve apoyado en summary/decisiones_clave/pendientes.
 
+Para "persona" y "cargo": extrae nombre y puesto sólo si aparecen literalmente en el transcript (presentaciones tipo "soy Juan Pérez, jefe de comunicación"). Si no hay identificación clara, deja "persona":"" y "cargo":"" y describe en "asesoria_descripcion" cuántos asistentes participaron. NUNCA inventes nombres ni puestos.
+
 Devuelve JSON con:
 {
   "resumen_ejecutivo": "máx 10 líneas",
