@@ -55,12 +55,14 @@ Deno.serve(async (req) => {
       year,
       month,
       consultantName = "KiMedia",
+      wholeCycle = false,
     } = (await req.json()) as {
       deliverableType: DeliverableType;
       dependenciaId?: string;
       year: number;
       month: number;
       consultantName?: string;
+      wholeCycle?: boolean;
     };
 
     if (!deliverableType || !year || !month) {
@@ -90,15 +92,33 @@ Deno.serve(async (req) => {
       dep = data;
     }
 
-    // Load training sessions of the period
+    // Load training sessions of the period (or full cycle when wholeCycle=true)
     let sessionsQuery = admin
       .from("gto_training_sessions")
       .select("*")
-      .gte("session_date", periodStart)
-      .lte("session_date", periodEnd)
       .order("session_date", { ascending: true });
+    if (!wholeCycle) {
+      sessionsQuery = sessionsQuery
+        .gte("session_date", periodStart)
+        .lte("session_date", periodEnd);
+    }
     if (dependenciaId) sessionsQuery = sessionsQuery.eq("dependencia_id", dependenciaId);
-    const { data: sessions } = await sessionsQuery;
+    const { data: rawSessions } = await sessionsQuery;
+
+    // Dedupe por fireflies_meeting_id (una misma reunión puede estar enlazada a varias dependencias)
+    const seen = new Set<string>();
+    const sessions = (rawSessions ?? []).filter((s: any) => {
+      const k = s.fireflies_meeting_id || s.id;
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
+
+    // Split por tipo (útil para entregables y para detectar vacíos)
+    const consultoriaSessions = sessions.filter((s: any) => s.session_type === "consultoria");
+    const simulacroSessions = sessions.filter((s: any) =>
+      s.session_type === "simulacro" || s.session_type === "entrenamiento"
+    );
 
     // Load all dependencias for resumen / reporte global if needed
     const { data: allDeps } = await admin
@@ -114,6 +134,18 @@ Deno.serve(async (req) => {
       .eq("period_month", month);
     if (dependenciaId) mcnQuery = mcnQuery.eq("dependencia_id", dependenciaId);
     const { data: mcnCurrent } = await mcnQuery;
+    // Si no hay del mes seleccionado, busca el MCN más reciente (cuando wholeCycle=true o ciclos cortos)
+    let mcnEffective = mcnCurrent ?? [];
+    if ((mcnEffective?.length ?? 0) === 0) {
+      let fallback = admin
+        .from("gto_mcn_scores")
+        .select("*")
+        .order("computed_at", { ascending: false })
+        .limit(50);
+      if (dependenciaId) fallback = fallback.eq("dependencia_id", dependenciaId);
+      const { data: f } = await fallback;
+      mcnEffective = f ?? [];
+    }
 
     const prevMonth = month === 1 ? 12 : month - 1;
     const prevYear = month === 1 ? year - 1 : year;
@@ -135,28 +167,35 @@ Deno.serve(async (req) => {
       dependencia: dep,
       year,
       month,
+      wholeCycle,
       monthName: new Date(year, month - 1, 1).toLocaleDateString("es-MX", {
         month: "long",
         year: "numeric",
       }),
+      periodo_label: wholeCycle
+        ? "Ciclo completo de capacitación (abril–mayo 2026)"
+        : new Date(year, month - 1, 1).toLocaleDateString("es-MX", { month: "long", year: "numeric" }),
       consultantName,
-      sessions: sessions ?? [],
-      mcnCurrent: mcnCurrent ?? [],
+      sessions_total: sessions.length,
+      consultoria_sessions: consultoriaSessions.map(slimSession),
+      simulacro_sessions: simulacroSessions.map(slimSession),
+      mcnCurrent: mcnEffective,
       mcnPrev: mcnPrev ?? [],
       depMap: Array.from(depMap.values()),
       bitacora_curso: bitacora,
     };
 
-    const systemPrompt = `Eres consultor senior de KiMedia. Generas entregables institucionales formales en español de México sobre gobernabilidad narrativa.
+    const systemPrompt = `Eres consultor senior de KiMedia. Generas entregables institucionales formales en español de México sobre gobernabilidad narrativa para el Gobierno de Guanajuato.
 
-Reglas estrictas:
-- NO inventes datos. Si falta información, escribe "[pendiente]" para que el consultor lo complete.
-- Tono profesional, claro, sin floritura.
-- Usa los datos exactos del contexto (nombres, fechas, calificaciones).
-- Si en el contexto viene "bitacora_curso", úsala como evidencia adicional de adopción
-  (corpus subido por la dependencia, diagnósticos realizados, herramienta IA elegida,
-  compromisos cumplidos) y reflejala en la sección correspondiente del entregable.
-- Devuelves SOLO JSON con la estructura solicitada según el tipo de entregable.`;
+REGLAS DURAS:
+- NUNCA inventes datos. Si no hay evidencia, deja el campo vacío ("") o el arreglo vacío ([]). NO uses "[pendiente]" salvo en bullets explícitos del consultor.
+- Usa SOLO el contexto. Cita transcript (frase textual entre comillas + fecha) cuando lo uses como evidencia.
+- El ciclo de capacitación fue una intervención única solicitada por el Gobierno de Guanajuato; NO dividas por mes calendario salvo que se pida. Usa el "periodo_label" como referencia.
+- Si un arreglo (consultorias / simulacros / entrenamientos) no tiene sesiones en el contexto, devuélvelo vacío []. NO inventes filas placebo.
+- Para cada consultoría: extrae 3–6 recomendaciones específicas citando frase del transcript. Para "asesoria_descripcion" da 3–5 líneas reales, no slogans.
+- "bitacora_curso" es evidencia adicional de adopción real (corpus subido, diagnósticos, brief del titular, herramienta IA, compromisos). Úsala literalmente; si está vacía, declara que no hay adopción registrada.
+- Tono profesional, técnico, sin floritura. Español MX.
+- Devuelves SOLO JSON válido con la estructura solicitada.`;
 
     const userPrompt = buildUserPrompt(deliverableType, context);
 
@@ -169,13 +208,14 @@ Reglas estrictas:
           Authorization: `Bearer ${LOVABLE_API_KEY}`,
         },
         body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
+          model: "google/gemini-2.5-pro",
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: userPrompt },
           ],
           response_format: { type: "json_object" },
-          temperature: 0.3,
+          temperature: 0.2,
+          max_tokens: 8192,
         }),
       }
     );
