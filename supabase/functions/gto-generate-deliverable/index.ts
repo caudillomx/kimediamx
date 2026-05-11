@@ -81,6 +81,14 @@ Deno.serve(async (req) => {
       .split("T")[0];
     const periodEnd = new Date(year, month, 0).toISOString().split("T")[0];
 
+    // El ciclo de capacitación GTO es una intervención única (Abril 2026)
+    // que incluye la sesión de cierre del 5 de mayo. Todos los entregables
+    // del ciclo se etiquetan como ABRIL 2026.
+    const cycleYear = 2026;
+    const cycleMonth = 4; // Abril
+    const effectiveYear = wholeCycle ? cycleYear : year;
+    const effectiveMonth = wholeCycle ? cycleMonth : month;
+
     // Load dependencia (if applicable)
     let dep: any = null;
     if (dependenciaId) {
@@ -114,11 +122,26 @@ Deno.serve(async (req) => {
       return true;
     });
 
-    // Split por tipo (útil para entregables y para detectar vacíos)
-    const consultoriaSessions = sessions.filter((s: any) => s.session_type === "consultoria");
-    const simulacroSessions = sessions.filter((s: any) =>
-      s.session_type === "simulacro" || s.session_type === "entrenamiento"
-    );
+    // Reclasificación semántica:
+    // - simulacro: session_type='simulacro'|'simulacion' o tópico con crisis/simulación
+    // - entrenamiento: session_type='entrenamiento' o consultoría grupal (>=3 asistentes)
+    // - consultoria 1:1: consultoría individual (<3 asistentes) y sin marca de simulacro
+    const isSimulacro = (s: any) => {
+      if (["simulacro", "simulacion"].includes(s.session_type)) return true;
+      const t = (s.topic ?? "").toLowerCase();
+      return /simulaci[óo]n|simulacro|crisis/.test(t);
+    };
+    const isEntrenamiento = (s: any) => {
+      if (isSimulacro(s)) return false;
+      if (s.session_type === "entrenamiento") return true;
+      return s.session_type === "consultoria" && (s.attendee_count ?? 0) >= 3;
+    };
+    const isConsultoria1a1 = (s: any) =>
+      !isSimulacro(s) && !isEntrenamiento(s) && s.session_type === "consultoria";
+
+    const consultoriaSessions = sessions.filter(isConsultoria1a1);
+    const entrenamientoSessions = sessions.filter(isEntrenamiento);
+    const simulacroSessions = sessions.filter(isSimulacro);
 
     // Load all dependencias for resumen / reporte global if needed
     const { data: allDeps } = await admin
@@ -126,12 +149,12 @@ Deno.serve(async (req) => {
       .select("id, nombre, siglas");
     const depMap = new Map((allDeps ?? []).map((d: any) => [d.id, d]));
 
-    // Load MCN scores
+    // Load MCN scores (usando el período efectivo del ciclo)
     let mcnQuery = admin
       .from("gto_mcn_scores")
       .select("*")
-      .eq("period_year", year)
-      .eq("period_month", month);
+      .eq("period_year", effectiveYear)
+      .eq("period_month", effectiveMonth);
     if (dependenciaId) mcnQuery = mcnQuery.eq("dependencia_id", dependenciaId);
     const { data: mcnCurrent } = await mcnQuery;
     // Si no hay del mes seleccionado, busca el MCN más reciente (cuando wholeCycle=true o ciclos cortos)
@@ -147,8 +170,8 @@ Deno.serve(async (req) => {
       mcnEffective = f ?? [];
     }
 
-    const prevMonth = month === 1 ? 12 : month - 1;
-    const prevYear = month === 1 ? year - 1 : year;
+    const prevMonth = effectiveMonth === 1 ? 12 : effectiveMonth - 1;
+    const prevYear = effectiveMonth === 1 ? effectiveYear - 1 : effectiveYear;
     let mcnPrevQuery = admin
       .from("gto_mcn_scores")
       .select("*")
@@ -165,19 +188,18 @@ Deno.serve(async (req) => {
     const context = {
       deliverableType,
       dependencia: dep,
-      year,
-      month,
+      year: effectiveYear,
+      month: effectiveMonth,
       wholeCycle,
-      monthName: new Date(year, month - 1, 1).toLocaleDateString("es-MX", {
+      monthName: new Date(effectiveYear, effectiveMonth - 1, 1).toLocaleDateString("es-MX", {
         month: "long",
         year: "numeric",
       }),
-      periodo_label: wholeCycle
-        ? "Ciclo completo de capacitación (abril–mayo 2026)"
-        : new Date(year, month - 1, 1).toLocaleDateString("es-MX", { month: "long", year: "numeric" }),
+      periodo_label: "Abril 2026 (ciclo único; incluye sesión de cierre del 5 de mayo)",
       consultantName,
       sessions_total: sessions.length,
       consultoria_sessions: consultoriaSessions.map(slimSession),
+      entrenamiento_sessions: entrenamientoSessions.map(slimSession),
       simulacro_sessions: simulacroSessions.map(slimSession),
       mcnCurrent: mcnEffective,
       mcnPrev: mcnPrev ?? [],
@@ -190,7 +212,7 @@ Deno.serve(async (req) => {
 REGLAS DURAS:
 - NUNCA inventes datos. Si no hay evidencia, deja el campo vacío ("") o el arreglo vacío ([]). NO uses "[pendiente]" salvo en bullets explícitos del consultor.
 - Usa SOLO el contexto. Cita transcript (frase textual entre comillas + fecha) cuando lo uses como evidencia.
-- El ciclo de capacitación fue una intervención única solicitada por el Gobierno de Guanajuato; NO dividas por mes calendario salvo que se pida. Usa el "periodo_label" como referencia.
+- El ciclo de capacitación fue una intervención única solicitada por el Gobierno de Guanajuato durante ABRIL 2026 (incluye la sesión de cierre del 5 de mayo, que administrativamente forma parte del ciclo de abril). NUNCA dividas el reporte en "abril" vs "mayo": todo el contenido pertenece al ciclo ABRIL 2026. Usa "periodo_label" como referencia textual.
 - Si un arreglo (consultorias / simulacros / entrenamientos) no tiene sesiones en el contexto, devuélvelo vacío []. NO inventes filas placebo.
 - Para cada consultoría: extrae 3–6 recomendaciones específicas citando frase del transcript. Para "asesoria_descripcion" da 3–5 líneas reales, no slogans.
 - "bitacora_curso" es evidencia adicional de adopción real (corpus subido, diagnósticos, brief del titular, herramienta IA, compromisos). Úsala literalmente; si está vacía, declara que no hay adopción registrada.
@@ -234,13 +256,13 @@ REGLAS DURAS:
     // Build HTML for the deliverable (Word-importable)
     const html = renderHtml(deliverableType, context, generated);
 
-    // Save deliverable record
+    // Save deliverable record (etiquetado como Abril 2026 cuando es ciclo)
     const title = `${titleFor(deliverableType)} - ${dep?.siglas ?? "Global"} - ${context.monthName}`;
-    const fileName = `${deliverableType}_${dep?.siglas ?? "global"}_${year}-${String(month).padStart(2, "0")}.html`;
+    const fileName = `${deliverableType}_${dep?.siglas ?? "global"}_${effectiveYear}-${String(effectiveMonth).padStart(2, "0")}.html`;
 
     // Upload HTML to storage so it's downloadable as .doc-readable file
     const bucket = "gto-deliverables";
-    const filePath = `${year}/${String(month).padStart(2, "0")}/${fileName}`;
+    const filePath = `${effectiveYear}/${String(effectiveMonth).padStart(2, "0")}/${fileName}`;
     const blob = new Blob([html], { type: "text/html" });
     const { error: uploadErr } = await admin.storage
       .from(bucket)
@@ -259,8 +281,8 @@ REGLAS DURAS:
       .insert({
         deliverable_type: deliverableType,
         dependencia_id: dependenciaId ?? null,
-        period_year: year,
-        period_month: month,
+        period_year: effectiveYear,
+        period_month: effectiveMonth,
         title,
         status: "borrador",
         consultant_name: consultantName,
@@ -403,10 +425,14 @@ Usa mcnCurrent y mcnPrev del contexto. Si una dimensión no tiene calificación 
         base +
         `Genera la "Bitácora de Entrenamientos y Simulacros" del ciclo (${ctx.periodo_label}) para ${ctx.dependencia?.nombre ?? "todas las dependencias"}.
 
-Usa EXCLUSIVAMENTE simulacro_sessions del contexto. Si está vacío:
-- devuelve "entrenamientos": [], "simulacros": [], "comparativo_evolutivo": []
-- escribe en conclusion_avance: "No se realizaron simulacros ni entrenamientos formales en el ciclo. Las sesiones registradas fueron consultorías 1:1."
-- en recomendaciones_siguiente_mes sugiere 2-3 simulacros pertinentes para esta dependencia con base en consultoria_sessions y bitacora_curso.
+Para los ENTRENAMIENTOS usa EXCLUSIVAMENTE "entrenamiento_sessions" (incluye sesiones grupales de capacitación con varios asistentes; el ciclo GTO usó sesiones grupales el 29 de abril y la de cierre del 5 de mayo).
+Para los SIMULACROS usa EXCLUSIVAMENTE "simulacro_sessions" (ejercicios prácticos tipo crisis/simulación).
+
+Reglas:
+- Si "entrenamiento_sessions" tiene elementos, llena el arreglo "entrenamientos" con UNA fila por sesión, citando frase del transcript_excerpt y listando 3-5 competencias trabajadas.
+- Si "simulacro_sessions" está vacío, devuelve "simulacros": [] y aclara en conclusion_avance que en este ciclo no se ejecutaron simulacros formales.
+- Si AMBOS están vacíos, devuelve los tres arreglos vacíos y en conclusion_avance escribe: "No se realizaron entrenamientos ni simulacros formales en el ciclo. Las sesiones registradas fueron consultorías 1:1."
+- En recomendaciones_siguiente_mes sugiere 2-3 simulacros pertinentes para esta dependencia con base en entrenamiento_sessions, consultoria_sessions y bitacora_curso.
 
 Devuelve JSON:
 {

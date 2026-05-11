@@ -101,9 +101,10 @@ export default function CursoGtoEntregables() {
   const [sessions, setSessions] = useState<TrainingSession[]>([]);
   const [deliverables, setDeliverables] = useState<Deliverable[]>([]);
 
-  const now = new Date();
-  const [year, setYear] = useState(now.getFullYear());
-  const [month, setMonth] = useState(now.getMonth() + 1);
+  // Ciclo único GTO: Abril 2026 (incluye sesión de cierre del 5 de mayo).
+  // Los entregables se guardan etiquetados como abril 2026.
+  const [year, setYear] = useState(2026);
+  const [month, setMonth] = useState(4);
   const [filterDep, setFilterDep] = useState<string>("all");
   const [sessRange, setSessRange] = useState<"month" | "90d" | "6m" | "all">("all");
 
