@@ -178,6 +178,120 @@ export default function CursoGtoEntregables() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAdmin, year, month, sessRange]);
 
+  const dedupeDeliverables = (rows: Deliverable[]) => {
+    const latest = new Map<string, Deliverable>();
+    for (const row of rows) {
+      const key = `${row.deliverable_type}::${row.dependencia_id ?? "global"}::${row.period_year}::${row.period_month}`;
+      const prev = latest.get(key);
+      if (!prev || new Date(row.created_at).getTime() > new Date(prev.created_at).getTime()) {
+        latest.set(key, row);
+      }
+    }
+    return Array.from(latest.values()).sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+  };
+
+  const isTransientEdgeFailure = (error: unknown) => {
+    const msg = String((error as any)?.message ?? error ?? "");
+    return /Failed to fetch|Failed to send a request to the Edge Function|context canceled|network/i.test(msg);
+  };
+
+  const findLatestDeliverableRecord = async (type: string, depId: string | null, startedAt: Date) => {
+    const lookupFrom = new Date(startedAt.getTime() - 3 * 60 * 1000).toISOString();
+    let query: any = supabase
+      .from("gto_deliverables")
+      .select("id, deliverable_type, dependencia_id, period_year, period_month, title, status, file_url, created_at")
+      .eq("deliverable_type", type)
+      .eq("period_year", year)
+      .eq("period_month", month)
+      .gte("created_at", lookupFrom)
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    query = depId ? query.eq("dependencia_id", depId) : query.is("dependencia_id", null);
+    const { data } = await query;
+    return ((data ?? [])[0] as Deliverable | undefined) ?? null;
+  };
+
+  const findLatestMcnRecord = async (depId: string, startedAt: Date) => {
+    const lookupFrom = new Date(startedAt.getTime() - 3 * 60 * 1000).toISOString();
+    const { data } = await supabase
+      .from("gto_mcn_scores")
+      .select("id, computed_at")
+      .eq("dependencia_id", depId)
+      .eq("period_year", year)
+      .eq("period_month", month)
+      .gte("computed_at", lookupFrom)
+      .order("computed_at", { ascending: false })
+      .limit(1);
+
+    return ((data ?? [])[0] as { id: string; computed_at: string } | undefined) ?? null;
+  };
+
+  const invokeDeliverableWithRecovery = async (type: string, depId: string | null, wholeCycle: boolean) => {
+    const startedAt = new Date();
+    const body = {
+      deliverableType: type,
+      dependenciaId: depId,
+      year,
+      month,
+      wholeCycle,
+      consultantName: "KiMedia",
+    };
+
+    const attempt = async () => {
+      const { data, error } = await supabase.functions.invoke("gto-generate-deliverable", { body });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      return data as any;
+    };
+
+    try {
+      return { data: await attempt(), recovered: false };
+    } catch (error) {
+      const recovered = await findLatestDeliverableRecord(type, depId, startedAt);
+      if (recovered) return { data: { deliverable: recovered }, recovered: true };
+      if (!isTransientEdgeFailure(error)) throw error;
+
+      try {
+        return { data: await attempt(), recovered: false };
+      } catch (retryError) {
+        const retryRecovered = await findLatestDeliverableRecord(type, depId, startedAt);
+        if (retryRecovered) return { data: { deliverable: retryRecovered }, recovered: true };
+        throw retryError;
+      }
+    }
+  };
+
+  const invokeMcnWithRecovery = async (depId: string, wholeCycle: boolean) => {
+    const startedAt = new Date();
+    const body = { dependenciaId: depId, year, month, wholeCycle };
+
+    const attempt = async () => {
+      const { data, error } = await supabase.functions.invoke("gto-compute-mcn", { body });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      return data as any;
+    };
+
+    try {
+      return { data: await attempt(), recovered: false };
+    } catch (error) {
+      const recovered = await findLatestMcnRecord(depId, startedAt);
+      if (recovered) return { data: recovered, recovered: true };
+      if (!isTransientEdgeFailure(error)) throw error;
+
+      try {
+        return { data: await attempt(), recovered: false };
+      } catch (retryError) {
+        const retryRecovered = await findLatestMcnRecord(depId, startedAt);
+        if (retryRecovered) return { data: retryRecovered, recovered: true };
+        throw retryError;
+      }
+    }
+  };
+
   const filteredSessions = useMemo(() => {
     if (filterDep === "all") return sessions;
     return sessions.filter((s) => s.dependencia_id === filterDep);
