@@ -511,3 +511,78 @@ function esc(v: any): string {
   if (v === null || v === undefined || v === "") return '<span class="placeholder">[pendiente]</span>';
   return String(v).replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c] as string));
 }
+
+/**
+ * Carga la bitácora del curso (sesiones del panel del participante, corpus subido,
+ * diagnósticos hechos y compromisos cumplidos) para una dependencia o para todas.
+ * Devuelve un objeto resumido pensado para meter al prompt sin saturar tokens.
+ */
+async function loadBitacoraCurso(admin: any, dependenciaId: string | null) {
+  let sesionesQ = admin.from("gto_sesiones").select("*");
+  if (dependenciaId) sesionesQ = sesionesQ.eq("dependencia_id", dependenciaId);
+  const { data: cursoSesiones } = await sesionesQ;
+  const ids = (cursoSesiones ?? []).map((s: any) => s.id);
+  if (ids.length === 0) {
+    return {
+      curso_sesiones: [],
+      participantes_count: 0,
+      corpus_count: 0,
+      diagnosticos_count: 0,
+      corpus_resumen: [],
+      diagnosticos_resumen: [],
+    };
+  }
+  const [{ data: p }, { data: c }, { data: d }] = await Promise.all([
+    admin
+      .from("gto_participantes")
+      .select("id, sesion_id, nombre, cargo, ultimo_paso, ultima_actividad")
+      .in("sesion_id", ids),
+    admin
+      .from("gto_corpus_uploads")
+      .select("id, sesion_id, participante_id, doc_tipo, file_name, created_at")
+      .in("sesion_id", ids),
+    admin
+      .from("gto_diagnostico_textos")
+      .select("id, sesion_id, participante_nombre, titulo, score_calidad, errores_detectados, analizado_at")
+      .in("sesion_id", ids),
+  ]);
+  return {
+    curso_sesiones: (cursoSesiones ?? []).map((s: any) => ({
+      titular_nombre: s.titular_nombre,
+      titular_cargo: s.titular_cargo,
+      herramienta_ia: s.herramienta_ia,
+      estado: s.estado,
+      paso_actual: s.paso_actual,
+      brief: {
+        mision: s.brief_mision,
+        tono: s.brief_tono,
+        audiencias: s.brief_audiencias,
+        tipo_texto: s.brief_tipo_texto,
+        terminos_preferidos: s.brief_terminos_preferidos,
+        terminos_prohibidos: s.brief_terminos_prohibidos,
+      },
+      compromisos: {
+        corpus_subido: s.compromiso_corpus_subido,
+        prompt_probado: s.compromiso_prompt_probado,
+        resultado_compartido: s.compromiso_resultado_compartido,
+      },
+      prompt_generado_at: s.prompt_generado_at,
+      completed_at: s.completed_at,
+    })),
+    participantes_count: (p ?? []).length,
+    corpus_count: (c ?? []).length,
+    diagnosticos_count: (d ?? []).length,
+    corpus_resumen: (c ?? []).slice(0, 30).map((x: any) => ({
+      doc_tipo: x.doc_tipo,
+      file_name: x.file_name,
+      created_at: x.created_at,
+    })),
+    diagnosticos_resumen: (d ?? []).slice(0, 20).map((x: any) => ({
+      titulo: x.titulo,
+      participante: x.participante_nombre,
+      score: x.score_calidad,
+      errores: Array.isArray(x.errores_detectados) ? x.errores_detectados.length : null,
+      analizado_at: x.analizado_at,
+    })),
+  };
+}
