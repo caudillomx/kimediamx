@@ -169,7 +169,7 @@ export default function CursoGtoEntregables() {
     ]);
     setDeps((d1 ?? []) as Dependencia[]);
     setSessions((d2 ?? []) as TrainingSession[]);
-    setDeliverables((d3 ?? []) as Deliverable[]);
+    setDeliverables(dedupeDeliverables((d3 ?? []) as Deliverable[]));
   };
 
   useEffect(() => {
@@ -368,17 +368,12 @@ export default function CursoGtoEntregables() {
     }
     setGenerating(true);
     try {
-      const { data, error } = await supabase.functions.invoke("gto-generate-deliverable", {
-        body: {
-          deliverableType: genType,
-          dependenciaId: genType === "resumen_consultorias" ? null : genDep,
-          year, month,
-          wholeCycle: true,
-          consultantName: "KiMedia",
-        },
-      });
-      if (error) throw error;
-      toast.success("Entregable generado");
+      const { data, recovered } = await invokeDeliverableWithRecovery(
+        genType,
+        genType === "resumen_consultorias" ? null : genDep,
+        true,
+      );
+      toast.success(recovered ? "Entregable generado y reconciliado" : "Entregable generado");
       fetchData();
       const html = (data as any)?.html;
       if (html) {
@@ -414,11 +409,7 @@ export default function CursoGtoEntregables() {
       const label = `Calcular MCN · ${dep.siglas}`;
       setBulkProgress({ done, total, current: label });
       try {
-        const { data, error } = await supabase.functions.invoke("gto-compute-mcn", {
-          body: { dependenciaId: dep.id, year, month, wholeCycle },
-        });
-        if (error) throw error;
-        if ((data as any)?.error) throw new Error((data as any).error);
+        await invokeMcnWithRecovery(dep.id, wholeCycle);
       } catch (e: any) {
         errors.push(`${label}: ${e?.message ?? "desconocido"}`);
       } finally {
@@ -430,17 +421,7 @@ export default function CursoGtoEntregables() {
     const runOne = async (type: string, depId: string | null, label: string) => {
       setBulkProgress({ done, total, current: label });
       try {
-        const { data, error } = await supabase.functions.invoke("gto-generate-deliverable", {
-          body: {
-            deliverableType: type,
-            dependenciaId: depId,
-            year, month,
-            wholeCycle,
-            consultantName: "KiMedia",
-          },
-        });
-        if (error) throw error;
-        if ((data as any)?.error) throw new Error((data as any).error);
+        await invokeDeliverableWithRecovery(type, depId, wholeCycle);
       } catch (e: any) {
         errors.push(`${label}: ${e?.message ?? "desconocido"}`);
       } finally {
