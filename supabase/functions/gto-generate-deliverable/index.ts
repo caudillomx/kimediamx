@@ -216,6 +216,7 @@ REGLAS DURAS:
 - Si un arreglo (consultorias / simulacros / entrenamientos) no tiene sesiones en el contexto, devuélvelo vacío []. NO inventes filas placebo.
 - Para cada consultoría: extrae 3–6 recomendaciones específicas citando frase del transcript. Para "asesoria_descripcion" da 3–5 líneas reales, no slogans.
 - "bitacora_curso" es evidencia adicional de adopción real (corpus subido, diagnósticos, brief del titular, herramienta IA, compromisos). Úsala literalmente; si está vacía, declara que no hay adopción registrada.
+- ASISTENTES: intenta identificar nombres/cargos a partir del transcript_excerpt (presentaciones del tipo "soy X, de Y", "habla X", etiquetas de hablante). Si no se distinguen con claridad, deja el campo vacío y reporta solo el conteo numérico. NUNCA inventes nombres.
 - Tono profesional, técnico, sin floritura. Español MX.
 - Devuelves SOLO JSON válido con la estructura solicitada.`;
 
@@ -439,6 +440,7 @@ Devuelve JSON:
   "resumen_ejecutivo": "...",
   "entrenamientos": [
     {"fecha":"","duracion":"","modalidad":"","instructor":"","areas":"","asistentes":N,"objetivo":"","competencias":["..."],"evidencias":"","observaciones":""}
+    /* En "areas" puedes listar nombres/cargos detectados en el transcript separados por coma. Si no se identifican con seguridad, déjalo vacío y reporta solo "asistentes":N. */
   ],
   "simulacros": [
     {"fecha":"","tipo":"","duracion":"","dependencia":"","integrantes":N,
