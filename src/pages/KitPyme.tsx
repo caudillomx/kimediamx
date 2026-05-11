@@ -27,14 +27,16 @@ export default function KitPyme() {
   const handleWelcome = async (info: PymeParticipantInfo) => {
     setParticipantInfo(info);
     try {
-      const { data, error } = await supabase.from("brand_kit_profiles").insert({
+      const newId = crypto.randomUUID();
+      const { error } = await supabase.from("brand_kit_profiles").insert({
+        id: newId,
         full_name: info.fullName, email: info.email, profession: "Empresa",
         social_handle: info.socialHandle, industry: info.industry, main_channel: info.mainChannel,
         approx_followers: info.approxFollowers, has_website: info.hasWebsite, kit_type: "pyme",
         company_name: info.companyName, company_size: info.companySize, years_in_business: info.yearsInBusiness,
-      }).select("id").single();
+      });
       if (error) throw error;
-      setProfileId(data.id);
+      setProfileId(newId);
     } catch {
       toast({ title: "Error guardando datos", variant: "destructive" });
     }
