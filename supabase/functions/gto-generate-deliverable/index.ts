@@ -216,6 +216,7 @@ REGLAS DURAS:
 - Si un arreglo (consultorias / simulacros / entrenamientos) no tiene sesiones en el contexto, devuélvelo vacío []. NO inventes filas placebo.
 - Para cada consultoría: extrae 3–6 recomendaciones específicas citando frase del transcript. Para "asesoria_descripcion" da 3–5 líneas reales, no slogans.
 - "bitacora_curso" es evidencia adicional de adopción real (corpus subido, diagnósticos, brief del titular, herramienta IA, compromisos). Úsala literalmente; si está vacía, declara que no hay adopción registrada.
+- ASISTENTES: intenta identificar nombres/cargos a partir del transcript_excerpt (presentaciones del tipo "soy X, de Y", "habla X", etiquetas de hablante). Si no se distinguen con claridad, deja el campo vacío y reporta solo el conteo numérico. NUNCA inventes nombres.
 - Tono profesional, técnico, sin floritura. Español MX.
 - Devuelves SOLO JSON válido con la estructura solicitada.`;
 
@@ -352,6 +353,8 @@ Usa EXCLUSIVAMENTE las sesiones de "consultoria_sessions" del contexto. Si ese a
 
 Para cada consultoría debes citar al menos 2 frases textuales del transcript_excerpt entre comillas (en "asesoria_descripcion" o "recomendaciones"). Si el transcript está vacío, omite las comillas pero deja el campo con resumen breve apoyado en summary/decisiones_clave/pendientes.
 
+Para "persona" y "cargo": extrae nombre y puesto sólo si aparecen literalmente en el transcript (presentaciones tipo "soy Juan Pérez, jefe de comunicación"). Si no hay identificación clara, deja "persona":"" y "cargo":"" y describe en "asesoria_descripcion" cuántos asistentes participaron. NUNCA inventes nombres ni puestos.
+
 Devuelve JSON con:
 {
   "resumen_ejecutivo": "máx 10 líneas",
@@ -433,6 +436,7 @@ Reglas:
 - Si "simulacro_sessions" está vacío, devuelve "simulacros": [] y aclara en conclusion_avance que en este ciclo no se ejecutaron simulacros formales.
 - Si AMBOS están vacíos, devuelve los tres arreglos vacíos y en conclusion_avance escribe: "No se realizaron entrenamientos ni simulacros formales en el ciclo. Las sesiones registradas fueron consultorías 1:1."
 - En recomendaciones_siguiente_mes sugiere 2-3 simulacros pertinentes para esta dependencia con base en entrenamiento_sessions, consultoria_sessions y bitacora_curso.
+- En cada entrenamiento, el campo "areas" debe listar nombres y cargos detectados explícitamente en el transcript_excerpt (presentaciones tipo "soy X, jefe de Y"). Si no logras identificarlos con seguridad, deja "areas" vacío ("") y reporta sólo el conteo en "asistentes". No inventes nombres.
 
 Devuelve JSON:
 {
