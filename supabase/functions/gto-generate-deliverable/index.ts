@@ -302,22 +302,42 @@ function titleFor(t: DeliverableType): string {
   }
 }
 
+function slimSession(s: any) {
+  return {
+    id: s.id,
+    fecha: s.session_date,
+    tipo: s.session_type,
+    tema: s.topic,
+    duracion_min: s.duration_minutes,
+    asistentes: s.attendee_count,
+    participantes: s.attendees ?? s.participants ?? null,
+    decisiones_clave: s.key_decisions,
+    pendientes: s.pending_actions,
+    resumen: s.summary,
+    transcript_excerpt: typeof s.transcript === "string" ? s.transcript.slice(0, 8000) : null,
+  };
+}
+
 function buildUserPrompt(t: DeliverableType, ctx: any): string {
   const base = `CONTEXTO (datos reales del sistema):\n${JSON.stringify(ctx, null, 2)}\n\n`;
   switch (t) {
     case "registro_consultorias":
       return (
         base +
-        `Genera el contenido para el "Registro Sistematizado de Consultorías Especializadas 1:1 por Dependencia" del mes ${ctx.monthName} para la dependencia ${ctx.dependencia?.nombre}.
+        `Genera el contenido para el "Registro Sistematizado de Consultorías 1:1" del ciclo (${ctx.periodo_label}) para la dependencia ${ctx.dependencia?.nombre}.
+
+Usa EXCLUSIVAMENTE las sesiones de "consultoria_sessions" del contexto. Si ese arreglo está vacío, devuelve "consultorias": [] y marca observaciones_globales con la nota: "Sin consultorías 1:1 registradas en el ciclo."
+
+Para cada consultoría debes citar al menos 2 frases textuales del transcript_excerpt entre comillas (en "asesoria_descripcion" o "recomendaciones"). Si el transcript está vacío, omite las comillas pero deja el campo con resumen breve apoyado en summary/decisiones_clave/pendientes.
 
 Devuelve JSON con:
 {
   "resumen_ejecutivo": "máx 10 líneas",
-  "consultorias": [ // una por cada session de tipo consultoria
+  "consultorias": [
     {
       "persona": "...", "cargo": "...", "fecha": "...", "duracion": "...", "modalidad": "...",
-      "tema_coyuntural": "...", "asesoria_descripcion": "...",
-      "recomendaciones": ["...","...","..."],
+      "tema_coyuntural": "...", "asesoria_descripcion": "3-5 líneas reales con cita textual",
+      "recomendaciones": ["3-6 bullets accionables, específicos al caso"],
       "resultado_tipo": "...", "resultado_descripcion": "...",
       "evidencias": ["bitacora_individual","recomendaciones_escritas"]
     }
@@ -325,28 +345,31 @@ Devuelve JSON con:
   "observaciones_globales": "patrones, riesgos transversales, aprendizajes",
   "conclusion_tecnica": "...",
   "evidencia_adopcion": {
-    "resumen": "2-3 líneas describiendo qué hizo la dependencia en el panel del curso (corpus subido, diagnósticos, herramienta IA elegida, compromisos cumplidos). Si bitacora_curso está vacío, escribe '[pendiente]'.",
-    "items": ["bullet con dato concreto + fecha", "..."]
+    "resumen": "2-3 líneas sobre adopción real del curso de IA. Si bitacora_curso está vacío, escribe: 'No se registró actividad de la dependencia en el panel del curso.'",
+    "items": ["bullet con dato concreto + fecha"]
   }
 }`
       );
     case "resumen_consultorias":
       return (
         base +
-        `Genera la "Sistematización Mensual Consolidada de Consultorías" del mes ${ctx.monthName}.
+        `Genera la "Sistematización Consolidada de Consultorías" del ciclo (${ctx.periodo_label}). Usa SOLO consultoria_sessions de TODAS las dependencias presentes en el contexto.
 
 Devuelve JSON:
 {
   "filas": [
     {"dependencia":"...","personas":"...","tema":"...","fecha":"...","duracion":"...","resultado":"...","evidencias":"..."}
-  ]
+  ],
+  "conclusion": "2-4 líneas que sinteticen patrones del ciclo (qué temas dominaron, qué dependencias salieron mejor preparadas)."
 }
-Una fila por cada session de tipo consultoria de TODAS las dependencias del mes.`
+Una fila por cada consultoría real; si no hay, devuelve filas: [].`
       );
     case "reporte_mcn":
       return (
         base +
-        `Genera el "Reporte Mensual MCN" del mes ${ctx.monthName}${ctx.dependencia ? ` para ${ctx.dependencia.nombre}` : " (consolidado global)"}.
+        `Genera el "Reporte MCN del ciclo" (${ctx.periodo_label})${ctx.dependencia ? ` para ${ctx.dependencia.nombre}` : " (consolidado global)"}.
+
+IMPORTANTE: Usa los scores reales que vienen en mcnCurrent (campo 'evidence' incluye las citas que justifican cada puntaje). NO inventes números: si una dimensión viene null, deja mes_actual: null y marca observación como "Sin evidencia suficiente".
 
 Las 5 dimensiones MCN son:
 1. Detección temprana de señales
@@ -368,8 +391,8 @@ Devuelve JSON:
   "recomendaciones_transversales": ["...","..."],
   "recomendaciones_dimension": [{"dimension":"...","recomendacion":"..."}],
   "evidencia_adopcion": {
-    "resumen": "Cómo la dependencia está aplicando lo aprendido en el curso de IA (corpus, diagnósticos, herramienta elegida). Si no hay datos, '[pendiente]'.",
-    "items": ["bullet con dato concreto + fecha", "..."]
+    "resumen": "Cómo la dependencia está aplicando lo aprendido en el curso. Si bitacora_curso vacía: 'No se registró actividad en el panel del curso.'",
+    "items": ["bullet con dato concreto + fecha"]
   }
 }
 
@@ -378,7 +401,12 @@ Usa mcnCurrent y mcnPrev del contexto. Si una dimensión no tiene calificación 
     case "bitacora_simulacros":
       return (
         base +
-        `Genera la "Bitácora Mensual de Entrenamientos y Simulacros" del mes ${ctx.monthName} para ${ctx.dependencia?.nombre ?? "todas las dependencias"}.
+        `Genera la "Bitácora de Entrenamientos y Simulacros" del ciclo (${ctx.periodo_label}) para ${ctx.dependencia?.nombre ?? "todas las dependencias"}.
+
+Usa EXCLUSIVAMENTE simulacro_sessions del contexto. Si está vacío:
+- devuelve "entrenamientos": [], "simulacros": [], "comparativo_evolutivo": []
+- escribe en conclusion_avance: "No se realizaron simulacros ni entrenamientos formales en el ciclo. Las sesiones registradas fueron consultorías 1:1."
+- en recomendaciones_siguiente_mes sugiere 2-3 simulacros pertinentes para esta dependencia con base en consultoria_sessions y bitacora_curso.
 
 Devuelve JSON:
 {
