@@ -20,15 +20,16 @@ export default function BrandKitProfile() {
     const load = async () => {
       if (!id || !token) { setError("Acceso no autorizado"); setLoading(false); return; }
 
-      const { data } = await supabase
-        .from("brand_kit_profiles")
-        .select("*")
-        .eq("id", id)
-        .eq("profile_token", token)
-        .maybeSingle();
+      const { data, error: rpcError } = await supabase
+        .rpc("get_brand_kit_by_token", { _id: id, _token: token });
 
-      if (!data) { setError("Perfil no encontrado o token inválido"); setLoading(false); return; }
-      setProfile(data);
+      const row = Array.isArray(data) ? data[0] : data;
+      if (rpcError || !row) {
+        setError("Perfil no encontrado o token inválido");
+        setLoading(false);
+        return;
+      }
+      setProfile(row);
       setLoading(false);
     };
     load();

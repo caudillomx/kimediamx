@@ -2461,6 +2461,57 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_brand_kit_by_token: {
+        Args: { _id: string; _token: string }
+        Returns: {
+          approx_followers: string | null
+          bio_text: string | null
+          brand_tone: string | null
+          company_name: string | null
+          company_size: string | null
+          competitors: string | null
+          consent_email: boolean
+          consent_whatsapp: boolean
+          content_grid: Json | null
+          content_pillars: Json | null
+          content_restrictions: string | null
+          created_at: string
+          diagnostic_level: string | null
+          diagnostic_score: number | null
+          differentiator: string | null
+          email: string
+          full_name: string
+          goal_90_days: string | null
+          has_website: boolean | null
+          id: string
+          industry: string | null
+          key_dates: string | null
+          kit_type: string
+          main_channel: string | null
+          market_position: string | null
+          post_published: boolean
+          post_text: string | null
+          post_type: string | null
+          preferred_formats: Json | null
+          profession: string
+          profile_token: string | null
+          publication_frequency: string | null
+          reference_accounts: string | null
+          self_perception: string | null
+          social_handle: string
+          target_audience: string | null
+          updated_at: string
+          user_id: string | null
+          value_proposition: string | null
+          years_in_business: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "brand_kit_profiles"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       gto_bootstrap_session: {
         Args: { _participante_id: string; _sesion_id: string }
         Returns: Json

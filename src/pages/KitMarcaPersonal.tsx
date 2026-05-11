@@ -27,14 +27,16 @@ export default function KitMarcaPersonal() {
   const handleWelcome = async (info: BrandParticipantInfo) => {
     setParticipantInfo(info);
     try {
-      const { data, error } = await supabase.from("brand_kit_profiles").insert({
+      const newId = crypto.randomUUID();
+      const { error } = await supabase.from("brand_kit_profiles").insert({
+        id: newId,
         full_name: info.fullName, email: info.email, profession: info.profession,
         industry: info.industry, social_handle: info.socialHandle,
         main_channel: info.mainChannel, approx_followers: info.approxFollowers, has_website: info.hasWebsite,
         competitors: info.competitors || null,
-      }).select("id").single();
+      });
       if (error) throw error;
-      setProfileId(data.id);
+      setProfileId(newId);
     } catch {
       toast({ title: "Error guardando datos", variant: "destructive" });
     }
