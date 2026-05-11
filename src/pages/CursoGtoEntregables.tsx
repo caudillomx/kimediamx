@@ -671,6 +671,12 @@ function McnEditor({
   const [fortalezas, setFortalezas] = useState("");
   const [areas, setAreas] = useState("");
   const [loading, setLoading] = useState(false);
+  const [computing, setComputing] = useState(false);
+  const [computedBy, setComputedBy] = useState<string>("manual");
+  const [computedAt, setComputedAt] = useState<string | null>(null);
+  const [evidence, setEvidence] = useState<Record<string, string[]>>({});
+  const [sources, setSources] = useState<any | null>(null);
+  const [resumenIa, setResumenIa] = useState<string>("");
 
   useEffect(() => {
     if (!depId) return;
@@ -689,11 +695,21 @@ function McnEditor({
         setScores(s);
         setFortalezas(data.fortalezas ?? "");
         setAreas(data.areas_mejora ?? "");
+        setComputedBy((data as any).computed_by ?? "manual");
+        setComputedAt((data as any).computed_at ?? null);
+        setEvidence(((data as any).evidence ?? {}) as Record<string, string[]>);
+        const obs = (data as any).observaciones ?? {};
+        setResumenIa(obs?.resumen_ejecutivo ?? "");
       } else {
         setScores({});
         setFortalezas("");
         setAreas("");
+        setComputedBy("manual");
+        setComputedAt(null);
+        setEvidence({});
+        setResumenIa("");
       }
+      setSources(null);
     })();
   }, [depId, year, month]);
 
@@ -706,7 +722,7 @@ function McnEditor({
         period_year: year,
         period_month: month,
         fortalezas, areas_mejora: areas,
-        computed_by: "manual",
+        computed_by: computedBy === "ai" ? "ai_edited" : "manual",
       };
       MCN_DIMENSIONS.forEach((d) => {
         const v = scores[d.key];
@@ -725,22 +741,89 @@ function McnEditor({
     }
   };
 
+  const computeAi = async () => {
+    if (!depId) return toast.error("Selecciona dependencia");
+    setComputing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("gto-compute-mcn", {
+        body: { dependenciaId: depId, year, month },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      const score = (data as any).score;
+      const s: Record<string, string> = {};
+      MCN_DIMENSIONS.forEach((d) => {
+        const v = score?.[d.key];
+        s[d.key] = v != null ? String(v) : "";
+      });
+      setScores(s);
+      setFortalezas(score?.fortalezas ?? "");
+      setAreas(score?.areas_mejora ?? "");
+      setEvidence((score?.evidence ?? {}) as Record<string, string[]>);
+      setComputedBy(score?.computed_by ?? "ai");
+      setComputedAt(score?.computed_at ?? null);
+      setResumenIa(score?.observaciones?.resumen_ejecutivo ?? "");
+      setSources((data as any).sources ?? null);
+      toast.success("MCN calculada por IA");
+      onSaved();
+    } catch (e: any) {
+      toast.error(`IA falló: ${e?.message ?? "desconocido"}`);
+    } finally {
+      setComputing(false);
+    }
+  };
+
+  const badge =
+    computedBy === "ai"
+      ? { label: "Calculado por IA", cls: "bg-coral/15 text-coral border-coral/30" }
+      : computedBy === "ai_edited"
+        ? { label: "IA + edición humana", cls: "bg-amber-500/15 text-amber-600 border-amber-500/30" }
+        : { label: "Manual", cls: "bg-muted text-muted-foreground border-border" };
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Matriz de Competencias Narrativas (MCN)</CardTitle>
-        <CardDescription>Calificaciones 0–10 por dimensión. Se usan en el reporte mensual MCN.</CardDescription>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <CardTitle>Matriz de Competencias Narrativas (MCN)</CardTitle>
+            <CardDescription>
+              La IA califica 0–10 por dimensión con base en sesiones Fireflies y bitácoras del curso. Puedes editar antes de guardar.
+            </CardDescription>
+          </div>
+          {depId && (
+            <span className={`text-xs px-2 py-1 rounded border ${badge.cls}`}>
+              {badge.label}
+              {computedAt ? ` · ${new Date(computedAt).toLocaleDateString("es-MX")}` : ""}
+            </span>
+          )}
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="space-y-1 max-w-md">
-          <Label>Dependencia</Label>
-          <Select value={depId} onValueChange={setDepId}>
-            <SelectTrigger><SelectValue placeholder="Selecciona…" /></SelectTrigger>
-            <SelectContent>
-              {deps.map((d) => (<SelectItem key={d.id} value={d.id}>{d.siglas} · {d.nombre}</SelectItem>))}
-            </SelectContent>
-          </Select>
+        <div className="flex items-end gap-2 flex-wrap">
+          <div className="space-y-1 flex-1 min-w-[240px] max-w-md">
+            <Label>Dependencia</Label>
+            <Select value={depId} onValueChange={setDepId}>
+              <SelectTrigger><SelectValue placeholder="Selecciona…" /></SelectTrigger>
+              <SelectContent>
+                {deps.map((d) => (<SelectItem key={d.id} value={d.id}>{d.siglas} · {d.nombre}</SelectItem>))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Button
+            type="button"
+            variant="default"
+            onClick={computeAi}
+            disabled={!depId || computing}
+          >
+            {computing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
+            Calcular con IA
+          </Button>
         </div>
+        {sources && (
+          <p className="text-xs text-muted-foreground">
+            Fuentes usadas: {sources.fireflies_sessions} sesiones Fireflies · {sources.curso_sesiones} sesiones del curso · {sources.corpus_docs} documentos · {sources.diagnosticos} diagnósticos
+          </p>
+        )}
         {depId && (
           <>
             <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
@@ -752,9 +835,21 @@ function McnEditor({
                     value={scores[d.key] ?? ""}
                     onChange={(e) => setScores({ ...scores, [d.key]: e.target.value })}
                   />
+                  {evidence?.[d.key]?.length ? (
+                    <ul className="text-[10px] text-muted-foreground mt-1 space-y-0.5 list-disc list-inside">
+                      {evidence[d.key].slice(0, 3).map((ev, i) => (
+                        <li key={i} className="line-clamp-2">{ev}</li>
+                      ))}
+                    </ul>
+                  ) : null}
                 </div>
               ))}
             </div>
+            {resumenIa && (
+              <div className="text-xs bg-muted/40 border border-border rounded p-3">
+                <span className="font-medium">Resumen IA:</span> {resumenIa}
+              </div>
+            )}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label className="text-xs">Fortalezas</Label>
