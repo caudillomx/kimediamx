@@ -74,6 +74,10 @@ Deno.serve(async (req) => {
     const periodStart = new Date(year, month - 1, 1).toISOString().split("T")[0];
     const periodEnd = new Date(year, month, 0).toISOString().split("T")[0];
 
+    // Ciclo único GTO: cuando wholeCycle=true, todos los scores se etiquetan como Abril 2026.
+    const effectiveYear = wholeCycle ? 2026 : year;
+    const effectiveMonth = wholeCycle ? 4 : month;
+
     // 1) Dependencia
     const { data: dep } = await admin
       .from("gto_dependencias")
@@ -106,8 +110,8 @@ Deno.serve(async (req) => {
     });
 
     // 3) MCN previo (mes anterior) y actual (para auditoría)
-    const prevMonth = month === 1 ? 12 : month - 1;
-    const prevYear = month === 1 ? year - 1 : year;
+    const prevMonth = effectiveMonth === 1 ? 12 : effectiveMonth - 1;
+    const prevYear = effectiveMonth === 1 ? effectiveYear - 1 : effectiveYear;
     const { data: mcnPrev } = await admin
       .from("gto_mcn_scores")
       .select("*")
