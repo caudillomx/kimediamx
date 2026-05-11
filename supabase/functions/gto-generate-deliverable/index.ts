@@ -81,6 +81,14 @@ Deno.serve(async (req) => {
       .split("T")[0];
     const periodEnd = new Date(year, month, 0).toISOString().split("T")[0];
 
+    // El ciclo de capacitación GTO es una intervención única (Abril 2026)
+    // que incluye la sesión de cierre del 5 de mayo. Todos los entregables
+    // del ciclo se etiquetan como ABRIL 2026.
+    const cycleYear = 2026;
+    const cycleMonth = 4; // Abril
+    const effectiveYear = wholeCycle ? cycleYear : year;
+    const effectiveMonth = wholeCycle ? cycleMonth : month;
+
     // Load dependencia (if applicable)
     let dep: any = null;
     if (dependenciaId) {
@@ -114,11 +122,26 @@ Deno.serve(async (req) => {
       return true;
     });
 
-    // Split por tipo (útil para entregables y para detectar vacíos)
-    const consultoriaSessions = sessions.filter((s: any) => s.session_type === "consultoria");
-    const simulacroSessions = sessions.filter((s: any) =>
-      s.session_type === "simulacro" || s.session_type === "entrenamiento"
-    );
+    // Reclasificación semántica:
+    // - simulacro: session_type='simulacro'|'simulacion' o tópico con crisis/simulación
+    // - entrenamiento: session_type='entrenamiento' o consultoría grupal (>=3 asistentes)
+    // - consultoria 1:1: consultoría individual (<3 asistentes) y sin marca de simulacro
+    const isSimulacro = (s: any) => {
+      if (["simulacro", "simulacion"].includes(s.session_type)) return true;
+      const t = (s.topic ?? "").toLowerCase();
+      return /simulaci[óo]n|simulacro|crisis/.test(t);
+    };
+    const isEntrenamiento = (s: any) => {
+      if (isSimulacro(s)) return false;
+      if (s.session_type === "entrenamiento") return true;
+      return s.session_type === "consultoria" && (s.attendee_count ?? 0) >= 3;
+    };
+    const isConsultoria1a1 = (s: any) =>
+      !isSimulacro(s) && !isEntrenamiento(s) && s.session_type === "consultoria";
+
+    const consultoriaSessions = sessions.filter(isConsultoria1a1);
+    const entrenamientoSessions = sessions.filter(isEntrenamiento);
+    const simulacroSessions = sessions.filter(isSimulacro);
 
     // Load all dependencias for resumen / reporte global if needed
     const { data: allDeps } = await admin
@@ -126,12 +149,12 @@ Deno.serve(async (req) => {
       .select("id, nombre, siglas");
     const depMap = new Map((allDeps ?? []).map((d: any) => [d.id, d]));
 
-    // Load MCN scores
+    // Load MCN scores (usando el período efectivo del ciclo)
     let mcnQuery = admin
       .from("gto_mcn_scores")
       .select("*")
-      .eq("period_year", year)
-      .eq("period_month", month);
+      .eq("period_year", effectiveYear)
+      .eq("period_month", effectiveMonth);
     if (dependenciaId) mcnQuery = mcnQuery.eq("dependencia_id", dependenciaId);
     const { data: mcnCurrent } = await mcnQuery;
     // Si no hay del mes seleccionado, busca el MCN más reciente (cuando wholeCycle=true o ciclos cortos)
@@ -147,8 +170,8 @@ Deno.serve(async (req) => {
       mcnEffective = f ?? [];
     }
 
-    const prevMonth = month === 1 ? 12 : month - 1;
-    const prevYear = month === 1 ? year - 1 : year;
+    const prevMonth = effectiveMonth === 1 ? 12 : effectiveMonth - 1;
+    const prevYear = effectiveMonth === 1 ? effectiveYear - 1 : effectiveYear;
     let mcnPrevQuery = admin
       .from("gto_mcn_scores")
       .select("*")
@@ -165,19 +188,18 @@ Deno.serve(async (req) => {
     const context = {
       deliverableType,
       dependencia: dep,
-      year,
-      month,
+      year: effectiveYear,
+      month: effectiveMonth,
       wholeCycle,
-      monthName: new Date(year, month - 1, 1).toLocaleDateString("es-MX", {
+      monthName: new Date(effectiveYear, effectiveMonth - 1, 1).toLocaleDateString("es-MX", {
         month: "long",
         year: "numeric",
       }),
-      periodo_label: wholeCycle
-        ? "Ciclo completo de capacitación (abril–mayo 2026)"
-        : new Date(year, month - 1, 1).toLocaleDateString("es-MX", { month: "long", year: "numeric" }),
+      periodo_label: "Abril 2026 (ciclo único; incluye sesión de cierre del 5 de mayo)",
       consultantName,
       sessions_total: sessions.length,
       consultoria_sessions: consultoriaSessions.map(slimSession),
+      entrenamiento_sessions: entrenamientoSessions.map(slimSession),
       simulacro_sessions: simulacroSessions.map(slimSession),
       mcnCurrent: mcnEffective,
       mcnPrev: mcnPrev ?? [],
@@ -234,13 +256,13 @@ REGLAS DURAS:
     // Build HTML for the deliverable (Word-importable)
     const html = renderHtml(deliverableType, context, generated);
 
-    // Save deliverable record
+    // Save deliverable record (etiquetado como Abril 2026 cuando es ciclo)
     const title = `${titleFor(deliverableType)} - ${dep?.siglas ?? "Global"} - ${context.monthName}`;
-    const fileName = `${deliverableType}_${dep?.siglas ?? "global"}_${year}-${String(month).padStart(2, "0")}.html`;
+    const fileName = `${deliverableType}_${dep?.siglas ?? "global"}_${effectiveYear}-${String(effectiveMonth).padStart(2, "0")}.html`;
 
     // Upload HTML to storage so it's downloadable as .doc-readable file
     const bucket = "gto-deliverables";
-    const filePath = `${year}/${String(month).padStart(2, "0")}/${fileName}`;
+    const filePath = `${effectiveYear}/${String(effectiveMonth).padStart(2, "0")}/${fileName}`;
     const blob = new Blob([html], { type: "text/html" });
     const { error: uploadErr } = await admin.storage
       .from(bucket)
@@ -259,8 +281,8 @@ REGLAS DURAS:
       .insert({
         deliverable_type: deliverableType,
         dependencia_id: dependenciaId ?? null,
-        period_year: year,
-        period_month: month,
+        period_year: effectiveYear,
+        period_month: effectiveMonth,
         title,
         status: "borrador",
         consultant_name: consultantName,
