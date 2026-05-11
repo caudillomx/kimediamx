@@ -259,6 +259,7 @@ export default function CursoGtoEntregables() {
           deliverableType: genType,
           dependenciaId: genType === "resumen_consultorias" ? null : genDep,
           year, month,
+          wholeCycle: true,
           consultantName: "KiMedia",
         },
       });
