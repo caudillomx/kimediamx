@@ -212,7 +212,7 @@ Deno.serve(async (req) => {
 REGLAS DURAS:
 - NUNCA inventes datos. Si no hay evidencia, deja el campo vacío ("") o el arreglo vacío ([]). NO uses "[pendiente]" salvo en bullets explícitos del consultor.
 - Usa SOLO el contexto. Cita transcript (frase textual entre comillas + fecha) cuando lo uses como evidencia.
-- El ciclo de capacitación fue una intervención única solicitada por el Gobierno de Guanajuato; NO dividas por mes calendario salvo que se pida. Usa el "periodo_label" como referencia.
+- El ciclo de capacitación fue una intervención única solicitada por el Gobierno de Guanajuato durante ABRIL 2026 (incluye la sesión de cierre del 5 de mayo, que administrativamente forma parte del ciclo de abril). NUNCA dividas el reporte en "abril" vs "mayo": todo el contenido pertenece al ciclo ABRIL 2026. Usa "periodo_label" como referencia textual.
 - Si un arreglo (consultorias / simulacros / entrenamientos) no tiene sesiones en el contexto, devuélvelo vacío []. NO inventes filas placebo.
 - Para cada consultoría: extrae 3–6 recomendaciones específicas citando frase del transcript. Para "asesoria_descripcion" da 3–5 líneas reales, no slogans.
 - "bitacora_curso" es evidencia adicional de adopción real (corpus subido, diagnósticos, brief del titular, herramienta IA, compromisos). Úsala literalmente; si está vacía, declara que no hay adopción registrada.
@@ -425,10 +425,14 @@ Usa mcnCurrent y mcnPrev del contexto. Si una dimensión no tiene calificación 
         base +
         `Genera la "Bitácora de Entrenamientos y Simulacros" del ciclo (${ctx.periodo_label}) para ${ctx.dependencia?.nombre ?? "todas las dependencias"}.
 
-Usa EXCLUSIVAMENTE simulacro_sessions del contexto. Si está vacío:
-- devuelve "entrenamientos": [], "simulacros": [], "comparativo_evolutivo": []
-- escribe en conclusion_avance: "No se realizaron simulacros ni entrenamientos formales en el ciclo. Las sesiones registradas fueron consultorías 1:1."
-- en recomendaciones_siguiente_mes sugiere 2-3 simulacros pertinentes para esta dependencia con base en consultoria_sessions y bitacora_curso.
+Para los ENTRENAMIENTOS usa EXCLUSIVAMENTE "entrenamiento_sessions" (incluye sesiones grupales de capacitación con varios asistentes; el ciclo GTO usó sesiones grupales el 29 de abril y la de cierre del 5 de mayo).
+Para los SIMULACROS usa EXCLUSIVAMENTE "simulacro_sessions" (ejercicios prácticos tipo crisis/simulación).
+
+Reglas:
+- Si "entrenamiento_sessions" tiene elementos, llena el arreglo "entrenamientos" con UNA fila por sesión, citando frase del transcript_excerpt y listando 3-5 competencias trabajadas.
+- Si "simulacro_sessions" está vacío, devuelve "simulacros": [] y aclara en conclusion_avance que en este ciclo no se ejecutaron simulacros formales.
+- Si AMBOS están vacíos, devuelve los tres arreglos vacíos y en conclusion_avance escribe: "No se realizaron entrenamientos ni simulacros formales en el ciclo. Las sesiones registradas fueron consultorías 1:1."
+- En recomendaciones_siguiente_mes sugiere 2-3 simulacros pertinentes para esta dependencia con base en entrenamiento_sessions, consultoria_sessions y bitacora_curso.
 
 Devuelve JSON:
 {
