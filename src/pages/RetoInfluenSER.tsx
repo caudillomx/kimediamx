@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Sparkles, Wand2, Calendar, Users, Trophy, Download, FileText,
-  Loader2, Check, Copy, ArrowRight, Mic, Lightbulb, Target, Heart,
+  Sparkles, Wand2, Calendar, Users, Download, FileText,
+  Loader2, Check, Copy, ArrowRight, Mic, Lightbulb, Target, Compass,
+  Layers, MessageSquare, Megaphone,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,22 +19,24 @@ const STORAGE_KEY = "reto-influenser-registration";
 
 type Registration = { id: string; nombre: string; email: string };
 
-type ReelOutput = {
-  titulo?: string;
-  hook?: string;
-  estructura?: { tiempo: string; que_dices: string; que_se_ve: string }[];
-  cta?: string;
-  caption?: string;
-  hashtags?: string[];
-  tips?: string[];
+type StrategyOutput = {
+  diagnostico?: string;
+  posicionamiento?: string;
+  pilares?: { nombre: string; descripcion: string }[];
+  audiencia?: string;
+  tono?: string;
+  frameworks?: { nombre: string; cuando_usarlo: string }[];
+  ideas?: { formato: string; red: string; pilar: string; hook: string; cta: string }[];
+  siguiente_paso?: string;
 };
 
 const agenda = [
-  { t: "0:00", titulo: "Bienvenida y por qué estamos aquí", desc: "El creador de hoy compite con todo, no solo con otros creadores." },
-  { t: "0:05", titulo: "Estrategia ≠ improvisación", desc: "Framework Hook → Problema → Solución → CTA aplicado a causas sociales." },
-  { t: "0:20", titulo: "Anatomía de un reel que conecta", desc: "Primeros 3 segundos, ritmo, beat visual y cierre que mueve a acción." },
-  { t: "0:35", titulo: "Ejercicio en vivo con Reel Coach", desc: "Usamos la herramienta para construir tu reel del Business Case." },
-  { t: "0:50", titulo: "Q&A y siguientes pasos", desc: "Cómo aterrizar tu propuesta para el Reto." },
+  { t: "0:00", titulo: "Por qué hablar de estrategia, no solo de contenido", desc: "Publicar sin estrategia es ruido. Hoy ordenamos el juego." },
+  { t: "0:08", titulo: "Diagnóstico: dónde estás parado", desc: "El mismo método que usamos con gobierno e iniciativa privada para ver qué ya está funcionando." },
+  { t: "0:18", titulo: "Brief y posicionamiento", desc: "Para quién hablas, para qué, y qué te hace distinto en 1 frase." },
+  { t: "0:30", titulo: "Pilares de contenido", desc: "3 categorías estables que sostienen todo lo que publicas durante meses." },
+  { t: "0:42", titulo: "Frameworks de copy y narrativa", desc: "Hook → Problema → Solución → CTA, AIDA, PAS: cuándo usar cada uno." },
+  { t: "0:50", titulo: "Ejercicio en vivo: tu mini-estrategia", desc: "Cada quien construye su estrategia con el Estrategia Coach." },
 ];
 
 const fechas = [
@@ -44,12 +47,11 @@ const fechas = [
   { label: "Anuncio de ganadores", value: "26 junio" },
 ];
 
-const criterios = [
-  "Autenticidad del creador",
-  "Claridad del mensaje",
-  "Conexión emocional (storytelling)",
-  "Creatividad y originalidad",
-  "Impacto social y llamado a la acción",
+const principios = [
+  { titulo: "Estrategia antes que herramienta", desc: "Las apps cambian cada mes. La estrategia se sostiene." },
+  { titulo: "Pilares antes que posts", desc: "Sin pilares, cada publicación es una decisión nueva. Con pilares, es solo ejecución." },
+  { titulo: "Audiencia específica, no genérica", desc: "'Jóvenes' no es audiencia. 'Universitarios de primer empleo en CDMX' sí." },
+  { titulo: "Métrica de movimiento, no de vanidad", desc: "Lo que importa es qué hace tu audiencia después de verte." },
 ];
 
 export default function RetoInfluenSER() {
@@ -136,12 +138,12 @@ export default function RetoInfluenSER() {
           </Card>
           <Card className="glass-strong border-border/50">
             <CardContent className="p-6">
-              <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><Trophy className="w-4 h-4 text-coral" /> Cómo evalúan</h3>
-              <ul className="space-y-2 text-sm">
-                {criterios.map((c, i) => (
-                  <li key={c} className="flex items-start gap-3">
-                    <span className="mt-0.5 inline-flex w-6 h-6 rounded-full bg-coral/15 text-coral text-xs font-bold items-center justify-center shrink-0">{i + 1}</span>
-                    <span>{c}</span>
+              <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><Compass className="w-4 h-4 text-coral" /> Principios que vamos a usar hoy</h3>
+              <ul className="space-y-3 text-sm">
+                {principios.map((p) => (
+                  <li key={p.titulo}>
+                    <div className="font-semibold">{p.titulo}</div>
+                    <div className="text-xs text-muted-foreground">{p.desc}</div>
                   </li>
                 ))}
               </ul>
@@ -167,11 +169,11 @@ function Hero() {
           <Sparkles className="w-3 h-3 mr-1.5" /> Webinar 2 · Contenido y Estrategia
         </Badge>
         <h1 className="text-4xl md:text-6xl font-bold tracking-tight leading-[1.05]">
-          Cómo construir un reel <br />
-          <span className="bg-gradient-coral bg-clip-text text-transparent">con propósito</span> que la gente quiera ver.
+          Contenido con <br />
+          <span className="bg-gradient-coral bg-clip-text text-transparent">estrategia detrás</span>, no contenido por publicar.
         </h1>
         <p className="mt-6 text-lg text-muted-foreground max-w-2xl">
-          En 60 minutos vamos del concepto al guion. Aprendes el framework que usamos en KiMedia para que tu Business Case del Reto InfluenSER salga publicable, no solo bonito.
+          En 60 minutos vemos el mismo método con el que trabajamos a gobiernos, PyMEs y marcas personales en KiMedia: cómo pasar de publicar suelto a tener una estrategia de contenido con pilares, narrativa y resultados. Al final, cada quien sale con su mini-estrategia hecha.
         </p>
         <div className="mt-6 flex flex-wrap gap-3 text-xs text-muted-foreground">
           <span className="flex items-center gap-1.5"><Users className="w-3.5 h-3.5" /> +2,000 invitados · Influencer Academy</span>
@@ -229,7 +231,7 @@ function WebinarRoom({ registration }: { registration: Registration }) {
       </div>
 
       <Agenda />
-      <ReelCoach registration={registration} />
+      <StrategyCoach registration={registration} />
       <Recursos />
     </motion.div>
   );
@@ -259,18 +261,20 @@ function Agenda() {
   );
 }
 
-function ReelCoach({ registration }: { registration: Registration }) {
-  const [causa, setCausa] = useState("");
-  const [estilo, setEstilo] = useState("");
+function StrategyCoach({ registration }: { registration: Registration }) {
+  const [tema, setTema] = useState("");
+  const [objetivo, setObjetivo] = useState("");
   const [audiencia, setAudiencia] = useState("");
-  const [mensaje, setMensaje] = useState("");
+  const [tono, setTono] = useState("");
+  const [redes, setRedes] = useState("");
+  const [contexto, setContexto] = useState("");
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<ReelOutput | null>(null);
+  const [result, setResult] = useState<StrategyOutput | null>(null);
   const resultRef = useRef<HTMLDivElement | null>(null);
 
   async function generate() {
-    if (causa.trim().length < 3) {
-      toast({ title: "Cuéntanos tu causa", description: "Describe brevemente la causa social que te mueve.", variant: "destructive" });
+    if (tema.trim().length < 3) {
+      toast({ title: "Cuéntanos tu tema", description: "¿Sobre qué quieres crear contenido?", variant: "destructive" });
       return;
     }
     setLoading(true);
@@ -279,20 +283,19 @@ function ReelCoach({ registration }: { registration: Registration }) {
       body: {
         nombre: registration.nombre,
         registration_id: registration.id,
-        causa_social: causa,
-        estilo, audiencia, mensaje_clave: mensaje,
+        tema, objetivo, audiencia, tono, redes, contexto,
       },
     });
     setLoading(false);
     if (error) {
-      toast({ title: "No pudimos generar tu reel", description: error.message, variant: "destructive" });
+      toast({ title: "No pudimos generar tu estrategia", description: error.message, variant: "destructive" });
       return;
     }
     if ((data as any)?.error) {
       toast({ title: "Algo salió mal", description: (data as any).error, variant: "destructive" });
       return;
     }
-    setResult((data as any).result as ReelOutput);
+    setResult((data as any).result as StrategyOutput);
     setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
   }
 
@@ -301,28 +304,34 @@ function ReelCoach({ registration }: { registration: Registration }) {
       <div className="flex items-end justify-between mb-6 flex-wrap gap-3">
         <div>
           <Badge variant="outline" className="mb-2 border-coral/40 text-coral text-[10px]">EN VIVO</Badge>
-          <h2 className="text-2xl font-bold">Reel Coach</h2>
-          <p className="text-sm text-muted-foreground">Construye el primer borrador de tu reel del Reto en menos de un minuto.</p>
+          <h2 className="text-2xl font-bold">Estrategia Coach</h2>
+          <p className="text-sm text-muted-foreground">Tu mini-estrategia de contenido: diagnóstico, pilares, audiencia, frameworks e ideas accionables.</p>
         </div>
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">
         <Card className="glass-strong border-border/60">
           <CardContent className="p-6 space-y-4">
-            <Field label="Tu causa social" icon={<Heart className="w-3.5 h-3.5" />} hint="¿Qué problema o tema te mueve?">
-              <Textarea value={causa} onChange={(e) => setCausa(e.target.value)} placeholder="Ej. Salud mental en adolescentes" rows={2} />
+            <Field label="¿Sobre qué quieres crear contenido?" icon={<Target className="w-3.5 h-3.5" />} hint="Tema, nicho, causa o industria">
+              <Textarea value={tema} onChange={(e) => setTema(e.target.value)} placeholder="Ej. Educación financiera para jóvenes que recién empiezan a trabajar." rows={2} />
             </Field>
-            <Field label="Tu estilo como creador" icon={<Sparkles className="w-3.5 h-3.5" />} hint="¿Cómo te comunicas naturalmente?">
-              <Input value={estilo} onChange={(e) => setEstilo(e.target.value)} placeholder="Ej. Conversacional, irónico, didáctico" />
+            <Field label="Objetivo" icon={<Compass className="w-3.5 h-3.5" />} hint="¿Para qué publicas? Comunidad, clientes, agenda…">
+              <Input value={objetivo} onChange={(e) => setObjetivo(e.target.value)} placeholder="Ej. Construir autoridad y atraer clientes de asesoría" />
             </Field>
-            <Field label="Audiencia" icon={<Users className="w-3.5 h-3.5" />} hint="¿A quién le hablas?">
-              <Input value={audiencia} onChange={(e) => setAudiencia(e.target.value)} placeholder="Ej. Jóvenes universitarios 18-24" />
+            <Field label="Audiencia" icon={<Users className="w-3.5 h-3.5" />} hint="Lo más concreta posible">
+              <Input value={audiencia} onChange={(e) => setAudiencia(e.target.value)} placeholder="Ej. Mujeres 25-35, primer empleo formal en CDMX" />
             </Field>
-            <Field label="Mensaje clave" icon={<Target className="w-3.5 h-3.5" />} hint="Si solo se llevaran una idea, ¿cuál?">
-              <Textarea value={mensaje} onChange={(e) => setMensaje(e.target.value)} placeholder="Ej. Pedir ayuda no te hace débil." rows={2} />
+            <Field label="Tono / personalidad" icon={<MessageSquare className="w-3.5 h-3.5" />} hint="Cómo suenas cuando hablas natural">
+              <Input value={tono} onChange={(e) => setTono(e.target.value)} placeholder="Ej. Cercano, directo, con humor seco" />
+            </Field>
+            <Field label="Redes donde estás o quieres estar" icon={<Megaphone className="w-3.5 h-3.5" />}>
+              <Input value={redes} onChange={(e) => setRedes(e.target.value)} placeholder="Ej. Instagram, TikTok, LinkedIn" />
+            </Field>
+            <Field label="Contexto actual" icon={<Layers className="w-3.5 h-3.5" />} hint="Qué ya haces, de dónde partes (opcional)">
+              <Textarea value={contexto} onChange={(e) => setContexto(e.target.value)} placeholder="Ej. Publico 1 reel a la semana, sin plan claro. Tengo 800 seguidores." rows={2} />
             </Field>
             <Button onClick={generate} disabled={loading} className="w-full bg-gradient-coral text-primary-foreground hover:shadow-glow">
-              {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Generando...</> : <><Wand2 className="w-4 h-4" /> Generar mi reel</>}
+              {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Construyendo tu estrategia...</> : <><Wand2 className="w-4 h-4" /> Generar mi estrategia</>}
             </Button>
           </CardContent>
         </Card>
@@ -339,7 +348,7 @@ function ReelCoach({ registration }: { registration: Registration }) {
                   <CardContent className="p-8 flex flex-col items-center justify-center text-center h-full">
                     <Lightbulb className="w-10 h-10 text-coral/60 mb-4" />
                     <p className="text-sm text-muted-foreground max-w-xs">
-                      Aquí verás tu hook, estructura del reel, caption y hashtags. <br /> Lo trabajamos juntos en vivo.
+                      Aquí verás tu diagnóstico, posicionamiento, pilares, frameworks e ideas concretas. <br /> Lo construimos juntos en vivo.
                     </p>
                   </CardContent>
                 </Card>
@@ -364,69 +373,101 @@ function Field({ label, icon, hint, children }: { label: string; icon: React.Rea
   );
 }
 
-function ResultCard({ r }: { r: ReelOutput }) {
+function ResultCard({ r }: { r: StrategyOutput }) {
   const fullText = useMemo(() => {
-    const lines: string[] = [];
-    if (r.titulo) lines.push(`📌 ${r.titulo}`);
-    if (r.hook) lines.push(`\nHOOK\n${r.hook}`);
-    if (r.estructura?.length) {
-      lines.push("\nESTRUCTURA");
-      r.estructura.forEach((b) => lines.push(`[${b.tiempo}] ${b.que_dices}\n  📷 ${b.que_se_ve}`));
+    const L: string[] = [];
+    if (r.diagnostico) L.push(`DIAGNÓSTICO\n${r.diagnostico}`);
+    if (r.posicionamiento) L.push(`\nPOSICIONAMIENTO\n${r.posicionamiento}`);
+    if (r.audiencia) L.push(`\nAUDIENCIA\n${r.audiencia}`);
+    if (r.tono) L.push(`\nTONO\n${r.tono}`);
+    if (r.pilares?.length) {
+      L.push("\nPILARES");
+      r.pilares.forEach((p, i) => L.push(`${i + 1}. ${p.nombre} — ${p.descripcion}`));
     }
-    if (r.cta) lines.push(`\nCTA\n${r.cta}`);
-    if (r.caption) lines.push(`\nCAPTION\n${r.caption}`);
-    if (r.hashtags?.length) lines.push(`\n${r.hashtags.join(" ")}`);
-    if (r.tips?.length) lines.push(`\nTIPS\n- ${r.tips.join("\n- ")}`);
-    return lines.join("\n");
+    if (r.frameworks?.length) {
+      L.push("\nFRAMEWORKS");
+      r.frameworks.forEach((f) => L.push(`• ${f.nombre} — ${f.cuando_usarlo}`));
+    }
+    if (r.ideas?.length) {
+      L.push("\nIDEAS DE CONTENIDO");
+      r.ideas.forEach((i, k) => L.push(`${k + 1}. [${i.formato} · ${i.red} · ${i.pilar}]\n   Hook: ${i.hook}\n   CTA: ${i.cta}`));
+    }
+    if (r.siguiente_paso) L.push(`\nSIGUIENTE PASO\n${r.siguiente_paso}`);
+    return L.join("\n");
   }, [r]);
 
   async function copy() {
     await navigator.clipboard.writeText(fullText);
-    toast({ title: "Copiado", description: "Listo para pegar en tu nota o guion." });
+    toast({ title: "Copiado", description: "Listo para pegar en tu nota o doc." });
   }
 
   return (
     <Card className="glass-strong border-coral/30">
       <CardContent className="p-6 space-y-5">
         <div className="flex items-start justify-between gap-3">
-          <h3 className="text-lg font-bold">{r.titulo || "Tu reel"}</h3>
+          <h3 className="text-lg font-bold">Tu mini-estrategia</h3>
           <Button size="sm" variant="ghost" onClick={copy}><Copy className="w-3.5 h-3.5" /> Copiar</Button>
         </div>
 
-        {r.hook && <Block label="Hook (0-3s)">{r.hook}</Block>}
+        {r.diagnostico && <Block label="Diagnóstico">{r.diagnostico}</Block>}
+        {r.posicionamiento && <Block label="Posicionamiento">{r.posicionamiento}</Block>}
 
-        {r.estructura?.length ? (
+        {r.pilares?.length ? (
           <div>
-            <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Estructura</p>
+            <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Pilares de contenido</p>
+            <div className="grid sm:grid-cols-3 gap-2">
+              {r.pilares.map((p, i) => (
+                <div key={i} className="rounded-lg border border-coral/20 bg-coral/5 p-3">
+                  <div className="text-sm font-semibold text-coral">{p.nombre}</div>
+                  <div className="text-xs text-muted-foreground mt-1">{p.descripcion}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        {r.audiencia && <Block label="Audiencia">{r.audiencia}</Block>}
+        {r.tono && <Block label="Tono">{r.tono}</Block>}
+
+        {r.frameworks?.length ? (
+          <div>
+            <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Frameworks sugeridos</p>
+            <ul className="space-y-1.5 text-sm">
+              {r.frameworks.map((f, i) => (
+                <li key={i} className="flex gap-2">
+                  <span className="text-coral font-semibold shrink-0">{f.nombre}</span>
+                  <span className="text-muted-foreground">— {f.cuando_usarlo}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
+        {r.ideas?.length ? (
+          <div>
+            <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Ideas listas para producir</p>
             <ol className="space-y-3">
-              {r.estructura.map((b, i) => (
-                <li key={i} className="border-l-2 border-coral/40 pl-3">
-                  <div className="text-[11px] font-mono text-coral">{b.tiempo}</div>
-                  <div className="text-sm font-medium">{b.que_dices}</div>
-                  <div className="text-xs text-muted-foreground">📷 {b.que_se_ve}</div>
+              {r.ideas.map((i, k) => (
+                <li key={k} className="border-l-2 border-coral/40 pl-3">
+                  <div className="flex flex-wrap gap-1.5 mb-1">
+                    <span className="text-[10px] uppercase font-mono bg-coral/10 text-coral px-1.5 py-0.5 rounded">{i.formato}</span>
+                    <span className="text-[10px] uppercase font-mono bg-muted text-muted-foreground px-1.5 py-0.5 rounded">{i.red}</span>
+                    <span className="text-[10px] uppercase font-mono bg-muted text-muted-foreground px-1.5 py-0.5 rounded">{i.pilar}</span>
+                  </div>
+                  <div className="text-sm"><span className="font-semibold">Hook:</span> {i.hook}</div>
+                  <div className="text-xs text-muted-foreground"><span className="font-semibold text-foreground">CTA:</span> {i.cta}</div>
                 </li>
               ))}
             </ol>
           </div>
         ) : null}
 
-        {r.cta && <Block label="CTA">{r.cta}</Block>}
-        {r.caption && <Block label="Caption">{r.caption}</Block>}
-
-        {r.hashtags?.length ? (
-          <div className="flex flex-wrap gap-1.5">
-            {r.hashtags.map((h) => <span key={h} className="text-xs text-coral bg-coral/10 px-2 py-0.5 rounded-full">{h}</span>)}
+        {r.siguiente_paso && (
+          <div className="rounded-lg bg-coral/10 border border-coral/30 p-4">
+            <p className="text-xs uppercase tracking-wider text-coral mb-1 font-semibold">Siguiente paso (48h)</p>
+            <p className="text-sm">{r.siguiente_paso}</p>
           </div>
-        ) : null}
-
-        {r.tips?.length ? (
-          <div>
-            <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Tips</p>
-            <ul className="space-y-1.5 text-sm">
-              {r.tips.map((t) => <li key={t} className="flex gap-2"><Check className="w-3.5 h-3.5 text-coral mt-0.5 shrink-0" />{t}</li>)}
-            </ul>
-          </div>
-        ) : null}
+        )}
       </CardContent>
     </Card>
   );
