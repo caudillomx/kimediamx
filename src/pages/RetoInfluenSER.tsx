@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Sparkles, Wand2, Calendar, Users, Trophy, Download, FileText,
+  Sparkles, Wand2, Calendar, Users, Download, FileText,
   Loader2, Check, Copy, ArrowRight, Mic, Lightbulb, Target, Compass,
   Layers, MessageSquare, Megaphone,
 } from "lucide-react";
