@@ -17,45 +17,61 @@ Deno.serve(async (req) => {
     if (!LOVABLE_API_KEY) throw new Error('LOVABLE_API_KEY is not configured');
 
     const body = await req.json().catch(() => ({}));
-    const causa = clean(body?.causa_social);
-    const estilo = clean(body?.estilo, 300);
+    const tema = clean(body?.tema, 500);          // de qué quiere hablar / causa o nicho
+    const objetivo = clean(body?.objetivo, 300);  // qué quiere lograr
     const audiencia = clean(body?.audiencia, 300);
-    const mensaje = clean(body?.mensaje_clave, 400);
+    const tono = clean(body?.tono, 200);
+    const redes = clean(body?.redes, 200);        // canales donde está / quiere estar
+    const contexto = clean(body?.contexto, 600);  // momento actual / qué ya hace
     const nombre = clean(body?.nombre, 120);
     const registration_id = typeof body?.registration_id === 'string' ? body.registration_id : null;
 
-    if (!causa || causa.length < 3) {
-      return new Response(JSON.stringify({ error: 'Cuéntanos cuál es tu causa social.' }), {
+    if (!tema || tema.length < 3) {
+      return new Response(JSON.stringify({ error: 'Cuéntanos sobre qué quieres crear contenido.' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    const system = `Eres un coach de contenido de KiMedia para creadores que participan en el Reto InfluenSER.
-Tu única tarea es devolver un brief CONCRETO para un reel vertical de 30 a 60 segundos sobre una causa social, basándote SOLO en lo que el creador escribió. No inventes datos, cifras ni hechos sobre la causa. Si algo no se dice, hazlo genérico o pídelo como nota.
+    const system = `Eres estratega de contenido senior de KiMedia. Acompañas creadores y marcas a pasar de "publicar por publicar" a una estrategia de contenido con foco, narrativa y resultados.
 
-Estructura obligatoria (framework KiMedia: Hook → Problema → Solución → CTA).
-Tono: profesional pero cercano, conversacional, en español de México.
-Devuelve SOLO JSON válido con la siguiente forma exacta:
+Tu única tarea es devolver una MINI-ESTRATEGIA DE CONTENIDO concreta, basada SOLO en lo que la persona escribió. No inventes cifras, datos, estudios ni hechos. Si algo no se dijo, hazlo genérico o márcalo como pendiente.
+
+Marco KiMedia que debes seguir:
+1. Diagnóstico breve: qué oportunidad ves en lo que comparte.
+2. Posicionamiento: una frase clara de "para quién" y "para qué".
+3. Pilares de contenido (3): categorías temáticas estables que va a sostener.
+4. Audiencia: 1-2 líneas describiéndola en humano, no demográficos vacíos.
+5. Tono y voz recomendados.
+6. Frameworks útiles según el caso (ej. Hook→Problema→Solución→CTA, AIDA, PAS, "antes/después", educativo/inspirador/conversión).
+7. 3 ideas de contenido concretas, cada una con: formato (reel, carrusel, post, live, blog), red sugerida, pilar al que pertenece, hook de apertura y CTA.
+8. Siguiente paso accionable que pueda hacer en las próximas 48h.
+
+Tono: profesional pero cercano, español de México, sin relleno, sin emojis decorativos.
+
+Devuelve SOLO JSON válido con esta forma exacta:
 {
-  "titulo": string,                         // título corto del reel
-  "hook": string,                           // 1-2 frases para los primeros 3 segundos
-  "estructura": [                           // 3 a 5 bloques
-    { "tiempo": "0-3s", "que_dices": string, "que_se_ve": string }
+  "diagnostico": string,
+  "posicionamiento": string,
+  "pilares": [{ "nombre": string, "descripcion": string }],   // exactamente 3
+  "audiencia": string,
+  "tono": string,
+  "frameworks": [{ "nombre": string, "cuando_usarlo": string }],  // 2 a 3
+  "ideas": [                                                   // exactamente 3
+    { "formato": string, "red": string, "pilar": string, "hook": string, "cta": string }
   ],
-  "cta": string,                            // llamado a la acción claro
-  "caption": string,                        // texto para publicar (máx 280 caracteres)
-  "hashtags": [string],                     // 5 a 8 hashtags relevantes en minúsculas con #
-  "tips": [string]                          // 3 consejos accionables (luz, edición, ritmo, etc.)
+  "siguiente_paso": string
 }
-No agregues markdown, ni texto fuera del JSON.`;
+No agregues markdown ni texto fuera del JSON.`;
 
-    const user = `Datos del creador:
+    const user = `Datos de la persona:
 - Nombre: ${nombre || '(no especificado)'}
-- Causa social: ${causa}
-- Estilo / personalidad: ${estilo || '(no especificado)'}
-- Audiencia: ${audiencia || '(no especificada)'}
-- Mensaje clave que quiere transmitir: ${mensaje || '(no especificado)'}`;
+- Tema / nicho sobre el que quiere crear contenido: ${tema}
+- Objetivo con su contenido: ${objetivo || '(no especificado)'}
+- Audiencia a la que quiere hablar: ${audiencia || '(no especificada)'}
+- Tono / personalidad: ${tono || '(no especificado)'}
+- Redes donde publica o quiere publicar: ${redes || '(no especificadas)'}
+- Contexto actual (qué ya hace o de dónde parte): ${contexto || '(no especificado)'}`;
 
     const aiResp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -98,10 +114,10 @@ No agregues markdown, ni texto fuera del JSON.`;
       const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
       await admin.from('webinar_coach_outputs').insert({
         registration_id,
-        causa_social: causa,
-        estilo: estilo || null,
+        causa_social: tema,
+        estilo: tono || null,
         audiencia: audiencia || null,
-        mensaje_clave: mensaje || null,
+        mensaje_clave: objetivo || null,
         output: parsed,
       });
     } catch (e) {
