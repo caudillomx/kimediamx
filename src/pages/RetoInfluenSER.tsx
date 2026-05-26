@@ -323,25 +323,85 @@ function WebinarRoom({ registration }: { registration: Registration }) {
 }
 
 function Agenda() {
+  const [openIdx, setOpenIdx] = useState<number | null>(null);
+  const active = openIdx !== null ? agenda[openIdx] : null;
   return (
     <section>
       <h2 className="text-2xl font-bold mb-1">Agenda</h2>
-      <p className="text-sm text-muted-foreground mb-6">Una hora, sin relleno.</p>
+      <p className="text-sm text-muted-foreground mb-6">Una hora, sin relleno. <span className="text-coral">Toca cualquier bloque para ver el detalle y un ejemplo real.</span></p>
       <div className="grid md:grid-cols-2 gap-3">
         {agenda.map((a, i) => (
-          <Card key={a.titulo} className="border-border/50 hover:border-coral/40 transition-colors">
+          <Card
+            key={a.titulo}
+            onClick={() => setOpenIdx(i)}
+            className="border-border/50 hover:border-coral/50 hover:bg-coral/[0.03] transition-all cursor-pointer group"
+          >
             <CardContent className="p-5 flex gap-4">
               <div className="shrink-0 w-12 h-12 rounded-lg bg-coral/10 text-coral flex items-center justify-center font-mono text-xs font-bold">
                 {a.t}
               </div>
-              <div>
-                <h3 className="font-semibold mb-1">{i + 1}. {a.titulo}</h3>
+              <div className="flex-1">
+                <h3 className="font-semibold mb-1 group-hover:text-coral transition-colors">{i + 1}. {a.titulo}</h3>
                 <p className="text-sm text-muted-foreground leading-snug">{a.desc}</p>
+                <span className="mt-2 inline-flex items-center gap-1 text-[11px] text-coral/70 group-hover:text-coral">
+                  Ver detalle + ejemplo real <ArrowRight className="w-3 h-3" />
+                </span>
               </div>
             </CardContent>
           </Card>
         ))}
       </div>
+
+      <Dialog open={openIdx !== null} onOpenChange={(o) => !o && setOpenIdx(null)}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          {active && (
+            <>
+              <DialogHeader>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="shrink-0 w-12 h-12 rounded-lg bg-coral/10 text-coral flex items-center justify-center font-mono text-xs font-bold">
+                    {active.t}
+                  </div>
+                  <Badge variant="outline" className="border-coral/40 text-coral text-[10px]">
+                    Bloque {(openIdx ?? 0) + 1} de {agenda.length}
+                  </Badge>
+                </div>
+                <DialogTitle className="text-2xl leading-tight text-left">{active.titulo}</DialogTitle>
+                <DialogDescription className="text-left">{active.desc}</DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-5 mt-4">
+                <div>
+                  <h4 className="text-[11px] uppercase tracking-widest text-coral font-bold mb-2 flex items-center gap-1.5">
+                    <Lightbulb className="w-3.5 h-3.5" /> La idea central
+                  </h4>
+                  <p className="text-sm leading-relaxed text-foreground/90">{active.idea}</p>
+                </div>
+
+                <div>
+                  <h4 className="text-[11px] uppercase tracking-widest text-coral font-bold mb-2 flex items-center gap-1.5">
+                    <Layers className="w-3.5 h-3.5" /> Qué vamos a ver
+                  </h4>
+                  <ul className="space-y-2">
+                    {active.puntos.map((p) => (
+                      <li key={p} className="flex gap-2 text-sm text-muted-foreground">
+                        <Check className="w-4 h-4 text-coral shrink-0 mt-0.5" />
+                        <span>{p}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="rounded-lg border border-coral/30 bg-coral/[0.04] p-4">
+                  <h4 className="text-[11px] uppercase tracking-widest text-coral font-bold mb-2 flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5" /> {active.ejemplo.titulo}
+                  </h4>
+                  <p className="text-sm leading-relaxed text-foreground/85">{active.ejemplo.texto}</p>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }
