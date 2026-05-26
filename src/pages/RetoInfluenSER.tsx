@@ -277,41 +277,117 @@ const THEORY: Record<string, Theory> = {
 function TheoryBlock({ stepKey }: { stepKey: keyof typeof THEORY }) {
   const data = THEORY[stepKey];
   if (!data) return null;
+  const accents = [
+    { ring: "ring-coral/30", dot: "bg-coral", text: "text-coral", bg: "bg-coral/10", glow: "from-coral/15" },
+    { ring: "ring-electric/30", dot: "bg-electric", text: "text-electric", bg: "bg-electric/10", glow: "from-electric/15" },
+    { ring: "ring-cyan/30", dot: "bg-cyan", text: "text-cyan", bg: "bg-cyan/10", glow: "from-cyan/15" },
+    { ring: "ring-magenta/30", dot: "bg-magenta", text: "text-magenta", bg: "bg-magenta/10", glow: "from-magenta/15" },
+    { ring: "ring-lime/30", dot: "bg-lime", text: "text-lime", bg: "bg-lime/10", glow: "from-lime/15" },
+  ];
   return (
-    <Card className="mb-6 border-coral/25 bg-gradient-to-br from-coral/[0.04] to-transparent">
-      <CardContent className="p-5">
-        <div className="flex items-start gap-3 mb-3">
-          <div className="shrink-0 w-9 h-9 rounded-lg bg-coral/15 text-coral flex items-center justify-center">
-            <Lightbulb className="w-4 h-4" />
-          </div>
-          <div>
-            <p className="text-[10px] uppercase tracking-widest text-coral font-bold">Teoría rápida + ejemplos reales</p>
-            <p className="text-sm text-foreground/85 mt-1 leading-relaxed">{data.intro}</p>
+    <div className="relative mb-8">
+      {/* Ambient glow */}
+      <div className="pointer-events-none absolute -inset-4 -z-10 opacity-60 blur-3xl">
+        <div className="absolute inset-0 bg-gradient-to-br from-coral/10 via-transparent to-magenta/10 rounded-[2rem]" />
+      </div>
+
+      <Card className="overflow-hidden border-border/50 bg-gradient-to-br from-surface-elevated/95 via-card to-surface-elevated/80 backdrop-blur-xl shadow-lg">
+        {/* Header band */}
+        <div className="relative border-b border-border/40 bg-gradient-to-r from-coral/10 via-magenta/5 to-transparent px-6 py-5">
+          <div className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-coral via-magenta to-electric" />
+          <div className="flex items-start gap-4">
+            <div className="shrink-0 relative">
+              <div className="absolute inset-0 bg-coral/30 rounded-2xl blur-md" />
+              <div className="relative w-12 h-12 rounded-2xl bg-gradient-to-br from-coral to-magenta text-white flex items-center justify-center shadow-glow">
+                <Lightbulb className="w-5 h-5" />
+              </div>
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1.5">
+                <span className="text-[10px] uppercase tracking-[0.2em] font-black text-coral">
+                  Teoría + Ejemplos reales
+                </span>
+                <span className="h-px flex-1 bg-gradient-to-r from-coral/40 to-transparent" />
+                <span className="text-[10px] font-mono text-muted-foreground">
+                  {data.items.length} claves
+                </span>
+              </div>
+              <p className="text-[15px] md:text-base text-foreground/90 leading-relaxed font-medium">
+                {data.intro}
+              </p>
+            </div>
           </div>
         </div>
-        <Accordion type="single" collapsible className="w-full">
-          {data.items.map((it, i) => (
-            <AccordionItem key={i} value={`it-${i}`} className="border-border/40">
-              <AccordionTrigger className="text-left text-sm font-semibold hover:text-coral hover:no-underline py-3">
-                <span className="flex items-center gap-2">
-                  <span className="w-5 h-5 rounded-full bg-coral/15 text-coral text-[10px] font-mono font-bold flex items-center justify-center">{i + 1}</span>
-                  {it.titulo}
-                </span>
-              </AccordionTrigger>
-              <AccordionContent className="text-sm text-muted-foreground leading-relaxed space-y-3 pb-4">
-                <p>{it.teoria}</p>
-                <div className="rounded-md border-l-2 border-coral/60 bg-coral/[0.04] p-3">
-                  <p className="text-[10px] uppercase tracking-widest text-coral font-bold mb-1 flex items-center gap-1.5">
-                    <Sparkles className="w-3 h-3" /> Ejemplo real · {it.ejemplo.marca}
-                  </p>
-                  <p className="text-sm text-foreground/85 italic">{it.ejemplo.texto}</p>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          ))}
-        </Accordion>
-      </CardContent>
-    </Card>
+
+        {/* Items */}
+        <CardContent className="p-0">
+          <Accordion type="single" collapsible className="w-full divide-y divide-border/40">
+            {data.items.map((it, i) => {
+              const a = accents[i % accents.length];
+              return (
+                <AccordionItem key={i} value={`it-${i}`} className="border-0 group">
+                  <AccordionTrigger className="px-6 py-4 text-left hover:no-underline hover:bg-muted/30 transition-colors [&[data-state=open]]:bg-muted/20">
+                    <span className="flex items-center gap-4 flex-1 min-w-0">
+                      <span className={cn(
+                        "shrink-0 w-9 h-9 rounded-xl ring-1 flex items-center justify-center font-display font-black text-base transition-all",
+                        a.bg, a.ring, a.text,
+                        "group-hover:scale-110 group-data-[state=open]:scale-110"
+                      )}>
+                        {String(i + 1).padStart(2, "0")}
+                      </span>
+                      <span className="flex-1 font-display text-base md:text-lg font-bold leading-snug text-foreground">
+                        {it.titulo}
+                      </span>
+                    </span>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-6 pb-6 pt-1">
+                    <div className="ml-13 md:pl-13 space-y-4">
+                      {/* Theory */}
+                      <div className="relative pl-5">
+                        <div className={cn("absolute left-0 top-1 bottom-1 w-0.5 rounded-full", a.dot)} />
+                        <p className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground mb-1.5">
+                          La teoría
+                        </p>
+                        <p className="text-[15px] leading-relaxed text-foreground/85">
+                          {it.teoria}
+                        </p>
+                      </div>
+
+                      {/* Example card */}
+                      <div className={cn(
+                        "relative rounded-2xl p-4 md:p-5 bg-gradient-to-br to-transparent border border-border/40 overflow-hidden",
+                        a.glow
+                      )}>
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl opacity-20 blur-2xl pointer-events-none rounded-full" />
+                        <div className="flex items-start gap-3">
+                          <div className={cn("shrink-0 w-8 h-8 rounded-lg flex items-center justify-center", a.bg, a.text)}>
+                            <Sparkles className="w-4 h-4" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                              <span className={cn("text-[10px] uppercase tracking-widest font-black", a.text)}>
+                                Caso real
+                              </span>
+                              <span className="text-muted-foreground/40">·</span>
+                              <span className="text-sm font-display font-bold text-foreground">
+                                {it.ejemplo.marca}
+                              </span>
+                            </div>
+                            <p className="text-[15px] leading-relaxed text-foreground/80 italic">
+                              "{it.ejemplo.texto}"
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              );
+            })}
+          </Accordion>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
