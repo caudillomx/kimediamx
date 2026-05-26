@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import kimediaLogo from "@/assets/kimedia-logo.png";
@@ -31,12 +32,96 @@ type StrategyOutput = {
 };
 
 const agenda = [
-  { t: "0:00", titulo: "Por qué hablar de estrategia, no solo de contenido", desc: "Publicar sin estrategia es ruido. Hoy ordenamos el juego." },
-  { t: "0:08", titulo: "Diagnóstico: dónde estás parado", desc: "El mismo método que usamos con gobierno e iniciativa privada para ver qué ya está funcionando." },
-  { t: "0:18", titulo: "Brief y posicionamiento", desc: "Para quién hablas, para qué, y qué te hace distinto en 1 frase." },
-  { t: "0:30", titulo: "Pilares de contenido", desc: "3 categorías estables que sostienen todo lo que publicas durante meses." },
-  { t: "0:42", titulo: "Frameworks de copy y narrativa", desc: "Hook → Problema → Solución → CTA, AIDA, PAS: cuándo usar cada uno." },
-  { t: "0:50", titulo: "Ejercicio en vivo: tu mini-estrategia", desc: "Cada quien construye su estrategia con el Estrategia Coach." },
+  {
+    t: "0:00",
+    titulo: "Por qué hablar de estrategia, no solo de contenido",
+    desc: "Publicar sin estrategia es ruido. Hoy ordenamos el juego.",
+    idea: "La mayoría no tiene un problema de contenido: tiene un problema de estrategia. Publican mucho, pero nada acumula. Una estrategia hace que cada post sume al mismo edificio en vez de ser ladrillos sueltos.",
+    puntos: [
+      "Diferencia entre 'hacer posts' y construir presencia.",
+      "Por qué el algoritmo premia consistencia temática, no frecuencia ciega.",
+      "Qué cambia cuando defines a quién le hablas antes de qué dices.",
+    ],
+    ejemplo: {
+      titulo: "Caso real · Candidatura local en Yucatán",
+      texto: "Llegó publicando 4 veces por semana sin línea: foto de evento, frase motivacional, video con música. En 6 semanas, tras definir 3 pilares (gestión, vínculo con la comunidad, propuestas concretas) y 1 audiencia (mujeres 30-55 de su distrito), bajó a 3 posts pero el engagement se multiplicó por 3.2x y empezaron a llegarle mensajes directos pidiendo reuniones.",
+    },
+  },
+  {
+    t: "0:08",
+    titulo: "Diagnóstico: dónde estás parado",
+    desc: "El mismo método que usamos con gobierno e iniciativa privada para ver qué ya está funcionando.",
+    idea: "Antes de cambiar nada, hay que ver qué ya jala. El diagnóstico te dice cuáles de tus posts ya conectan con tu audiencia real (no la que imaginas) y por qué.",
+    puntos: [
+      "Top 5 posts de los últimos 90 días: qué tienen en común.",
+      "Hora, formato y hook que más retiene en tu cuenta específica.",
+      "Brechas: temas que tu audiencia pide y que no estás cubriendo.",
+    ],
+    ejemplo: {
+      titulo: "Caso real · PyME de bienestar",
+      texto: "Pensaba que sus mejores posts eran los tutoriales. El diagnóstico mostró que los 3 reels con más conversión a venta eran historias personales de clientas. Pivoteamos el calendario: 60% testimonios narrados, 40% tutoriales. Cierres por DM subieron de 4 a 11 al mes.",
+    },
+  },
+  {
+    t: "0:18",
+    titulo: "Brief y posicionamiento",
+    desc: "Para quién hablas, para qué, y qué te hace distinto en 1 frase.",
+    idea: "El brief es el ADN. Sin una frase clara de posicionamiento (a quién, para qué, qué te hace distinto), cada post arranca de cero. Con ella, todo se filtra fácil: '¿esto suma a mi posicionamiento o no?'",
+    puntos: [
+      "Fórmula: Ayudo a [audiencia] a [resultado] a través de [cómo distinto].",
+      "Por qué 'para todos' = para nadie.",
+      "El test de la servilleta: si no lo puedes decir en 1 frase, todavía no está.",
+    ],
+    ejemplo: {
+      titulo: "Ejemplo real · Coach de finanzas personales",
+      texto: "Antes: 'Te ayudo a tener una mejor relación con el dinero.' (vago, igual que 100 cuentas más). Después: 'Ayudo a profesionistas de 28-40 a salir de deudas de tarjeta sin dejar de tener vida social, con un método de 90 días.' Mismo servicio, otro nivel de claridad y de leads.",
+    },
+  },
+  {
+    t: "0:30",
+    titulo: "Pilares de contenido",
+    desc: "3 categorías estables que sostienen todo lo que publicas durante meses.",
+    idea: "Los pilares son 3 temas estables que sostienen tu cuenta por meses. Cada post tiene que caber en uno. Eso elimina el 'no sé qué publicar hoy' y entrena a tu audiencia a saber qué esperar.",
+    puntos: [
+      "Pilar 1: Autoridad (qué sabes y demuestras).",
+      "Pilar 2: Cercanía (quién eres, cómo piensas).",
+      "Pilar 3: Conversión (por qué trabajar/votar/seguirte).",
+    ],
+    ejemplo: {
+      titulo: "Caso real · KiMedia (esta cuenta)",
+      texto: "Nuestros 3 pilares: (1) Detrás de cámaras de campañas reales, (2) Mini-tutoriales de estrategia digital, (3) Casos de antes/después con clientes. Cualquier idea que se nos ocurre la pasamos por ese filtro. Si no entra en uno, no se publica.",
+    },
+  },
+  {
+    t: "0:42",
+    titulo: "Frameworks de copy y narrativa",
+    desc: "Hook → Problema → Solución → CTA, AIDA, PAS: cuándo usar cada uno.",
+    idea: "No escribas desde cero. Los frameworks son moldes probados que ordenan el mensaje. Cada uno sirve para algo distinto: educar, vender, mover a la acción, conectar emocionalmente.",
+    puntos: [
+      "Hook → Problema → Solución → CTA: para reels educativos cortos.",
+      "AIDA (Atención, Interés, Deseo, Acción): para landing y carruseles de venta.",
+      "PAS (Problema, Agitación, Solución): para captar audiencia con un dolor claro.",
+    ],
+    ejemplo: {
+      titulo: "Ejemplo real · Reel con framework PAS",
+      texto: "Hook (P): '¿Llevas 6 meses publicando y sigues con los mismos seguidores?' Agitación (A): 'No es el algoritmo. Es que no tienes pilares: cada post es una decisión nueva y tu audiencia no sabe qué esperar de ti.' Solución (S): 'Define 3 pilares hoy y úsalos como filtro las próximas 4 semanas.' CTA: 'Te dejo la plantilla en bio.' Resultado típico: 2-3x retención vs. un reel sin estructura.",
+    },
+  },
+  {
+    t: "0:50",
+    titulo: "Ejercicio en vivo: tu mini-estrategia",
+    desc: "Cada quien construye su estrategia con el Estrategia Coach.",
+    idea: "El cierre es práctico. Cada quien usa el Estrategia Coach (la herramienta de abajo) para generar su propia mini-estrategia con todo lo visto: posicionamiento, pilares, audiencia, frameworks e ideas accionables para los próximos 7 días.",
+    puntos: [
+      "Llena los campos con tu tema real.",
+      "La IA devuelve diagnóstico + 3 pilares + 3 ideas concretas con hook y CTA.",
+      "Te lo llevas listo para ejecutar la próxima semana.",
+    ],
+    ejemplo: {
+      titulo: "Qué saldrá en tu pantalla",
+      texto: "Un documento estructurado: tu posicionamiento en 1 frase, tus 3 pilares con descripción, tu audiencia afinada, qué framework conviene para tu caso, 3 ideas de contenido listas (formato + red + hook + CTA) y tu siguiente paso accionable. No es teoría: es tu plan para los siguientes 7 días.",
+    },
+  },
 ];
 
 const fechas = [
