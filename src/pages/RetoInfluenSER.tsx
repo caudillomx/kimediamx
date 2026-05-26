@@ -124,14 +124,6 @@ const agenda = [
   },
 ];
 
-const fechas = [
-  { label: "Webinar 2 · Contenido y estrategia", value: "26 mayo" },
-  { label: "Lanzamiento del Business Case", value: "27 mayo" },
-  { label: "Entrega de videos", value: "28 may → 14 jun" },
-  { label: "Evaluación", value: "17 → 24 jun" },
-  { label: "Anuncio de ganadores", value: "26 junio" },
-];
-
 const principios = [
   { titulo: "Estrategia antes que herramienta", desc: "Las apps cambian cada mes. La estrategia se sostiene." },
   { titulo: "Pilares antes que posts", desc: "Sin pilares, cada publicación es una decisión nueva. Con pilares, es solo ejecución." },
@@ -207,20 +199,7 @@ export default function RetoInfluenSER() {
           <WebinarRoom registration={registration} />
         )}
 
-        <section className="mt-24 grid md:grid-cols-2 gap-6">
-          <Card className="glass-strong border-border/50">
-            <CardContent className="p-6">
-              <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><Calendar className="w-4 h-4 text-coral" /> Fechas clave</h3>
-              <ul className="space-y-3 text-sm">
-                {fechas.map((f) => (
-                  <li key={f.label} className="flex justify-between gap-4 border-b border-border/30 pb-2 last:border-0">
-                    <span className="text-muted-foreground">{f.label}</span>
-                    <span className="font-semibold">{f.value}</span>
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
+        <section className="mt-24">
           <Card className="glass-strong border-border/50">
             <CardContent className="p-6">
               <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><Compass className="w-4 h-4 text-coral" /> Principios que vamos a usar hoy</h3>
