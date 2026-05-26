@@ -2462,6 +2462,83 @@ export type Database = {
         }
         Relationships: []
       }
+      webinar_coach_outputs: {
+        Row: {
+          audiencia: string | null
+          causa_social: string
+          created_at: string
+          estilo: string | null
+          evento: string
+          id: string
+          mensaje_clave: string | null
+          output: Json
+          registration_id: string | null
+        }
+        Insert: {
+          audiencia?: string | null
+          causa_social: string
+          created_at?: string
+          estilo?: string | null
+          evento?: string
+          id?: string
+          mensaje_clave?: string | null
+          output: Json
+          registration_id?: string | null
+        }
+        Update: {
+          audiencia?: string | null
+          causa_social?: string
+          created_at?: string
+          estilo?: string | null
+          evento?: string
+          id?: string
+          mensaje_clave?: string | null
+          output?: Json
+          registration_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webinar_coach_outputs_registration_id_fkey"
+            columns: ["registration_id"]
+            isOneToOne: false
+            referencedRelation: "webinar_registrations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      webinar_registrations: {
+        Row: {
+          created_at: string
+          email: string
+          evento: string
+          fuente: string | null
+          id: string
+          metadata: Json | null
+          nombre: string
+          redes: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          evento?: string
+          fuente?: string | null
+          id?: string
+          metadata?: Json | null
+          nombre: string
+          redes?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          evento?: string
+          fuente?: string | null
+          id?: string
+          metadata?: Json | null
+          nombre?: string
+          redes?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

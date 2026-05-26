@@ -25,6 +25,7 @@ import CursoIaGobiernoGtoAdmin from "./pages/CursoIaGobiernoGtoAdmin";
 import CursoGtoEntregables from "./pages/CursoGtoEntregables";
 import ClientWorkspace from "./pages/ClientWorkspace";
 import AdsProposalView from "./pages/AdsProposalView";
+import RetoInfluenSER from "./pages/RetoInfluenSER";
 
 const queryClient = new QueryClient();
 
@@ -57,6 +58,7 @@ const App = () => (
           <Route path="/curso/ia-gobierno-gto" element={<CursoIaGobiernoGto />} />
           <Route path="/curso/ia-gobierno-gto/admin" element={<CursoIaGobiernoGtoAdmin />} />
           <Route path="/curso/ia-gobierno-gto/entregables" element={<CursoGtoEntregables />} />
+          <Route path="/reto-influenser" element={<RetoInfluenSER />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
