@@ -157,6 +157,164 @@ const STEPS = [
   { key: "recursos",       label: "Llévate tu plan",       icon: Rocket },
 ] as const;
 
+/* ───────── Pedagogical theory + real examples per step ───────── */
+type TheoryItem = { titulo: string; teoria: string; ejemplo: { marca: string; texto: string } };
+type Theory = { intro: string; items: TheoryItem[] };
+
+const THEORY: Record<string, Theory> = {
+  diagnostico: {
+    intro: "Antes de medir, hay que saber qué medimos. Estas son las 3 dimensiones que separan a un creador que improvisa del que sí construye marca.",
+    items: [
+      {
+        titulo: "Frecuencia con plan vs. publicar por inspiración",
+        teoria: "Publicar 'cuando se me ocurre' produce picos y silencios. El algoritmo de Instagram y TikTok premia la consistencia: cuentas que publican con cadencia estable retienen entre 30-40% más alcance orgánico (datos públicos de Meta Creator Insights, 2024). El plan no mata la creatividad: la enfoca.",
+        ejemplo: { marca: "Mariana Rodríguez (NL)", texto: "Pasó de subir contenido reactivo a un calendario semanal con 3 pilares fijos (familia, gestión pública, cercanía). Resultado: triplicó retención de video en 6 meses y construyó la base que sostuvo su carrera política." },
+      },
+      {
+        titulo: "Audiencia genérica vs. audiencia con nombre",
+        teoria: "'Jóvenes', 'mujeres', 'emprendedores' no son audiencias: son censos. Una audiencia útil tiene nombre, edad, dolor concreto y un momento del día en el que abre el teléfono. Mientras más específico, más fuerte es el gancho que puedes escribir.",
+        ejemplo: { marca: "Stori (fintech)", texto: "No le habla a 'gente sin tarjeta'. Le habla a mexicanos de 25-40 años con buró manchado que llevan años queriendo una Visa. Esa precisión les permitió convertir TikTok en su canal #1 de adquisición." },
+      },
+      {
+        titulo: "Métricas de vanidad vs. métricas de movimiento",
+        teoria: "Likes y views miden atención momentánea. Guardados, comparticiones, DMs, clics y conversaciones miden intención. Si tu objetivo es vender, agendar o influir, las segundas son las únicas que importan.",
+        ejemplo: { marca: "Yokoi Kenji", texto: "Sus videos tienen menos likes que muchos creadores virales, pero generan miles de comparticiones por familia y conversaciones reales en comentarios. Esa señal es la que lo lleva a conferencias pagadas, no el view count." },
+      },
+    ],
+  },
+  posicionamiento: {
+    intro: "Posicionamiento no es un eslogan: es la frase que tu audiencia repite cuando habla de ti sin que estés presente. La fórmula clásica de Al Ries / Jack Trout adaptada a creadores: 'Ayudo a [QUIÉN] a [QUÉ LOGRAR] a través de [CÓMO ÚNICO]'.",
+    items: [
+      {
+        titulo: "El QUIÉN tiene que doler",
+        teoria: "Si tu audiencia es 'todos los que quieran aprender', no es nadie. El QUIÉN debe ser tan concreto que esa persona piense 'me está hablando a mí'. Edad, momento de vida, dolor específico.",
+        ejemplo: { marca: "Sofía Macías (Pequeño Cerdo Capitalista)", texto: "No habla de finanzas. Habla a 'mexicanos veinteañeros que ganan su primer sueldo y no saben qué hacer con él'. Ese QUIÉN tan claro construyó una marca que vende libros, cursos y conferencias por más de una década." },
+      },
+      {
+        titulo: "El QUÉ es transformación, no servicio",
+        teoria: "La gente no contrata clases de yoga: contrata 'dormir mejor'. No compra coaching: compra 'tomar decisiones sin culpa'. Vende el después, no el durante.",
+        ejemplo: { marca: "Marie Forleo", texto: "No vende 'cursos de negocios'. Vende 'que cualquier mujer pueda construir un negocio y una vida que ame'. Ese QUÉ emocional convirtió B-School en un programa de 8 cifras." },
+      },
+      {
+        titulo: "El CÓMO te separa del resto",
+        teoria: "Hay 100 personas haciendo lo que tú haces. Tu CÓMO es el método, la mecánica, el ángulo o el tono que ningún otro puede copiar fácilmente. Es lo que te hace memorable.",
+        ejemplo: { marca: "Ali Abdaal", texto: "Hay miles de creadores de productividad. Su CÓMO es 'productividad sin sufrir' basada en evidencia académica, con tono cálido de doctor. Ese ángulo lo separa de los gurús del hustle." },
+      },
+    ],
+  },
+  pilares: {
+    intro: "Los pilares son 3-4 categorías estables que vas a sostener por meses. Cada post debe caber en una. Esto resuelve el 'no sé qué publicar hoy' y construye una identidad reconocible. La regla 80/20: 80% del valor en 3 pilares, 20% experimentación.",
+    items: [
+      {
+        titulo: "Pilar de Autoridad — Demuestras que sabes",
+        teoria: "Contenido educativo, datos, frameworks, casos. Posiciona tu expertise. Es lo que hace que alguien te recomiende diciendo 'esta persona sabe'.",
+        ejemplo: { marca: "Vilma Núñez (marketing)", texto: "Su pilar de autoridad son frameworks y plantillas accionables (RSS, fórmulas de copy). Cada post es una mini-clase. Eso la posicionó como referente latina de marketing digital." },
+      },
+      {
+        titulo: "Pilar de Cercanía — Demuestras que eres humano",
+        teoria: "Detrás de cámara, opiniones, tu rutina, errores, contexto personal. Es lo que convierte un experto en una persona seguible. Sin este pilar, eres un manual ambulante.",
+        ejemplo: { marca: "Mau Nieto", texto: "Mezcla su trabajo de comediante con momentos cotidianos de papá. Esa cercanía es la razón por la que su audiencia compra boletos cuando sale de gira, no su número de seguidores." },
+      },
+      {
+        titulo: "Pilar de Conversión — Demuestras qué pasa después",
+        teoria: "Testimonios, casos reales, oferta, llamados a la acción. Sin este pilar tu cuenta entretiene pero no vende. Aquí es donde se cobra todo el trabajo de los otros dos pilares.",
+        ejemplo: { marca: "Kueski Pay", texto: "Su pilar de conversión son testimonios reales de gente comprando a meses sin tarjeta. No esconde el CTA: lo integra al storytelling. Por eso convierten en redes mejor que sus competidores que solo educan." },
+      },
+    ],
+  },
+  hooks: {
+    intro: "Tienes 1.7 segundos antes de que alguien decida si te ve o pasa al siguiente video (TikTok Internal Data, 2023). El hook no es 'algo que se te ocurre al final': es el 50% del trabajo del guion. Estos son los 5 frameworks que más funcionan en español.",
+    items: [
+      {
+        titulo: "Pregunta directa — 'PAS' (Problema · Agitación · Solución)",
+        teoria: "Pones al espectador frente a su propio problema y se queda a escuchar la solución. Funciona porque activa identificación inmediata: 'esto me pasa'.",
+        ejemplo: { marca: "Hook real", texto: "'¿Tu calendario de contenido se rompe en la 3ra semana? No es flojera. Es un error de diseño que vamos a corregir en 60 segundos.'" },
+      },
+      {
+        titulo: "Dato sorprendente — 'Pattern interrupt'",
+        teoria: "Abres con un número o estadística que rompe el patrón mental del usuario. El cerebro no puede ignorar la novedad: tiene que confirmar si es cierto.",
+        ejemplo: { marca: "Hook real", texto: "'El 73% de los creadores deja de publicar antes de los 90 días. Y casi siempre por el mismo error que te voy a contar.'" },
+      },
+      {
+        titulo: "Promesa específica — 'AIDA' adaptado",
+        teoria: "Prometes un resultado concreto en un tiempo concreto. Mientras más específico, más creíble. 'En 3 minutos' funciona mejor que 'rápido'.",
+        ejemplo: { marca: "Hook real", texto: "'En los próximos 90 segundos te doy 3 hooks que puedes usar mañana en tu próximo reel, sin importar tu nicho.'" },
+      },
+      {
+        titulo: "Confesión / contraste — Storytelling express",
+        teoria: "Empiezas con una confesión personal o contraste violento (antes/después, lo que creías vs. la realidad). Activa curiosidad narrativa.",
+        ejemplo: { marca: "Hook real", texto: "'Durante 2 años publiqué todos los días sin un solo cliente. Hasta que cambié esta sola cosa.'" },
+      },
+      {
+        titulo: "Opinión incómoda — 'Hot take'",
+        teoria: "Tomas una postura contraria al consenso de tu industria. Genera comentarios (a favor y en contra), lo que dispara distribución algorítmica.",
+        ejemplo: { marca: "Hook real", texto: "'Publicar todos los días es el peor consejo que te han dado. Te explico por qué los que mejor convierten publican menos.'" },
+      },
+    ],
+  },
+  estrategia: {
+    intro: "Una estrategia no es una lista de ideas: es un sistema que conecta a quién le hablas, qué le dices, dónde y para qué. Aquí integramos todo lo trabajado en los pasos anteriores en un solo plan ejecutable.",
+    items: [
+      {
+        titulo: "Objetivo SMART antes que creatividad",
+        teoria: "Un objetivo vago ('crecer en redes') no se puede medir ni ajustar. Convierte cada objetivo en algo Específico, Medible, Alcanzable, Relevante y con Tiempo. 'Conseguir 20 leads calificados en 60 días vía DM' sí guía decisiones.",
+        ejemplo: { marca: "Caso KiMedia", texto: "Con un cliente de bienes raíces en Guanajuato pasamos de 'queremos vender más' a 'agendar 12 visitas mensuales vía Instagram'. Ese objetivo definió pilares, formatos y CTAs. En 4 meses superamos la meta." },
+      },
+      {
+        titulo: "Distribución: nativo por plataforma, no copy-paste",
+        teoria: "El mismo mensaje funciona, pero el formato cambia: TikTok premia velocidad y rostro; Instagram premia estética y carruseles densos; LinkedIn premia texto largo con historia. Subir el mismo reel a todas mata el alcance.",
+        ejemplo: { marca: "Gary Vaynerchuk", texto: "Su equipo toma 1 keynote y produce ~30 piezas adaptadas formato por formato. No es 'reciclar': es traducir. Por eso domina 5 plataformas con el mismo mensaje raíz." },
+      },
+      {
+        titulo: "Medir lo que importa: del view al movimiento",
+        teoria: "Define 3 métricas por pilar: una de atención (views, retención), una de intención (guardados, comparticiones) y una de acción (DMs, clics, agendas). Si no mueves la de acción, ajusta CTA y oferta, no más contenido.",
+        ejemplo: { marca: "Caso real", texto: "Un coach de finanzas tenía 200k views pero 0 ventas. El problema no era el contenido: era que nunca pedía la acción. Agregar un CTA claro en los últimos 5 segundos triplicó conversaciones en 3 semanas." },
+      },
+    ],
+  },
+};
+
+function TheoryBlock({ stepKey }: { stepKey: keyof typeof THEORY }) {
+  const data = THEORY[stepKey];
+  if (!data) return null;
+  return (
+    <Card className="mb-6 border-coral/25 bg-gradient-to-br from-coral/[0.04] to-transparent">
+      <CardContent className="p-5">
+        <div className="flex items-start gap-3 mb-3">
+          <div className="shrink-0 w-9 h-9 rounded-lg bg-coral/15 text-coral flex items-center justify-center">
+            <Lightbulb className="w-4 h-4" />
+          </div>
+          <div>
+            <p className="text-[10px] uppercase tracking-widest text-coral font-bold">Teoría rápida + ejemplos reales</p>
+            <p className="text-sm text-foreground/85 mt-1 leading-relaxed">{data.intro}</p>
+          </div>
+        </div>
+        <Accordion type="single" collapsible className="w-full">
+          {data.items.map((it, i) => (
+            <AccordionItem key={i} value={`it-${i}`} className="border-border/40">
+              <AccordionTrigger className="text-left text-sm font-semibold hover:text-coral hover:no-underline py-3">
+                <span className="flex items-center gap-2">
+                  <span className="w-5 h-5 rounded-full bg-coral/15 text-coral text-[10px] font-mono font-bold flex items-center justify-center">{i + 1}</span>
+                  {it.titulo}
+                </span>
+              </AccordionTrigger>
+              <AccordionContent className="text-sm text-muted-foreground leading-relaxed space-y-3 pb-4">
+                <p>{it.teoria}</p>
+                <div className="rounded-md border-l-2 border-coral/60 bg-coral/[0.04] p-3">
+                  <p className="text-[10px] uppercase tracking-widest text-coral font-bold mb-1 flex items-center gap-1.5">
+                    <Sparkles className="w-3 h-3" /> Ejemplo real · {it.ejemplo.marca}
+                  </p>
+                  <p className="text-sm text-foreground/85 italic">{it.ejemplo.texto}</p>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function RetoInfluenSER() {
   const [registration, setRegistration] = useState<Registration | null>(null);
   const [loading, setLoading] = useState(false);
