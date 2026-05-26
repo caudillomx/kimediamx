@@ -729,6 +729,8 @@ function StepDiagnostico({ progress, update, onNext }: { progress: Progress; upd
         <p className="text-sm text-muted-foreground mt-2 max-w-2xl">3 preguntas honestas. Esto nos dice si hoy hay que empezar desde cero, ordenar lo que ya hay, o subirle al siguiente nivel.</p>
       </div>
 
+      <TheoryBlock stepKey="diagnostico" />
+
       <div className="space-y-4">
         {DIAG_QUESTIONS.map((q, qi) => (
           <Card key={qi} className="border-border/50">
@@ -833,6 +835,8 @@ function StepPosicionamiento({ progress, update, onNext }: { progress: Progress;
         <p className="text-sm text-muted-foreground mt-2 max-w-2xl">Llena 3 campos. La IA te devuelve 3 versiones afinadas de tu posicionamiento. Eliges la que mejor suena y nos la llevamos al PDF final.</p>
       </div>
 
+      <TheoryBlock stepKey="posicionamiento" />
+
       <div className="grid lg:grid-cols-2 gap-6">
         <Card className="glass-strong border-border/60">
           <CardContent className="p-6 space-y-4">
@@ -922,6 +926,8 @@ function StepPilares({ progress, update, onNext }: { progress: Progress; update:
         <h2 className="text-3xl font-bold">Tus 3 pilares de contenido</h2>
         <p className="text-sm text-muted-foreground mt-2 max-w-2xl">3 categorías estables que vas a sostener por meses. Cada post tiene que caber en una. Esto mata el "no sé qué publicar hoy".</p>
       </div>
+
+      <TheoryBlock stepKey="pilares" />
 
       <div className="grid lg:grid-cols-2 gap-6">
         <Card className="glass-strong border-border/60">
@@ -1014,6 +1020,8 @@ function StepHooks({ progress, update, onNext }: { progress: Progress; update: (
         <p className="text-sm text-muted-foreground mt-2 max-w-2xl">Dale a la IA el tema y te regresa 5 ganchos en 5 frameworks distintos. Eliges el que más te late.</p>
       </div>
 
+      <TheoryBlock stepKey="hooks" />
+
       <div className="grid lg:grid-cols-2 gap-6">
         <Card className="glass-strong border-border/60">
           <CardContent className="p-6 space-y-4">
@@ -1093,6 +1101,8 @@ function StepEstrategia({ registration, progress, update, onNext }: { registrati
         <h2 className="text-3xl font-bold">Tu mini-estrategia completa</h2>
         <p className="text-sm text-muted-foreground mt-2 max-w-2xl">Esto junta todo: diagnóstico, posicionamiento, audiencia, pilares, frameworks y 3 ideas listas para producir esta semana.</p>
       </div>
+
+      <TheoryBlock stepKey="estrategia" />
 
       <div className="grid lg:grid-cols-2 gap-6">
         <Card className="glass-strong border-border/60">
