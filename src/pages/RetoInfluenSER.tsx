@@ -416,17 +416,15 @@ export default function RetoInfluenSER() {
       return;
     }
     setLoading(true);
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from("webinar_registrations")
-      .insert({ nombre, email, redes: form.redes.trim() || null, evento: "reto-influenser-2026", fuente: "landing" })
-      .select("id, nombre, email")
-      .single();
+      .insert({ nombre, email, redes: form.redes.trim() || null, evento: "reto-influenser-2026", fuente: "landing" });
     setLoading(false);
-    if (error || !data) {
+    if (error) {
       toast({ title: "No pudimos registrarte", description: error?.message || "Intenta de nuevo.", variant: "destructive" });
       return;
     }
-    const reg = { id: data.id, nombre: data.nombre, email: data.email };
+    const reg = { id: crypto.randomUUID(), nombre, email };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(reg));
     setRegistration(reg);
     toast({ title: "¡Listo!", description: "Tu lugar está apartado. Bienvenido al Reto." });
