@@ -678,6 +678,7 @@ export type Database = {
       client_objectives: {
         Row: {
           business_unit: string | null
+          client_id: string | null
           client_name: string
           created_at: string
           id: string
@@ -689,6 +690,7 @@ export type Database = {
         }
         Insert: {
           business_unit?: string | null
+          client_id?: string | null
           client_name: string
           created_at?: string
           id?: string
@@ -700,6 +702,7 @@ export type Database = {
         }
         Update: {
           business_unit?: string | null
+          client_id?: string | null
           client_name?: string
           created_at?: string
           id?: string
@@ -709,7 +712,15 @@ export type Database = {
           updated_at?: string
           year?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "client_objectives_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       client_reports: {
         Row: {
@@ -893,6 +904,47 @@ export type Database = {
             columns: ["objective_id"]
             isOneToOne: false
             referencedRelation: "client_objectives"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_weekly_status: {
+        Row: {
+          client_id: string
+          id: string
+          proximo_hito: string | null
+          riesgo_activo: string | null
+          semaforo: string
+          updated_at: string
+          updated_by: string | null
+          week_start: string
+        }
+        Insert: {
+          client_id: string
+          id?: string
+          proximo_hito?: string | null
+          riesgo_activo?: string | null
+          semaforo?: string
+          updated_at?: string
+          updated_by?: string | null
+          week_start: string
+        }
+        Update: {
+          client_id?: string
+          id?: string
+          proximo_hito?: string | null
+          riesgo_activo?: string | null
+          semaforo?: string
+          updated_at?: string
+          updated_by?: string | null
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_weekly_status_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
             referencedColumns: ["id"]
           },
         ]
