@@ -52,28 +52,24 @@ export const StepDiagnostico = ({ sesionId, participanteId, participanteNombre, 
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      // Persist
-      const insert = await supabase
-        .from("gto_diagnostico_textos")
-        .insert({
-          sesion_id: sesionId,
-          participante_id: participanteId,
-          participante_nombre: participanteNombre,
-          titulo: titulo.trim() || "Texto sin título",
-          texto_original: texto.trim(),
-          errores_detectados: data.errores_detectados || [],
-          resumen_diagnostico: data.resumen,
-          score_calidad: data.score_calidad,
-          analizado_at: new Date().toISOString(),
-        })
-        .select()
-        .single();
+      // Persist via scoped SECURITY DEFINER RPC
+      const insert = await (supabase.rpc as any)("gto_insert_diagnostico", {
+        _sesion_id: sesionId,
+        _participante_id: participanteId,
+        _participante_nombre: participanteNombre,
+        _titulo: titulo.trim() || "Texto sin título",
+        _texto_original: texto.trim(),
+        _errores_detectados: data.errores_detectados || [],
+        _resumen_diagnostico: data.resumen,
+        _score_calidad: data.score_calidad,
+      });
       if (insert.error) throw insert.error;
+      const inserted = insert.data as { id: string; titulo: string; texto_original: string };
 
       onAdded({
-        id: insert.data.id,
-        titulo: insert.data.titulo,
-        texto_original: insert.data.texto_original,
+        id: inserted.id,
+        titulo: inserted.titulo,
+        texto_original: inserted.texto_original,
         resumen: data.resumen,
         score_calidad: data.score_calidad,
         errores_detectados: data.errores_detectados || [],
