@@ -134,17 +134,17 @@ const CursoIaGobiernoGto = () => {
         const s = b.sesion;
         const dep = { ...b.dependencia, access_code: "" };
         const part = b.participante;
-        // Refresh activity timestamp
-        await supabase
-          .from("gto_participantes")
-          .update({ ultima_actividad: new Date().toISOString() })
-          .eq("id", part.id);
+        // Refresh activity timestamp via scoped RPC
+        await (supabase.rpc as any)("gto_update_participante_progress", {
+          _sesion_id: s.id,
+          _participante_id: part.id,
+          _ultimo_paso: null,
+        });
 
-        const { data: diags } = await supabase
-          .from("gto_diagnostico_textos")
-          .select("*")
-          .eq("participante_id", part.id)
-          .order("created_at", { ascending: false });
+        const { data: diags } = await (supabase.rpc as any)("gto_list_diagnosticos", {
+          _sesion_id: s.id,
+          _participante_id: part.id,
+        });
 
         const mappedDiagnosticos = (diags || []).map((d: any) => ({
           id: d.id,
@@ -203,11 +203,10 @@ const CursoIaGobiernoGto = () => {
     const dep = { ...data.dependencia, access_code: "" };
     const createdPart = data.participante;
 
-    const { data: diags } = await supabase
-      .from("gto_diagnostico_textos")
-      .select("*")
-      .eq("participante_id", createdPart.id)
-      .order("created_at", { ascending: false });
+    const { data: diags } = await (supabase.rpc as any)("gto_list_diagnosticos", {
+      _sesion_id: sess.id,
+      _participante_id: createdPart.id,
+    });
 
     setDependencia(dep as Dependencia);
     setSesion(sess as Sesion);
@@ -244,14 +243,19 @@ const CursoIaGobiernoGto = () => {
     const newHighest = Math.max(highest, cappedNext);
     setStep(cappedNext);
     setHighest(newHighest);
-    // Update participant progress + activity
-    await supabase
-      .from("gto_participantes")
-      .update({ ultimo_paso: newHighest, ultima_actividad: new Date().toISOString() })
-      .eq("id", participante.id);
+    // Update participant progress + activity via scoped RPC
+    await (supabase.rpc as any)("gto_update_participante_progress", {
+      _sesion_id: sesion.id,
+      _participante_id: participante.id,
+      _ultimo_paso: newHighest,
+    });
     // Bump shared session highest step (so admin sees furthest reached)
     if (newHighest > (sesion.paso_actual || 0)) {
-      await supabase.from("gto_sesiones").update({ paso_actual: newHighest }).eq("id", sesion.id);
+      await (supabase.rpc as any)("gto_update_sesion", {
+        _sesion_id: sesion.id,
+        _participante_id: participante.id,
+        _patch: { paso_actual: newHighest },
+      });
       setSesion({ ...sesion, paso_actual: newHighest });
     }
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -296,10 +300,12 @@ const CursoIaGobiernoGto = () => {
       brief_mensajes_clave: data.brief_mensajes_clave,
       brief_tipo_texto: data.brief_tipo_texto,
     };
-    const { error } = await supabase
-      .from("gto_sesiones")
-      .update(patch)
-      .eq("id", sesion.id);
+    if (!participante) return;
+    const { error } = await (supabase.rpc as any)("gto_update_sesion", {
+      _sesion_id: sesion.id,
+      _participante_id: participante.id,
+      _patch: patch,
+    });
     if (error) {
       toast.error("No se pudo guardar el brief.");
       return;
@@ -310,21 +316,24 @@ const CursoIaGobiernoGto = () => {
 
   const saveCorpus = async (d: CorpusData) => {
     if (!sesion) return;
+    if (!participante) return;
     const patch = { corpus_documentos: d.corpus_documentos, corpus_notas: d.corpus_notas };
-    await supabase
-      .from("gto_sesiones")
-      .update(patch)
-      .eq("id", sesion.id);
+    await (supabase.rpc as any)("gto_update_sesion", {
+      _sesion_id: sesion.id,
+      _participante_id: participante.id,
+      _patch: patch,
+    });
     setSesion({ ...sesion, ...patch } as Sesion);
     await advanceTo(4);
   };
 
   const savePrompt = async (prompt: string) => {
-    if (!sesion) return;
-    await supabase
-      .from("gto_sesiones")
-      .update({ prompt_sistema: prompt, prompt_generado_at: new Date().toISOString() })
-      .eq("id", sesion.id);
+    if (!sesion || !participante) return;
+    await (supabase.rpc as any)("gto_update_sesion", {
+      _sesion_id: sesion.id,
+      _participante_id: participante.id,
+      _patch: { prompt_sistema: prompt, prompt_generado_at: new Date().toISOString() },
+    });
     setSesion({ ...sesion, prompt_sistema: prompt });
   };
 
@@ -340,18 +349,25 @@ const CursoIaGobiernoGto = () => {
       patch.estado = "finalizada";
       patch.completed_at = new Date().toISOString();
     }
-    await supabase.from("gto_sesiones").update(patch).eq("id", sesion.id);
+    if (!participante) return;
+    await (supabase.rpc as any)("gto_update_sesion", {
+      _sesion_id: sesion.id,
+      _participante_id: participante.id,
+      _patch: patch,
+    });
     setSesion({ ...sesion, ...patch });
   };
 
   const propagateProhibidos = async (terminos: string[]) => {
     if (!sesion) return;
+    if (!participante) return;
     const current: string[] = (sesion.brief_terminos_prohibidos as string[]) || [];
     const merged = Array.from(new Set([...current, ...terminos]));
-    await supabase
-      .from("gto_sesiones")
-      .update({ brief_terminos_prohibidos: merged })
-      .eq("id", sesion.id);
+    await (supabase.rpc as any)("gto_update_sesion", {
+      _sesion_id: sesion.id,
+      _participante_id: participante.id,
+      _patch: { brief_terminos_prohibidos: merged },
+    });
     setSesion({ ...sesion, brief_terminos_prohibidos: merged });
     toast.success("Términos agregados al brief.");
   };
