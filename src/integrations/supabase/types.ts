@@ -2605,6 +2605,37 @@ export type Database = {
           storage_path: string
         }[]
       }
+      gto_insert_diagnostico: {
+        Args: {
+          _errores_detectados: Json
+          _participante_id: string
+          _participante_nombre: string
+          _resumen_diagnostico: string
+          _score_calidad: number
+          _sesion_id: string
+          _texto_original: string
+          _titulo: string
+        }
+        Returns: {
+          analizado_at: string | null
+          created_at: string
+          errores_detectados: Json | null
+          id: string
+          participante_id: string | null
+          participante_nombre: string | null
+          resumen_diagnostico: string | null
+          score_calidad: number | null
+          sesion_id: string
+          texto_original: string
+          titulo: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "gto_diagnostico_textos"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       gto_list_corpus_uploads: {
         Args: { _participante_id: string }
         Returns: {
@@ -2618,6 +2649,72 @@ export type Database = {
           sesion_id: string
           storage_path: string
         }[]
+      }
+      gto_list_diagnosticos: {
+        Args: { _participante_id: string; _sesion_id: string }
+        Returns: {
+          analizado_at: string | null
+          created_at: string
+          errores_detectados: Json | null
+          id: string
+          participante_id: string | null
+          participante_nombre: string | null
+          resumen_diagnostico: string | null
+          score_calidad: number | null
+          sesion_id: string
+          texto_original: string
+          titulo: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "gto_diagnostico_textos"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      gto_update_participante_progress: {
+        Args: {
+          _participante_id: string
+          _sesion_id: string
+          _ultimo_paso?: number
+        }
+        Returns: undefined
+      }
+      gto_update_sesion: {
+        Args: { _participante_id: string; _patch: Json; _sesion_id: string }
+        Returns: {
+          brief_audiencias: Json | null
+          brief_mensajes_clave: Json | null
+          brief_mision: string | null
+          brief_terminos_preferidos: Json | null
+          brief_terminos_prohibidos: Json | null
+          brief_tipo_texto: string | null
+          brief_tono: string | null
+          completed_at: string | null
+          compromiso_corpus_subido: boolean
+          compromiso_prompt_probado: boolean
+          compromiso_resultado_compartido: boolean
+          corpus_documentos: Json | null
+          corpus_notas: string | null
+          created_at: string
+          dependencia_id: string
+          estado: string
+          herramienta_ia: string | null
+          id: string
+          notas_kimedia: string | null
+          paso_actual: number
+          prompt_generado_at: string | null
+          prompt_sistema: string | null
+          titular_cargo: string | null
+          titular_nombre: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "gto_sesiones"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       gto_validate_access_code: { Args: { _code: string }; Returns: Json }
       has_role: {
