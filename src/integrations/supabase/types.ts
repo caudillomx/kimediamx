@@ -915,6 +915,7 @@ export type Database = {
           proximo_hito: string | null
           riesgo_activo: string | null
           semaforo: string
+          source: string
           updated_at: string
           updated_by: string | null
           week_start: string
@@ -925,6 +926,7 @@ export type Database = {
           proximo_hito?: string | null
           riesgo_activo?: string | null
           semaforo?: string
+          source?: string
           updated_at?: string
           updated_by?: string | null
           week_start: string
@@ -935,6 +937,7 @@ export type Database = {
           proximo_hito?: string | null
           riesgo_activo?: string | null
           semaforo?: string
+          source?: string
           updated_at?: string
           updated_by?: string | null
           week_start?: string

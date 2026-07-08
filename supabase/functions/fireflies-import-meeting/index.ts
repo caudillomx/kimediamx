@@ -200,6 +200,22 @@ Devuelve SOLO un JSON array. Cada tarea: { description, responsible_name (string
       reviewed_by: userData.user.id,
     }).eq("id", meeting.id);
 
+    // 7. AI-suggested weekly status per client mentioned in this meeting
+    try {
+      await suggestWeeklyStatus({
+        admin,
+        LOVABLE_API_KEY,
+        meetingDateOnly,
+        meetingTitle: meeting.title,
+        overview: t.summary?.overview || "",
+        transcript: fullTranscript,
+        tasks: resolved,
+      });
+    } catch (whErr) {
+      console.error("weekly-status suggestion failed:", whErr);
+      // Non-fatal — main import already succeeded.
+    }
+
     return new Response(
       JSON.stringify({ success: true, minuteId: minute.id, taskCount: resolved.length }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -211,3 +227,142 @@ Devuelve SOLO un JSON array. Cada tarea: { description, responsible_name (string
     });
   }
 });
+
+// --- Weekly status suggestion helpers ---------------------------------------
+
+function mondayOf(dateStr: string): string {
+  const d = new Date(`${dateStr}T00:00:00Z`);
+  const dow = d.getUTCDay(); // 0=Sun..6=Sat
+  const diff = dow === 0 ? -6 : 1 - dow;
+  d.setUTCDate(d.getUTCDate() + diff);
+  return d.toISOString().slice(0, 10);
+}
+
+async function suggestWeeklyStatus(opts: {
+  admin: ReturnType<typeof createClient>;
+  LOVABLE_API_KEY: string;
+  meetingDateOnly: string;
+  meetingTitle: string;
+  overview: string;
+  transcript: string;
+  tasks: Array<{ client: string | null; description: string; priority: string; due_date: string | null }>;
+}) {
+  const { admin, LOVABLE_API_KEY, meetingDateOnly, meetingTitle, overview, transcript, tasks } = opts;
+
+  // Group tasks by client (skip unassigned)
+  const byClient = new Map<string, typeof tasks>();
+  for (const t of tasks) {
+    if (!t.client) continue;
+    if (!byClient.has(t.client)) byClient.set(t.client, []);
+    byClient.get(t.client)!.push(t);
+  }
+  if (byClient.size === 0) return;
+
+  const clientNames = Array.from(byClient.keys());
+  const { data: activeClients } = await admin
+    .from("clients")
+    .select("id, name, is_active")
+    .eq("is_active", true)
+    .in("name", clientNames);
+  if (!activeClients || activeClients.length === 0) return;
+
+  const weekStart = mondayOf(meetingDateOnly);
+
+  // Build compact per-client blocks for the AI
+  const blocks = activeClients
+    .map((c: any) => {
+      const list = (byClient.get(c.name) || [])
+        .slice(0, 12)
+        .map((t) => `- [${t.priority || "media"}${t.due_date ? ` · vence ${t.due_date}` : ""}] ${t.description}`)
+        .join("\n");
+      return `## ${c.name}\n${list || "(sin tareas concretas asignadas)"}`;
+    })
+    .join("\n\n");
+
+  const sysPrompt = `Eres un jefe de cuentas revisando el estado semanal de cada cliente después de una reunión de seguimiento.
+
+Para cada cliente que se te pase, propone:
+- semaforo: "verde" (todo bien, sin bloqueos), "amarillo" (hay riesgo o retraso), "rojo" (bloqueo real o cliente molesto / entregable vencido y crítico).
+- proximo_hito: una frase corta (≤80 caracteres) con el próximo entregable o compromiso concreto de la semana. Si no queda claro, escribe "Por definir".
+- riesgo_activo: una frase corta (≤80 caracteres) con el mayor riesgo o punto de atención. Si no hay riesgo, deja string vacío "".
+
+Reglas:
+- Basa la propuesta SOLO en el resumen de la reunión y las tareas listadas por cliente. No inventes datos.
+- Si un cliente casi no aparece o solo hay tareas rutinarias, propón "verde".
+- Sé conservador con "rojo": úsalo solo si hay evidencia clara.
+
+Devuelve SOLO un JSON array con este shape exacto (sin markdown):
+[{ "client_name": string, "semaforo": "verde"|"amarillo"|"rojo", "proximo_hito": string, "riesgo_activo": string }]`;
+
+  const userPrompt = `Reunión: ${meetingTitle}\nFecha: ${meetingDateOnly}\n\nResumen general:\n${overview || "(sin resumen)"}\n\nTareas extraídas por cliente:\n\n${blocks}\n\nTranscripción (extracto):\n${transcript.slice(0, 8000)}`;
+
+  const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${LOVABLE_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: "google/gemini-2.5-flash",
+      messages: [
+        { role: "system", content: sysPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      temperature: 0.2,
+    }),
+  });
+  if (!aiRes.ok) {
+    console.error("weekly-status AI error:", aiRes.status, await aiRes.text());
+    return;
+  }
+  const aiData = await aiRes.json();
+  let content = aiData.choices?.[0]?.message?.content || "[]";
+  content = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+  let suggestions: any[] = [];
+  try { suggestions = JSON.parse(content); } catch { suggestions = []; }
+  if (!Array.isArray(suggestions) || suggestions.length === 0) return;
+
+  // Fetch existing rows for this week to avoid overwriting confirmed (manual) ones
+  const clientIds = activeClients.map((c: any) => c.id);
+  const { data: existing } = await admin
+    .from("client_weekly_status")
+    .select("id, client_id, source")
+    .eq("week_start", weekStart)
+    .in("client_id", clientIds);
+  const existingByClient = new Map<string, { id: string; source: string }>();
+  (existing || []).forEach((r: any) => existingByClient.set(r.client_id, { id: r.id, source: r.source }));
+
+  for (const s of suggestions) {
+    const client = activeClients.find((c: any) => c.name === s.client_name);
+    if (!client) continue;
+    const semaforo = ["verde", "amarillo", "rojo"].includes(s.semaforo) ? s.semaforo : "verde";
+    const proximo_hito = (s.proximo_hito || "").toString().slice(0, 200).trim() || null;
+    const riesgo_activo = (s.riesgo_activo || "").toString().slice(0, 200).trim() || null;
+
+    const prev = existingByClient.get(client.id);
+    if (prev && prev.source === "manual") {
+      // Ana Sofía already touched this row → don't overwrite her review.
+      continue;
+    }
+
+    const payload = {
+      client_id: client.id,
+      week_start: weekStart,
+      semaforo,
+      proximo_hito,
+      riesgo_activo,
+      source: "ia_sugerido" as const,
+      updated_by: null,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (prev) {
+      await admin
+        .from("client_weekly_status")
+        .update(payload)
+        .eq("id", prev.id);
+    } else {
+      await admin.from("client_weekly_status").insert(payload);
+    }
+  }
+}
