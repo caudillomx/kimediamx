@@ -12,7 +12,8 @@ import {
 import { format, startOfWeek } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Sparkles } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 type ClientRow = { id: string; name: string };
 
@@ -27,6 +28,7 @@ type StatusRow = {
   riesgo_activo: string | null;
   updated_by: string | null;
   updated_at: string;
+  source: "manual" | "ia_sugerido";
 };
 
 type ProfileMap = Record<string, { full_name: string | null; email: string | null }>;
@@ -142,7 +144,7 @@ export default function WeeklyHealthView({ clients }: Props) {
       const nowIso = new Date().toISOString();
       const { data, error } = await supabase
         .from("client_weekly_status")
-        .update({ ...patch, updated_by: uid, updated_at: nowIso })
+        .update({ ...patch, updated_by: uid, updated_at: nowIso, source: "manual" })
         .eq("id", rowId)
         .select()
         .single();
@@ -172,6 +174,10 @@ export default function WeeklyHealthView({ clients }: Props) {
   };
 
   const formatUpdated = (row: StatusRow) => {
+    if (row.source === "ia_sugerido") {
+      return "Sugerido por IA · revisar";
+    }
+    if (!row.updated_by) return "—";
     const who = row.updated_by
       ? profiles[row.updated_by]?.full_name || profiles[row.updated_by]?.email || "Usuario"
       : "—";
@@ -219,12 +225,26 @@ export default function WeeklyHealthView({ clients }: Props) {
             const row = rows[c.id];
             if (!row) return null;
             const meta = SEMAFORO_META[row.semaforo];
+            const isSuggested = row.source === "ia_sugerido";
             return (
               <div
                 key={c.id}
-                className={`grid grid-cols-12 gap-3 px-4 py-3 items-center border-l-4 ${meta.bar} hover:bg-muted/30 transition-colors`}
+                className={`grid grid-cols-12 gap-3 px-4 py-3 items-center border-l-4 ${meta.bar} hover:bg-muted/30 transition-colors ${
+                  isSuggested ? "bg-electric/5 ring-1 ring-inset ring-electric/25" : ""
+                }`}
               >
-                <div className="col-span-3 font-medium text-foreground text-sm truncate">{c.name}</div>
+                <div className="col-span-3 font-medium text-foreground text-sm truncate flex items-center gap-2">
+                  {isSuggested && (
+                    <Badge
+                      variant="outline"
+                      className="border-electric/50 text-electric bg-electric/10 gap-1 px-1.5 py-0 text-[10px]"
+                      title="Sugerencia de IA — pendiente de revisión de Ana Sofía"
+                    >
+                      <Sparkles className="w-3 h-3" /> IA
+                    </Badge>
+                  )}
+                  <span className="truncate">{c.name}</span>
+                </div>
 
                 <div className="col-span-2">
                   <Select
@@ -291,6 +311,10 @@ export default function WeeklyHealthView({ clients }: Props) {
                   {savingId === row.id ? (
                     <span className="inline-flex items-center gap-1">
                       <Loader2 className="w-3 h-3 animate-spin" /> Guardando…
+                    </span>
+                  ) : isSuggested ? (
+                    <span className="inline-flex items-center gap-1 text-electric font-medium">
+                      <Sparkles className="w-3 h-3" /> Sugerido por IA · revisar
                     </span>
                   ) : (
                     formatUpdated(row)
