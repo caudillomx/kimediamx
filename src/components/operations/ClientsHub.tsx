@@ -11,6 +11,8 @@ import { Badge } from "@/components/ui/badge";
 import { Search, Target, CheckSquare, TrendingUp, MessageSquare, AlertTriangle, ArrowRight } from "lucide-react";
 import { isPast, parseISO } from "date-fns";
 import { useNavigate } from "react-router-dom";
+import WeeklyHealthView from "./WeeklyHealthView";
+import { Button } from "@/components/ui/button";
 
 interface Props {
   items: ActionItem[];
@@ -26,6 +28,7 @@ const ClientsHub = ({ items, deals, objectives, interactions, onOpenClient }: Pr
   const navigate = useNavigate();
   const [clients, setClients] = useState<ClientRow[]>([]);
   const [search, setSearch] = useState("");
+  const [tab, setTab] = useState<"resumen" | "salud">("resumen");
 
   useEffect(() => {
     supabase
@@ -83,6 +86,31 @@ const ClientsHub = ({ items, deals, objectives, interactions, onOpenClient }: Pr
 
   return (
     <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <div className="inline-flex rounded-md border border-border bg-card p-0.5">
+          <Button
+            size="sm"
+            variant={tab === "resumen" ? "default" : "ghost"}
+            onClick={() => setTab("resumen")}
+            className="h-7 px-3 text-xs"
+          >
+            Resumen
+          </Button>
+          <Button
+            size="sm"
+            variant={tab === "salud" ? "default" : "ghost"}
+            onClick={() => setTab("salud")}
+            className="h-7 px-3 text-xs"
+          >
+            Salud semanal
+          </Button>
+        </div>
+      </div>
+
+      {tab === "salud" ? (
+        <WeeklyHealthView clients={clients.map(c => ({ id: c.id, name: c.name }))} />
+      ) : (
+      <>
       <div className="flex items-center gap-3">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -148,6 +176,8 @@ const ClientsHub = ({ items, deals, objectives, interactions, onOpenClient }: Pr
           );
         })}
       </div>
+      </>
+      )}
     </div>
   );
 };
