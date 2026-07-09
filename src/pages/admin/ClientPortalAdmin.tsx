@@ -10,7 +10,7 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ArrowLeft, Plus, Trash2, Paperclip, Upload, X, Users, FileText } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Paperclip, Upload, X, Users, FileText, Lightbulb, KeyRound, Save } from "lucide-react";
 import { toast } from "sonner";
 
 type Report = {
@@ -35,6 +35,20 @@ type AccessRow = {
   email?: string | null;
 };
 
+type WeeklyRec = {
+  id: string;
+  week_start: string;
+  for_client_md: string | null;
+  for_team_md: string | null;
+  priority: string;
+};
+
+type Credentials = {
+  id?: string;
+  portal_email: string | null;
+  notes: string | null;
+};
+
 const TYPE_OPTIONS = [
   { value: "daily", label: "Análisis diario" },
   { value: "weekly", label: "Reporte semanal" },
@@ -50,6 +64,8 @@ export default function ClientPortalAdmin() {
   const [reports, setReports] = useState<Report[]>([]);
   const [access, setAccess] = useState<AccessRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [recs, setRecs] = useState<WeeklyRec[]>([]);
+  const [creds, setCreds] = useState<Credentials>({ portal_email: "", notes: "" });
 
   // Create-report dialog state
   const [open, setOpen] = useState(false);
@@ -64,6 +80,13 @@ export default function ClientPortalAdmin() {
 
   // Grant-access state
   const [newUserId, setNewUserId] = useState("");
+
+  // Weekly rec editor state
+  const [recForm, setRecForm] = useState<WeeklyRec>({
+    id: "", week_start: new Date().toISOString().slice(0, 10),
+    for_client_md: "", for_team_md: "", priority: "media",
+  });
+  const [recSaving, setRecSaving] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -91,7 +114,7 @@ export default function ClientPortalAdmin() {
 
   const load = async () => {
     setLoading(true);
-    const [c, r, a] = await Promise.all([
+    const [c, r, a, w, cr] = await Promise.all([
       supabase.from("clients").select("name").eq("id", clientId).maybeSingle(),
       supabase
         .from("client_portal_reports")
@@ -103,10 +126,23 @@ export default function ClientPortalAdmin() {
         .select("id, user_id, created_at")
         .eq("client_id", clientId)
         .order("created_at", { ascending: false }),
+      supabase
+        .from("client_portal_weekly_recommendations")
+        .select("id, week_start, for_client_md, for_team_md, priority")
+        .eq("client_id", clientId)
+        .order("week_start", { ascending: false }),
+      supabase
+        .from("client_portal_credentials")
+        .select("id, portal_email, notes")
+        .eq("client_id", clientId)
+        .maybeSingle(),
     ]);
     setClientName(c.data?.name ?? "");
     setReports((r.data ?? []) as Report[]);
     setAccess((a.data ?? []) as AccessRow[]);
+    setRecs((w.data ?? []) as WeeklyRec[]);
+    if (cr.data) setCreds(cr.data as Credentials);
+    else setCreds({ portal_email: "", notes: "" });
     setLoading(false);
   };
 
@@ -191,6 +227,59 @@ export default function ClientPortalAdmin() {
     load();
   };
 
+  const saveRec = async () => {
+    if (!clientId) return;
+    setRecSaving(true);
+    try {
+      const { data: s } = await supabase.auth.getSession();
+      const payload = {
+        client_id: clientId,
+        week_start: recForm.week_start,
+        for_client_md: recForm.for_client_md?.trim() || null,
+        for_team_md: recForm.for_team_md?.trim() || null,
+        priority: recForm.priority,
+        created_by: s.session?.user.id,
+      };
+      const { error } = await supabase
+        .from("client_portal_weekly_recommendations")
+        .upsert(payload, { onConflict: "client_id,week_start" });
+      if (error) throw error;
+      toast.success("Recomendación guardada");
+      setRecForm({ id: "", week_start: new Date().toISOString().slice(0, 10), for_client_md: "", for_team_md: "", priority: "media" });
+      load();
+    } catch (e: any) { toast.error(e.message); }
+    finally { setRecSaving(false); }
+  };
+
+  const editRec = (w: WeeklyRec) => {
+    setRecForm({
+      id: w.id, week_start: w.week_start,
+      for_client_md: w.for_client_md ?? "", for_team_md: w.for_team_md ?? "",
+      priority: w.priority,
+    });
+  };
+
+  const deleteRec = async (id: string) => {
+    if (!confirm("¿Eliminar esta recomendación?")) return;
+    const { error } = await supabase.from("client_portal_weekly_recommendations").delete().eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Eliminada"); load();
+  };
+
+  const saveCreds = async () => {
+    if (!clientId) return;
+    const { data: s } = await supabase.auth.getSession();
+    const { error } = await supabase.from("client_portal_credentials").upsert({
+      client_id: clientId,
+      portal_email: creds.portal_email?.trim() || null,
+      notes: creds.notes?.trim() || null,
+      created_by: s.session?.user.id,
+    }, { onConflict: "client_id" });
+    if (error) { toast.error(error.message); return; }
+    toast.success("Credenciales guardadas");
+    load();
+  };
+
   if (checking) return <div className="min-h-screen bg-background" />;
 
   return (
@@ -209,6 +298,8 @@ export default function ClientPortalAdmin() {
         <Tabs defaultValue="reportes">
           <TabsList>
             <TabsTrigger value="reportes"><FileText className="w-4 h-4 mr-2" /> Reportes</TabsTrigger>
+            <TabsTrigger value="recs"><Lightbulb className="w-4 h-4 mr-2" /> Recomendaciones</TabsTrigger>
+            <TabsTrigger value="creds"><KeyRound className="w-4 h-4 mr-2" /> Credenciales</TabsTrigger>
             <TabsTrigger value="accesos"><Users className="w-4 h-4 mr-2" /> Accesos</TabsTrigger>
           </TabsList>
 
@@ -304,6 +395,114 @@ export default function ClientPortalAdmin() {
                 ))}
               </div>
             )}
+          </TabsContent>
+
+          <TabsContent value="recs" className="space-y-4">
+            <Card className="p-4 space-y-3">
+              <h3 className="font-semibold text-sm">Nueva o editar recomendación semanal</h3>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>Inicio de semana (lunes)</Label>
+                  <Input type="date" value={recForm.week_start}
+                    onChange={(e) => setRecForm({ ...recForm, week_start: e.target.value })} />
+                </div>
+                <div>
+                  <Label>Prioridad</Label>
+                  <Select value={recForm.priority} onValueChange={(v) => setRecForm({ ...recForm, priority: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="alta">Alta</SelectItem>
+                      <SelectItem value="media">Media</SelectItem>
+                      <SelectItem value="baja">Baja</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div>
+                <Label>Para el cliente (visible) · Markdown</Label>
+                <Textarea rows={6} value={recForm.for_client_md ?? ""}
+                  onChange={(e) => setRecForm({ ...recForm, for_client_md: e.target.value })}
+                  placeholder="- Publicar reel sobre X&#10;- Reforzar bloque de story sobre Y" />
+              </div>
+              <div>
+                <Label>Para el equipo KiMedia (interno · NO se muestra al cliente)</Label>
+                <Textarea rows={6} value={recForm.for_team_md ?? ""}
+                  onChange={(e) => setRecForm({ ...recForm, for_team_md: e.target.value })}
+                  placeholder="- Renegociar pauta con Meta&#10;- Ajustar KPI de alcance" />
+              </div>
+              <div className="flex justify-end gap-2">
+                {recForm.id && (
+                  <Button variant="ghost" onClick={() => setRecForm({ id: "", week_start: new Date().toISOString().slice(0, 10), for_client_md: "", for_team_md: "", priority: "media" })}>
+                    Cancelar edición
+                  </Button>
+                )}
+                <Button onClick={saveRec} disabled={recSaving}>
+                  <Save className="w-4 h-4 mr-2" /> {recSaving ? "Guardando..." : "Guardar"}
+                </Button>
+              </div>
+            </Card>
+
+            {loading ? (
+              <div className="text-center py-10 text-muted-foreground">Cargando...</div>
+            ) : recs.length === 0 ? (
+              <Card className="p-10 text-center text-muted-foreground">Sin recomendaciones aún.</Card>
+            ) : (
+              <div className="space-y-2">
+                {recs.map((w) => (
+                  <Card key={w.id} className="p-4 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary">Semana {w.week_start}</Badge>
+                        <Badge>Prioridad {w.priority}</Badge>
+                      </div>
+                      <div className="flex gap-1">
+                        <Button size="sm" variant="ghost" onClick={() => editRec(w)}>Editar</Button>
+                        <Button size="sm" variant="ghost" onClick={() => deleteRec(w.id)}>
+                          <Trash2 className="w-4 h-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </div>
+                    {w.for_client_md && (
+                      <div className="text-sm">
+                        <div className="text-xs text-muted-foreground mb-1">Cliente:</div>
+                        <div className="whitespace-pre-wrap">{w.for_client_md}</div>
+                      </div>
+                    )}
+                    {w.for_team_md && (
+                      <div className="text-sm border-l-2 border-coral pl-3">
+                        <div className="text-xs text-coral mb-1">Interno (equipo):</div>
+                        <div className="whitespace-pre-wrap">{w.for_team_md}</div>
+                      </div>
+                    )}
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="creds" className="space-y-4">
+            <Card className="p-4 space-y-3">
+              <h3 className="font-semibold text-sm">Cuenta portal del cliente</h3>
+              <p className="text-xs text-muted-foreground">
+                Registro del email compartido con el cliente (password se gestiona vía "Olvidé contraseña"
+                en el portal, o desde Cloud → Users).
+              </p>
+              <div>
+                <Label>Email del usuario portal</Label>
+                <Input value={creds.portal_email ?? ""}
+                  onChange={(e) => setCreds({ ...creds, portal_email: e.target.value })}
+                  placeholder={`portal+${(clientName || "cliente").toLowerCase().replace(/\s+/g,"")}@kimedia.mx`} />
+              </div>
+              <div>
+                <Label>Notas internas</Label>
+                <Textarea rows={3} value={creds.notes ?? ""}
+                  onChange={(e) => setCreds({ ...creds, notes: e.target.value })}
+                  placeholder="A quién se le envió el acceso, cuándo, etc." />
+              </div>
+              <div className="flex justify-end">
+                <Button onClick={saveCreds}><Save className="w-4 h-4 mr-2" /> Guardar</Button>
+              </div>
+            </Card>
           </TabsContent>
 
           <TabsContent value="accesos" className="space-y-4">
