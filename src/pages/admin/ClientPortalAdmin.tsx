@@ -114,6 +114,56 @@ export default function ClientPortalAdmin() {
   const [pasteMode, setPasteMode] = useState<"append" | "replace">("append");
   const [pasting, setPasting] = useState(false);
 
+  // AI analysis state
+  const [analyzing, setAnalyzing] = useState(false);
+  const [weeklyDate, setWeeklyDate] = useState(() => {
+    const d = new Date(); const day = d.getDay(); const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    return new Date(d.setDate(diff)).toISOString().slice(0, 10);
+  });
+  const [genSummary, setGenSummary] = useState(false);
+
+  const analyzePending = async () => {
+    if (!clientId) return;
+    setAnalyzing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("analyze-listening-entries", {
+        body: { client_id: clientId, only_unanalyzed: true, limit: 30 },
+      });
+      if (error) throw error;
+      toast.success(`Analizadas ${data?.processed ?? 0} entradas`);
+      load();
+    } catch (e: any) {
+      toast.error(e.message ?? "Error al analizar");
+    } finally { setAnalyzing(false); }
+  };
+
+  const generateWeeklySummary = async () => {
+    if (!clientId || !weeklyDate) return;
+    setGenSummary(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-listening-weekly-summary", {
+        body: { client_id: clientId, week_start: weeklyDate },
+      });
+      if (error) throw error;
+      toast.success("Resumen semanal generado. Visible en el portal del cliente en la pestaña Análisis.");
+    } catch (e: any) {
+      toast.error(e.message ?? "No se pudo generar el resumen");
+    } finally { setGenSummary(false); }
+  };
+
+  const SENTIMENT_STYLES: Record<string, string> = {
+    positivo: "bg-emerald-500/15 text-emerald-600 border-emerald-500/30",
+    neutral: "bg-muted text-muted-foreground",
+    negativo: "bg-amber-500/15 text-amber-700 border-amber-500/30",
+    crisis: "bg-red-500/15 text-red-700 border-red-500/30",
+  };
+  const URGENCY_STYLES: Record<string, string> = {
+    baja: "bg-muted text-muted-foreground",
+    media: "bg-blue-500/15 text-blue-700 border-blue-500/30",
+    alta: "bg-amber-500/15 text-amber-700 border-amber-500/30",
+    critica: "bg-red-500/15 text-red-700 border-red-500/30",
+  };
+
   useEffect(() => {
     (async () => {
       const { data: s } = await supabase.auth.getSession();
