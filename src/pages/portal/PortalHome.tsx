@@ -29,6 +29,13 @@ type WeeklyRec = {
   priority: string;
 };
 
+type ListeningEntry = {
+  id: string;
+  entry_date: string;
+  content_md: string;
+  source: string;
+};
+
 const TYPE_LABEL: Record<string, string> = {
   daily: "Análisis diario",
   weekly: "Reporte semanal",
@@ -58,6 +65,8 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
   const [customTo, setCustomTo] = useState<string>("");
   const [reports, setReports] = useState<Report[]>([]);
   const [recs, setRecs] = useState<WeeklyRec[]>([]);
+  const [listening, setListening] = useState<ListeningEntry[]>([]);
+  const [listeningSearch, setListeningSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [denied, setDenied] = useState(false);
   const pdfRef = useRef<HTMLDivElement>(null);
@@ -76,7 +85,7 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
   useEffect(() => {
     (async () => {
       setLoading(true);
-      const [r, w] = await Promise.all([
+      const [r, w, l] = await Promise.all([
         supabase
           .from("client_portal_reports")
           .select("id, report_date, title, type, summary_md")
@@ -91,10 +100,19 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
           .gte("week_start", fromDate)
           .lte("week_start", toDate)
           .order("week_start", { ascending: false }),
+        supabase
+          .from("client_portal_listening_entries")
+          .select("id, entry_date, content_md, source")
+          .eq("client_id", portal.clientId)
+          .gte("entry_date", fromDate)
+          .lte("entry_date", toDate)
+          .order("entry_date", { ascending: false })
+          .limit(500),
       ]);
       if (r.error) toast.error(r.error.message);
       setReports((r.data ?? []) as Report[]);
       setRecs((w.data ?? []) as WeeklyRec[]);
+      setListening((l.data ?? []) as ListeningEntry[]);
 
       if ((r.data ?? []).length === 0 && (w.data ?? []).length === 0) {
         const { data: access } = await supabase
@@ -275,12 +293,40 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
 
           {/* Listening placeholder */}
           <TabsContent value="listening" className="mt-6">
-            <div className="glass rounded-xl p-10 text-center space-y-2">
-              <MessageSquare className="w-8 h-8 text-coral mx-auto" />
-              <h3 className="font-semibold">Bitácora de escucha</h3>
-              <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                El histórico diario de WhatsApp se integra aquí en la siguiente entrega.
-              </p>
+            <div className="space-y-3">
+              <Input
+                placeholder="Buscar en la bitácora..."
+                value={listeningSearch}
+                onChange={(e) => setListeningSearch(e.target.value)}
+              />
+              {loading ? (
+                <div className="text-center py-12 text-muted-foreground">Cargando...</div>
+              ) : listening.length === 0 ? (
+                <div className="glass rounded-xl p-10 text-center text-muted-foreground">
+                  Sin entradas en este rango.
+                </div>
+              ) : (
+                listening
+                  .filter((e) => !listeningSearch || e.content_md.toLowerCase().includes(listeningSearch.toLowerCase()))
+                  .map((e, i) => (
+                    <motion.div
+                      key={e.id}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: Math.min(i * 0.02, 0.3) }}
+                      className="glass rounded-xl p-5 space-y-2"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary" className="text-xs">
+                          <Calendar className="w-3 h-3 mr-1" /> {fmtDate(e.entry_date)}
+                        </Badge>
+                      </div>
+                      <div className="prose prose-invert max-w-none prose-p:my-2 prose-li:my-0 text-sm">
+                        <ReactMarkdown>{e.content_md}</ReactMarkdown>
+                      </div>
+                    </motion.div>
+                  ))
+              )}
             </div>
           </TabsContent>
         </Tabs>

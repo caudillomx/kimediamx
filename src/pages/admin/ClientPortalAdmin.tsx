@@ -10,8 +10,9 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ArrowLeft, Plus, Trash2, Paperclip, Upload, X, Users, FileText, Lightbulb, KeyRound, Save } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Paperclip, Upload, X, Users, FileText, Lightbulb, KeyRound, Save, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
+import { parseWhatsappTxt } from "@/lib/whatsappParser";
 
 type Report = {
   id: string;
@@ -47,6 +48,13 @@ type Credentials = {
   id?: string;
   portal_email: string | null;
   notes: string | null;
+};
+
+type ListeningEntry = {
+  id: string;
+  entry_date: string;
+  content_md: string;
+  source: string;
 };
 
 const TYPE_OPTIONS = [
@@ -88,6 +96,13 @@ export default function ClientPortalAdmin() {
   });
   const [recSaving, setRecSaving] = useState(false);
 
+  // Listening state
+  const [listening, setListening] = useState<ListeningEntry[]>([]);
+  const [importing, setImporting] = useState(false);
+  const [importPreview, setImportPreview] = useState<{ date: string; chars: number }[] | null>(null);
+  const [importText, setImportText] = useState<string>("");
+  const [importFileName, setImportFileName] = useState<string>("");
+
   useEffect(() => {
     (async () => {
       const { data: s } = await supabase.auth.getSession();
@@ -114,7 +129,7 @@ export default function ClientPortalAdmin() {
 
   const load = async () => {
     setLoading(true);
-    const [c, r, a, w, cr] = await Promise.all([
+    const [c, r, a, w, cr, ls] = await Promise.all([
       supabase.from("clients").select("name").eq("id", clientId).maybeSingle(),
       supabase
         .from("client_portal_reports")
@@ -136,6 +151,12 @@ export default function ClientPortalAdmin() {
         .select("id, portal_email, notes")
         .eq("client_id", clientId)
         .maybeSingle(),
+      supabase
+        .from("client_portal_listening_entries")
+        .select("id, entry_date, content_md, source")
+        .eq("client_id", clientId)
+        .order("entry_date", { ascending: false })
+        .limit(500),
     ]);
     setClientName(c.data?.name ?? "");
     setReports((r.data ?? []) as Report[]);
@@ -143,6 +164,7 @@ export default function ClientPortalAdmin() {
     setRecs((w.data ?? []) as WeeklyRec[]);
     if (cr.data) setCreds(cr.data as Credentials);
     else setCreds({ portal_email: "", notes: "" });
+    setListening((ls.data ?? []) as ListeningEntry[]);
     setLoading(false);
   };
 
@@ -280,6 +302,73 @@ export default function ClientPortalAdmin() {
     load();
   };
 
+  const handleTxtFile = async (file: File) => {
+    setImportFileName(file.name);
+    const text = await file.text();
+    setImportText(text);
+    const parsed = parseWhatsappTxt(text);
+    setImportPreview(parsed.map((p) => ({ date: p.entry_date, chars: p.content_md.length })));
+  };
+
+  const importWhatsapp = async (mode: "upsert" | "skip") => {
+    if (!clientId || !importText) return;
+    setImporting(true);
+    try {
+      const parsed = parseWhatsappTxt(importText);
+      if (parsed.length === 0) { toast.error("No se detectaron entradas"); return; }
+      const { data: s } = await supabase.auth.getSession();
+      const rows = parsed.map((p) => ({
+        client_id: clientId,
+        entry_date: p.entry_date,
+        content_md: p.content_md,
+        source: "whatsapp_txt",
+        raw_source_ref: importFileName || null,
+        created_by: s.session?.user.id,
+      }));
+      if (mode === "skip") {
+        const dates = rows.map((r) => r.entry_date);
+        const { data: existing } = await supabase
+          .from("client_portal_listening_entries")
+          .select("entry_date")
+          .eq("client_id", clientId)
+          .in("entry_date", dates);
+        const existingSet = new Set((existing ?? []).map((e: any) => e.entry_date));
+        const toInsert = rows.filter((r) => !existingSet.has(r.entry_date));
+        if (toInsert.length === 0) { toast.info("Nada nuevo que importar"); return; }
+        const chunk = 200;
+        for (let i = 0; i < toInsert.length; i += chunk) {
+          const { error } = await supabase.from("client_portal_listening_entries").insert(toInsert.slice(i, i + chunk));
+          if (error) throw error;
+        }
+        toast.success(`Importadas ${toInsert.length} entradas nuevas`);
+      } else {
+        // Upsert: reemplaza por (client_id, entry_date) — requiere borrar previas del mismo día
+        const dates = Array.from(new Set(rows.map((r) => r.entry_date)));
+        await supabase.from("client_portal_listening_entries")
+          .delete().eq("client_id", clientId).in("entry_date", dates);
+        const chunk = 200;
+        for (let i = 0; i < rows.length; i += chunk) {
+          const { error } = await supabase.from("client_portal_listening_entries").insert(rows.slice(i, i + chunk));
+          if (error) throw error;
+        }
+        toast.success(`Reemplazadas ${rows.length} entradas`);
+      }
+      setImportPreview(null); setImportText(""); setImportFileName("");
+      load();
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const deleteListening = async (id: string) => {
+    if (!confirm("¿Eliminar esta entrada?")) return;
+    const { error } = await supabase.from("client_portal_listening_entries").delete().eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Eliminada"); load();
+  };
+
   if (checking) return <div className="min-h-screen bg-background" />;
 
   return (
@@ -299,6 +388,7 @@ export default function ClientPortalAdmin() {
           <TabsList>
             <TabsTrigger value="reportes"><FileText className="w-4 h-4 mr-2" /> Reportes</TabsTrigger>
             <TabsTrigger value="recs"><Lightbulb className="w-4 h-4 mr-2" /> Recomendaciones</TabsTrigger>
+            <TabsTrigger value="listening"><MessageSquare className="w-4 h-4 mr-2" /> Listening</TabsTrigger>
             <TabsTrigger value="creds"><KeyRound className="w-4 h-4 mr-2" /> Credenciales</TabsTrigger>
             <TabsTrigger value="accesos"><Users className="w-4 h-4 mr-2" /> Accesos</TabsTrigger>
           </TabsList>
@@ -492,6 +582,9 @@ export default function ClientPortalAdmin() {
                 <Input value={creds.portal_email ?? ""}
                   onChange={(e) => setCreds({ ...creds, portal_email: e.target.value })}
                   placeholder={`portal+${(clientName || "cliente").toLowerCase().replace(/\s+/g,"")}@kimedia.mx`} />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Sugerencia para Actinver: <code>portalactinver@kimedia.mx</code>
+                </p>
               </div>
               <div>
                 <Label>Notas internas</Label>
@@ -503,6 +596,67 @@ export default function ClientPortalAdmin() {
                 <Button onClick={saveCreds}><Save className="w-4 h-4 mr-2" /> Guardar</Button>
               </div>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="listening" className="space-y-4">
+            <Card className="p-4 space-y-3">
+              <h3 className="font-semibold text-sm">Importar histórico de WhatsApp</h3>
+              <p className="text-xs text-muted-foreground">
+                Sube el <code>.txt</code> exportado desde WhatsApp. Se agrupa por día y se guarda como bitácora de escucha.
+              </p>
+              <input
+                type="file"
+                accept=".txt,text/plain"
+                onChange={(e) => {
+                  const f = e.target.files?.[0]; if (f) handleTxtFile(f);
+                }}
+                className="text-sm"
+              />
+              {importPreview && (
+                <div className="space-y-2">
+                  <div className="text-xs text-muted-foreground">
+                    Detectadas <strong>{importPreview.length}</strong> fechas · rango{" "}
+                    {importPreview[importPreview.length - 1]?.date} → {importPreview[0]?.date}
+                  </div>
+                  <div className="flex gap-2">
+                    <Button size="sm" disabled={importing} onClick={() => importWhatsapp("skip")}>
+                      {importing ? "Importando..." : "Importar solo fechas nuevas"}
+                    </Button>
+                    <Button size="sm" variant="outline" disabled={importing} onClick={() => importWhatsapp("upsert")}>
+                      Reemplazar días existentes
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => { setImportPreview(null); setImportText(""); setImportFileName(""); }}>
+                      Cancelar
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </Card>
+
+            {loading ? (
+              <div className="text-center py-10 text-muted-foreground">Cargando...</div>
+            ) : listening.length === 0 ? (
+              <Card className="p-10 text-center text-muted-foreground">Sin entradas de escucha aún.</Card>
+            ) : (
+              <div className="space-y-2">
+                {listening.map((e) => (
+                  <Card key={e.id} className="p-3">
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary">{e.entry_date}</Badge>
+                        <Badge variant="outline" className="text-xs">{e.source}</Badge>
+                      </div>
+                      <Button size="sm" variant="ghost" onClick={() => deleteListening(e.id)}>
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      </Button>
+                    </div>
+                    <div className="text-xs text-muted-foreground line-clamp-3 whitespace-pre-wrap">
+                      {e.content_md.slice(0, 300)}{e.content_md.length > 300 ? "..." : ""}
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="accesos" className="space-y-4">
