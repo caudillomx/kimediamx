@@ -127,11 +127,15 @@ export default function ClientPortalAdmin() {
     setAnalyzing(true);
     try {
       const { data, error } = await supabase.functions.invoke("analyze-listening-entries", {
-        body: { client_id: clientId, only_unanalyzed: true, limit: 30 },
+        body: { client_id: clientId, only_unanalyzed: true, limit: 100, background: true },
       });
       if (error) throw error;
-      toast.success(`Analizadas ${data?.processed ?? 0} entradas`);
-      load();
+      if (data?.background) {
+        toast.success(`Analizando ${data.total} entradas en segundo plano. Recarga en 1-2 min.`);
+      } else {
+        toast.success(`Analizadas ${data?.processed ?? 0} entradas`);
+      }
+      setTimeout(() => load(), 3000);
     } catch (e: any) {
       toast.error(e.message ?? "Error al analizar");
     } finally { setAnalyzing(false); }
