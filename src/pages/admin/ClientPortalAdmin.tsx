@@ -707,6 +707,38 @@ export default function ClientPortalAdmin() {
           </TabsContent>
 
           <TabsContent value="listening" className="space-y-4">
+            <Card className="p-4 space-y-3 border-coral/30">
+              <div className="flex items-start gap-2">
+                <Sparkles className="w-5 h-5 text-coral shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <h3 className="font-semibold text-sm">Análisis IA del listening</h3>
+                  <p className="text-xs text-muted-foreground">
+                    Enriquece cada entrada con sentimiento, urgencia, temas y menciones. Genera un resumen ejecutivo semanal
+                    (visible en el portal del cliente, en la pestaña Análisis).
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="text-xs text-muted-foreground">
+                  <strong>{listening.filter(e => e.analyzed_at).length}</strong> / {listening.length} entradas analizadas
+                </div>
+                <div className="ml-auto flex flex-wrap gap-2">
+                  <Button size="sm" onClick={analyzePending} disabled={analyzing}>
+                    <Sparkles className="w-4 h-4 mr-1" /> {analyzing ? "Analizando..." : "Analizar pendientes (30)"}
+                  </Button>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-end gap-2 pt-2 border-t border-border/50">
+                <div>
+                  <Label className="text-xs">Semana (lunes)</Label>
+                  <Input type="date" value={weeklyDate} onChange={(e) => setWeeklyDate(e.target.value)} className="w-40" />
+                </div>
+                <Button size="sm" variant="outline" onClick={generateWeeklySummary} disabled={genSummary}>
+                  <BarChart3 className="w-4 h-4 mr-1" /> {genSummary ? "Generando..." : "Generar resumen semanal"}
+                </Button>
+              </div>
+            </Card>
+
             <Card className="p-4 space-y-3">
               <h3 className="font-semibold text-sm">Pegar texto (día actual o varios días)</h3>
               <p className="text-xs text-muted-foreground">
