@@ -10,7 +10,7 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ArrowLeft, Plus, Trash2, Paperclip, Upload, X, Users, FileText, Lightbulb, KeyRound, Save, MessageSquare } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Paperclip, Upload, X, Users, FileText, Lightbulb, KeyRound, Save, MessageSquare, Sparkles, BarChart3 } from "lucide-react";
 import { toast } from "sonner";
 import { parseWhatsappTxt } from "@/lib/whatsappParser";
 
@@ -55,6 +55,11 @@ type ListeningEntry = {
   entry_date: string;
   content_md: string;
   source: string;
+  sentiment?: string | null;
+  urgency?: string | null;
+  topics?: string[] | null;
+  summary?: string | null;
+  analyzed_at?: string | null;
 };
 
 const TYPE_OPTIONS = [
