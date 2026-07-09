@@ -164,7 +164,7 @@ export default function ClientPortalAdmin() {
         .maybeSingle(),
       supabase
         .from("client_portal_listening_entries")
-        .select("id, entry_date, content_md, source")
+        .select("id, entry_date, content_md, source, sentiment, urgency, topics, summary, analyzed_at")
         .eq("client_id", clientId)
         .order("entry_date", { ascending: false })
         .limit(500),
