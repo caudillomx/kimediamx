@@ -52,7 +52,7 @@ async function analyzeOne(entry: Entry) {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   try {
-    const { client_id, entry_ids, only_unanalyzed = true, limit = 30 } = await req.json();
+    const { client_id, entry_ids, only_unanalyzed = true, limit = 10, background = false } = await req.json();
     if (!client_id) throw new Error('client_id requerido');
 
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
@@ -75,6 +75,37 @@ Deno.serve(async (req) => {
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
+    const processAll = async () => {
+      let ok = 0;
+      for (const e of entries) {
+        try {
+          const a = await analyzeOne(e as Entry);
+          await admin.from('client_portal_listening_entries').update({
+            sentiment: a.sentiment ?? null,
+            sentiment_score: typeof a.sentiment_score === 'number' ? a.sentiment_score : null,
+            urgency: a.urgency ?? null,
+            topics: Array.isArray(a.topics) ? a.topics.slice(0, 8) : [],
+            mentions: Array.isArray(a.mentions) ? a.mentions.slice(0, 20) : [],
+            actors: Array.isArray(a.actors) ? a.actors.slice(0, 15) : [],
+            summary: typeof a.summary === 'string' ? a.summary : null,
+            analyzed_at: new Date().toISOString(),
+          }).eq('id', e.id);
+          ok++;
+        } catch (err: any) {
+          console.error('analyze error', e.id, err.message);
+        }
+      }
+      console.log(`analyzed ${ok}/${entries.length}`);
+    };
+
+    if (background) {
+      // @ts-ignore EdgeRuntime is available in Supabase functions
+      EdgeRuntime.waitUntil(processAll());
+      return new Response(JSON.stringify({ started: true, total: entries.length, background: true }),
+        { status: 202, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    // Foreground: process sequentially but with small limit to stay under 150s
     let ok = 0; const errors: any[] = [];
     for (const e of entries) {
       try {
