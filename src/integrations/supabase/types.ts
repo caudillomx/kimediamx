@@ -792,6 +792,153 @@ export type Database = {
           },
         ]
       }
+      client_portal_credentials: {
+        Row: {
+          client_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          portal_email: string | null
+          portal_user_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          portal_email?: string | null
+          portal_user_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          portal_email?: string | null
+          portal_user_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_portal_credentials_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_portal_datasets: {
+        Row: {
+          client_id: string
+          created_at: string
+          file_name: string | null
+          id: string
+          mime_type: string | null
+          notes: string | null
+          parsed_data: Json
+          period_end: string
+          period_start: string
+          platform: string | null
+          size_bytes: number | null
+          source: Database["public"]["Enums"]["portal_dataset_source"]
+          storage_path: string | null
+          updated_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          file_name?: string | null
+          id?: string
+          mime_type?: string | null
+          notes?: string | null
+          parsed_data?: Json
+          period_end: string
+          period_start: string
+          platform?: string | null
+          size_bytes?: number | null
+          source: Database["public"]["Enums"]["portal_dataset_source"]
+          storage_path?: string | null
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          file_name?: string | null
+          id?: string
+          mime_type?: string | null
+          notes?: string | null
+          parsed_data?: Json
+          period_end?: string
+          period_start?: string
+          platform?: string | null
+          size_bytes?: number | null
+          source?: Database["public"]["Enums"]["portal_dataset_source"]
+          storage_path?: string | null
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_portal_datasets_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_portal_listening_entries: {
+        Row: {
+          client_id: string
+          content_md: string
+          created_at: string
+          created_by: string | null
+          entry_date: string
+          id: string
+          raw_source_ref: string | null
+          source: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          content_md: string
+          created_at?: string
+          created_by?: string | null
+          entry_date: string
+          id?: string
+          raw_source_ref?: string | null
+          source?: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          content_md?: string
+          created_at?: string
+          created_by?: string | null
+          entry_date?: string
+          id?: string
+          raw_source_ref?: string | null
+          source?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_portal_listening_entries_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_portal_reports: {
         Row: {
           client_id: string
@@ -829,6 +976,50 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "client_portal_reports_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_portal_weekly_recommendations: {
+        Row: {
+          client_id: string
+          created_at: string
+          created_by: string | null
+          for_client_md: string | null
+          for_team_md: string | null
+          id: string
+          priority: string
+          updated_at: string
+          week_start: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          created_by?: string | null
+          for_client_md?: string | null
+          for_team_md?: string | null
+          id?: string
+          priority?: string
+          updated_at?: string
+          week_start: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          created_by?: string | null
+          for_client_md?: string | null
+          for_team_md?: string | null
+          id?: string
+          priority?: string
+          updated_at?: string
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_portal_weekly_recommendations_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
@@ -2710,7 +2901,44 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      client_portal_weekly_recommendations_public: {
+        Row: {
+          client_id: string | null
+          created_at: string | null
+          for_client_md: string | null
+          id: string | null
+          priority: string | null
+          updated_at: string | null
+          week_start: string | null
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string | null
+          for_client_md?: string | null
+          id?: string | null
+          priority?: string | null
+          updated_at?: string | null
+          week_start?: string | null
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string | null
+          for_client_md?: string | null
+          id?: string | null
+          priority?: string | null
+          updated_at?: string | null
+          week_start?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_portal_weekly_recommendations_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       get_brand_kit_by_token: {
@@ -2901,6 +3129,14 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user" | "client_viewer"
+      portal_dataset_source:
+        | "fanpage_karma"
+        | "meta_ads"
+        | "x_ads"
+        | "tiktok_ads"
+        | "google_ads"
+        | "screenshot"
+        | "other"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -3029,6 +3265,15 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user", "client_viewer"],
+      portal_dataset_source: [
+        "fanpage_karma",
+        "meta_ads",
+        "x_ads",
+        "tiktok_ads",
+        "google_ads",
+        "screenshot",
+        "other",
+      ],
     },
   },
 } as const
