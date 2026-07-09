@@ -26,15 +26,23 @@ import CursoGtoEntregables from "./pages/CursoGtoEntregables";
 import ClientWorkspace from "./pages/ClientWorkspace";
 import AdsProposalView from "./pages/AdsProposalView";
 import RetoInfluenSER from "./pages/RetoInfluenSER";
+import ClientPortalAdmin from "./pages/admin/ClientPortalAdmin";
+import PortalRouter from "./pages/portal/PortalRouter";
+import { detectClientPortal } from "./lib/clientPortal";
 
 const queryClient = new QueryClient();
 
-const App = () => (
+const App = () => {
+  const portal = detectClientPortal();
+  return (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        {portal ? (
+          <PortalRouter portal={portal} />
+        ) : (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/guias/marca-personal" element={<GuidePersonalBrand />} />
@@ -50,6 +58,7 @@ const App = () => (
           <Route path="/admin/operaciones/login" element={<OperationsLogin />} />
           <Route path="/admin/operaciones" element={<OperationsDashboard />} />
           <Route path="/admin/cliente/:clientId" element={<ClientWorkspace />} />
+          <Route path="/admin/cliente/:clientId/portal" element={<ClientPortalAdmin />} />
           <Route path="/admin/propuesta/:proposalId" element={<AdsProposalView />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/parrilla" element={<ContentEngine />} />
@@ -62,9 +71,11 @@ const App = () => (
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
+        )}
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
-);
+  );
+};
 
 export default App;
