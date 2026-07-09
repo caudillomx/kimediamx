@@ -820,14 +820,37 @@ export default function ClientPortalAdmin() {
                 {listening.map((e) => (
                   <Card key={e.id} className="p-3">
                     <div className="flex items-center justify-between gap-2 mb-2">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <Badge variant="secondary">{e.entry_date}</Badge>
                         <Badge variant="outline" className="text-xs">{e.source}</Badge>
+                        {e.sentiment && (
+                          <Badge className={`text-xs border ${SENTIMENT_STYLES[e.sentiment] ?? ""}`}>
+                            {e.sentiment}
+                          </Badge>
+                        )}
+                        {e.urgency && e.urgency !== "baja" && (
+                          <Badge className={`text-xs border ${URGENCY_STYLES[e.urgency] ?? ""}`}>
+                            urgencia {e.urgency}
+                          </Badge>
+                        )}
+                        {!e.analyzed_at && (
+                          <Badge variant="outline" className="text-xs text-muted-foreground">sin analizar</Badge>
+                        )}
                       </div>
                       <Button size="sm" variant="ghost" onClick={() => deleteListening(e.id)}>
                         <Trash2 className="w-4 h-4 text-destructive" />
                       </Button>
                     </div>
+                    {e.summary && (
+                      <p className="text-xs mb-2 leading-relaxed">{e.summary}</p>
+                    )}
+                    {e.topics && e.topics.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mb-2">
+                        {e.topics.slice(0, 6).map((t, i) => (
+                          <Badge key={i} variant="outline" className="text-[10px]">{t}</Badge>
+                        ))}
+                      </div>
+                    )}
                     <div className="text-xs text-muted-foreground line-clamp-3 whitespace-pre-wrap">
                       {e.content_md.slice(0, 300)}{e.content_md.length > 300 ? "..." : ""}
                     </div>
