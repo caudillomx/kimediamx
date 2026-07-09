@@ -653,6 +653,44 @@ export default function ClientPortalAdmin() {
 
           <TabsContent value="listening" className="space-y-4">
             <Card className="p-4 space-y-3">
+              <h3 className="font-semibold text-sm">Pegar texto (día actual o varios días)</h3>
+              <p className="text-xs text-muted-foreground">
+                Pega texto plano para la fecha elegida, o pega directamente el bloque de WhatsApp — si detecta
+                encabezados <code>[DD/MM/AA, hh:mm]</code> los agrupa automáticamente por día.
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>Fecha (si es texto plano)</Label>
+                  <Input type="date" value={pasteDate} onChange={(e) => setPasteDate(e.target.value)} />
+                </div>
+                <div>
+                  <Label>Modo</Label>
+                  <Select value={pasteMode} onValueChange={(v: any) => setPasteMode(v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="append">Agregar como nueva entrada</SelectItem>
+                      <SelectItem value="replace">Reemplazar días existentes</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div>
+                <Label>Contenido</Label>
+                <Textarea
+                  rows={10}
+                  value={pasteText}
+                  onChange={(e) => setPasteText(e.target.value)}
+                  placeholder="Pega aquí el análisis del día, o el bloque de WhatsApp copiado tal cual."
+                />
+              </div>
+              <div className="flex justify-end">
+                <Button onClick={importPaste} disabled={pasting || !pasteText.trim()}>
+                  <Save className="w-4 h-4 mr-2" /> {pasting ? "Guardando..." : "Guardar"}
+                </Button>
+              </div>
+            </Card>
+
+            <Card className="p-4 space-y-3">
               <h3 className="font-semibold text-sm">Importar histórico de WhatsApp</h3>
               <p className="text-xs text-muted-foreground">
                 Sube el <code>.txt</code> exportado desde WhatsApp. Se agrupa por día y se guarda como bitácora de escucha.
