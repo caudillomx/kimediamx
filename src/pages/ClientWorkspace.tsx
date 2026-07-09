@@ -12,7 +12,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   ArrowLeft, Plus, Trash2, FileText, Link2, Notebook, Mic, BookOpen,
-  Upload, ChevronDown, ChevronUp, ExternalLink, Megaphone,
+  Upload, ChevronDown, ChevronUp, ExternalLink, Megaphone, Globe,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
@@ -105,6 +105,9 @@ const ClientWorkspace = () => {
           <div className="ml-auto flex items-center gap-2">
             <Badge variant="outline" className={typeMeta.badgeClass}>{typeMeta.label}</Badge>
             {client.is_probono && <Badge variant="outline" className="bg-blue-500/15 text-blue-600 border-blue-500/30">Pro bono</Badge>}
+            <Button variant="outline" size="sm" onClick={() => navigate(`/admin/cliente/${client.id}/portal`)}>
+              <Globe className="w-4 h-4 mr-1" /> Portal cliente
+            </Button>
           </div>
         </div>
       </header>
