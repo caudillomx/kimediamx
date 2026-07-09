@@ -2782,7 +2782,7 @@ export type Database = {
       increment_code_usage: { Args: { code_text: string }; Returns: boolean }
     }
     Enums: {
-      app_role: "admin" | "user"
+      app_role: "admin" | "user" | "client_viewer"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2910,7 +2910,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "user"],
+      app_role: ["admin", "user", "client_viewer"],
     },
   },
 } as const
