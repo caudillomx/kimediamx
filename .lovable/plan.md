@@ -1,58 +1,60 @@
-# Plan: Portal Actinver (subdominio privado, solo lectura)
+# Portal Actinver — subdominio virtual sobre KiMedia
 
-Arrancamos por Actinver. Los otros dos (rankings competencia, tendencias) quedan como proyectos separados a futuro con el mismo patrón.
+Montamos `actinver.kimedia.mx` apuntando a **este mismo proyecto**. El hostname decide qué UI se renderiza, y el backend (auth, DB, storage, edge functions) es 100% compartido con KiMedia.
 
 ## Arquitectura
 
-- **Proyecto Lovable nuevo**, independiente de este. Se publica y se conecta el subdominio `actinver.kimedia.mx` desde Project Settings → Domains.
-- Backend propio (Lovable Cloud nuevo). No comparte DB con kimedia.mx — así el acceso queda aislado y no arrastramos las 40+ tablas actuales.
-- Branding independiente (podemos alinearlo a Actinver o mantener KiMedia como proveedor).
+```text
+kimedia.mx / www.kimedia.mx   →  App KiMedia (todo lo actual, sin cambios)
+actinver.kimedia.mx           →  Portal cliente (login + reportes)
+        ↓
+   mismo Supabase / mismo auth / mismas tablas
+```
 
-## Acceso privado
+Un wrapper en `App.tsx` lee `window.location.hostname`. Si es el subdominio de Actinver, monta solo `<ClientPortalRoutes />` (login, home, detalle de reporte). En cualquier otro hostname, todo sigue igual.
 
-- Auth por email + password, con **allowlist de dominios/emails de Actinver** (tabla `allowed_emails`). Signup abierto solo si el email está en la lista; el resto ve "solicita acceso a hola@kimedia.mx".
-- Rol `admin` (tú y Ana Sofía) para subir contenido. Rol `viewer` (Actinver) solo lectura.
+## Modelo de datos (genérico, reutilizable para futuros clientes)
 
-## Modelo de datos mínimo
+- `client_reports`: `client_id → clients.id`, `report_date`, `title`, `summary_md`, `type` (daily / weekly / benchmark / other), `created_by`.
+- `client_report_attachments`: `report_id`, `file_name`, `storage_path`, `mime_type`, `size_bytes`.
+- `client_access`: `user_id`, `client_id` — define qué cliente puede ver cada viewer.
+- Bucket privado `client-reports` con RLS por `client_id`.
+- Nuevo rol en enum `app_role`: `client_viewer`.
 
-- `reports`: id, fecha (date), titulo, resumen_ejecutivo (text), tipo (`benchmark_diario` | `analisis_semanal` | `otro`), created_by.
-- `report_attachments`: id, report_id, file_name, storage_path, mime_type, size. Bucket privado `actinver-reports`, URLs firmadas al servir.
-- `report_metrics` (opcional fase 2): id, report_id, marca, red, metrica, valor. Para graficar evolución cuando ya tengamos volumen.
-- Tablas con RLS: viewers leen todo; solo admin escribe.
+**RLS**:
+- `client_reports` / `client_report_attachments`: viewer solo ve filas cuyo `client_id` esté en su `client_access`; `admin` ve todo.
+- `client_access`: solo `admin` lee/escribe.
+- Bucket: policies equivalentes leyendo `client_access`.
 
-## Funcionalidad fase 1 (MVP)
+## Fases
 
-1. **Home**: lista cronológica invertida de reportes con fecha, título, snippet del resumen, tags.
-2. **Detalle de reporte**: resumen ejecutivo en markdown + attachments descargables (imágenes del análisis WhatsApp, PDFs, capturas de benchmark).
-3. **Admin**: formulario para crear reporte (fecha + título + resumen + drag&drop de archivos). Sin editor complicado — pegas texto y subes imágenes.
-4. **Búsqueda simple** por fecha y texto en título/resumen.
-5. **Timeline lateral** por mes para navegar el histórico.
+**Fase 1 — Portal Actinver funcional**
+1. Migración: tablas nuevas, enum, bucket, RLS, GRANTs.
+2. Seed: mi email y el de Ana Sofía como `admin`; grant de `client_access` al `client_id` de Actinver para los viewers que me pases.
+3. Detector de hostname + `<ClientPortalRoutes />` (login, lista cronológica de reportes con filtros por fecha/tipo, vista de detalle con markdown + adjuntos descargables).
+4. UI admin en `/admin/clientes/:id/reportes` (dentro de KiMedia, no en el subdominio) para crear reportes: fecha, título, resumen markdown, drag&drop de adjuntos, dropdown de tipo.
+5. Branding co-marca sobrio (Actinver + "powered by KiMedia" en footer).
 
-## Fuera de alcance fase 1
+**Fase 2 — Importador del histórico**
+Cuando me pegues el .txt: edge function `actinver-import-history` que parsea, agrupa por fecha y crea un `client_report` por día con `type = 'daily'`, `created_by = tu usuario`. Preview antes de commit real.
 
-- No generación automática de análisis (tú los sigues creando, aquí solo se suben).
-- No dashboards de métricas ni gráficas — se agregan cuando `report_metrics` tenga datos.
-- No ingesta de Fanpage Karma todavía (eso vive en el proyecto de "rankings" cuando lo armemos).
+**Fase 3 — Gestión de accesos (UI)**
+Panel simple en `/admin/clientes/:id/accesos` para invitar/revocar viewers sin tocar SQL.
 
-## DNS / subdominio
+## Fuera de alcance ahora
 
-- Requiere que el nuevo proyecto esté publicado primero (crea el `.lovable.app`), luego conectas `actinver.kimedia.mx` desde Domains. Necesitarás agregar el registro CNAME/A en el DNS de kimedia.mx.
-
-## Siguientes proyectos (referencia, no se construyen ahora)
-
-- `rankings.kimedia.mx`: uploader CSV/Excel de exports Fanpage Karma → parser → tablas `industries`, `profiles`, `metrics_snapshots` → vistas públicas de ranking por industria.
-- `tendencias.kimedia.mx`: extender la lógica de `research-trends` que ya tienes, vista pública navegable.
+- Rankings.kimedia.mx y tendencias.kimedia.mx (proyectos separados, después).
+- Ingesta automática de Fanpage Karma o generación de análisis en el portal.
+- Dashboards con métricas — Fase 1 es solo repositorio/lectura.
 
 ## Detalles técnicos
 
-- Stack idéntico al proyecto actual (React + Vite + Tailwind + Lovable Cloud/Supabase).
-- Storage: bucket privado `actinver-reports` con RLS por rol.
-- Signed URLs con expiración de 1h para descargas.
-- Edge function `create-report` para validar rol admin antes de insertar.
-- SEO: `noindex` en el subdominio entero (es contenido privado de cliente).
+- Custom domain: `actinver.kimedia.mx` se conecta desde Project Settings → Domains como subdominio adicional; SSL auto.
+- Detector: `const isActinverPortal = window.location.hostname === 'actinver.kimedia.mx'` en el root router; en dev se puede forzar con `?portal=actinver`.
+- `types.ts` se regenera tras la migración; el código del portal se escribe después.
+- No se toca `ObjectivesView`, `KanbanBoard`, `WeeklyHealthView`, `ClientsHub`, ni ninguna vista existente de KiMedia.
 
-## Decisiones pendientes antes de construir
+## Pendiente que me confirmes al aprobar
 
-1. ¿Quieres que yo cree el proyecto Lovable nuevo, o lo creas tú desde el dashboard y me pasas acceso? (Yo no puedo crear proyectos desde aquí — solo puedo trabajar en este).
-2. ¿Emails/dominios permitidos para Actinver? (ej. `@actinver.com` completo, o lista específica).
-3. ¿El branding del portal es KiMedia, Actinver, o co-branded?
+1. Emails viewers Actinver iniciales (o "por ahora solo admins, viewers después").
+2. Cuando arranquemos Fase 2, me pegas el .txt completo aquí.
