@@ -64,7 +64,7 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
           .order("week_start", { ascending: false }),
       ]);
       setEntries((e.data ?? []) as Entry[]);
-      setAnalyses((a.data ?? []) as Analysis[]);
+      setAnalyses(((a.data ?? []) as unknown) as Analysis[]);
       setLoading(false);
     })();
   }, [clientId, fromDate, toDate]);
