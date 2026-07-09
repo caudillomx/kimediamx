@@ -13,6 +13,7 @@ import {
   Lightbulb, BarChart3, MessageSquare, Sparkles,
 } from "lucide-react";
 import type { ClientPortalConfig } from "@/lib/clientPortal";
+import PortalAnalysis from "./PortalAnalysis";
 
 type Report = {
   id: string;
@@ -213,7 +214,7 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
           <TabsList className="w-full flex flex-wrap justify-start">
             <TabsTrigger value="recomendaciones"><Lightbulb className="w-4 h-4 mr-2" />Recomendaciones</TabsTrigger>
             <TabsTrigger value="reportes"><FileText className="w-4 h-4 mr-2" />Reportes</TabsTrigger>
-            <TabsTrigger value="performance"><BarChart3 className="w-4 h-4 mr-2" />Performance</TabsTrigger>
+            <TabsTrigger value="analisis"><BarChart3 className="w-4 h-4 mr-2" />Análisis</TabsTrigger>
             <TabsTrigger value="listening"><MessageSquare className="w-4 h-4 mr-2" />Listening</TabsTrigger>
           </TabsList>
 
@@ -279,16 +280,9 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
             ))}
           </TabsContent>
 
-          {/* Performance placeholder */}
-          <TabsContent value="performance" className="mt-6">
-            <div className="glass rounded-xl p-10 text-center space-y-2">
-              <Sparkles className="w-8 h-8 text-coral mx-auto" />
-              <h3 className="font-semibold">Panel de performance en camino</h3>
-              <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                Muy pronto verás aquí las gráficas de redes sociales (Fanpage Karma) y ads (Meta, X, otras)
-                del rango seleccionado, con evidencia visual.
-              </p>
-            </div>
+          {/* Análisis IA */}
+          <TabsContent value="analisis" className="mt-6">
+            <PortalAnalysis clientId={portal.clientId} fromDate={fromDate} toDate={toDate} />
           </TabsContent>
 
           {/* Listening placeholder */}
