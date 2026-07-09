@@ -10,7 +10,7 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ArrowLeft, Plus, Trash2, Paperclip, Upload, X, Users, FileText, Lightbulb, KeyRound, Save, MessageSquare } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Paperclip, Upload, X, Users, FileText, Lightbulb, KeyRound, Save, MessageSquare, Sparkles, BarChart3 } from "lucide-react";
 import { toast } from "sonner";
 import { parseWhatsappTxt } from "@/lib/whatsappParser";
 
@@ -55,6 +55,11 @@ type ListeningEntry = {
   entry_date: string;
   content_md: string;
   source: string;
+  sentiment?: string | null;
+  urgency?: string | null;
+  topics?: string[] | null;
+  summary?: string | null;
+  analyzed_at?: string | null;
 };
 
 const TYPE_OPTIONS = [
@@ -109,6 +114,56 @@ export default function ClientPortalAdmin() {
   const [pasteMode, setPasteMode] = useState<"append" | "replace">("append");
   const [pasting, setPasting] = useState(false);
 
+  // AI analysis state
+  const [analyzing, setAnalyzing] = useState(false);
+  const [weeklyDate, setWeeklyDate] = useState(() => {
+    const d = new Date(); const day = d.getDay(); const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    return new Date(d.setDate(diff)).toISOString().slice(0, 10);
+  });
+  const [genSummary, setGenSummary] = useState(false);
+
+  const analyzePending = async () => {
+    if (!clientId) return;
+    setAnalyzing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("analyze-listening-entries", {
+        body: { client_id: clientId, only_unanalyzed: true, limit: 30 },
+      });
+      if (error) throw error;
+      toast.success(`Analizadas ${data?.processed ?? 0} entradas`);
+      load();
+    } catch (e: any) {
+      toast.error(e.message ?? "Error al analizar");
+    } finally { setAnalyzing(false); }
+  };
+
+  const generateWeeklySummary = async () => {
+    if (!clientId || !weeklyDate) return;
+    setGenSummary(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-listening-weekly-summary", {
+        body: { client_id: clientId, week_start: weeklyDate },
+      });
+      if (error) throw error;
+      toast.success("Resumen semanal generado. Visible en el portal del cliente en la pestaña Análisis.");
+    } catch (e: any) {
+      toast.error(e.message ?? "No se pudo generar el resumen");
+    } finally { setGenSummary(false); }
+  };
+
+  const SENTIMENT_STYLES: Record<string, string> = {
+    positivo: "bg-emerald-500/15 text-emerald-600 border-emerald-500/30",
+    neutral: "bg-muted text-muted-foreground",
+    negativo: "bg-amber-500/15 text-amber-700 border-amber-500/30",
+    crisis: "bg-red-500/15 text-red-700 border-red-500/30",
+  };
+  const URGENCY_STYLES: Record<string, string> = {
+    baja: "bg-muted text-muted-foreground",
+    media: "bg-blue-500/15 text-blue-700 border-blue-500/30",
+    alta: "bg-amber-500/15 text-amber-700 border-amber-500/30",
+    critica: "bg-red-500/15 text-red-700 border-red-500/30",
+  };
+
   useEffect(() => {
     (async () => {
       const { data: s } = await supabase.auth.getSession();
@@ -159,7 +214,7 @@ export default function ClientPortalAdmin() {
         .maybeSingle(),
       supabase
         .from("client_portal_listening_entries")
-        .select("id, entry_date, content_md, source")
+        .select("id, entry_date, content_md, source, sentiment, urgency, topics, summary, analyzed_at")
         .eq("client_id", clientId)
         .order("entry_date", { ascending: false })
         .limit(500),
@@ -652,6 +707,38 @@ export default function ClientPortalAdmin() {
           </TabsContent>
 
           <TabsContent value="listening" className="space-y-4">
+            <Card className="p-4 space-y-3 border-coral/30">
+              <div className="flex items-start gap-2">
+                <Sparkles className="w-5 h-5 text-coral shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <h3 className="font-semibold text-sm">Análisis IA del listening</h3>
+                  <p className="text-xs text-muted-foreground">
+                    Enriquece cada entrada con sentimiento, urgencia, temas y menciones. Genera un resumen ejecutivo semanal
+                    (visible en el portal del cliente, en la pestaña Análisis).
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="text-xs text-muted-foreground">
+                  <strong>{listening.filter(e => e.analyzed_at).length}</strong> / {listening.length} entradas analizadas
+                </div>
+                <div className="ml-auto flex flex-wrap gap-2">
+                  <Button size="sm" onClick={analyzePending} disabled={analyzing}>
+                    <Sparkles className="w-4 h-4 mr-1" /> {analyzing ? "Analizando..." : "Analizar pendientes (30)"}
+                  </Button>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-end gap-2 pt-2 border-t border-border/50">
+                <div>
+                  <Label className="text-xs">Semana (lunes)</Label>
+                  <Input type="date" value={weeklyDate} onChange={(e) => setWeeklyDate(e.target.value)} className="w-40" />
+                </div>
+                <Button size="sm" variant="outline" onClick={generateWeeklySummary} disabled={genSummary}>
+                  <BarChart3 className="w-4 h-4 mr-1" /> {genSummary ? "Generando..." : "Generar resumen semanal"}
+                </Button>
+              </div>
+            </Card>
+
             <Card className="p-4 space-y-3">
               <h3 className="font-semibold text-sm">Pegar texto (día actual o varios días)</h3>
               <p className="text-xs text-muted-foreground">
@@ -733,14 +820,37 @@ export default function ClientPortalAdmin() {
                 {listening.map((e) => (
                   <Card key={e.id} className="p-3">
                     <div className="flex items-center justify-between gap-2 mb-2">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <Badge variant="secondary">{e.entry_date}</Badge>
                         <Badge variant="outline" className="text-xs">{e.source}</Badge>
+                        {e.sentiment && (
+                          <Badge className={`text-xs border ${SENTIMENT_STYLES[e.sentiment] ?? ""}`}>
+                            {e.sentiment}
+                          </Badge>
+                        )}
+                        {e.urgency && e.urgency !== "baja" && (
+                          <Badge className={`text-xs border ${URGENCY_STYLES[e.urgency] ?? ""}`}>
+                            urgencia {e.urgency}
+                          </Badge>
+                        )}
+                        {!e.analyzed_at && (
+                          <Badge variant="outline" className="text-xs text-muted-foreground">sin analizar</Badge>
+                        )}
                       </div>
                       <Button size="sm" variant="ghost" onClick={() => deleteListening(e.id)}>
                         <Trash2 className="w-4 h-4 text-destructive" />
                       </Button>
                     </div>
+                    {e.summary && (
+                      <p className="text-xs mb-2 leading-relaxed">{e.summary}</p>
+                    )}
+                    {e.topics && e.topics.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mb-2">
+                        {e.topics.slice(0, 6).map((t, i) => (
+                          <Badge key={i} variant="outline" className="text-[10px]">{t}</Badge>
+                        ))}
+                      </div>
+                    )}
                     <div className="text-xs text-muted-foreground line-clamp-3 whitespace-pre-wrap">
                       {e.content_md.slice(0, 300)}{e.content_md.length > 300 ? "..." : ""}
                     </div>
