@@ -1,48 +1,58 @@
-## Objetivo
-1. Que la IA calcule las **calificaciones MCN** por dependencia a partir de evidencia real (sesiones Fireflies + bitácoras de uso).
-2. Sumar las **bitácoras de uso de las sesiones del curso** (lo que cada dependencia trabajó en su panel) como insumo, tanto para las MCN como para los entregables.
+# Plan: Portal Actinver (subdominio privado, solo lectura)
 
-## Fuentes de datos que se van a juntar por dependencia y mes
+Arrancamos por Actinver. Los otros dos (rankings competencia, tendencias) quedan como proyectos separados a futuro con el mismo patrón.
 
-- **Sesiones Fireflies** del mes (consultorías/entrenamientos/simulacros) con sus extracciones (temas, decisiones, pendientes, asistentes).
-- **Bitácoras del curso** (`gto_sesiones` + `gto_participantes` + `gto_corpus_uploads` + `gto_diagnostico_textos`):
-  - Brief del titular (misión, tono, audiencias, términos preferidos/prohibidos).
-  - Documentos de corpus subidos (tipo, cantidad, fechas).
-  - Diagnósticos de textos hechos (cuántos, score, errores detectados).
-  - Compromisos cumplidos (corpus subido, prompt probado, resultado compartido).
-  - Herramienta de IA elegida y prompt generado.
+## Arquitectura
 
-## Cambios
+- **Proyecto Lovable nuevo**, independiente de este. Se publica y se conecta el subdominio `actinver.kimedia.mx` desde Project Settings → Domains.
+- Backend propio (Lovable Cloud nuevo). No comparte DB con kimedia.mx — así el acceso queda aislado y no arrastramos las 40+ tablas actuales.
+- Branding independiente (podemos alinearlo a Actinver o mantener KiMedia como proveedor).
 
-### 1. Edge function nueva: `gto-compute-mcn`
-- Entrada: `dependenciaId`, `year`, `month`.
-- Reúne en paralelo: sesiones Fireflies del mes, bitácoras del curso de esa dependencia, calificaciones MCN previas (para tendencia).
-- Llama a Lovable AI (Gemini 3 Flash) con un prompt estricto:
-  - Rúbrica clara 1–5 por cada eje: coordinación, tiempo de respuesta, trazabilidad, análisis de riesgos, detección temprana.
-  - Cada score debe citar evidencia (frase de transcripción, documento subido, fecha). Si no hay evidencia → `null` y se reporta como "pendiente", **nunca inventa**.
-  - Devuelve también `fortalezas`, `areas_mejora` y un `observaciones.evidencias` con las citas.
-- Hace `upsert` en `gto_mcn_scores` (`computed_by = 'ai'`).
+## Acceso privado
 
-### 2. UI tab "Calificaciones MCN" (`CursoGtoEntregables.tsx`)
-- Botón nuevo **"Calcular con IA"** por dependencia (o "Calcular todas").
-- Los campos pasan a ser **editables sobre el resultado de la IA** (revisión humana).
-- Muestra la sección de evidencias citadas debajo de cada score para auditoría.
-- Badge "Calculado por IA" / "Manual" / "Editado".
+- Auth por email + password, con **allowlist de dominios/emails de Actinver** (tabla `allowed_emails`). Signup abierto solo si el email está en la lista; el resto ve "solicita acceso a hola@kimedia.mx".
+- Rol `admin` (tú y Ana Sofía) para subir contenido. Rol `viewer` (Actinver) solo lectura.
 
-### 3. Entregables: inyectar bitácoras de uso
-En `gto-generate-deliverable` agregamos al contexto:
-- Resumen por dependencia: # participantes activos, # documentos en corpus, # diagnósticos hechos, compromisos cumplidos, herramientas IA usadas, brief.
-- Se renderiza como nueva sección **"Evidencia de adopción"** dentro del registro de consultorías y el reporte mensual.
+## Modelo de datos mínimo
 
-### 4. Migración mínima
-- Agregar columnas opcionales en `gto_mcn_scores`: `computed_at timestamptz`, `evidence jsonb` (para guardar citas).
-- No se borra nada; el modo manual sigue funcionando.
+- `reports`: id, fecha (date), titulo, resumen_ejecutivo (text), tipo (`benchmark_diario` | `analisis_semanal` | `otro`), created_by.
+- `report_attachments`: id, report_id, file_name, storage_path, mime_type, size. Bucket privado `actinver-reports`, URLs firmadas al servir.
+- `report_metrics` (opcional fase 2): id, report_id, marca, red, metrica, valor. Para graficar evolución cuando ya tengamos volumen.
+- Tablas con RLS: viewers leen todo; solo admin escribe.
+
+## Funcionalidad fase 1 (MVP)
+
+1. **Home**: lista cronológica invertida de reportes con fecha, título, snippet del resumen, tags.
+2. **Detalle de reporte**: resumen ejecutivo en markdown + attachments descargables (imágenes del análisis WhatsApp, PDFs, capturas de benchmark).
+3. **Admin**: formulario para crear reporte (fecha + título + resumen + drag&drop de archivos). Sin editor complicado — pegas texto y subes imágenes.
+4. **Búsqueda simple** por fecha y texto en título/resumen.
+5. **Timeline lateral** por mes para navegar el histórico.
+
+## Fuera de alcance fase 1
+
+- No generación automática de análisis (tú los sigues creando, aquí solo se suben).
+- No dashboards de métricas ni gráficas — se agregan cuando `report_metrics` tenga datos.
+- No ingesta de Fanpage Karma todavía (eso vive en el proyecto de "rankings" cuando lo armemos).
+
+## DNS / subdominio
+
+- Requiere que el nuevo proyecto esté publicado primero (crea el `.lovable.app`), luego conectas `actinver.kimedia.mx` desde Domains. Necesitarás agregar el registro CNAME/A en el DNS de kimedia.mx.
+
+## Siguientes proyectos (referencia, no se construyen ahora)
+
+- `rankings.kimedia.mx`: uploader CSV/Excel de exports Fanpage Karma → parser → tablas `industries`, `profiles`, `metrics_snapshots` → vistas públicas de ranking por industria.
+- `tendencias.kimedia.mx`: extender la lógica de `research-trends` que ya tienes, vista pública navegable.
 
 ## Detalles técnicos
-- Modelo IA: `google/gemini-3-flash-preview` con `tool_choice` para forzar el JSON de la rúbrica.
-- Validación con Zod en el edge function; si falta evidencia para un eje, ese eje queda `null` y se reporta como pendiente en `areas_mejora`.
-- Todas las llamadas siguen el patrón actual de RBAC admin.
 
-## Lo que NO cambia
-- El flujo manual de captura MCN sigue disponible como fallback/edición.
-- No tocamos auth ni la estructura del curso público.
+- Stack idéntico al proyecto actual (React + Vite + Tailwind + Lovable Cloud/Supabase).
+- Storage: bucket privado `actinver-reports` con RLS por rol.
+- Signed URLs con expiración de 1h para descargas.
+- Edge function `create-report` para validar rol admin antes de insertar.
+- SEO: `noindex` en el subdominio entero (es contenido privado de cliente).
+
+## Decisiones pendientes antes de construir
+
+1. ¿Quieres que yo cree el proyecto Lovable nuevo, o lo creas tú desde el dashboard y me pasas acceso? (Yo no puedo crear proyectos desde aquí — solo puedo trabajar en este).
+2. ¿Emails/dominios permitidos para Actinver? (ej. `@actinver.com` completo, o lista específica).
+3. ¿El branding del portal es KiMedia, Actinver, o co-branded?
