@@ -1,60 +1,89 @@
-# Portal Actinver — subdominio virtual sobre KiMedia
+# Portales de cliente — arquitectura viva
 
-Montamos `actinver.kimedia.mx` apuntando a **este mismo proyecto**. El hostname decide qué UI se renderiza, y el backend (auth, DB, storage, edge functions) es 100% compartido con KiMedia.
+Evolucionamos el "Portal Actinver" (ya montado como subdominio virtual) a un **patrón reutilizable para cualquier cliente**: `<cliente>.kimedia.mx` → mismo backend KiMedia, UI aislada por hostname. Actinver es la primera instancia; el resto se activan agregando una fila en la config de portales.
 
-## Arquitectura
+## Cómo se accede
 
-```text
-kimedia.mx / www.kimedia.mx   →  App KiMedia (todo lo actual, sin cambios)
-actinver.kimedia.mx           →  Portal cliente (login + reportes)
-        ↓
-   mismo Supabase / mismo auth / mismas tablas
-```
+- **Password único por cliente (ahora)**: un solo "usuario técnico" por cliente (ej. `portal+actinver@kimedia.mx`) con password que le pasamos al cliente. Todos los del cliente entran con ese mismo login. Cero fricción, cero gestión de invitaciones.
+- **Migración futura a usuarios individuales**: la tabla `client_access(user_id, client_id)` ya existe, así que cuando queramos multi-usuario solo creamos cuentas reales y les damos acceso al mismo `client_id` — sin migrar datos.
+- El admin de KiMedia entra con su cuenta normal y ve **todo** + las recomendaciones internas.
 
-Un wrapper en `App.tsx` lee `window.location.hostname`. Si es el subdominio de Actinver, monta solo `<ClientPortalRoutes />` (login, home, detalle de reporte). En cualquier otro hostname, todo sigue igual.
+## Qué ve el cliente al entrar
 
-## Modelo de datos (genérico, reutilizable para futuros clientes)
+**Home del portal** = dashboard vivo del cliente, no lista cronológica. Tres bloques principales + filtro global de fechas arriba.
 
-- `client_reports`: `client_id → clients.id`, `report_date`, `title`, `summary_md`, `type` (daily / weekly / benchmark / other), `created_by`.
-- `client_report_attachments`: `report_id`, `file_name`, `storage_path`, `mime_type`, `size_bytes`.
-- `client_access`: `user_id`, `client_id` — define qué cliente puede ver cada viewer.
-- Bucket privado `client-reports` con RLS por `client_id`.
-- Nuevo rol en enum `app_role`: `client_viewer`.
+### 1. Panel de datos (Performance)
+Tabs internas:
+- **Redes sociales** — datos de Fanpage Karma (xlsx/csv semanal). Gráficas de evolución (seguidores, engagement, alcance, top posts) y tabla comparativa por red.
+- **Ads** — xlsx/csv de Meta, X, otras plataformas. KPIs (spend, CPM, CTR, conversiones), gráficas por campaña, breakdown por plataforma.
+- **Screenshots / evidencia** — galería con caption y fecha, para métricas que no vienen en export.
+- **Listening (WhatsApp)** — timeline con los mensajes/análisis diarios importados desde `.txt` (lo que ya vamos a construir para Actinver), buscable y filtrable.
 
-**RLS**:
-- `client_reports` / `client_report_attachments`: viewer solo ve filas cuyo `client_id` esté en su `client_access`; `admin` ve todo.
-- `client_access`: solo `admin` lee/escribe.
-- Bucket: policies equivalentes leyendo `client_access`.
+Todo respeta el **filtro de fechas global** (default: últimas 4 semanas). Se puede cambiar a rango custom o a "esta semana / mes / trimestre".
 
-## Fases
+### 2. Recomendaciones de la semana
+Dos secciones separadas en la misma pantalla:
+- **Para el cliente** — visible siempre. Bullets accionables + prioridad (alta/media/baja).
+- **Para el equipo KiMedia** — solo visible si el usuario logueado es admin de KiMedia. El cliente NO las ve.
 
-**Fase 1 — Portal Actinver funcional**
-1. Migración: tablas nuevas, enum, bucket, RLS, GRANTs.
-2. Seed: mi email y el de Ana Sofía como `admin`; grant de `client_access` al `client_id` de Actinver para los viewers que me pases.
-3. Detector de hostname + `<ClientPortalRoutes />` (login, lista cronológica de reportes con filtros por fecha/tipo, vista de detalle con markdown + adjuntos descargables).
-4. UI admin en `/admin/clientes/:id/reportes` (dentro de KiMedia, no en el subdominio) para crear reportes: fecha, título, resumen markdown, drag&drop de adjuntos, dropdown de tipo.
-5. Branding co-marca sobrio (Actinver + "powered by KiMedia" en footer).
+Se editan desde el panel admin, no desde el portal.
 
-**Fase 2 — Importador del histórico**
-Cuando me pegues el .txt: edge function `actinver-import-history` que parsea, agrupa por fecha y crea un `client_report` por día con `type = 'daily'`, `created_by = tu usuario`. Preview antes de commit real.
+### 3. Descarga de reporte en PDF
+Botón "Descargar reporte" arriba a la derecha:
+- Genera PDF con el rango de fechas activo.
+- Incluye: portada co-branded (logo cliente + "powered by KiMedia"), resumen ejecutivo, gráficas de redes/ads, top screenshots, recomendaciones para el cliente. **No incluye** recomendaciones internas.
+- Reutiliza el patrón `html2pdf.js` que ya usamos en el proyecto.
 
-**Fase 3 — Gestión de accesos (UI)**
-Panel simple en `/admin/clientes/:id/accesos` para invitar/revocar viewers sin tocar SQL.
+## Cómo lo alimentamos (solo KiMedia admin)
 
-## Fuera de alcance ahora
+Panel admin por cliente en `/admin/cliente/:id/portal` (ya existe la ruta, la expandimos). Tabs:
+- **Datasets** — subir xlsx/csv de Fanpage Karma, subir xlsx/csv de ads (Meta/X/otras), subir screenshots. Cada archivo se etiqueta con `week_start`, `source` (fanpage_karma / meta_ads / x_ads / other), `platform` opcional, y notas.
+- **Listening** — pegar/importar `.txt` de WhatsApp (parser semanal → agrupa por día).
+- **Recomendaciones semanales** — form por semana con dos áreas: cliente / equipo interno.
+- **Reportes narrativos** — lo que ya construimos (`client_portal_reports`) sigue vivo para análisis largos tipo Actinver histórico.
+- **Acceso** — muestra el email/password del "usuario portal" del cliente, permite resetear password y (a futuro) invitar usuarios individuales.
 
-- Rankings.kimedia.mx y tendencias.kimedia.mx (proyectos separados, después).
-- Ingesta automática de Fanpage Karma o generación de análisis en el portal.
-- Dashboards con métricas — Fase 1 es solo repositorio/lectura.
+## Modelo de datos nuevo
 
-## Detalles técnicos
+Genérico — sirve para Actinver y para cualquier cliente futuro que enchufemos.
 
-- Custom domain: `actinver.kimedia.mx` se conecta desde Project Settings → Domains como subdominio adicional; SSL auto.
-- Detector: `const isActinverPortal = window.location.hostname === 'actinver.kimedia.mx'` en el root router; en dev se puede forzar con `?portal=actinver`.
-- `types.ts` se regenera tras la migración; el código del portal se escribe después.
-- No se toca `ObjectivesView`, `KanbanBoard`, `WeeklyHealthView`, `ClientsHub`, ni ninguna vista existente de KiMedia.
+- `client_portal_datasets` — un registro por archivo subido. Campos: `client_id`, `source` (enum: `fanpage_karma`, `meta_ads`, `x_ads`, `tiktok_ads`, `screenshot`, `other`), `platform` (nullable: `facebook`, `instagram`, `x`, `tiktok`, ...), `period_start`, `period_end`, `storage_path`, `parsed_data` (jsonb con las métricas ya normalizadas para graficar), `notes`, `uploaded_by`.
+- `client_portal_listening_entries` — un registro por día. Campos: `client_id`, `entry_date`, `content_md`, `source` (`whatsapp_txt` / `manual`), `raw_source_ref` (opcional).
+- `client_portal_weekly_recommendations` — un registro por semana + cliente. Campos: `client_id`, `week_start`, `for_client_md`, `for_team_md`, `priority`.
+- `client_portal_credentials` — un registro por cliente. Campos: `client_id`, `portal_user_id` (fk a auth.users del "usuario técnico"), notas. Permite mostrar en admin qué cuenta usa cada cliente.
 
-## Pendiente que me confirmes al aprobar
+Se conservan tal cual: `client_portal_reports`, `client_portal_attachments`, `client_access`, bucket `client-reports`, rol `client_viewer`.
 
-1. Emails viewers Actinver iniciales (o "por ahora solo admins, viewers después").
-2. Cuando arranquemos Fase 2, me pegas el .txt completo aquí.
+Nuevo bucket privado `client-datasets` para xlsx/csv/screenshots, con RLS equivalente (viewer solo si `has_client_access`, admin todo).
+
+## RLS (resumen en lenguaje humano)
+
+- Cliente logueado ve **solo** las filas de las tablas nuevas cuyo `client_id` esté en su `client_access`, y **nunca** el campo `for_team_md`.
+- Admin de KiMedia ve todo y edita todo.
+- Los archivos en `client-datasets` siguen la misma regla vía `has_client_access`.
+
+## Fases de entrega
+
+**Fase A — Fundación multi-cliente (siguiente entrega)**
+1. Migración: tablas nuevas + bucket `client-datasets` + RLS + GRANTs.
+2. Refactor de `src/lib/clientPortal.ts` para que el mapa de portales sea la única fuente de verdad (ya lo es; solo lo dejamos listo para agregar clientes con una línea).
+3. Nuevo home del portal: shell con filtro de fechas global + tabs (Performance / Recomendaciones / Reportes narrativos).
+4. Recomendaciones semanales (lectura en portal, edición en admin) con separación cliente/equipo.
+5. Botón "Descargar PDF" con rango activo.
+
+**Fase B — Ingesta de datos**
+6. Uploader admin de xlsx/csv de Fanpage Karma con parser → `parsed_data`.
+7. Uploader de ads (Meta primero, X y otras después) con parser.
+8. Uploader de screenshots con caption/fecha.
+9. Importador de `.txt` WhatsApp → `client_portal_listening_entries` (aplica al histórico Actinver que me vas a pegar).
+
+**Fase C — Multi-usuario opcional**
+10. UI para invitar usuarios individuales a un cliente cuando lo pidas. La estructura ya está lista.
+
+**Fuera de alcance ahora**: rankings públicos entre industrias, ingesta automática vía API de Fanpage Karma/Meta, generación de recomendaciones con IA (podemos agregar después como asistente al escribirlas).
+
+## Lo que necesito de ti para arrancar Fase A
+
+1. **Nombre del cliente Actinver** para el "usuario portal" — sugiero `portal+actinver@kimedia.mx`. ¿OK o prefieres otro?
+2. Un ejemplo de export xlsx/csv de **Fanpage Karma** y uno de **Meta Ads** para diseñar el parser correcto en Fase B (no bloquea Fase A).
+3. El `.txt` completo del histórico de WhatsApp de Actinver cuando quieras (tampoco bloquea Fase A).
