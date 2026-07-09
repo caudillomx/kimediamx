@@ -117,8 +117,7 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
         filename: `${portal.slug}-reporte-${fromDate}_a_${toDate}.pdf`,
         html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
         jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-        pagebreak: { mode: ["css", "legacy"] },
-      }).from(pdfRef.current).save();
+      } as any).from(pdfRef.current).save();
       toast.success("PDF descargado", { id: "pdf" });
     } catch (e: any) {
       toast.error("No se pudo generar el PDF", { id: "pdf" });
