@@ -895,39 +895,128 @@ export type Database = {
           },
         ]
       }
+      client_portal_listening_analyses: {
+        Row: {
+          alerts: Json | null
+          client_id: string
+          created_at: string
+          entries_count: number
+          executive_summary: string | null
+          generated_by: string | null
+          id: string
+          key_findings: Json | null
+          recommendations_client: string | null
+          recommendations_team: string | null
+          sentiment_breakdown: Json | null
+          top_mentions: Json | null
+          top_topics: Json | null
+          updated_at: string
+          week_end: string
+          week_start: string
+        }
+        Insert: {
+          alerts?: Json | null
+          client_id: string
+          created_at?: string
+          entries_count?: number
+          executive_summary?: string | null
+          generated_by?: string | null
+          id?: string
+          key_findings?: Json | null
+          recommendations_client?: string | null
+          recommendations_team?: string | null
+          sentiment_breakdown?: Json | null
+          top_mentions?: Json | null
+          top_topics?: Json | null
+          updated_at?: string
+          week_end: string
+          week_start: string
+        }
+        Update: {
+          alerts?: Json | null
+          client_id?: string
+          created_at?: string
+          entries_count?: number
+          executive_summary?: string | null
+          generated_by?: string | null
+          id?: string
+          key_findings?: Json | null
+          recommendations_client?: string | null
+          recommendations_team?: string | null
+          sentiment_breakdown?: Json | null
+          top_mentions?: Json | null
+          top_topics?: Json | null
+          updated_at?: string
+          week_end?: string
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_portal_listening_analyses_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_portal_listening_entries: {
         Row: {
+          actors: string[] | null
+          analyzed_at: string | null
           client_id: string
           content_md: string
           created_at: string
           created_by: string | null
           entry_date: string
           id: string
+          mentions: Json | null
           raw_source_ref: string | null
+          sentiment: string | null
+          sentiment_score: number | null
           source: string
+          summary: string | null
+          topics: string[] | null
           updated_at: string
+          urgency: string | null
         }
         Insert: {
+          actors?: string[] | null
+          analyzed_at?: string | null
           client_id: string
           content_md: string
           created_at?: string
           created_by?: string | null
           entry_date: string
           id?: string
+          mentions?: Json | null
           raw_source_ref?: string | null
+          sentiment?: string | null
+          sentiment_score?: number | null
           source?: string
+          summary?: string | null
+          topics?: string[] | null
           updated_at?: string
+          urgency?: string | null
         }
         Update: {
+          actors?: string[] | null
+          analyzed_at?: string | null
           client_id?: string
           content_md?: string
           created_at?: string
           created_by?: string | null
           entry_date?: string
           id?: string
+          mentions?: Json | null
           raw_source_ref?: string | null
+          sentiment?: string | null
+          sentiment_score?: number | null
           source?: string
+          summary?: string | null
+          topics?: string[] | null
           updated_at?: string
+          urgency?: string | null
         }
         Relationships: [
           {
