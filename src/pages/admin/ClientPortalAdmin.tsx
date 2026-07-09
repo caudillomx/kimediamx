@@ -103,6 +103,12 @@ export default function ClientPortalAdmin() {
   const [importText, setImportText] = useState<string>("");
   const [importFileName, setImportFileName] = useState<string>("");
 
+  // Paste-text state
+  const [pasteText, setPasteText] = useState("");
+  const [pasteDate, setPasteDate] = useState(new Date().toISOString().slice(0, 10));
+  const [pasteMode, setPasteMode] = useState<"append" | "replace">("append");
+  const [pasting, setPasting] = useState(false);
+
   useEffect(() => {
     (async () => {
       const { data: s } = await supabase.auth.getSession();
@@ -367,6 +373,53 @@ export default function ClientPortalAdmin() {
     const { error } = await supabase.from("client_portal_listening_entries").delete().eq("id", id);
     if (error) { toast.error(error.message); return; }
     toast.success("Eliminada"); load();
+  };
+
+  const importPaste = async () => {
+    if (!clientId || !pasteText.trim()) return;
+    setPasting(true);
+    try {
+      const { data: s } = await supabase.auth.getSession();
+      const hasHeaders = /\[\d{1,2}\/\d{1,2}\/\d{2,4},\s*\d{1,2}:\d{2}/.test(pasteText);
+      let rows: any[] = [];
+      if (hasHeaders) {
+        const parsed = parseWhatsappTxt(pasteText);
+        if (parsed.length === 0) { toast.error("No se detectaron entradas con formato WhatsApp"); return; }
+        rows = parsed.map((p) => ({
+          client_id: clientId,
+          entry_date: p.entry_date,
+          content_md: p.content_md,
+          source: "whatsapp_txt",
+          created_by: s.session?.user.id,
+        }));
+      } else {
+        rows = [{
+          client_id: clientId,
+          entry_date: pasteDate,
+          content_md: pasteText.trim(),
+          source: "manual",
+          created_by: s.session?.user.id,
+        }];
+      }
+      const dates = Array.from(new Set(rows.map((r) => r.entry_date)));
+      if (pasteMode === "replace") {
+        await supabase.from("client_portal_listening_entries")
+          .delete().eq("client_id", clientId).in("entry_date", dates);
+        const { error } = await supabase.from("client_portal_listening_entries").insert(rows);
+        if (error) throw error;
+        toast.success(`Reemplazadas ${rows.length} entradas (${dates.length} fecha${dates.length > 1 ? "s" : ""})`);
+      } else {
+        const { error } = await supabase.from("client_portal_listening_entries").insert(rows);
+        if (error) throw error;
+        toast.success(`Agregada${rows.length > 1 ? "s" : ""} ${rows.length} entrada${rows.length > 1 ? "s" : ""}`);
+      }
+      setPasteText("");
+      load();
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setPasting(false);
+    }
   };
 
   if (checking) return <div className="min-h-screen bg-background" />;
