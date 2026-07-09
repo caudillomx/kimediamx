@@ -8,7 +8,7 @@ import { Interaction } from "@/hooks/useInteractionsData";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, Target, CheckSquare, TrendingUp, MessageSquare, AlertTriangle, ArrowRight } from "lucide-react";
+import { Search, Target, CheckSquare, TrendingUp, MessageSquare, AlertTriangle, ArrowRight, Globe } from "lucide-react";
 import { isPast, parseISO } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import WeeklyHealthView from "./WeeklyHealthView";
@@ -170,6 +170,15 @@ const ClientsHub = ({ items, deals, objectives, interactions, onOpenClient }: Pr
                   className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline cursor-pointer"
                 >
                   Workspace <ArrowRight className="w-3 h-3" />
+                </div>
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={(e) => { e.stopPropagation(); navigate(`/admin/cliente/${c.id}/portal`); }}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); navigate(`/admin/cliente/${c.id}/portal`); } }}
+                  className="mt-2 ml-3 inline-flex items-center gap-1 text-xs font-medium text-coral hover:underline cursor-pointer"
+                >
+                  <Globe className="w-3 h-3" /> Portal
                 </div>
               </Card>
             </motion.button>
