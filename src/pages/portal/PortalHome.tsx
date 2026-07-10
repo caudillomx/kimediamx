@@ -262,11 +262,43 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
     })();
   }, [portal.clientId, fromDate, toDate]);
 
+  const weekLabel = current ? fmtWeekShort(current.week_start, current.week_end) : "";
+
   const sentTotals = useMemo(() => {
     const s = rangeAgg.sent;
     const total = s.positivo + s.neutral + s.negativo + s.crisis;
     return { total, ...s };
   }, [rangeAgg]);
+
+  const displayExecutiveSummary = useMemo(() => {
+    const summary = current?.executive_summary ?? "";
+    const contradictsCounts = /no se detectaron|volumen nulo|silencio digital|sin actividad relevante/i.test(summary);
+    if (!current || !contradictsCounts || rangeAgg.totalMentions <= 0) return summary;
+
+    const posPct = sentTotals.total ? Math.round((sentTotals.positivo / sentTotals.total) * 100) : null;
+    const negPct = sentTotals.total ? Math.round((sentTotals.negativo / sentTotals.total) * 100) : null;
+    const crisisPct = sentTotals.total ? Math.round((sentTotals.crisis / sentTotals.total) * 100) : null;
+    const sentimentLine = posPct !== null
+      ? `El balance de sentimiento fue ${posPct}% positivo, ${negPct}% negativo y ${crisisPct}% crisis, calculado directamente desde la bitácora procesada.`
+      : "El balance de sentimiento se muestra en las tarjetas y gráficas a partir de la bitácora procesada.";
+
+    return `Durante la semana ${weekLabel}, se analizaron ${rangeAgg.totalMentions} menciones detectadas en el monitoreo. ${sentimentLine} Las gráficas de esta vista son la fuente operativa para volumen, canales, entidades y evolución del período.`;
+  }, [current, rangeAgg.totalMentions, sentTotals, weekLabel]);
+
+  const pdfAnalysis = useMemo(() => {
+    if (!current) return null;
+    return {
+      ...current,
+      executive_summary: displayExecutiveSummary,
+      entries_count: rangeAgg.totalMentions || current.entries_count,
+      sentiment_breakdown: sentTotals.total ? {
+        positivo: sentTotals.positivo,
+        neutral: sentTotals.neutral,
+        negativo: sentTotals.negativo,
+        crisis: sentTotals.crisis,
+      } : current.sentiment_breakdown,
+    };
+  }, [current, displayExecutiveSummary, rangeAgg.totalMentions, sentTotals]);
 
   const deltaMentions = useMemo(() => {
     if (!prevRangeAgg) return null;
@@ -312,8 +344,6 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
       </div>
     );
   }
-
-  const weekLabel = current ? fmtWeekShort(current.week_start, current.week_end) : "";
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -471,13 +501,13 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
 
                 {/* Panorama: resumen ejecutivo + alertas + hallazgos + análisis en un solo tab */}
                 <TabsContent value="panorama" className="mt-5 space-y-5">
-                  {current?.executive_summary && (
+                  {displayExecutiveSummary && (
                     <div className="glass rounded-2xl p-6">
                       <div className="flex items-center gap-2 mb-3">
                         <Sparkles className="w-4 h-4 text-coral" />
                         <span className="text-[11px] uppercase tracking-widest text-muted-foreground">Resumen ejecutivo</span>
                       </div>
-                      <p className="text-[15px] leading-relaxed">{current.executive_summary}</p>
+                      <p className="text-[15px] leading-relaxed">{displayExecutiveSummary}</p>
                       <p className="text-[11px] text-muted-foreground mt-3 italic">
                         Nota: los conteos y gráficas de abajo son la fuente de verdad — reflejan cada mención individual detectada en la bitácora.
                       </p>
@@ -602,7 +632,7 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
 
         {/* Hidden PDF template */}
         <div className="fixed -left-[10000px] top-0" aria-hidden>
-          <PortalPdfTemplate ref={pdfRef} portal={portal} logoUrl={logoUrl} analysis={current} weekLabel={weekLabel} charts={pdfChartData} />
+          <PortalPdfTemplate ref={pdfRef} portal={portal} logoUrl={logoUrl} analysis={pdfAnalysis} weekLabel={weekLabel} charts={pdfChartData} />
         </div>
       </main>
 

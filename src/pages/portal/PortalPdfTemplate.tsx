@@ -241,13 +241,15 @@ function VolumeBarsSvg({ data }: { data: { date: string; positivo: number; neutr
       })}
       {data.map((d, i) => {
         let cursor = H - P.b;
+        const gap = bw >= 5 ? 2 : 0;
+        const barW = Math.max(0.5, bw - gap * 2);
         return (
           <g key={i} transform={`translate(${P.l + i * bw}, 0)`}>
             {keys.map(k => {
               const h = scaleY(d[k] as number);
               const y = cursor - h; cursor -= h;
               if (h <= 0) return null;
-              return <rect key={k} x={2} y={y} width={bw - 4} height={h} fill={SENT_COLORS[k]} />;
+              return <rect key={k} x={gap} y={y} width={barW} height={h} fill={SENT_COLORS[k]} />;
             })}
             <text x={bw / 2} y={H - P.b + 12} fontSize={7} fill="#64748b" textAnchor="middle">{d.date.slice(5)}</text>
           </g>
