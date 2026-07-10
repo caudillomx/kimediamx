@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   LineChart, Line, PieChart, Pie, Cell, Legend, CartesianGrid,
-  Treemap, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
+  RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   AreaChart, Area, ScatterChart, Scatter, ZAxis,
   RadialBarChart, RadialBar,
 } from "recharts";
@@ -553,15 +553,7 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
           {entitiesTreemap.length === 0 ? (
             <p className="text-xs text-muted-foreground py-8 text-center">Sin entidades para mapear.</p>
           ) : (
-            <ResponsiveContainer width="100%" height={260}>
-              <Treemap
-                data={entitiesTreemap}
-                dataKey="size"
-                stroke="#fff"
-                content={<TreemapCell />}
-                isAnimationActive={false}
-              />
-            </ResponsiveContainer>
+            <EntityTreemap data={entitiesTreemap} />
           )}
         </Card>
 
@@ -677,34 +669,30 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
   );
 }
 
-function TreemapCell(props: any) {
-  const { x, y, width, height, size, sentiment, root } = props;
-  const safeWidth = Math.max(0, Number(width) || 0);
-  const safeHeight = Math.max(0, Number(height) || 0);
-  if (safeWidth < 2 || safeHeight < 2) return null;
+function EntityTreemap({ data }: { data: { name: string; size: number; sentiment?: string }[] }) {
   const sColor: Record<string, string> = {
     positivo: "#10b981", neutral: "#64748b", negativo: "#f59e0b", crisis: "#ef4444",
   };
-  const name = String(props?.name ?? props?.payload?.name ?? "");
-  const node = (root?.children ?? []).find((n: any) => n.name === name);
-  const s = node?.sentiment ?? sentiment;
-  const fill = sColor[s] ?? "#ef6a4d";
-  const showLabel = safeWidth > 60 && safeHeight > 24;
-  const showCount = safeWidth > 60 && safeHeight > 40;
-  const maxChars = Math.max(1, Math.floor(safeWidth / 7) - 1);
+  const total = Math.max(1, data.reduce((sum, item) => sum + item.size, 0));
   return (
-    <g>
-      <rect x={x} y={y} width={safeWidth} height={safeHeight} fill={fill} fillOpacity={0.75} stroke="#fff" strokeWidth={2} />
-      {showLabel && (
-        <text x={x + 6} y={y + 16} fill="#fff" fontSize={11} fontWeight={600}>
-          {name.length > maxChars ? name.slice(0, maxChars) + "…" : name}
-        </text>
-      )}
-      {showCount && (
-        <text x={x + 6} y={y + 30} fill="#fff" fontSize={10} fillOpacity={0.85}>
-          ×{size}
-        </text>
-      )}
-    </g>
+    <div className="h-[260px] flex flex-wrap gap-1 overflow-hidden rounded-lg">
+      {data.map((item) => {
+        const share = item.size / total;
+        const basis = `${Math.max(18, Math.min(62, 100 * Math.sqrt(share)))}%`;
+        const grow = Math.max(1, item.size);
+        const bg = sColor[item.sentiment ?? ""] ?? "#ef6a4d";
+        return (
+          <div
+            key={item.name}
+            className="min-w-[86px] min-h-[54px] flex flex-col justify-between rounded-md p-2 overflow-hidden text-white"
+            style={{ flex: `${grow} 1 ${basis}`, background: bg }}
+            title={`${item.name}: ${item.size}`}
+          >
+            <span className="text-[11px] font-semibold leading-tight line-clamp-2">{item.name}</span>
+            <span className="text-[10px] opacity-85">×{item.size}</span>
+          </div>
+        );
+      })}
+    </div>
   );
 }
