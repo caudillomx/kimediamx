@@ -192,7 +192,9 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
 
   const regeneratePeriod = async (silent = false) => {
     if (!isExtendedPeriod) return;
+    let queuedJob = false;
     setRegenerating(true);
+    setPeriodAnalysis(null);
     setPeriodJobId(null);
     if (!silent) toast.loading("Regenerando análisis del período…", { id: "regen" });
     try {
@@ -201,6 +203,7 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
       });
       if (error) throw error;
       if (data?.job_id) {
+        queuedJob = true;
         setPeriodJobId(data.job_id);
         setPeriodAnalysisErrorKey(null);
         if (!silent) toast.loading("Análisis en proceso…", { id: "regen" });
@@ -217,7 +220,7 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
       setPeriodJobId(null);
       toast.error(e.message ?? "No se pudo regenerar", { id: "regen" });
     } finally {
-      if (!periodJobId) setRegenerating(false);
+      if (!queuedJob) setRegenerating(false);
     }
   };
 
@@ -275,10 +278,10 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
   }, [periodJobId, isExtendedPeriod, activePeriodKey]);
 
   useEffect(() => {
-    if (!isExtendedPeriod || regenerating) return;
+    if (!isExtendedPeriod || regenerating || periodJobId) return;
     if (periodAnalysisKey === activePeriodKey || periodAnalysisErrorKey === activePeriodKey) return;
     regeneratePeriod(true);
-  }, [isExtendedPeriod, regenerating, activePeriodKey, periodAnalysisKey, periodAnalysisErrorKey]);
+  }, [isExtendedPeriod, regenerating, periodJobId, activePeriodKey, periodAnalysisKey, periodAnalysisErrorKey]);
 
   // Effective analysis for display: never show stale weekly text while an extended period is selected
   const effective: Analysis | null = isExtendedPeriod
