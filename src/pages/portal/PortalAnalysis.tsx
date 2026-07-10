@@ -680,3 +680,27 @@ function SlideKpi({ label, value, accent, hint }: { label: string; value: React.
     </div>
   );
 }
+
+function MilestonesLegend({ items }: { items: { date: string; title: string; detail: string; kind: string; color: string }[] }) {
+  return (
+    <div className="mt-3 rounded-lg border border-border/40 bg-background/30 p-3">
+      <div className="flex items-center gap-2 mb-2">
+        <Flag className="w-3.5 h-3.5 text-muted-foreground" />
+        <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Hitos del período</span>
+      </div>
+      <div className="grid gap-1.5 md:grid-cols-2">
+        {items.map((m, i) => (
+          <div key={i} className="flex items-start gap-2 text-xs">
+            <span className="mt-0.5 shrink-0 inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold text-white" style={{ background: m.color }}>H{i + 1}</span>
+            <div className="min-w-0">
+              <div className="font-medium leading-tight truncate">{m.title || m.kind}</div>
+              <div className="text-[10px] text-muted-foreground">
+                {new Date(m.date + "T00:00:00").toLocaleDateString("es-MX", { day: "numeric", month: "short" })} · {m.kind}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
