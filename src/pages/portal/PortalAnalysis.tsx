@@ -1169,7 +1169,7 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
                       <span
                         className="absolute -left-[13px] top-1 flex items-center justify-center w-6 h-6 rounded-full text-[10px] font-bold text-white ring-4 ring-background"
                         style={{ background: c }}
-                        title={`Impacto ${e.impact}`}
+                        title={`Impacto ${m.impact}`}
                       >
                         H{i + 1}
                       </span>
