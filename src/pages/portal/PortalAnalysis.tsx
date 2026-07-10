@@ -8,6 +8,7 @@ import {
   PolarAngleAxis, RadialBarChart, RadialBar, ReferenceDot,
 } from "recharts";
 import { Sparkles, Quote, AlertOctagon, Radio, Grid3x3, Gauge, TrendingUp, Flag } from "lucide-react";
+import { Lightbulb } from "lucide-react";
 
 type Entry = {
   entry_date: string;
@@ -355,6 +356,169 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
       .map(r => ({ date: r.date, score: +(r.sum / r.n).toFixed(2) }));
   }, [entries]);
 
+  // ---------- Insights narrativos (explicaciones) ----------
+
+  // Drivers de tonalidad: topics y entidades más asociados a cada polaridad
+  const sentimentDrivers = useMemo(() => {
+    const topicPolarity = new Map<string, { pos: number; neg: number; neu: number }>();
+    const entityPolarity = new Map<string, { pos: number; neg: number; neu: number; count: number }>();
+    for (const e of entries) {
+      const s = (e.sentiment ?? "neutral") as string;
+      const bucket = s === "positivo" ? "pos" : (s === "negativo" || s === "crisis") ? "neg" : "neu";
+      for (const t of (e.topics ?? [])) {
+        const row = topicPolarity.get(t) ?? { pos: 0, neg: 0, neu: 0 };
+        (row as any)[bucket]++;
+        topicPolarity.set(t, row);
+      }
+      for (const ent of (e.entities ?? [])) {
+        const name = typeof ent === "string" ? ent : ent?.name; if (!name) continue;
+        const localSent = (typeof ent === "object" && ent?.sentiment) ? ent.sentiment : s;
+        const b = localSent === "positivo" ? "pos" : (localSent === "negativo" || localSent === "crisis") ? "neg" : "neu";
+        const row = entityPolarity.get(name) ?? { pos: 0, neg: 0, neu: 0, count: 0 };
+        (row as any)[b]++; row.count++;
+        entityPolarity.set(name, row);
+      }
+    }
+    const negTopics = Array.from(topicPolarity.entries())
+      .filter(([_, v]) => v.neg > 0)
+      .sort((a, b) => b[1].neg - a[1].neg).slice(0, 4)
+      .map(([topic, v]) => ({ topic, count: v.neg }));
+    const posTopics = Array.from(topicPolarity.entries())
+      .filter(([_, v]) => v.pos > 0)
+      .sort((a, b) => b[1].pos - a[1].pos).slice(0, 4)
+      .map(([topic, v]) => ({ topic, count: v.pos }));
+    const negEntities = Array.from(entityPolarity.entries())
+      .filter(([_, v]) => v.neg > 0)
+      .sort((a, b) => b[1].neg - a[1].neg).slice(0, 3)
+      .map(([name, v]) => ({ name, count: v.neg }));
+    const posEntities = Array.from(entityPolarity.entries())
+      .filter(([_, v]) => v.pos > 0)
+      .sort((a, b) => b[1].pos - a[1].pos).slice(0, 3)
+      .map(([name, v]) => ({ name, count: v.pos }));
+    // Representative quotes
+    const negQuote = quotes.find(q => q.sentiment === "negativo" || q.sentiment === "crisis");
+    const posQuote = quotes.find(q => q.sentiment === "positivo");
+    return { negTopics, posTopics, negEntities, posEntities, negQuote, posQuote };
+  }, [entries, quotes]);
+
+  // Heatmap insights: día pico negativo y día pico positivo
+  const heatmapInsights = useMemo(() => {
+    const scan = (key: "positivo" | "negativo" | "crisis") => {
+      const row = heatmap.grid[key] ?? {};
+      let best = { day: "", value: 0 };
+      for (const d of DOW_LABELS) {
+        const v = row[d] ?? 0;
+        if (v > best.value) best = { day: d, value: v };
+      }
+      return best;
+    };
+    return {
+      pos: scan("positivo"),
+      neg: scan("negativo"),
+      crisis: scan("crisis"),
+    };
+  }, [heatmap]);
+
+  // Salud reputacional: desglose explicativo
+  const reputationBreakdown = useMemo(() => {
+    const baseline = 50;
+    const sentimentComponent = Math.round(50 * reputationScore.avg);
+    const crisisPenalty = Math.min(30, reputationScore.crisisEvents * 6);
+    const parts = [
+      { label: "Base neutral", value: baseline, tone: "neutral" as const },
+      { label: "Aporte del sentimiento promedio", value: sentimentComponent, tone: sentimentComponent >= 0 ? "positivo" : "negativo" as any },
+      { label: "Penalización por crisis / alto impacto", value: -crisisPenalty, tone: crisisPenalty > 0 ? "negativo" : "neutral" as any },
+    ];
+    const explanation = (() => {
+      const bits: string[] = [];
+      if (sentimentComponent > 15) bits.push("el tono predominante fue claramente positivo");
+      else if (sentimentComponent > 0) bits.push("el tono predominante fue ligeramente positivo");
+      else if (sentimentComponent < -15) bits.push("el tono predominante fue marcadamente negativo");
+      else if (sentimentComponent < 0) bits.push("el tono predominante fue ligeramente negativo");
+      else bits.push("el tono predominante fue neutral");
+      if (crisisPenalty > 0) bits.push(`se detectaron ${reputationScore.crisisEvents} evento(s) de alto impacto que restan al score`);
+      else bits.push("no se detectaron eventos de crisis o alto impacto");
+      return bits.join(" y ") + ".";
+    })();
+    return { parts, explanation };
+  }, [reputationScore]);
+
+  // Insights por plataforma: qué está pasando en cada una
+  const platformInsights = useMemo(() => {
+    // Agrupa entradas por plataforma (una entrada puede aparecer en varias plataformas)
+    const perPlatform = new Map<string, {
+      total: number;
+      pos: number; neg: number; neu: number; crisis: number;
+      topics: Map<string, number>;
+      entities: Map<string, number>;
+    }>();
+    for (const e of entries) {
+      const chs = (e.channels ?? []).map((c: any) => ({
+        name: typeof c === "string" ? c : c?.name,
+        count: typeof c?.count === "number" ? c.count : 1,
+      })).filter(c => c.name);
+      for (const ch of chs) {
+        const key = ch.name;
+        const row = perPlatform.get(key) ?? { total: 0, pos: 0, neg: 0, neu: 0, crisis: 0, topics: new Map(), entities: new Map() };
+        row.total += ch.count;
+        const s = (e.sentiment ?? "neutral") as string;
+        if (s === "positivo") row.pos += ch.count;
+        else if (s === "negativo") row.neg += ch.count;
+        else if (s === "crisis") row.crisis += ch.count;
+        else row.neu += ch.count;
+        for (const t of (e.topics ?? []).slice(0, 3)) row.topics.set(t, (row.topics.get(t) ?? 0) + 1);
+        for (const ent of (e.entities ?? []).slice(0, 3)) {
+          const nm = typeof ent === "string" ? ent : ent?.name;
+          if (nm) row.entities.set(nm, (row.entities.get(nm) ?? 0) + 1);
+        }
+        perPlatform.set(key, row);
+      }
+    }
+    return platforms.map(p => {
+      const row = perPlatform.get(p.name);
+      if (!row) return { ...p, insight: "", dominant: "neutral", topTopics: [] as string[], topEntities: [] as string[] };
+      const totalSent = row.pos + row.neg + row.neu + row.crisis || 1;
+      const negPct = Math.round(((row.neg + row.crisis) / totalSent) * 100);
+      const posPct = Math.round((row.pos / totalSent) * 100);
+      const dominant = row.crisis > 0 && (row.crisis + row.neg) >= row.pos ? "crisis"
+        : row.neg > row.pos ? "negativo"
+        : row.pos > row.neg ? "positivo" : "neutral";
+      const topTopics = Array.from(row.topics.entries()).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([t]) => t);
+      const topEntities = Array.from(row.entities.entries()).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([n]) => n);
+      const insight = (() => {
+        const parts: string[] = [];
+        if (dominant === "positivo") parts.push(`Conversación mayoritariamente positiva (${posPct}%)`);
+        else if (dominant === "negativo") parts.push(`Predomina la crítica (${negPct}% negativo)`);
+        else if (dominant === "crisis") parts.push(`Foco de crisis activo (${negPct}% negativo)`);
+        else parts.push(`Volumen neutral, sin polarización clara`);
+        if (topTopics.length) parts.push(`Ejes: ${topTopics.join(", ")}`);
+        if (topEntities.length) parts.push(`Actores citados: ${topEntities.join(", ")}`);
+        return parts.join(". ") + ".";
+      })();
+      return { ...p, insight, dominant, negPct, posPct, topTopics, topEntities };
+    });
+  }, [entries, platforms]);
+
+  // Detalles por narrativa: sentimiento dominante + snippet + fechas
+  const narrativeDetails = useMemo(() => {
+    return narratives.map(n => {
+      const related = entries.filter(e => (e.topics ?? []).includes(n.topic));
+      const sentCount: Record<string, number> = { positivo: 0, neutral: 0, negativo: 0, crisis: 0 };
+      for (const e of related) sentCount[e.sentiment ?? "neutral"] = (sentCount[e.sentiment ?? "neutral"] ?? 0) + 1;
+      const dominant = (Object.entries(sentCount).sort((a, b) => b[1] - a[1])[0] ?? ["neutral"])[0];
+      const snippet = related.map(e => e.summary).filter(Boolean)[0] ?? "";
+      const entities = new Set<string>();
+      for (const e of related) for (const ent of (e.entities ?? []).slice(0, 3)) {
+        const nm = typeof ent === "string" ? ent : ent?.name;
+        if (nm) entities.add(nm);
+        if (entities.size >= 4) break;
+      }
+      const firstDate = related.map(e => e.entry_date).sort()[0] ?? "";
+      const lastDate = related.map(e => e.entry_date).sort().slice(-1)[0] ?? "";
+      return { ...n, dominant, snippet, entities: Array.from(entities), firstDate, lastDate };
+    });
+  }, [entries, narratives]);
+
   if (loading) return <div className="text-center py-12 text-muted-foreground">Cargando análisis...</div>;
 
   if (entries.length === 0) {
@@ -483,6 +647,27 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
               ))}
             </div>
           </div>
+          {platformInsights.length > 0 && (
+            <div className="mt-6">
+              <div className="flex items-center gap-2 mb-3">
+                <Lightbulb className="w-3.5 h-3.5 text-muted-foreground" />
+                <span className="text-[11px] uppercase tracking-widest text-muted-foreground">Qué está pasando en cada plataforma</span>
+              </div>
+              <div className="grid gap-2 md:grid-cols-2">
+                {platformInsights.map((p) => (
+                  <div key={p.name} className="rounded-lg border border-border/40 bg-background/40 p-3 border-l-4" style={{ borderLeftColor: p.color }}>
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="text-sm font-semibold" style={{ color: p.color }}>{p.name}</div>
+                      <Badge variant="outline" className="text-[9px]" style={{ borderColor: SENT_COLORS[p.dominant] ?? "#94a3b8", color: SENT_COLORS[p.dominant] ?? "#94a3b8" }}>
+                        {p.dominant}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground leading-relaxed">{p.insight}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </Card>
       )}
 
@@ -519,19 +704,89 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
         </div>
         {milestones.length > 0 && <MilestonesLegend items={milestones} />}
 
-        {narratives.length > 0 && (
+        {/* Análisis de sentimiento: drivers */}
+        <div className="mt-6 grid gap-3 md:grid-cols-2">
+          <div className="rounded-lg border border-border/40 p-4" style={{ background: `${SENT_COLORS.positivo}0d`, borderLeftWidth: 4, borderLeftColor: SENT_COLORS.positivo }}>
+            <div className="flex items-center gap-2 mb-2">
+              <Lightbulb className="w-3.5 h-3.5" style={{ color: SENT_COLORS.positivo }} />
+              <span className="text-[11px] uppercase tracking-widest font-semibold" style={{ color: SENT_COLORS.positivo }}>Qué está impulsando lo positivo</span>
+            </div>
+            {sentimentDrivers.posTopics.length === 0 && sentimentDrivers.posEntities.length === 0 ? (
+              <p className="text-xs text-muted-foreground">Sin señales positivas relevantes en el período.</p>
+            ) : (
+              <div className="space-y-1.5 text-xs">
+                {sentimentDrivers.posTopics.length > 0 && (
+                  <div><span className="text-muted-foreground">Temas: </span><span className="font-medium">{sentimentDrivers.posTopics.map(t => t.topic).join(", ")}</span></div>
+                )}
+                {sentimentDrivers.posEntities.length > 0 && (
+                  <div><span className="text-muted-foreground">Voces / actores: </span><span className="font-medium">{sentimentDrivers.posEntities.map(e => e.name).join(", ")}</span></div>
+                )}
+                {sentimentDrivers.posQuote && (
+                  <blockquote className="mt-2 pl-2 border-l-2 italic text-[11px] text-muted-foreground" style={{ borderColor: SENT_COLORS.positivo }}>
+                    "{sentimentDrivers.posQuote.text}" <span className="not-italic">— {sentimentDrivers.posQuote.author || sentimentDrivers.posQuote.source || sentimentDrivers.posQuote.date}</span>
+                  </blockquote>
+                )}
+              </div>
+            )}
+          </div>
+          <div className="rounded-lg border border-border/40 p-4" style={{ background: `${SENT_COLORS.negativo}0d`, borderLeftWidth: 4, borderLeftColor: SENT_COLORS.negativo }}>
+            <div className="flex items-center gap-2 mb-2">
+              <AlertOctagon className="w-3.5 h-3.5" style={{ color: SENT_COLORS.negativo }} />
+              <span className="text-[11px] uppercase tracking-widest font-semibold" style={{ color: SENT_COLORS.negativo }}>Qué está pesando en lo negativo</span>
+            </div>
+            {sentimentDrivers.negTopics.length === 0 && sentimentDrivers.negEntities.length === 0 ? (
+              <p className="text-xs text-muted-foreground">Sin focos negativos relevantes en el período.</p>
+            ) : (
+              <div className="space-y-1.5 text-xs">
+                {sentimentDrivers.negTopics.length > 0 && (
+                  <div><span className="text-muted-foreground">Temas: </span><span className="font-medium">{sentimentDrivers.negTopics.map(t => t.topic).join(", ")}</span></div>
+                )}
+                {sentimentDrivers.negEntities.length > 0 && (
+                  <div><span className="text-muted-foreground">Voces / actores: </span><span className="font-medium">{sentimentDrivers.negEntities.map(e => e.name).join(", ")}</span></div>
+                )}
+                {sentimentDrivers.negQuote && (
+                  <blockquote className="mt-2 pl-2 border-l-2 italic text-[11px] text-muted-foreground" style={{ borderColor: SENT_COLORS.negativo }}>
+                    "{sentimentDrivers.negQuote.text}" <span className="not-italic">— {sentimentDrivers.negQuote.author || sentimentDrivers.negQuote.source || sentimentDrivers.negQuote.date}</span>
+                  </blockquote>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {narrativeDetails.length > 0 && (
           <div className="mt-6">
             <div className="text-[11px] uppercase tracking-widest text-muted-foreground mb-3">Narrativas dominantes</div>
-            <div className="grid gap-2 md:grid-cols-2">
-              {narratives.map((n) => (
-                <div key={n.topic} className="flex items-center gap-3 p-3 rounded-lg bg-background/40 border border-border/40">
-                  <div className="w-12 h-12 rounded-lg flex items-center justify-center text-sm font-bold text-white shrink-0" style={{ background: n.color }}>
-                    {n.pct}%
+            <div className="grid gap-3 md:grid-cols-2">
+              {narrativeDetails.map((n) => (
+                <div key={n.topic} className="p-4 rounded-lg bg-background/40 border border-border/40 border-l-4" style={{ borderLeftColor: n.color }}>
+                  <div className="flex items-start gap-3 mb-2">
+                    <div className="w-12 h-12 rounded-lg flex items-center justify-center text-sm font-bold text-white shrink-0" style={{ background: n.color }}>
+                      {n.pct}%
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <div className="text-sm font-semibold truncate">{n.topic}</div>
+                        <Badge variant="outline" className="text-[9px]" style={{ borderColor: SENT_COLORS[n.dominant] ?? "#94a3b8", color: SENT_COLORS[n.dominant] ?? "#94a3b8" }}>{n.dominant}</Badge>
+                      </div>
+                      <div className="text-[10px] text-muted-foreground">
+                        {n.days} día{n.days === 1 ? "" : "s"} activos
+                        {n.firstDate && n.lastDate && n.firstDate !== n.lastDate && (
+                          <> · del {new Date(n.firstDate + "T00:00:00").toLocaleDateString("es-MX", { day: "numeric", month: "short" })} al {new Date(n.lastDate + "T00:00:00").toLocaleDateString("es-MX", { day: "numeric", month: "short" })}</>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <div className="text-sm font-semibold truncate">{n.topic}</div>
-                    <div className="text-[10px] text-muted-foreground">Presente en {n.days} día{n.days === 1 ? "" : "s"} del período</div>
-                  </div>
+                  {n.snippet && (
+                    <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">{n.snippet}</p>
+                  )}
+                  {n.entities.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {n.entities.map((e) => (
+                        <span key={e} className="text-[10px] px-2 py-0.5 rounded-full bg-background/60 border border-border/40 text-muted-foreground">{e}</span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -610,6 +865,26 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
               {DOW_LABELS.map(d => <div key={d} className="text-[9px] text-center text-muted-foreground uppercase tracking-wider">{d}</div>)}
             </div>
           </div>
+          <div className="mt-4 rounded-lg border border-border/40 bg-background/40 p-3">
+            <div className="flex items-center gap-2 mb-2">
+              <Lightbulb className="w-3.5 h-3.5 text-muted-foreground" />
+              <span className="text-[11px] uppercase tracking-widest text-muted-foreground">Lectura del heatmap</span>
+            </div>
+            <ul className="text-xs text-muted-foreground space-y-1 leading-relaxed">
+              {heatmapInsights.pos.day && (
+                <li>• Los <span className="font-semibold text-foreground">{heatmapInsights.pos.day}</span> concentran el mayor volumen positivo ({heatmapInsights.pos.value} menciones): buena ventana para lanzar mensajes propios.</li>
+              )}
+              {heatmapInsights.neg.day && heatmapInsights.neg.value > 0 && (
+                <li>• Los <span className="font-semibold text-foreground">{heatmapInsights.neg.day}</span> son el día más crítico en negativo ({heatmapInsights.neg.value}): reforzar monitoreo y capacidad de respuesta rápida.</li>
+              )}
+              {heatmapInsights.crisis.value > 0 && (
+                <li>• Se registran picos de <span className="font-semibold" style={{ color: SENT_COLORS.crisis }}>crisis</span> los <span className="font-semibold text-foreground">{heatmapInsights.crisis.day}</span>: revisar detonantes recurrentes.</li>
+              )}
+              {(!heatmapInsights.pos.value && !heatmapInsights.neg.value && !heatmapInsights.crisis.value) && (
+                <li>Sin patrones semanales relevantes todavía.</li>
+              )}
+            </ul>
+          </div>
         </Card>
 
         <Card className="p-4 flex flex-col">
@@ -626,8 +901,26 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
               <div className="text-xs font-semibold" style={{ color: reputationScore.color }}>{reputationScore.label}</div>
             </div>
           </div>
-          <div className="text-[10px] text-muted-foreground text-center mt-1">
-            Score: {reputationScore.avg} · crisis: {reputationScore.crisisEvents}
+          <div className="mt-3 space-y-2">
+            <p className="text-[11px] text-muted-foreground leading-relaxed">{reputationBreakdown.explanation}</p>
+            <div className="space-y-1">
+              {reputationBreakdown.parts.map((p) => {
+                const isNeg = p.value < 0;
+                const isPos = p.value > 0;
+                const color = isNeg ? SENT_COLORS.negativo : isPos ? SENT_COLORS.positivo : "#94a3b8";
+                return (
+                  <div key={p.label} className="flex items-center justify-between text-[11px]">
+                    <span className="text-muted-foreground">{p.label}</span>
+                    <span className="font-semibold tabular-nums" style={{ color }}>{p.value > 0 ? "+" : ""}{p.value}</span>
+                  </div>
+                );
+              })}
+              <div className="flex items-center justify-between text-[11px] pt-1 border-t border-border/40">
+                <span className="font-semibold">Score total</span>
+                <span className="font-bold tabular-nums" style={{ color: reputationScore.color }}>{reputationScore.score}</span>
+              </div>
+            </div>
+            <div className="text-[10px] text-muted-foreground">Sentimiento promedio: {reputationScore.avg} · Crisis detectadas: {reputationScore.crisisEvents}</div>
           </div>
         </Card>
       </div>
