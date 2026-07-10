@@ -409,27 +409,36 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
     const uniq = (arr: string[]) => Array.from(new Set(arr)).sort();
     const negDatesU = uniq(negDates); const posDatesU = uniq(posDates);
     const negReading = (() => {
-      if (negEntries + crisisEntries === 0) return "";
+      const hasSignal = negEntries + crisisEntries > 0 || negTopics.length > 0 || negEntities.length > 0;
+      if (!hasSignal) return "";
       const who = negEntities.length ? negEntities.map(e => e.name).join(", ") : "";
       const what = negTopics.length ? negTopics.map(t => t.topic).slice(0, 3).join(", ") : "";
       const when = negDatesU.length ? negDatesU.slice(0, 3).map(fmt).join(", ") + (negDatesU.length > 3 ? "…" : "") : "";
       const parts: string[] = [];
-      parts.push(`Se detectaron ${negEntries + crisisEntries} día(s) con carga negativa${crisisEntries ? ` (incluyendo ${crisisEntries} de crisis)` : ""}.`);
-      if (what) parts.push(`El ruido gira en torno a ${what}.`);
-      if (who) parts.push(`Las voces más asociadas son ${who}.`);
-      if (when) parts.push(`Fechas clave: ${when}.`);
+      const totalNegMentions = negEntities.reduce((a, e) => a + e.count, 0) + negTopics.reduce((a, t) => a + t.count, 0);
+      if (negEntries + crisisEntries > 0) {
+        parts.push(`Se detectaron ${negEntries + crisisEntries} día(s) con carga negativa dominante${crisisEntries ? ` (incluyendo ${crisisEntries} de crisis)` : ""}.`);
+      } else {
+        parts.push(`El tono predominante no fue negativo, pero hay ${totalNegMentions || "algunas"} señal(es) puntual(es) de crítica que conviene monitorear.`);
+      }
+      if (what) parts.push(`El ruido gira en torno a: ${what}.`);
+      if (who) parts.push(`Voces más asociadas: ${who}.`);
+      if (when) parts.push(`Fechas con señal negativa: ${when}.`);
+      if (!what && !when && who) parts.push(`Sin un tema recurrente todavía — es una crítica aislada, no una narrativa instalada.`);
       return parts.join(" ");
     })();
     const posReading = (() => {
-      if (posEntries === 0) return "";
+      const hasSignal = posEntries > 0 || posTopics.length > 0 || posEntities.length > 0;
+      if (!hasSignal) return "";
       const who = posEntities.length ? posEntities.map(e => e.name).join(", ") : "";
       const what = posTopics.length ? posTopics.map(t => t.topic).slice(0, 3).join(", ") : "";
       const when = posDatesU.length ? posDatesU.slice(0, 3).map(fmt).join(", ") + (posDatesU.length > 3 ? "…" : "") : "";
       const parts: string[] = [];
-      parts.push(`Se registraron ${posEntries} día(s) con tono positivo.`);
-      if (what) parts.push(`Los temas que jalan son ${what}.`);
-      if (who) parts.push(`Impulsados por ${who}.`);
-      if (when) parts.push(`Fechas: ${when}.`);
+      if (posEntries > 0) parts.push(`Se registraron ${posEntries} día(s) con tono positivo dominante.`);
+      else parts.push(`Hay menciones positivas puntuales aunque no dominan la conversación del período.`);
+      if (what) parts.push(`Temas que jalan a favor: ${what}.`);
+      if (who) parts.push(`Impulsados por: ${who}.`);
+      if (when) parts.push(`Fechas con señal positiva: ${when}.`);
       return parts.join(" ");
     })();
     return {
