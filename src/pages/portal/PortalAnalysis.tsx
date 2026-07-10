@@ -647,6 +647,27 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
               ))}
             </div>
           </div>
+          {platformInsights.length > 0 && (
+            <div className="mt-6">
+              <div className="flex items-center gap-2 mb-3">
+                <Lightbulb className="w-3.5 h-3.5 text-muted-foreground" />
+                <span className="text-[11px] uppercase tracking-widest text-muted-foreground">Qué está pasando en cada plataforma</span>
+              </div>
+              <div className="grid gap-2 md:grid-cols-2">
+                {platformInsights.map((p) => (
+                  <div key={p.name} className="rounded-lg border border-border/40 bg-background/40 p-3 border-l-4" style={{ borderLeftColor: p.color }}>
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="text-sm font-semibold" style={{ color: p.color }}>{p.name}</div>
+                      <Badge variant="outline" className="text-[9px]" style={{ borderColor: SENT_COLORS[p.dominant] ?? "#94a3b8", color: SENT_COLORS[p.dominant] ?? "#94a3b8" }}>
+                        {p.dominant}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground leading-relaxed">{p.insight}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </Card>
       )}
 
