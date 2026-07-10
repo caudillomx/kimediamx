@@ -306,6 +306,118 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
       .slice(0, 6);
   }, [entries]);
 
+  // ---------- "Quién dijo qué": agregados por medio y por perfil social ----------
+
+  const mediaCoverage = useMemo(() => {
+    type Item = {
+      outlet: string;
+      type: string;
+      count: number;
+      pos: number;
+      neg: number;
+      neu: number;
+      topics: Set<string>;
+      links: { url: string; headline: string | null; date: string; sentiment: string; topic: string; quote: string | null }[];
+    };
+    const byOutlet = new Map<string, Item>();
+    for (const e of entries) {
+      for (const m of (e.media_mentions ?? [])) {
+        const outlet = String(m?.outlet ?? "").trim();
+        if (!outlet) continue;
+        const key = outlet.toLowerCase();
+        const row = byOutlet.get(key) ?? {
+          outlet, type: String(m?.type ?? "portal"),
+          count: 0, pos: 0, neg: 0, neu: 0,
+          topics: new Set<string>(), links: [],
+        };
+        row.count++;
+        const s = String(m?.sentiment ?? "neutral");
+        if (s === "positivo") row.pos++;
+        else if (s === "negativo" || s === "crisis") row.neg++;
+        else row.neu++;
+        const topic = String(m?.topic ?? "").trim();
+        if (topic) row.topics.add(topic);
+        row.links.push({
+          url: String(m?.url ?? "") || "",
+          headline: m?.headline ?? null,
+          date: e.entry_date,
+          sentiment: s,
+          topic,
+          quote: m?.quote ?? null,
+        });
+        byOutlet.set(key, row);
+      }
+    }
+    return Array.from(byOutlet.values())
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 12)
+      .map(r => ({ ...r, topics: Array.from(r.topics).slice(0, 4) }));
+  }, [entries]);
+
+  const socialVoices = useMemo(() => {
+    type Item = {
+      profile: string;
+      handle: string | null;
+      platform: string;
+      count: number;
+      pos: number;
+      neg: number;
+      neu: number;
+      topics: Set<string>;
+      posts: { url: string; date: string; sentiment: string; topic: string; quote: string | null }[];
+    };
+    const byKey = new Map<string, Item>();
+    for (const e of entries) {
+      for (const p of (e.social_mentions ?? [])) {
+        const profile = String(p?.profile ?? "").trim();
+        const handle = p?.handle ? String(p.handle).trim() : null;
+        const platform = canonicalChannel(String(p?.platform ?? ""));
+        if (!profile && !handle) continue;
+        if (platform === "medios digitales") continue; // solo redes sociales
+        const key = `${platform}::${(handle || profile).toLowerCase()}`;
+        const row = byKey.get(key) ?? {
+          profile: profile || handle || "",
+          handle, platform,
+          count: 0, pos: 0, neg: 0, neu: 0,
+          topics: new Set<string>(), posts: [],
+        };
+        row.count++;
+        const s = String(p?.sentiment ?? "neutral");
+        if (s === "positivo") row.pos++;
+        else if (s === "negativo" || s === "crisis") row.neg++;
+        else row.neu++;
+        const topic = String(p?.topic ?? "").trim();
+        if (topic) row.topics.add(topic);
+        row.posts.push({
+          url: String(p?.url ?? "") || "",
+          date: e.entry_date,
+          sentiment: s,
+          topic,
+          quote: p?.quote ?? null,
+        });
+        byKey.set(key, row);
+      }
+    }
+    // agrupa además por plataforma
+    const list = Array.from(byKey.values()).sort((a, b) => b.count - a.count);
+    const byPlatform = new Map<string, typeof list>();
+    for (const v of list) {
+      const arr = byPlatform.get(v.platform) ?? [];
+      arr.push(v);
+      byPlatform.set(v.platform, arr);
+    }
+    return {
+      flat: list.slice(0, 30).map(v => ({ ...v, topics: Array.from(v.topics).slice(0, 3) })),
+      byPlatform: Array.from(byPlatform.entries())
+        .map(([platform, voices]) => ({
+          platform,
+          total: voices.reduce((a, v) => a + v.count, 0),
+          voices: voices.slice(0, 8).map(v => ({ ...v, topics: Array.from(v.topics).slice(0, 3) })),
+        }))
+        .sort((a, b) => b.total - a.total),
+    };
+  }, [entries]);
+
   // Hitos: selección estricta por pico de menciones + impacto del evento.
   // El número de hitos NO escala con la duración del período; se limita a los
   // días verdaderamente destacados. Si el análisis IA no trajo eventos para un
