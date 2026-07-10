@@ -6,17 +6,21 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LogOut, FileText, ShieldAlert, Download, Sparkles,
   Gauge, BarChart3, Lightbulb, History, ChevronLeft, ChevronRight,
-  AlertTriangle, TrendingUp, MessageCircle,
+  AlertTriangle, TrendingUp, MessageCircle, Sun, Moon, CalendarRange, X,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import type { ClientPortalConfig } from "@/lib/clientPortal";
 import PortalAnalysis from "./PortalAnalysis";
 import PortalPdfTemplate from "./PortalPdfTemplate";
+import type { DateRange } from "react-day-picker";
 
 type Analysis = {
   id: string;
@@ -74,7 +78,20 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
   const [denied, setDenied] = useState(false);
   const [selectedWeek, setSelectedWeek] = useState<string | null>(null);
   const [compareKey, setCompareKey] = useState("week");
+  const [customRange, setCustomRange] = useState<DateRange | undefined>();
+  const [theme, setTheme] = useState<"dark" | "light">(() => {
+    if (typeof window === "undefined") return "dark";
+    return (localStorage.getItem("portal-theme") as "dark" | "light") || "dark";
+  });
   const pdfRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    localStorage.setItem("portal-theme", theme);
+    const root = document.documentElement;
+    if (theme === "light") root.classList.add("theme-light");
+    else root.classList.remove("theme-light");
+    return () => { root.classList.remove("theme-light"); };
+  }, [theme]);
 
   useEffect(() => {
     (async () => {
@@ -119,13 +136,19 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
   const prevWeek = currentIdx >= 0 && currentIdx < analyses.length - 1 ? analyses[currentIdx + 1] : null;
 
   const { fromDate, toDate } = useMemo(() => {
+    if (customRange?.from && customRange?.to) {
+      return {
+        fromDate: customRange.from.toISOString().slice(0, 10),
+        toDate: customRange.to.toISOString().slice(0, 10),
+      };
+    }
     if (!current) return { fromDate: "1900-01-01", toDate: "2999-12-31" };
     const weeks = COMPARE_OPTIONS.find(o => o.key === compareKey)?.weeks ?? 1;
     if (weeks === 1) return { fromDate: current.week_start, toDate: current.week_end };
     const end = new Date(current.week_end + "T00:00:00");
     const start = new Date(end); start.setDate(start.getDate() - 7 * weeks + 1);
     return { fromDate: start.toISOString().slice(0, 10), toDate: current.week_end };
-  }, [current, compareKey]);
+  }, [current, compareKey, customRange]);
 
   const sentTotals = useMemo(() => {
     const s = current?.sentiment_breakdown ?? {};
@@ -210,6 +233,9 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
             <Button variant="outline" size="sm" onClick={downloadPdf} disabled={!current}>
               <Download className="w-4 h-4 mr-2" /> PDF de la semana
             </Button>
+            <Button variant="ghost" size="icon" onClick={() => setTheme(t => t === "dark" ? "light" : "dark")} title="Cambiar tema" className="h-9 w-9">
+              {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </Button>
             <Button variant="ghost" size="sm" onClick={handleLogout}>
               <LogOut className="w-4 h-4 mr-2" /> Salir
             </Button>
@@ -244,7 +270,7 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
                 ))}
               </SelectContent>
             </Select>
-            <Select value={compareKey} onValueChange={setCompareKey}>
+            <Select value={compareKey} onValueChange={(v) => { setCompareKey(v); setCustomRange(undefined); }} disabled={!!customRange?.from && !!customRange?.to}>
               <SelectTrigger className="w-[190px] h-9"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {COMPARE_OPTIONS.map(o => (
@@ -252,6 +278,36 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
                 ))}
               </SelectContent>
             </Select>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant={customRange?.from && customRange?.to ? "default" : "outline"}
+                  size="sm"
+                  className="h-9"
+                >
+                  <CalendarRange className="w-4 h-4 mr-2" />
+                  {customRange?.from && customRange?.to
+                    ? `${customRange.from.toLocaleDateString("es-MX", { day: "numeric", month: "short" })} – ${customRange.to.toLocaleDateString("es-MX", { day: "numeric", month: "short" })}`
+                    : "Rango personalizado"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <Calendar
+                  mode="range"
+                  selected={customRange}
+                  onSelect={setCustomRange}
+                  numberOfMonths={2}
+                  className={cn("p-3 pointer-events-auto")}
+                />
+                {customRange?.from && (
+                  <div className="p-2 border-t border-border flex justify-end">
+                    <Button variant="ghost" size="sm" onClick={() => setCustomRange(undefined)}>
+                      <X className="w-3 h-3 mr-1" /> Limpiar
+                    </Button>
+                  </div>
+                )}
+              </PopoverContent>
+            </Popover>
           </div>
         </div>
 
