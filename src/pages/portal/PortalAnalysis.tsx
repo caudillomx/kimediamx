@@ -617,30 +617,12 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
   );
 }
 
-function EntityTreemap({ data }: { data: { name: string; size: number; sentiment?: string }[] }) {
-  const sColor: Record<string, string> = {
-    positivo: "#10b981", neutral: "#64748b", negativo: "#f59e0b", crisis: "#ef4444",
-  };
-  const total = Math.max(1, data.reduce((sum, item) => sum + item.size, 0));
+function SlideKpi({ label, value, accent, hint }: { label: string; value: React.ReactNode; accent: string; hint?: string }) {
   return (
-    <div className="h-[260px] flex flex-wrap gap-1 overflow-hidden rounded-lg">
-      {data.map((item) => {
-        const share = item.size / total;
-        const basis = `${Math.max(18, Math.min(62, 100 * Math.sqrt(share)))}%`;
-        const grow = Math.max(1, item.size);
-        const bg = sColor[item.sentiment ?? ""] ?? "#ef6a4d";
-        return (
-          <div
-            key={item.name}
-            className="min-w-[86px] min-h-[54px] flex flex-col justify-between rounded-md p-2 overflow-hidden text-white"
-            style={{ flex: `${grow} 1 ${basis}`, background: bg }}
-            title={`${item.name}: ${item.size}`}
-          >
-            <span className="text-[11px] font-semibold leading-tight line-clamp-2">{item.name}</span>
-            <span className="text-[10px] opacity-85">×{item.size}</span>
-          </div>
-        );
-      })}
+    <div className="rounded-xl border border-border/40 bg-background/40 p-4 border-l-4" style={{ borderLeftColor: accent }}>
+      <div className="text-[10px] uppercase tracking-widest text-muted-foreground">{label}</div>
+      <div className="text-2xl font-display font-bold mt-1" style={{ color: accent }}>{value}</div>
+      {hint && <div className="text-[10px] text-muted-foreground mt-1">{hint}</div>}
     </div>
   );
 }
