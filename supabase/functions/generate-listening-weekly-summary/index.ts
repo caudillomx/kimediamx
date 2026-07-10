@@ -7,21 +7,27 @@ const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 const MODEL = 'google/gemini-2.5-pro';
 
-const SYSTEM = `Eres jefe de análisis de reputación de KiMedia. A partir de entradas de listening ya enriquecidas por IA, produces el reporte SEMANAL EJECUTIVO para dos audiencias: el equipo interno KiMedia (accionable, sin adornos, con alertas) y el cliente (claro, sin jerga).
+const SYSTEM = `Eres jefe de análisis de reputación de KiMedia. Escribes el REPORTE SEMANAL EJECUTIVO para el cliente y para el equipo interno, a partir de datos ya cuantificados de social listening.
 
 Devuelve SIEMPRE JSON estricto:
 {
-  "executive_summary": string (3-5 oraciones, panorama general),
-  "key_findings": [{ "title": string, "detail": string, "impact": "alto"|"medio"|"bajo" }] (máx 6),
-  "alerts": [{ "level": "critica"|"alta"|"media", "detail": string }] (solo si aplica),
-  "recommendations_team": string (bullets en markdown, acciones concretas para el equipo KiMedia),
-  "recommendations_client": string (bullets en markdown, lenguaje claro para el cliente),
+  "executive_summary": string (4-6 oraciones, panorama sustantivo con NÚMEROS reales del período — volumen total, mix de sentimiento, canales/actores dominantes, hechos clave),
+  "key_findings": [{ "title": string, "detail": string, "impact": "alto"|"medio"|"bajo" }] (4-6, cada uno anclado a un dato específico),
+  "alerts": [{ "level": "critica"|"alta"|"media", "detail": string }] (solo si hay crisis o riesgo real; si no hay, deja el array vacío),
+  "recommendations_team": string (markdown, 4-6 bullets accionables para el equipo KiMedia: monitoreo, respuesta, contenido, aliados),
+  "recommendations_client": string (markdown, 4-6 bullets claros para el cliente, cada uno con QUÉ HACER + POR QUÉ, aterrizados en los temas/canales/actores concretos del período),
   "top_topics": [{ "topic": string, "count": number }] (máx 8),
   "top_mentions": [{ "name": string, "type": string, "count": number }] (máx 8),
   "sentiment_breakdown": { "positivo": number, "neutral": number, "negativo": number, "crisis": number }
 }
 
-Basa TODO en las entradas provistas. No inventes hechos.`;
+REGLAS DURAS:
+- Basa TODO en los AGREGADOS y las ENTRADAS provistas. No inventes hechos, cifras ni actores.
+- Los AGREGADOS (total_mentions_semana, sentiment_breakdown, top_topics, top_entities, top_channels, top_events, key_quotes, competitors) son la FUENTE DE VERDAD del volumen — úsalos literal.
+- PROHIBIDO decir "no hubo conversación significativa" o "semana de calma" si total_mentions_semana > 20. Si hay volumen, describe QUÉ se dijo, DÓNDE, QUIÉN lo dijo, y qué hacer al respecto.
+- Las recomendaciones NUNCA son genéricas ("preparen campañas de valor"): cada bullet debe citar un tema, canal, actor o evento concreto del período.
+- Si hay eventos con impact "alto" o kind "crisis", genera al menos una alerta y una recomendación de respuesta.
+- Si el mix es mayoritariamente positivo, recomienda cómo AMPLIFICAR (aliados, canales fuertes, temas que jalan). Si es negativo, recomienda cómo CONTENER y REENCUADRAR.`;
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
@@ -36,7 +42,7 @@ Deno.serve(async (req) => {
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
     const { data: entries, error } = await admin
       .from('client_portal_listening_entries')
-      .select('entry_date, content_md, sentiment, sentiment_score, urgency, topics, mentions, actors, summary')
+      .select('entry_date, sentiment, sentiment_score, urgency, topics, mentions, actors, summary, total_mentions, sentiment_counts, channels, entities, events, key_quotes, competitors')
       .eq('client_id', client_id)
       .gte('entry_date', week_start)
       .lte('entry_date', weekEnd)
@@ -47,12 +53,112 @@ Deno.serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
+    // ---- Agregados de la semana (fuente de verdad cuantitativa) ----
+    const sentBreak: Record<string, number> = { positivo: 0, neutral: 0, negativo: 0, crisis: 0 };
+    let totalMentions = 0;
+    const topicCount = new Map<string, number>();
+    const entityAgg = new Map<string, { name: string; type: string; count: number; sentiment: Record<string, number> }>();
+    const channelAgg = new Map<string, number>();
+    const eventList: any[] = [];
+    const quoteList: any[] = [];
+    const competitorAgg = new Map<string, { name: string; count: number; sentiment: Record<string, number> }>();
+
+    for (const e of entries as any[]) {
+      const sc = e.sentiment_counts ?? {};
+      const hasCounts = sc && (sc.positivo || sc.neutral || sc.negativo || sc.crisis);
+      if (hasCounts) {
+        sentBreak.positivo += Number(sc.positivo ?? 0) || 0;
+        sentBreak.neutral += Number(sc.neutral ?? 0) || 0;
+        sentBreak.negativo += Number(sc.negativo ?? 0) || 0;
+        sentBreak.crisis += Number(sc.crisis ?? 0) || 0;
+      } else if (e.sentiment) {
+        sentBreak[e.sentiment] = (sentBreak[e.sentiment] ?? 0) + (Number(e.total_mentions ?? 0) || 1);
+      }
+      totalMentions += Number(e.total_mentions ?? 0) || 0;
+
+      for (const t of (e.topics ?? [])) topicCount.set(t, (topicCount.get(t) ?? 0) + 1);
+
+      for (const ent of (e.entities ?? [])) {
+        const name = typeof ent === 'string' ? ent : ent?.name; if (!name) continue;
+        const type = (typeof ent === 'object' && ent?.type) || 'otro';
+        const s = (typeof ent === 'object' && ent?.sentiment) || e.sentiment || 'neutral';
+        const c = Number((typeof ent === 'object' && ent?.count) ?? 1) || 1;
+        const row = entityAgg.get(name) ?? { name, type, count: 0, sentiment: { positivo: 0, neutral: 0, negativo: 0, crisis: 0 } };
+        row.count += c;
+        row.sentiment[s] = (row.sentiment[s] ?? 0) + c;
+        entityAgg.set(name, row);
+      }
+
+      for (const ch of (e.channels ?? [])) {
+        const name = typeof ch === 'string' ? ch : ch?.name; if (!name) continue;
+        const c = Number((typeof ch === 'object' && ch?.count) ?? 1) || 1;
+        channelAgg.set(name, (channelAgg.get(name) ?? 0) + c);
+      }
+
+      for (const ev of (e.events ?? [])) {
+        eventList.push({ fecha: e.entry_date, title: ev?.title, kind: ev?.kind, impact: ev?.impact, detail: ev?.detail });
+      }
+      for (const q of (e.key_quotes ?? [])) {
+        quoteList.push({ fecha: e.entry_date, text: q?.text, author: q?.author, source: q?.source, sentiment: q?.sentiment });
+      }
+      for (const cp of (e.competitors ?? [])) {
+        const name = typeof cp === 'string' ? cp : cp?.name; if (!name) continue;
+        const c = Number((typeof cp === 'object' && cp?.count) ?? 1) || 1;
+        const s = (typeof cp === 'object' && cp?.sentiment) || 'neutral';
+        const row = competitorAgg.get(name) ?? { name, count: 0, sentiment: { positivo: 0, neutral: 0, negativo: 0, crisis: 0 } };
+        row.count += c; row.sentiment[s] = (row.sentiment[s] ?? 0) + c;
+        competitorAgg.set(name, row);
+      }
+    }
+
+    if (totalMentions === 0) {
+      totalMentions = sentBreak.positivo + sentBreak.neutral + sentBreak.negativo + sentBreak.crisis;
+    }
+
+    const top = <T,>(arr: T[], n: number) => arr.slice(0, n);
+    const aggregates = {
+      total_mentions_semana: totalMentions,
+      dias_con_bitacora: entries.length,
+      sentiment_breakdown: sentBreak,
+      top_topics: top(
+        Array.from(topicCount.entries()).map(([topic, count]) => ({ topic, count })).sort((a, b) => b.count - a.count),
+        10
+      ),
+      top_entities: top(
+        Array.from(entityAgg.values()).sort((a, b) => b.count - a.count),
+        10
+      ),
+      top_channels: top(
+        Array.from(channelAgg.entries()).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count),
+        10
+      ),
+      top_events: top(
+        eventList.sort((a, b) => (b.impact === 'alto' ? 1 : 0) - (a.impact === 'alto' ? 1 : 0)),
+        10
+      ),
+      key_quotes: top(quoteList, 10),
+      competitors: top(Array.from(competitorAgg.values()).sort((a, b) => b.count - a.count), 6),
+    };
+
     const digest = entries.map((e: any) => ({
       fecha: e.entry_date,
-      sentimiento: e.sentiment, urgencia: e.urgency,
+      sentimiento_dia: e.sentiment,
+      urgencia: e.urgency,
       resumen: e.summary,
-      temas: e.topics, menciones: e.mentions, actores: e.actors,
+      total_menciones_dia: e.total_mentions,
+      temas: e.topics,
+      actores_equipo: e.actors,
     }));
+
+    const userPrompt = [
+      `Semana ${week_start} → ${weekEnd}.`,
+      ``,
+      `AGREGADOS DE LA SEMANA (fuente de verdad — úsalos tal cual):`,
+      JSON.stringify(aggregates, null, 2),
+      ``,
+      `BITÁCORA DIARIA (contexto cualitativo):`,
+      JSON.stringify(digest).slice(0, 40000),
+    ].join('\n');
 
     const resp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -64,7 +170,7 @@ Deno.serve(async (req) => {
         model: MODEL,
         messages: [
           { role: 'system', content: SYSTEM },
-          { role: 'user', content: `Semana ${week_start} → ${weekEnd}. Entradas enriquecidas:\n\n${JSON.stringify(digest).slice(0, 60000)}` },
+          { role: 'user', content: userPrompt },
         ],
         response_format: { type: 'json_object' },
       }),
