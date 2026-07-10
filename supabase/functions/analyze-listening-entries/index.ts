@@ -25,7 +25,7 @@ Devuelve SIEMPRE JSON estricto con estas claves:
 
   "total_mentions": number (cantidad TOTAL de menciones individuales sobre el cliente encontradas en la bitácora del día — no cuentes el día como 1; cuenta cada tuit, nota, video, post, comentario, columna, mensaje que hable del cliente por separado),
   "sentiment_counts": { "positivo": number, "neutral": number, "negativo": number, "crisis": number } (cuenta cuántas de esas menciones individuales caen en cada sentimiento; la suma debe ser <= total_mentions),
-  "channels": [{ "name": "twitter"|"x"|"facebook"|"instagram"|"tiktok"|"youtube"|"linkedin"|"whatsapp"|"telegram"|"prensa"|"radio"|"tv"|"blog"|"foro"|"otro", "count": number }],
+  "channels": [{ "name": "medios digitales"|"x"|"facebook"|"instagram"|"youtube"|"tiktok"|"reddit"|"linkedin", "count": number }],
   "entities": [{ "name": string, "type": "persona"|"marca"|"medio"|"institucion"|"politico"|"influencer"|"otro", "sentiment": "positivo"|"neutral"|"negativo"|"crisis", "count": number }],
   "events": [{ "title": string, "kind": "crisis"|"lanzamiento"|"comunicado"|"declaracion"|"nota"|"campaña"|"evento"|"otro", "impact": "bajo"|"medio"|"alto", "detail": string }],
   "key_quotes": [{ "text": string, "author": string, "source": string, "sentiment": "positivo"|"neutral"|"negativo"|"crisis" }],
@@ -36,12 +36,61 @@ Reglas duras:
 - Devuelve arrays vacíos si no hay datos, NUNCA inventes nombres, canales ni citas.
 - "total_mentions" y "sentiment_counts" son OBLIGATORIOS y críticos: cuenta con rigor cada ítem individual (un tuit = 1, una nota de prensa = 1, un video = 1). Si el equipo dice "10 tuits negativos y 3 notas positivas", devuelve total_mentions=13 y sentiment_counts={positivo:3, negativo:10, neutral:0, crisis:0}. NO devuelvas 0 si el texto tiene contenido.
 - "sentiment" (el campo global del día) refleja el TONO PREDOMINANTE del día, no lo confundas con el conteo.
-- "channels": cuenta cuántas menciones vienen de cada canal identificable en el texto (por URL, hashtag, "@usuario", "en el noticiero X", "en el podcast", etc.). Si no se puede inferir, no lo agregues.
+- "channels": SOLO puedes usar estas 8 categorías, en minúsculas y con la ortografía EXACTA: "medios digitales", "x", "facebook", "instagram", "youtube", "tiktok", "reddit", "linkedin". NO existe "otro" ni "prensa" ni "radio" ni "tv" ni "blog" ni "whatsapp" ni "telegram" ni "podcast" ni "foro" — mapea así:
+  * URLs de x.com / twitter.com / t.co, tuits, "@usuario" de Twitter/X → "x"
+  * URLs de facebook.com / fb.com / fb.watch → "facebook"
+  * URLs de instagram.com / instagr.am, "reel de IG", stories → "instagram"
+  * URLs de youtube.com / youtu.be, videos de YouTube → "youtube"
+  * URLs de tiktok.com, "tiktok de @…" → "tiktok"
+  * URLs de reddit.com, subreddits (r/…) → "reddit"
+  * URLs de linkedin.com / lnkd.in, publicaciones de LinkedIn → "linkedin"
+  * Notas de prensa digital, columnas, portales, blogs, sitios de medios (eluniversal.com.mx, reforma.com, milenio.com, expansion.mx, forbes.com.mx, bloomberg, reuters, etc.), boletines, radio online, TV online, podcasts, cualquier otro sitio web informativo → "medios digitales"
+  Cuenta con RIGOR cuántas menciones individuales caen en cada categoría. Si el texto dice "5 tuits" cuenta 5 en "x", no 1. Recorre URL por URL y menciona por mención. Si una categoría no aparece, NO la incluyas.
 - "entities": personas/marcas/instituciones citadas junto al cliente. Deduplica normalizando mayúsculas.
 - "events": hitos concretos con impacto reputacional (crisis, lanzamientos, comunicados, declaraciones). No listes conversaciones triviales.
 - "key_quotes": frases textuales entrecomilladas o parafraseadas breves (máx 240 caracteres) que valga la pena citar en el reporte. Si no hay citas claras, devuelve [].
 - "competitors": otras marcas/organizaciones del mismo sector citadas de forma comparativa. Solo si el texto lo evidencia.
 - "crisis" solo si hay riesgo reputacional o legal claro. Ignora saludos, stickers, "🙂🙏", "ok" y ruido.`;
+
+// Taxonomía canónica de plataformas (fuente de verdad, única)
+const CANONICAL_CHANNELS = ['medios digitales','x','facebook','instagram','youtube','tiktok','reddit','linkedin'] as const;
+type Channel = typeof CANONICAL_CHANNELS[number];
+
+function normalizeChannelName(raw: string): Channel {
+  const s = (raw || '').toLowerCase().trim();
+  if (!s) return 'medios digitales';
+  if (s === 'x' || s === 'twitter' || s === 'x (twitter)' || s.includes('twitter')) return 'x';
+  if (s.startsWith('facebook') || s === 'fb') return 'facebook';
+  if (s.startsWith('instagram') || s === 'ig') return 'instagram';
+  if (s.startsWith('youtube') || s === 'yt') return 'youtube';
+  if (s.startsWith('tiktok') || s === 'tt') return 'tiktok';
+  if (s.startsWith('reddit')) return 'reddit';
+  if (s.startsWith('linkedin')) return 'linkedin';
+  // Todo lo demás (prensa, radio, tv, blog, podcast, whatsapp, telegram, foro, spotify, otro, medios, portal...) → medios digitales
+  return 'medios digitales';
+}
+
+// Cuenta URLs por dominio en el texto — evidencia dura, complemento del LLM
+function countChannelsFromText(md: string): Record<Channel, number> {
+  const counts: Record<Channel, number> = {
+    'medios digitales': 0, 'x': 0, 'facebook': 0, 'instagram': 0,
+    'youtube': 0, 'tiktok': 0, 'reddit': 0, 'linkedin': 0,
+  };
+  const urlRe = /https?:\/\/([^\s)\]\}>"']+)/gi;
+  let m: RegExpExecArray | null;
+  while ((m = urlRe.exec(md)) !== null) {
+    const host = m[1].toLowerCase().split('/')[0];
+    if (/(^|\.)x\.com$|(^|\.)twitter\.com$|(^|\.)t\.co$/.test(host)) counts.x++;
+    else if (/(^|\.)facebook\.com$|(^|\.)fb\.com$|(^|\.)fb\.watch$/.test(host)) counts.facebook++;
+    else if (/(^|\.)instagram\.com$|(^|\.)instagr\.am$/.test(host)) counts.instagram++;
+    else if (/(^|\.)youtube\.com$|(^|\.)youtu\.be$/.test(host)) counts.youtube++;
+    else if (/(^|\.)tiktok\.com$/.test(host)) counts.tiktok++;
+    else if (/(^|\.)reddit\.com$|(^|\.)redd\.it$/.test(host)) counts.reddit++;
+    else if (/(^|\.)linkedin\.com$|(^|\.)lnkd\.in$/.test(host)) counts.linkedin++;
+    else counts['medios digitales']++;
+  }
+  return counts;
+}
 
 // Extrae totales declarados EXPLÍCITAMENTE en la bitácora.
 // Ej: "Total: 119 menciones", "119 menciones únicas", "se identificaron 119 menciones"
@@ -137,6 +186,26 @@ async function analyzeOne(entry: Entry) {
       };
     }
   }
+
+  // Normaliza channels a la taxonomía canónica y fusiona con el conteo de URLs
+  const merged: Record<Channel, number> = {
+    'medios digitales': 0, 'x': 0, 'facebook': 0, 'instagram': 0,
+    'youtube': 0, 'tiktok': 0, 'reddit': 0, 'linkedin': 0,
+  };
+  if (Array.isArray(parsed.channels)) {
+    for (const ch of parsed.channels) {
+      const name = normalizeChannelName(typeof ch === 'string' ? ch : ch?.name);
+      const n = typeof ch?.count === 'number' ? ch.count : 1;
+      merged[name] += n;
+    }
+  }
+  const fromText = countChannelsFromText(entry.content_md);
+  // Toma el MÁXIMO entre LLM y evidencia dura de URLs (no sumar para no duplicar)
+  for (const k of CANONICAL_CHANNELS) merged[k] = Math.max(merged[k], fromText[k]);
+  parsed.channels = CANONICAL_CHANNELS
+    .filter(k => merged[k] > 0)
+    .map(k => ({ name: k, count: merged[k] }));
+
   return parsed;
 }
 

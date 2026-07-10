@@ -346,7 +346,17 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
         }
         volMap.set(r.entry_date, row);
         for (const ch of (r.channels ?? [])) {
-          const name = typeof ch === "string" ? ch : ch?.name; if (!name) continue;
+          const raw = typeof ch === "string" ? ch : ch?.name; if (!raw) continue;
+          const s = String(raw).toLowerCase().trim();
+          const name =
+            s === "x" || s.includes("twitter") ? "x" :
+            s.startsWith("facebook") || s === "fb" ? "facebook" :
+            s.startsWith("instagram") || s === "ig" ? "instagram" :
+            s.startsWith("youtube") || s === "yt" ? "youtube" :
+            s.startsWith("tiktok") ? "tiktok" :
+            s.startsWith("reddit") ? "reddit" :
+            s.startsWith("linkedin") ? "linkedin" :
+            "medios digitales";
           const n = typeof ch?.count === "number" ? ch.count : 1;
           chanMap.set(name, (chanMap.get(name) ?? 0) + n);
         }
