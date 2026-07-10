@@ -38,27 +38,31 @@ const SENT_COLORS: Record<string, string> = {
 // Brand-inspired colors per platform (lower-cased key)
 const PLATFORM_COLORS: Record<string, string> = {
   "medios digitales": "#3b82f6",
-  "medios": "#3b82f6",
-  "prensa": "#3b82f6",
   "x": "#0f172a",
-  "twitter": "#1da1f2",
-  "x (twitter)": "#0f172a",
   "linkedin": "#0a66c2",
   "facebook": "#1877f2",
   "instagram": "#e1306c",
   "youtube": "#ff0000",
   "tiktok": "#111111",
   "reddit": "#ff4500",
-  "threads": "#0f172a",
-  "whatsapp": "#25d366",
-  "telegram": "#0088cc",
-  "spotify": "#1db954",
-  "podcast": "#8b5cf6",
-  "blog": "#64748b",
 };
 const CHANNEL_FALLBACK = ["#ef6a4d", "#0ea5e9", "#a855f7", "#10b981", "#f59e0b", "#ec4899", "#14b8a6", "#8b5cf6"];
 function platformColor(name: string, i = 0) {
   return PLATFORM_COLORS[name.toLowerCase().trim()] ?? CHANNEL_FALLBACK[i % CHANNEL_FALLBACK.length];
+}
+
+// Normaliza cualquier nombre heredado a la taxonomía canónica (8 categorías)
+function canonicalChannel(raw: string): string {
+  const s = (raw || "").toLowerCase().trim();
+  if (!s) return "medios digitales";
+  if (s === "x" || s.includes("twitter")) return "x";
+  if (s.startsWith("facebook") || s === "fb") return "facebook";
+  if (s.startsWith("instagram") || s === "ig") return "instagram";
+  if (s.startsWith("youtube") || s === "yt") return "youtube";
+  if (s.startsWith("tiktok")) return "tiktok";
+  if (s.startsWith("reddit")) return "reddit";
+  if (s.startsWith("linkedin")) return "linkedin";
+  return "medios digitales"; // prensa, radio, tv, blog, podcast, whatsapp, telegram, otro, medios...
 }
 
 const DOW_LABELS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
@@ -181,7 +185,8 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
   const channelsBreakdown = useMemo(() => {
     const c = new Map<string, number>();
     for (const e of entries) for (const ch of (e.channels ?? [])) {
-      const name = typeof ch === "string" ? ch : ch?.name; if (!name) continue;
+      const raw = typeof ch === "string" ? ch : ch?.name; if (!raw) continue;
+      const name = canonicalChannel(raw);
       const n = typeof ch?.count === "number" ? ch.count : 1;
       c.set(name, (c.get(name) ?? 0) + n);
     }
