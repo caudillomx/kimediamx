@@ -1083,6 +1083,158 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
         )}
       </Card>
 
+      {/* ============ Quién dijo qué: medios y voces sociales ============ */}
+      {(mediaCoverage.length > 0 || socialVoices.flat.length > 0) && (
+        <Card className="p-5 md:p-6">
+          <div>
+            <span className="text-[11px] uppercase tracking-widest text-muted-foreground">Trazabilidad</span>
+            <h3 className="text-2xl font-display font-bold mt-1 flex items-center gap-2">
+              <AtSign className="w-5 h-5" />Quién dijo qué
+            </h3>
+            <p className="text-xs text-muted-foreground mt-1">
+              Reconstrucción por medio y por perfil social a partir de las bitácoras del período.
+            </p>
+          </div>
+
+          <div className="mt-5 grid gap-4 lg:grid-cols-2">
+            {/* Medios que hablaron */}
+            <div className="rounded-xl border border-border/40 bg-background/30 overflow-hidden flex flex-col">
+              <div className="flex items-center justify-between px-4 py-2.5 border-b border-border/40 bg-background/40">
+                <div className="flex items-center gap-2">
+                  <Newspaper className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-[11px] uppercase tracking-widest font-semibold">Medios que hablaron</span>
+                </div>
+                <span className="text-[10px] font-bold tabular-nums px-1.5 py-0.5 rounded bg-background/60 border border-border/40">
+                  {mediaCoverage.length}
+                </span>
+              </div>
+              {mediaCoverage.length === 0 ? (
+                <div className="p-4 text-xs text-muted-foreground italic">Sin coberturas mediáticas identificadas en el período.</div>
+              ) : (
+                <ul className="divide-y divide-border/40 max-h-[520px] overflow-auto">
+                  {mediaCoverage.map((m, i) => {
+                    const dominant = m.neg > m.pos ? "negativo" : m.pos > m.neg ? "positivo" : "neutral";
+                    const c = SENT_COLORS[dominant];
+                    return (
+                      <li key={i} className="p-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-semibold text-sm truncate">{m.outlet}</span>
+                              <span className="text-[9px] uppercase tracking-widest text-muted-foreground border border-border/40 rounded px-1.5 py-0.5">{m.type}</span>
+                            </div>
+                            {m.topics.length > 0 && (
+                              <div className="mt-1.5 flex flex-wrap gap-1">
+                                {m.topics.map((t) => (
+                                  <span key={t} className="text-[10px] px-2 py-0.5 rounded-full bg-background/60 border border-border/40 text-muted-foreground">{t}</span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          <div className="shrink-0 text-right">
+                            <div className="text-lg font-display font-bold tabular-nums leading-none" style={{ color: c }}>{m.count}</div>
+                            <div className="text-[9px] uppercase tracking-widest text-muted-foreground mt-0.5">nota{m.count === 1 ? "" : "s"}</div>
+                          </div>
+                        </div>
+                        {(m.pos + m.neg + m.neu) > 0 && (
+                          <div className="mt-2 flex h-1 rounded-full overflow-hidden bg-background/60">
+                            {m.pos > 0 && <div style={{ background: SENT_COLORS.positivo, width: `${(m.pos / m.count) * 100}%` }} />}
+                            {m.neu > 0 && <div style={{ background: SENT_COLORS.neutral, width: `${(m.neu / m.count) * 100}%` }} />}
+                            {m.neg > 0 && <div style={{ background: SENT_COLORS.negativo, width: `${(m.neg / m.count) * 100}%` }} />}
+                          </div>
+                        )}
+                        {m.links.filter(l => l.url).length > 0 && (
+                          <ul className="mt-2 space-y-1">
+                            {m.links.filter(l => l.url).slice(0, 3).map((l, li) => (
+                              <li key={li} className="text-[11px] leading-snug flex items-start gap-1.5">
+                                <ExternalLink className="w-3 h-3 mt-0.5 shrink-0 text-muted-foreground" />
+                                <a href={l.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate">
+                                  {l.headline || l.url}
+                                </a>
+                              </li>
+                            ))}
+                            {m.links.filter(l => l.url).length > 3 && (
+                              <li className="text-[10px] text-muted-foreground pl-4.5">+{m.links.filter(l => l.url).length - 3} más</li>
+                            )}
+                          </ul>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+
+            {/* Voces en redes */}
+            <div className="rounded-xl border border-border/40 bg-background/30 overflow-hidden flex flex-col">
+              <div className="flex items-center justify-between px-4 py-2.5 border-b border-border/40 bg-background/40">
+                <div className="flex items-center gap-2">
+                  <AtSign className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-[11px] uppercase tracking-widest font-semibold">Voces en redes</span>
+                </div>
+                <span className="text-[10px] font-bold tabular-nums px-1.5 py-0.5 rounded bg-background/60 border border-border/40">
+                  {socialVoices.flat.length}
+                </span>
+              </div>
+              {socialVoices.flat.length === 0 ? (
+                <div className="p-4 text-xs text-muted-foreground italic">Sin perfiles sociales identificados individualmente en el período.</div>
+              ) : (
+                <div className="divide-y divide-border/40 max-h-[520px] overflow-auto">
+                  {socialVoices.byPlatform.map((group) => (
+                    <div key={group.platform} className="p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full" style={{ background: platformColor(group.platform) }} />
+                          <span className="text-[11px] uppercase tracking-widest font-semibold capitalize">{group.platform}</span>
+                        </div>
+                        <span className="text-[10px] text-muted-foreground tabular-nums">{group.total} mención{group.total === 1 ? "" : "es"}</span>
+                      </div>
+                      <ul className="space-y-1.5">
+                        {group.voices.map((v, vi) => {
+                          const dominant = v.neg > v.pos ? "negativo" : v.pos > v.neg ? "positivo" : "neutral";
+                          const c = SENT_COLORS[dominant];
+                          const firstUrl = v.posts.find(p => p.url)?.url ?? "";
+                          const NameEl: any = firstUrl ? "a" : "span";
+                          const nameProps = firstUrl
+                            ? { href: firstUrl, target: "_blank", rel: "noopener noreferrer", className: "font-medium text-sm hover:underline truncate" }
+                            : { className: "font-medium text-sm truncate" };
+                          return (
+                            <li key={vi} className="flex items-start justify-between gap-2 rounded-lg bg-background/40 border border-border/30 px-2.5 py-1.5">
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                  <NameEl {...nameProps}>{v.profile}</NameEl>
+                                  {v.handle && <span className="text-[10px] text-muted-foreground truncate">{v.handle.startsWith("@") ? v.handle : `@${v.handle}`}</span>}
+                                </div>
+                                {v.topics.length > 0 && (
+                                  <div className="mt-0.5 flex flex-wrap gap-1">
+                                    {v.topics.map((t) => (
+                                      <span key={t} className="text-[9px] px-1.5 py-0.5 rounded-full bg-background/70 border border-border/40 text-muted-foreground">{t}</span>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="shrink-0 text-right">
+                                <div className="text-sm font-bold tabular-nums leading-none" style={{ color: c }}>{v.count}</div>
+                              </div>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {mediaCoverage.length === 0 && socialVoices.flat.length === 0 && (
+            <p className="mt-4 text-[11px] text-muted-foreground italic">
+              Este período fue analizado antes de habilitar el desglose por medio/perfil. Se activará automáticamente con los próximos análisis.
+            </p>
+          )}
+        </Card>
+      )}
+
       {/* Bloque táctico: volumen apilado + sentimiento agregado */}
       <div className="grid gap-4 md:grid-cols-2">
         <Card className="p-4">
