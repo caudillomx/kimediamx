@@ -964,12 +964,17 @@ export type Database = {
         Row: {
           actors: string[] | null
           analyzed_at: string | null
+          channels: Json | null
           client_id: string
+          competitors: Json | null
           content_md: string
           created_at: string
           created_by: string | null
+          entities: Json | null
           entry_date: string
+          events: Json | null
           id: string
+          key_quotes: Json | null
           mentions: Json | null
           raw_source_ref: string | null
           sentiment: string | null
@@ -983,12 +988,17 @@ export type Database = {
         Insert: {
           actors?: string[] | null
           analyzed_at?: string | null
+          channels?: Json | null
           client_id: string
+          competitors?: Json | null
           content_md: string
           created_at?: string
           created_by?: string | null
+          entities?: Json | null
           entry_date: string
+          events?: Json | null
           id?: string
+          key_quotes?: Json | null
           mentions?: Json | null
           raw_source_ref?: string | null
           sentiment?: string | null
@@ -1002,12 +1012,17 @@ export type Database = {
         Update: {
           actors?: string[] | null
           analyzed_at?: string | null
+          channels?: Json | null
           client_id?: string
+          competitors?: Json | null
           content_md?: string
           created_at?: string
           created_by?: string | null
+          entities?: Json | null
           entry_date?: string
+          events?: Json | null
           id?: string
+          key_quotes?: Json | null
           mentions?: Json | null
           raw_source_ref?: string | null
           sentiment?: string | null
