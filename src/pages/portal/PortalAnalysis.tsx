@@ -704,19 +704,89 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
         </div>
         {milestones.length > 0 && <MilestonesLegend items={milestones} />}
 
-        {narratives.length > 0 && (
+        {/* Análisis de sentimiento: drivers */}
+        <div className="mt-6 grid gap-3 md:grid-cols-2">
+          <div className="rounded-lg border border-border/40 p-4" style={{ background: `${SENT_COLORS.positivo}0d`, borderLeftWidth: 4, borderLeftColor: SENT_COLORS.positivo }}>
+            <div className="flex items-center gap-2 mb-2">
+              <Lightbulb className="w-3.5 h-3.5" style={{ color: SENT_COLORS.positivo }} />
+              <span className="text-[11px] uppercase tracking-widest font-semibold" style={{ color: SENT_COLORS.positivo }}>Qué está impulsando lo positivo</span>
+            </div>
+            {sentimentDrivers.posTopics.length === 0 && sentimentDrivers.posEntities.length === 0 ? (
+              <p className="text-xs text-muted-foreground">Sin señales positivas relevantes en el período.</p>
+            ) : (
+              <div className="space-y-1.5 text-xs">
+                {sentimentDrivers.posTopics.length > 0 && (
+                  <div><span className="text-muted-foreground">Temas: </span><span className="font-medium">{sentimentDrivers.posTopics.map(t => t.topic).join(", ")}</span></div>
+                )}
+                {sentimentDrivers.posEntities.length > 0 && (
+                  <div><span className="text-muted-foreground">Voces / actores: </span><span className="font-medium">{sentimentDrivers.posEntities.map(e => e.name).join(", ")}</span></div>
+                )}
+                {sentimentDrivers.posQuote && (
+                  <blockquote className="mt-2 pl-2 border-l-2 italic text-[11px] text-muted-foreground" style={{ borderColor: SENT_COLORS.positivo }}>
+                    "{sentimentDrivers.posQuote.text}" <span className="not-italic">— {sentimentDrivers.posQuote.author || sentimentDrivers.posQuote.source || sentimentDrivers.posQuote.date}</span>
+                  </blockquote>
+                )}
+              </div>
+            )}
+          </div>
+          <div className="rounded-lg border border-border/40 p-4" style={{ background: `${SENT_COLORS.negativo}0d`, borderLeftWidth: 4, borderLeftColor: SENT_COLORS.negativo }}>
+            <div className="flex items-center gap-2 mb-2">
+              <AlertOctagon className="w-3.5 h-3.5" style={{ color: SENT_COLORS.negativo }} />
+              <span className="text-[11px] uppercase tracking-widest font-semibold" style={{ color: SENT_COLORS.negativo }}>Qué está pesando en lo negativo</span>
+            </div>
+            {sentimentDrivers.negTopics.length === 0 && sentimentDrivers.negEntities.length === 0 ? (
+              <p className="text-xs text-muted-foreground">Sin focos negativos relevantes en el período.</p>
+            ) : (
+              <div className="space-y-1.5 text-xs">
+                {sentimentDrivers.negTopics.length > 0 && (
+                  <div><span className="text-muted-foreground">Temas: </span><span className="font-medium">{sentimentDrivers.negTopics.map(t => t.topic).join(", ")}</span></div>
+                )}
+                {sentimentDrivers.negEntities.length > 0 && (
+                  <div><span className="text-muted-foreground">Voces / actores: </span><span className="font-medium">{sentimentDrivers.negEntities.map(e => e.name).join(", ")}</span></div>
+                )}
+                {sentimentDrivers.negQuote && (
+                  <blockquote className="mt-2 pl-2 border-l-2 italic text-[11px] text-muted-foreground" style={{ borderColor: SENT_COLORS.negativo }}>
+                    "{sentimentDrivers.negQuote.text}" <span className="not-italic">— {sentimentDrivers.negQuote.author || sentimentDrivers.negQuote.source || sentimentDrivers.negQuote.date}</span>
+                  </blockquote>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {narrativeDetails.length > 0 && (
           <div className="mt-6">
             <div className="text-[11px] uppercase tracking-widest text-muted-foreground mb-3">Narrativas dominantes</div>
-            <div className="grid gap-2 md:grid-cols-2">
-              {narratives.map((n) => (
-                <div key={n.topic} className="flex items-center gap-3 p-3 rounded-lg bg-background/40 border border-border/40">
-                  <div className="w-12 h-12 rounded-lg flex items-center justify-center text-sm font-bold text-white shrink-0" style={{ background: n.color }}>
-                    {n.pct}%
+            <div className="grid gap-3 md:grid-cols-2">
+              {narrativeDetails.map((n) => (
+                <div key={n.topic} className="p-4 rounded-lg bg-background/40 border border-border/40 border-l-4" style={{ borderLeftColor: n.color }}>
+                  <div className="flex items-start gap-3 mb-2">
+                    <div className="w-12 h-12 rounded-lg flex items-center justify-center text-sm font-bold text-white shrink-0" style={{ background: n.color }}>
+                      {n.pct}%
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <div className="text-sm font-semibold truncate">{n.topic}</div>
+                        <Badge variant="outline" className="text-[9px]" style={{ borderColor: SENT_COLORS[n.dominant] ?? "#94a3b8", color: SENT_COLORS[n.dominant] ?? "#94a3b8" }}>{n.dominant}</Badge>
+                      </div>
+                      <div className="text-[10px] text-muted-foreground">
+                        {n.days} día{n.days === 1 ? "" : "s"} activos
+                        {n.firstDate && n.lastDate && n.firstDate !== n.lastDate && (
+                          <> · del {new Date(n.firstDate + "T00:00:00").toLocaleDateString("es-MX", { day: "numeric", month: "short" })} al {new Date(n.lastDate + "T00:00:00").toLocaleDateString("es-MX", { day: "numeric", month: "short" })}</>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <div className="text-sm font-semibold truncate">{n.topic}</div>
-                    <div className="text-[10px] text-muted-foreground">Presente en {n.days} día{n.days === 1 ? "" : "s"} del período</div>
-                  </div>
+                  {n.snippet && (
+                    <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">{n.snippet}</p>
+                  )}
+                  {n.entities.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {n.entities.map((e) => (
+                        <span key={e} className="text-[10px] px-2 py-0.5 rounded-full bg-background/60 border border-border/40 text-muted-foreground">{e}</span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
