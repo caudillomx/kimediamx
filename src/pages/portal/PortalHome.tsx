@@ -307,6 +307,10 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
   }, [portal.clientId, fromDate, toDate]);
 
   const weekLabel = current ? fmtWeekShort(current.week_start, current.week_end) : "";
+  const periodLabel = useMemo(() => {
+    if (!fromDate || !toDate) return weekLabel;
+    return fmtWeekShort(fromDate, toDate);
+  }, [fromDate, toDate, weekLabel]);
 
   const sentTotals = useMemo(() => {
     const s = rangeAgg.sent;
@@ -544,6 +548,23 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
 
                 {/* Panorama: resumen ejecutivo + alertas + hallazgos + análisis en un solo tab */}
                 <TabsContent value="panorama" className="mt-5 space-y-5">
+                  {isExtendedPeriod && (
+                    <div className="glass rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center gap-3 border border-coral/30 bg-coral/5">
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[11px] uppercase tracking-widest text-coral font-semibold">Período ampliado</div>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {periodAnalysis
+                            ? <>Mostrando análisis y recomendaciones regenerados para <b className="text-foreground">{periodLabel}</b>.</>
+                            : <>El resumen, hallazgos y recomendaciones abajo siguen anclados a la semana <b className="text-foreground">{weekLabel}</b>. Regénéralos para cubrir <b className="text-foreground">{periodLabel}</b>.</>}
+                        </p>
+                      </div>
+                      <Button size="sm" onClick={regeneratePeriod} disabled={regenerating} className="shrink-0">
+                        <RefreshCw className={`w-4 h-4 mr-2 ${regenerating ? "animate-spin" : ""}`} />
+                        {periodAnalysis ? "Regenerar de nuevo" : "Regenerar para el período"}
+                      </Button>
+                    </div>
+                  )}
+
                   {displayExecutiveSummary && (
                     <div className="glass rounded-2xl p-6">
                       <div className="flex items-center gap-2 mb-3">
@@ -557,9 +578,9 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
                     </div>
                   )}
 
-                  {current?.alerts && current.alerts.length > 0 && (
+                  {effective?.alerts && effective.alerts.length > 0 && (
                     <div className="grid gap-2">
-                      {current.alerts.map((a: any, i: number) => (
+                      {effective.alerts.map((a: any, i: number) => (
                         <div key={i} className="flex items-start gap-3 p-4 rounded-xl bg-red-500/5 border border-red-500/30">
                           <AlertTriangle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
                           <div className="flex-1 min-w-0">
@@ -573,11 +594,11 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
                     </div>
                   )}
 
-                  {current?.key_findings && current.key_findings.length > 0 && (
+                  {effective?.key_findings && effective.key_findings.length > 0 && (
                     <div>
                       <div className="text-[11px] uppercase tracking-widest text-muted-foreground mb-3">Hallazgos clave</div>
                       <div className="grid gap-3 md:grid-cols-2">
-                        {current.key_findings.map((f: any, i: number) => (
+                        {effective.key_findings.map((f: any, i: number) => (
                           <div key={i} className="glass rounded-xl p-4">
                             <div className="flex items-start justify-between gap-2 mb-2">
                               <div className="flex items-center gap-2 min-w-0">
@@ -599,8 +620,8 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
                   </div>
 
                   {/* Recomendaciones al cierre del análisis */}
-                  {current?.recommendations_client && (
-                    <RecommendationsBlock markdown={current.recommendations_client} weekLabel={weekLabel} />
+                  {effective?.recommendations_client && (
+                    <RecommendationsBlock markdown={effective.recommendations_client} weekLabel={periodAnalysis ? periodLabel : weekLabel} />
                   )}
                 </TabsContent>
 
