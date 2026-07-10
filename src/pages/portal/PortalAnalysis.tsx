@@ -351,13 +351,23 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
 
     // En rangos largos, no basta con comparar todo contra el pico global: si el
     // 6-jul concentra 119 menciones, puede ocultar picos locales reales de la
-    // primera semana. Reservamos el máximo de cada bloque de 7 días con volumen.
+    // primera semana. Reservamos el máximo de cada semana calendario.
     const coveragePeakDates = new Set<string>();
     const orderedVolumes = Array.from(mentionsByDate.entries()).sort((a, b) => a[0].localeCompare(b[0]));
-    for (let i = 0; i < orderedVolumes.length; i += 7) {
-      const segment = orderedVolumes.slice(i, i + 7).filter(([, v]) => v > 0);
-      if (!segment.length) continue;
-      const [localDate, localVol] = segment.reduce((best, cur) => cur[1] > best[1] ? cur : best);
+    const weekSegments = new Map<string, [string, number][]>();
+    for (const item of orderedVolumes) {
+      const dt = new Date(item[0] + "T00:00:00");
+      const monday = new Date(dt);
+      monday.setDate(dt.getDate() - ((dt.getDay() + 6) % 7));
+      const key = monday.toISOString().slice(0, 10);
+      const arr = weekSegments.get(key) ?? [];
+      arr.push(item);
+      weekSegments.set(key, arr);
+    }
+    for (const segment of weekSegments.values()) {
+      const active = segment.filter(([, v]) => v > 0);
+      if (!active.length) continue;
+      const [localDate, localVol] = active.reduce((best, cur) => cur[1] > best[1] ? cur : best);
       if (localVol >= Math.max(1, avgVol * 0.55, maxVol * 0.25)) coveragePeakDates.add(localDate);
     }
 
@@ -382,6 +392,13 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
         isPeak: isPeak || isCoveragePeak,
         color: impact >= IMPACT_RANK.alto ? "#ef4444" : "#f59e0b",
       });
+    }
+
+    for (const c of candidates) {
+      if (!coveragePeakDates.has(c.date)) continue;
+      c.isPeak = true;
+      c.score += 1;
+      if (c.title && !c.title.toLowerCase().includes("pico")) c.title = `${c.title}`;
     }
 
     const peakCandidate = peakDate ? candidates.find(c => c.date === peakDate) : undefined;
