@@ -158,7 +158,13 @@ function buildMilestonesFromRows(rows: any[]): PeriodMilestone[] {
     if (!picked.some(p => p.date === peakCandidate.date)) picked[picked.length - 1] = peakCandidate;
   }
 
-  return picked.sort((a, b) => a.date.localeCompare(b.date)).map(({ date, title, detail, kind, impact }) => ({ date, title, detail, kind, impact }));
+  return picked
+    .sort((a, b) => {
+      if (a.date === peakDate) return -1;
+      if (b.date === peakDate) return 1;
+      return b.score - a.score || a.date.localeCompare(b.date);
+    })
+    .map(({ date, title, detail, kind, impact }) => ({ date, title, detail, kind, impact }));
 }
 
 export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
