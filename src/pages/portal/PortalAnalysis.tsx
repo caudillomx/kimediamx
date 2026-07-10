@@ -362,9 +362,16 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
   const sentimentDrivers = useMemo(() => {
     const topicPolarity = new Map<string, { pos: number; neg: number; neu: number }>();
     const entityPolarity = new Map<string, { pos: number; neg: number; neu: number; count: number }>();
+    const negDates: string[] = [];
+    const posDates: string[] = [];
+    let posEntries = 0, negEntries = 0, neuEntries = 0, crisisEntries = 0;
     for (const e of entries) {
       const s = (e.sentiment ?? "neutral") as string;
       const bucket = s === "positivo" ? "pos" : (s === "negativo" || s === "crisis") ? "neg" : "neu";
+      if (s === "positivo") { posEntries++; posDates.push(e.entry_date); }
+      else if (s === "negativo") { negEntries++; negDates.push(e.entry_date); }
+      else if (s === "crisis") { crisisEntries++; negDates.push(e.entry_date); }
+      else neuEntries++;
       for (const t of (e.topics ?? [])) {
         const row = topicPolarity.get(t) ?? { pos: 0, neg: 0, neu: 0 };
         (row as any)[bucket]++;
@@ -398,7 +405,39 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
     // Representative quotes
     const negQuote = quotes.find(q => q.sentiment === "negativo" || q.sentiment === "crisis");
     const posQuote = quotes.find(q => q.sentiment === "positivo");
-    return { negTopics, posTopics, negEntities, posEntities, negQuote, posQuote };
+    const fmt = (d: string) => new Date(d + "T00:00:00").toLocaleDateString("es-MX", { day: "numeric", month: "short" });
+    const uniq = (arr: string[]) => Array.from(new Set(arr)).sort();
+    const negDatesU = uniq(negDates); const posDatesU = uniq(posDates);
+    const negReading = (() => {
+      if (negEntries + crisisEntries === 0) return "";
+      const who = negEntities.length ? negEntities.map(e => e.name).join(", ") : "";
+      const what = negTopics.length ? negTopics.map(t => t.topic).slice(0, 3).join(", ") : "";
+      const when = negDatesU.length ? negDatesU.slice(0, 3).map(fmt).join(", ") + (negDatesU.length > 3 ? "…" : "") : "";
+      const parts: string[] = [];
+      parts.push(`Se detectaron ${negEntries + crisisEntries} día(s) con carga negativa${crisisEntries ? ` (incluyendo ${crisisEntries} de crisis)` : ""}.`);
+      if (what) parts.push(`El ruido gira en torno a ${what}.`);
+      if (who) parts.push(`Las voces más asociadas son ${who}.`);
+      if (when) parts.push(`Fechas clave: ${when}.`);
+      return parts.join(" ");
+    })();
+    const posReading = (() => {
+      if (posEntries === 0) return "";
+      const who = posEntities.length ? posEntities.map(e => e.name).join(", ") : "";
+      const what = posTopics.length ? posTopics.map(t => t.topic).slice(0, 3).join(", ") : "";
+      const when = posDatesU.length ? posDatesU.slice(0, 3).map(fmt).join(", ") + (posDatesU.length > 3 ? "…" : "") : "";
+      const parts: string[] = [];
+      parts.push(`Se registraron ${posEntries} día(s) con tono positivo.`);
+      if (what) parts.push(`Los temas que jalan son ${what}.`);
+      if (who) parts.push(`Impulsados por ${who}.`);
+      if (when) parts.push(`Fechas: ${when}.`);
+      return parts.join(" ");
+    })();
+    return {
+      negTopics, posTopics, negEntities, posEntities, negQuote, posQuote,
+      posEntries, negEntries, neuEntries, crisisEntries,
+      negDates: negDatesU, posDates: posDatesU,
+      negReading, posReading,
+    };
   }, [entries, quotes]);
 
   // Heatmap insights: día pico negativo y día pico positivo
@@ -716,10 +755,13 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
             ) : (
               <div className="space-y-1.5 text-xs">
                 {sentimentDrivers.posTopics.length > 0 && (
-                  <div><span className="text-muted-foreground">Temas: </span><span className="font-medium">{sentimentDrivers.posTopics.map(t => t.topic).join(", ")}</span></div>
+                  <div><span className="text-muted-foreground">Temas: </span><span className="font-medium">{sentimentDrivers.posTopics.map(t => `${t.topic} (${t.count})`).join(", ")}</span></div>
                 )}
                 {sentimentDrivers.posEntities.length > 0 && (
-                  <div><span className="text-muted-foreground">Voces / actores: </span><span className="font-medium">{sentimentDrivers.posEntities.map(e => e.name).join(", ")}</span></div>
+                  <div><span className="text-muted-foreground">Voces / actores: </span><span className="font-medium">{sentimentDrivers.posEntities.map(e => `${e.name} (${e.count})`).join(", ")}</span></div>
+                )}
+                {sentimentDrivers.posReading && (
+                  <p className="pt-1 text-[11px] text-muted-foreground leading-relaxed">{sentimentDrivers.posReading}</p>
                 )}
                 {sentimentDrivers.posQuote && (
                   <blockquote className="mt-2 pl-2 border-l-2 italic text-[11px] text-muted-foreground" style={{ borderColor: SENT_COLORS.positivo }}>
@@ -739,10 +781,13 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
             ) : (
               <div className="space-y-1.5 text-xs">
                 {sentimentDrivers.negTopics.length > 0 && (
-                  <div><span className="text-muted-foreground">Temas: </span><span className="font-medium">{sentimentDrivers.negTopics.map(t => t.topic).join(", ")}</span></div>
+                  <div><span className="text-muted-foreground">Temas: </span><span className="font-medium">{sentimentDrivers.negTopics.map(t => `${t.topic} (${t.count})`).join(", ")}</span></div>
                 )}
                 {sentimentDrivers.negEntities.length > 0 && (
-                  <div><span className="text-muted-foreground">Voces / actores: </span><span className="font-medium">{sentimentDrivers.negEntities.map(e => e.name).join(", ")}</span></div>
+                  <div><span className="text-muted-foreground">Voces / actores: </span><span className="font-medium">{sentimentDrivers.negEntities.map(e => `${e.name} (${e.count})`).join(", ")}</span></div>
+                )}
+                {sentimentDrivers.negReading && (
+                  <p className="pt-1 text-[11px] text-muted-foreground leading-relaxed">{sentimentDrivers.negReading}</p>
                 )}
                 {sentimentDrivers.negQuote && (
                   <blockquote className="mt-2 pl-2 border-l-2 italic text-[11px] text-muted-foreground" style={{ borderColor: SENT_COLORS.negativo }}>
@@ -834,6 +879,42 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
               <Tooltip />
             </PieChart>
           </ResponsiveContainer>
+          {(() => {
+            const total = sentimentBreakdown.reduce((a, s) => a + s.value, 0);
+            if (!total) return null;
+            const get = (n: string) => sentimentBreakdown.find(s => s.name === n)?.value ?? 0;
+            const pos = get("positivo"), neg = get("negativo"), neu = get("neutral"), cri = get("crisis");
+            const pct = (v: number) => Math.round((v / total) * 100);
+            const dominante = [
+              { k: "positivo", v: pos }, { k: "neutral", v: neu }, { k: "negativo", v: neg }, { k: "crisis", v: cri }
+            ].sort((a, b) => b.v - a.v)[0];
+            const balance = pos - (neg + cri);
+            const lectura = (() => {
+              const bits: string[] = [];
+              bits.push(`De ${total} menciones, el ${pct(dominante.v)}% son ${dominante.k}.`);
+              if (balance > 0) bits.push(`La conversación se inclina a favor (${pos} positivas vs ${neg + cri} negativas).`);
+              else if (balance < 0) bits.push(`La conversación pesa en contra (${neg + cri} negativas vs ${pos} positivas).`);
+              else bits.push(`Positivo y negativo se equilibran.`);
+              if (cri > 0) bits.push(`Hay ${cri} mención(es) de crisis que requieren atención inmediata.`);
+              if (neu / total > 0.5) bits.push(`Más de la mitad del ruido es neutral: espacio para empujar mensajes propios.`);
+              return bits.join(" ");
+            })();
+            return (
+              <div className="mt-3 rounded-lg border border-border/40 bg-background/40 p-3">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <Lightbulb className="w-3.5 h-3.5 text-muted-foreground" />
+                  <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">Lectura</span>
+                </div>
+                <p className="text-[11px] text-muted-foreground leading-relaxed">{lectura}</p>
+                <div className="mt-2 flex flex-wrap gap-1.5 text-[10px]">
+                  <span className="px-1.5 py-0.5 rounded" style={{ background: `${SENT_COLORS.positivo}1a`, color: SENT_COLORS.positivo }}>Positivo {pct(pos)}%</span>
+                  <span className="px-1.5 py-0.5 rounded" style={{ background: `${SENT_COLORS.neutral}1a`, color: SENT_COLORS.neutral }}>Neutral {pct(neu)}%</span>
+                  <span className="px-1.5 py-0.5 rounded" style={{ background: `${SENT_COLORS.negativo}1a`, color: SENT_COLORS.negativo }}>Negativo {pct(neg)}%</span>
+                  {cri > 0 && <span className="px-1.5 py-0.5 rounded" style={{ background: `${SENT_COLORS.crisis}1a`, color: SENT_COLORS.crisis }}>Crisis {pct(cri)}%</span>}
+                </div>
+              </div>
+            );
+          })()}
         </Card>
       </div>
 
