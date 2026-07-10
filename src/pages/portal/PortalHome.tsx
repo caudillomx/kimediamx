@@ -14,7 +14,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   LogOut, FileText, ShieldAlert, Download, Sparkles,
   BarChart3, Lightbulb, History, ChevronLeft, ChevronRight,
-  AlertTriangle, TrendingUp, MessageCircle, Sun, Moon, CalendarRange, X,
+  AlertTriangle, TrendingUp, MessageCircle, Sun, Moon, CalendarRange, X, RefreshCw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ClientPortalConfig } from "@/lib/clientPortal";
@@ -86,6 +86,9 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
     sent: { positivo: number; neutral: number; negativo: number; crisis: number };
   }>({ totalMentions: 0, entriesInRange: 0, sent: { positivo: 0, neutral: 0, negativo: 0, crisis: 0 } });
   const [prevRangeAgg, setPrevRangeAgg] = useState<{ totalMentions: number } | null>(null);
+  const [periodAnalysis, setPeriodAnalysis] = useState<Analysis | null>(null);
+  const [periodAnalysisKey, setPeriodAnalysisKey] = useState<string | null>(null);
+  const [regenerating, setRegenerating] = useState(false);
   const [pdfChartData, setPdfChartData] = useState<{
     volumeByDay: { date: string; positivo: number; neutral: number; negativo: number; crisis: number }[];
     topChannels: { name: string; value: number }[];
@@ -162,6 +165,46 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
     const start = new Date(end); start.setDate(start.getDate() - 7 * weeks + 1);
     return { fromDate: start.toISOString().slice(0, 10), toDate: current.week_end };
   }, [current, compareKey, customRange]);
+
+  const isExtendedPeriod = useMemo(() => {
+    if (!current) return false;
+    return fromDate !== current.week_start || toDate !== current.week_end;
+  }, [current, fromDate, toDate]);
+
+  // Clear stale period analysis when range changes
+  useEffect(() => {
+    const key = `${portal.clientId}|${fromDate}|${toDate}`;
+    if (periodAnalysisKey && periodAnalysisKey !== key) {
+      setPeriodAnalysis(null);
+      setPeriodAnalysisKey(null);
+    }
+  }, [portal.clientId, fromDate, toDate, periodAnalysisKey]);
+
+  const regeneratePeriod = async () => {
+    if (!isExtendedPeriod) return;
+    setRegenerating(true);
+    toast.loading("Regenerando análisis del período…", { id: "regen" });
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-listening-weekly-summary", {
+        body: { client_id: portal.clientId, from_date: fromDate, to_date: toDate, persist: false },
+      });
+      if (error) throw error;
+      if (data?.analysis) {
+        setPeriodAnalysis(data.analysis as Analysis);
+        setPeriodAnalysisKey(`${portal.clientId}|${fromDate}|${toDate}`);
+        toast.success("Análisis regenerado para el período", { id: "regen" });
+      } else {
+        throw new Error(data?.error ?? "Sin respuesta");
+      }
+    } catch (e: any) {
+      toast.error(e.message ?? "No se pudo regenerar", { id: "regen" });
+    } finally {
+      setRegenerating(false);
+    }
+  };
+
+  // Effective analysis for display: period override wins over stored weekly
+  const effective: Analysis | null = periodAnalysis ?? current;
 
   // Aggregate real numbers directly from analyzed entries in the selected range
   useEffect(() => {
@@ -264,6 +307,10 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
   }, [portal.clientId, fromDate, toDate]);
 
   const weekLabel = current ? fmtWeekShort(current.week_start, current.week_end) : "";
+  const periodLabel = useMemo(() => {
+    if (!fromDate || !toDate) return weekLabel;
+    return fmtWeekShort(fromDate, toDate);
+  }, [fromDate, toDate, weekLabel]);
 
   const sentTotals = useMemo(() => {
     const s = rangeAgg.sent;
@@ -272,9 +319,9 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
   }, [rangeAgg]);
 
   const displayExecutiveSummary = useMemo(() => {
-    const summary = current?.executive_summary ?? "";
+    const summary = effective?.executive_summary ?? "";
     const contradictsCounts = /no se detectaron|volumen nulo|silencio digital|sin actividad relevante/i.test(summary);
-    if (!current || !contradictsCounts || rangeAgg.totalMentions <= 0) return summary;
+    if (!effective || !contradictsCounts || rangeAgg.totalMentions <= 0) return summary;
 
     const posPct = sentTotals.total ? Math.round((sentTotals.positivo / sentTotals.total) * 100) : null;
     const negPct = sentTotals.total ? Math.round((sentTotals.negativo / sentTotals.total) * 100) : null;
@@ -283,23 +330,23 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
       ? `El balance de sentimiento fue ${posPct}% positivo, ${negPct}% negativo y ${crisisPct}% crisis, calculado directamente desde la bitácora procesada.`
       : "El balance de sentimiento se muestra en las tarjetas y gráficas a partir de la bitácora procesada.";
 
-    return `Durante la semana ${weekLabel}, se analizaron ${rangeAgg.totalMentions} menciones detectadas en el monitoreo. ${sentimentLine} Las gráficas de esta vista son la fuente operativa para volumen, canales, entidades y evolución del período.`;
-  }, [current, rangeAgg.totalMentions, sentTotals, weekLabel]);
+    return `Durante ${weekLabel}, se analizaron ${rangeAgg.totalMentions} menciones detectadas en el monitoreo. ${sentimentLine} Las gráficas de esta vista son la fuente operativa para volumen, canales, entidades y evolución del período.`;
+  }, [effective, rangeAgg.totalMentions, sentTotals, weekLabel]);
 
   const pdfAnalysis = useMemo(() => {
-    if (!current) return null;
+    if (!effective) return null;
     return {
-      ...current,
+      ...effective,
       executive_summary: displayExecutiveSummary,
-      entries_count: rangeAgg.totalMentions || current.entries_count,
+      entries_count: rangeAgg.totalMentions || effective.entries_count,
       sentiment_breakdown: sentTotals.total ? {
         positivo: sentTotals.positivo,
         neutral: sentTotals.neutral,
         negativo: sentTotals.negativo,
         crisis: sentTotals.crisis,
-      } : current.sentiment_breakdown,
+      } : effective.sentiment_breakdown,
     };
-  }, [current, displayExecutiveSummary, rangeAgg.totalMentions, sentTotals]);
+  }, [effective, displayExecutiveSummary, rangeAgg.totalMentions, sentTotals]);
 
   const deltaMentions = useMemo(() => {
     if (!prevRangeAgg) return null;
@@ -501,6 +548,23 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
 
                 {/* Panorama: resumen ejecutivo + alertas + hallazgos + análisis en un solo tab */}
                 <TabsContent value="panorama" className="mt-5 space-y-5">
+                  {isExtendedPeriod && (
+                    <div className="glass rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center gap-3 border border-coral/30 bg-coral/5">
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[11px] uppercase tracking-widest text-coral font-semibold">Período ampliado</div>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {periodAnalysis
+                            ? <>Mostrando análisis y recomendaciones regenerados para <b className="text-foreground">{periodLabel}</b>.</>
+                            : <>El resumen, hallazgos y recomendaciones abajo siguen anclados a la semana <b className="text-foreground">{weekLabel}</b>. Regénéralos para cubrir <b className="text-foreground">{periodLabel}</b>.</>}
+                        </p>
+                      </div>
+                      <Button size="sm" onClick={regeneratePeriod} disabled={regenerating} className="shrink-0">
+                        <RefreshCw className={`w-4 h-4 mr-2 ${regenerating ? "animate-spin" : ""}`} />
+                        {periodAnalysis ? "Regenerar de nuevo" : "Regenerar para el período"}
+                      </Button>
+                    </div>
+                  )}
+
                   {displayExecutiveSummary && (
                     <div className="glass rounded-2xl p-6">
                       <div className="flex items-center gap-2 mb-3">
@@ -514,9 +578,9 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
                     </div>
                   )}
 
-                  {current?.alerts && current.alerts.length > 0 && (
+                  {effective?.alerts && effective.alerts.length > 0 && (
                     <div className="grid gap-2">
-                      {current.alerts.map((a: any, i: number) => (
+                      {effective.alerts.map((a: any, i: number) => (
                         <div key={i} className="flex items-start gap-3 p-4 rounded-xl bg-red-500/5 border border-red-500/30">
                           <AlertTriangle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
                           <div className="flex-1 min-w-0">
@@ -530,11 +594,11 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
                     </div>
                   )}
 
-                  {current?.key_findings && current.key_findings.length > 0 && (
+                  {effective?.key_findings && effective.key_findings.length > 0 && (
                     <div>
                       <div className="text-[11px] uppercase tracking-widest text-muted-foreground mb-3">Hallazgos clave</div>
                       <div className="grid gap-3 md:grid-cols-2">
-                        {current.key_findings.map((f: any, i: number) => (
+                        {effective.key_findings.map((f: any, i: number) => (
                           <div key={i} className="glass rounded-xl p-4">
                             <div className="flex items-start justify-between gap-2 mb-2">
                               <div className="flex items-center gap-2 min-w-0">
@@ -556,8 +620,8 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
                   </div>
 
                   {/* Recomendaciones al cierre del análisis */}
-                  {current?.recommendations_client && (
-                    <RecommendationsBlock markdown={current.recommendations_client} weekLabel={weekLabel} />
+                  {effective?.recommendations_client && (
+                    <RecommendationsBlock markdown={effective.recommendations_client} weekLabel={periodAnalysis ? periodLabel : weekLabel} />
                   )}
                 </TabsContent>
 
