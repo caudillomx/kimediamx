@@ -48,6 +48,7 @@ type Credentials = {
   id?: string;
   portal_email: string | null;
   notes: string | null;
+  portal_user_id?: string | null;
 };
 
 type ListeningEntry = {
@@ -213,7 +214,7 @@ export default function ClientPortalAdmin() {
         .order("week_start", { ascending: false }),
       supabase
         .from("client_portal_credentials")
-        .select("id, portal_email, notes")
+        .select("id, portal_email, notes, portal_user_id")
         .eq("client_id", clientId)
         .maybeSingle(),
       supabase
@@ -365,6 +366,62 @@ export default function ClientPortalAdmin() {
     if (error) { toast.error(error.message); return; }
     toast.success("Credenciales guardadas");
     load();
+  };
+
+  // Portal user auth management
+  const [newPassword, setNewPassword] = useState("");
+  const [portalBusy, setPortalBusy] = useState(false);
+
+  const createOrUpdatePortalUser = async () => {
+    if (!clientId) return;
+    const email = (creds.portal_email ?? "").trim();
+    if (!email) { toast.error("Escribe un email primero"); return; }
+    if (newPassword.length < 8) { toast.error("Contraseña mínima 8 caracteres"); return; }
+    setPortalBusy(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("manage-portal-user", {
+        body: { action: "create", client_id: clientId, email, password: newPassword },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      toast.success("Usuario portal creado/actualizado y acceso otorgado");
+      setNewPassword("");
+      load();
+    } catch (e: any) { toast.error(e.message ?? "Error"); }
+    finally { setPortalBusy(false); }
+  };
+
+  const resetPortalPassword = async () => {
+    if (!clientId) return;
+    if (newPassword.length < 8) { toast.error("Contraseña mínima 8 caracteres"); return; }
+    setPortalBusy(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("manage-portal-user", {
+        body: { action: "set_password", client_id: clientId, password: newPassword },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      toast.success("Contraseña actualizada");
+      setNewPassword("");
+    } catch (e: any) { toast.error(e.message ?? "Error"); }
+    finally { setPortalBusy(false); }
+  };
+
+  const deletePortalUser = async () => {
+    if (!clientId) return;
+    if (!confirm("¿Eliminar el usuario portal y revocar su acceso?")) return;
+    setPortalBusy(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("manage-portal-user", {
+        body: { action: "delete", client_id: clientId },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      toast.success("Usuario portal eliminado");
+      setCreds({ portal_email: "", notes: "", portal_user_id: null });
+      load();
+    } catch (e: any) { toast.error(e.message ?? "Error"); }
+    finally { setPortalBusy(false); }
   };
 
   const handleTxtFile = async (file: File) => {
@@ -686,8 +743,8 @@ export default function ClientPortalAdmin() {
             <Card className="p-4 space-y-3">
               <h3 className="font-semibold text-sm">Cuenta portal del cliente</h3>
               <p className="text-xs text-muted-foreground">
-                Registro del email compartido con el cliente (password se gestiona vía "Olvidé contraseña"
-                en el portal, o desde Cloud → Users).
+                Crea o actualiza el usuario que el cliente usará para entrar a su portal privado.
+                Al crearlo se le da acceso automáticamente a este cliente.
               </p>
               <div>
                 <Label>Email del usuario portal</Label>
@@ -699,13 +756,45 @@ export default function ClientPortalAdmin() {
                 </p>
               </div>
               <div>
+                <Label>Contraseña (mín 8 caracteres)</Label>
+                <Input
+                  type="text"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Genera una contraseña fuerte y compártela por canal seguro"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Se guarda solo en la cuenta auth del portal — nunca en texto plano en la base.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button onClick={createOrUpdatePortalUser} disabled={portalBusy}>
+                  {creds.portal_user_id ? "Actualizar usuario + contraseña" : "Crear usuario portal"}
+                </Button>
+                {creds.portal_user_id && (
+                  <>
+                    <Button variant="outline" onClick={resetPortalPassword} disabled={portalBusy}>
+                      Solo cambiar contraseña
+                    </Button>
+                    <Button variant="ghost" className="text-destructive" onClick={deletePortalUser} disabled={portalBusy}>
+                      <Trash2 className="w-4 h-4 mr-1" /> Eliminar usuario
+                    </Button>
+                  </>
+                )}
+              </div>
+              {creds.portal_user_id && (
+                <div className="text-xs bg-emerald-500/10 border border-emerald-500/30 rounded p-2">
+                  ✓ Usuario portal activo · <code>{creds.portal_email}</code>
+                </div>
+              )}
+              <div>
                 <Label>Notas internas</Label>
                 <Textarea rows={3} value={creds.notes ?? ""}
                   onChange={(e) => setCreds({ ...creds, notes: e.target.value })}
                   placeholder="A quién se le envió el acceso, cuándo, etc." />
               </div>
               <div className="flex justify-end">
-                <Button onClick={saveCreds}><Save className="w-4 h-4 mr-2" /> Guardar</Button>
+                <Button variant="outline" onClick={saveCreds}><Save className="w-4 h-4 mr-2" /> Guardar notas</Button>
               </div>
             </Card>
           </TabsContent>
