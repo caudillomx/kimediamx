@@ -32,24 +32,34 @@ REGLAS DURAS:
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   try {
-    const { client_id, week_start } = await req.json();
-    if (!client_id || !week_start) throw new Error('client_id y week_start requeridos');
+    const body = await req.json();
+    const { client_id, week_start, from_date, to_date, persist } = body ?? {};
+    if (!client_id) throw new Error('client_id requerido');
+    if (!week_start && !(from_date && to_date)) {
+      throw new Error('week_start o (from_date + to_date) requeridos');
+    }
 
-    const start = new Date(week_start + 'T00:00:00');
-    const end = new Date(start); end.setDate(end.getDate() + 6);
+    // Modo período libre (persist=false por defecto en este modo)
+    const isRange = Boolean(from_date && to_date);
+    const periodStart = isRange ? from_date : week_start;
+    const start = new Date(periodStart + 'T00:00:00');
+    const end = isRange
+      ? new Date(to_date + 'T00:00:00')
+      : (() => { const d = new Date(start); d.setDate(d.getDate() + 6); return d; })();
     const weekEnd = end.toISOString().slice(0, 10);
+    const shouldPersist = persist ?? !isRange;
 
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
     const { data: entries, error } = await admin
       .from('client_portal_listening_entries')
       .select('entry_date, sentiment, sentiment_score, urgency, topics, mentions, actors, summary, total_mentions, sentiment_counts, channels, entities, events, key_quotes, competitors')
       .eq('client_id', client_id)
-      .gte('entry_date', week_start)
+      .gte('entry_date', periodStart)
       .lte('entry_date', weekEnd)
       .order('entry_date', { ascending: true });
     if (error) throw error;
     if (!entries || entries.length === 0) {
-      return new Response(JSON.stringify({ error: 'No hay entradas esa semana' }),
+      return new Response(JSON.stringify({ error: 'No hay entradas en el período' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
@@ -150,10 +160,12 @@ Deno.serve(async (req) => {
       actores_equipo: e.actors,
     }));
 
+    const daysInPeriod = Math.round((end.getTime() - start.getTime()) / 86400000) + 1;
+    const periodLabel = daysInPeriod <= 7 ? 'Semana' : daysInPeriod <= 14 ? 'Quincena' : daysInPeriod <= 31 ? 'Mes' : 'Período';
     const userPrompt = [
-      `Semana ${week_start} → ${weekEnd}.`,
+      `${periodLabel} analizado: ${periodStart} → ${weekEnd} (${daysInPeriod} días).`,
       ``,
-      `AGREGADOS DE LA SEMANA (fuente de verdad — úsalos tal cual):`,
+      `AGREGADOS DEL PERÍODO (fuente de verdad — úsalos tal cual):`,
       JSON.stringify(aggregates, null, 2),
       ``,
       `BITÁCORA DIARIA (contexto cualitativo):`,
@@ -182,24 +194,32 @@ Deno.serve(async (req) => {
     const j = await resp.json();
     const parsed = JSON.parse(j?.choices?.[0]?.message?.content ?? '{}');
 
-    const { data: saved, error: upErr } = await admin
-      .from('client_portal_listening_analyses')
-      .upsert({
-        client_id, week_start, week_end: weekEnd,
-        entries_count: entries.length,
-        executive_summary: parsed.executive_summary ?? null,
-        key_findings: parsed.key_findings ?? [],
-        alerts: parsed.alerts ?? [],
-        recommendations_team: parsed.recommendations_team ?? null,
-        recommendations_client: parsed.recommendations_client ?? null,
-        sentiment_breakdown: parsed.sentiment_breakdown ?? {},
-        top_topics: parsed.top_topics ?? [],
-        top_mentions: parsed.top_mentions ?? [],
-      }, { onConflict: 'client_id,week_start' })
-      .select().single();
-    if (upErr) throw upErr;
+    const payload = {
+      client_id,
+      week_start: periodStart,
+      week_end: weekEnd,
+      entries_count: entries.length,
+      executive_summary: parsed.executive_summary ?? null,
+      key_findings: parsed.key_findings ?? [],
+      alerts: parsed.alerts ?? [],
+      recommendations_team: parsed.recommendations_team ?? null,
+      recommendations_client: parsed.recommendations_client ?? null,
+      sentiment_breakdown: parsed.sentiment_breakdown ?? {},
+      top_topics: parsed.top_topics ?? [],
+      top_mentions: parsed.top_mentions ?? [],
+    };
 
-    return new Response(JSON.stringify({ analysis: saved }),
+    let saved: any = { ...payload, id: `transient-${periodStart}-${weekEnd}` };
+    if (shouldPersist) {
+      const { data, error: upErr } = await admin
+        .from('client_portal_listening_analyses')
+        .upsert(payload, { onConflict: 'client_id,week_start' })
+        .select().single();
+      if (upErr) throw upErr;
+      saved = data;
+    }
+
+    return new Response(JSON.stringify({ analysis: saved, period: { from: periodStart, to: weekEnd, days: daysInPeriod }, persisted: shouldPersist }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   } catch (e: any) {
     return new Response(JSON.stringify({ error: e.message }),
