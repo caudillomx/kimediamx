@@ -860,7 +860,7 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
                   )}
 
                   {(() => {
-                    const computedAlerts = rangeMilestones.filter(m => m.impact === "alto" || m.kind === "crisis").slice(0, 5);
+                    const computedAlerts = rangeMilestones.slice(0, 6);
                     const items = computedAlerts.length
                       ? computedAlerts.map((m, i) => ({
                           label: `H${i + 1}`,
