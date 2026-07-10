@@ -661,22 +661,22 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
 
   return (
     <div className="space-y-6">
-      {/* Alertas: eventos de alto impacto */}
-      {eventsTimeline.some(e => e.impact === "alto" || e.kind === "crisis") && (
+      {/* Alertas: hitos críticos del período */}
+      {milestones.some(m => m.impact === "alto" || m.kind === "crisis") && (
         <Card className="p-5 border-rose-500/30 bg-rose-500/5">
           <div className="flex items-center gap-2 mb-3">
             <AlertOctagon className="w-4 h-4 text-rose-500" />
-            <h4 className="text-sm font-semibold">Eventos críticos del período</h4>
+            <h4 className="text-sm font-semibold">Hitos críticos del período</h4>
           </div>
           <div className="space-y-2">
-            {eventsTimeline.filter(e => e.impact === "alto" || e.kind === "crisis").slice(0, 5).map((e, i) => (
+            {milestones.filter(m => m.impact === "alto" || m.kind === "crisis").slice(0, 5).map((m, i) => (
               <div key={i} className="text-sm flex items-start gap-3 p-2 rounded bg-background/50">
-                <Badge variant="destructive" className="text-[10px] shrink-0">{e.kind}</Badge>
+                <Badge variant="destructive" className="text-[10px] shrink-0">H{i + 1}</Badge>
                 <div className="min-w-0 flex-1">
-                  <div className="font-medium">{e.title}</div>
-                  {e.detail && <div className="text-xs text-muted-foreground">{e.detail}</div>}
+                  <div className="font-medium">{m.title || m.kind}</div>
+                  {m.detail && <div className="text-xs text-muted-foreground">{m.detail}</div>}
                 </div>
-                <span className="text-[10px] text-muted-foreground shrink-0">{e.date}</span>
+                <span className="text-[10px] text-muted-foreground shrink-0">{m.date}</span>
               </div>
             ))}
           </div>
