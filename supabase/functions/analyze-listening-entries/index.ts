@@ -43,6 +43,48 @@ Reglas duras:
 - "competitors": otras marcas/organizaciones del mismo sector citadas de forma comparativa. Solo si el texto lo evidencia.
 - "crisis" solo si hay riesgo reputacional o legal claro. Ignora saludos, stickers, "🙂🙏", "ok" y ruido.`;
 
+// Extrae totales declarados EXPLÍCITAMENTE en la bitácora.
+// Ej: "Total: 119 menciones", "119 menciones únicas", "se identificaron 119 menciones"
+function extractDeclaredTotals(md: string): { total?: number; counts?: Record<string, number> } {
+  const text = md.replace(/[\*_`~]/g, ' ').replace(/\s+/g, ' ');
+  const out: { total?: number; counts?: Record<string, number> } = {};
+
+  const totalPatterns = [
+    /total\s*(?:general|de\s+menciones)?\s*[:\-–]?\s*(\d{1,5})\s*menciones/i,
+    /(\d{1,5})\s*menciones\s*(?:únicas|unicas|totales|en\s+total)/i,
+    /se\s+identificaron\s+(\d{1,5})\s*menciones/i,
+    /volumen\s+total\s+de\s+menciones[^0-9]{0,60}(\d{1,5})/i,
+  ];
+  let best = 0;
+  for (const re of totalPatterns) {
+    const m = text.match(re);
+    if (m) { const n = parseInt(m[1], 10); if (Number.isFinite(n) && n > best) best = n; }
+  }
+  if (best > 0) out.total = best;
+
+  const grab = (labels: string[]): number | undefined => {
+    for (const label of labels) {
+      const re = new RegExp(`${label}[^0-9\\-]{0,40}(?:~|aprox\\.?|cerca\\s+de\\s+)?\\(?\\s*~?\\s*(\\d{1,5})\\s*menciones?\\)?`, 'i');
+      const m = text.match(re);
+      if (m) { const n = parseInt(m[1], 10); if (Number.isFinite(n)) return n; }
+    }
+    return undefined;
+  };
+  const positivo = grab(['positivo', 'positivas']);
+  const neutral  = grab(['neutral', 'neutrales', 'neutro']);
+  const negativo = grab(['negativo', 'negativas', 'negativo\\s*/\\s*riesgo', 'riesgo\\s*con\\s*contexto']);
+  const crisis   = grab(['crisis']);
+  if (positivo || neutral || negativo || crisis) {
+    out.counts = {
+      positivo: positivo ?? 0,
+      neutral: neutral ?? 0,
+      negativo: negativo ?? 0,
+      crisis: crisis ?? 0,
+    };
+  }
+  return out;
+}
+
 async function analyzeOne(entry: Entry) {
   const resp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
     method: 'POST',
@@ -54,7 +96,7 @@ async function analyzeOne(entry: Entry) {
       model: MODEL,
       messages: [
         { role: 'system', content: SYSTEM },
-        { role: 'user', content: `Fecha: ${entry.entry_date}\n\nBitácora:\n${entry.content_md.slice(0, 12000)}` },
+        { role: 'user', content: `Fecha: ${entry.entry_date}\n\nBitácora:\n${entry.content_md.slice(0, 28000)}` },
       ],
       response_format: { type: 'json_object' },
     }),
@@ -65,7 +107,33 @@ async function analyzeOne(entry: Entry) {
   }
   const j = await resp.json();
   const raw = j?.choices?.[0]?.message?.content ?? '{}';
-  return JSON.parse(raw);
+  const parsed = JSON.parse(raw);
+
+  // Override con totales declarados explícitamente en el texto (fuente de verdad)
+  const declared = extractDeclaredTotals(entry.content_md);
+  if (declared.total && declared.total > (Number(parsed.total_mentions) || 0)) {
+    parsed.total_mentions = declared.total;
+  }
+  if (declared.counts) {
+    const sum = declared.counts.positivo + declared.counts.neutral + declared.counts.negativo + declared.counts.crisis;
+    const currentSum = ['positivo','neutral','negativo','crisis'].reduce((a,k)=>a+(Number(parsed?.sentiment_counts?.[k])||0),0);
+    if (sum > currentSum) parsed.sentiment_counts = declared.counts;
+  }
+  // Si tenemos total declarado pero los sentiment_counts no lo alcanzan, escálalos proporcionalmente
+  if (parsed.total_mentions && parsed.sentiment_counts) {
+    const sc = parsed.sentiment_counts;
+    const sum = (Number(sc.positivo)||0)+(Number(sc.neutral)||0)+(Number(sc.negativo)||0)+(Number(sc.crisis)||0);
+    if (sum > 0 && sum < parsed.total_mentions) {
+      const k = parsed.total_mentions / sum;
+      parsed.sentiment_counts = {
+        positivo: Math.round((Number(sc.positivo)||0) * k),
+        neutral:  Math.round((Number(sc.neutral)||0) * k),
+        negativo: Math.round((Number(sc.negativo)||0) * k),
+        crisis:   Math.round((Number(sc.crisis)||0) * k),
+      };
+    }
+  }
+  return parsed;
 }
 
 Deno.serve(async (req) => {
