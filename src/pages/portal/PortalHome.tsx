@@ -114,6 +114,25 @@ function buildMilestonesFromRows(rows: any[]): PeriodMilestone[] {
     if (v > peakVolume) { peakVolume = v; peakDate = d; }
   }
 
+  const coveragePeakDates = new Set<string>();
+  const orderedVolumes = Array.from(mentionsByDate.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+  const weekSegments = new Map<string, [string, number][]>();
+  for (const item of orderedVolumes) {
+    const dt = new Date(item[0] + "T00:00:00");
+    const monday = new Date(dt);
+    monday.setDate(dt.getDate() - ((dt.getDay() + 6) % 7));
+    const key = monday.toISOString().slice(0, 10);
+    const arr = weekSegments.get(key) ?? [];
+    arr.push(item);
+    weekSegments.set(key, arr);
+  }
+  for (const segment of weekSegments.values()) {
+    const active = segment.filter(([, v]) => v > 0);
+    if (!active.length) continue;
+    const [localDate, localVol] = active.reduce((best, cur) => cur[1] > best[1] ? cur : best);
+    if (localVol >= Math.max(1, avgVol * 0.55, maxVol * 0.25)) coveragePeakDates.add(localDate);
+  }
+
   const bestByDate = new Map<string, PeriodMilestone>();
   for (const ev of events) {
     const cur = bestByDate.get(ev.date);
@@ -131,27 +150,43 @@ function buildMilestonesFromRows(rows: any[]): PeriodMilestone[] {
   for (const [date, vol] of mentionsByDate.entries()) {
     if (candidates.some(c => c.date === date)) continue;
     const isPeak = date === peakDate || vol >= peakThreshold;
-    if (!isPeak) continue;
+    const isCoveragePeak = coveragePeakDates.has(date);
+    if (!isPeak && !isCoveragePeak) continue;
     const ratio = avgVol ? vol / avgVol : 1;
     const impactScore = date === peakDate || vol >= maxVol * 0.75 ? IMPACT_RANK.alto : IMPACT_RANK.medio;
     candidates.push({
       date,
-      title: date === peakDate ? "Pico de conversación del período" : "Día con conversación destacada",
+      title: date === peakDate ? "Pico de conversación del período" : isCoveragePeak ? "Pico local de conversación" : "Día con conversación destacada",
       kind: "volumen",
       impact: impactScore >= IMPACT_RANK.alto ? "alto" : "medio",
       detail: `${vol.toLocaleString("es-MX")} menciones registradas${avgVol ? ` (${ratio.toFixed(1)}× el promedio diario)` : ""}.`,
       vol,
       impactScore,
-      score: (vol / maxVol) * 10 + impactScore,
-      isPeak,
+      score: (vol / maxVol) * 10 + impactScore + (isCoveragePeak ? 1 : 0),
+      isPeak: isPeak || isCoveragePeak,
     });
   }
 
+  for (const c of candidates) {
+    if (!coveragePeakDates.has(c.date)) continue;
+    c.isPeak = true;
+    c.score += 1;
+  }
+
   const peakCandidate = peakDate ? candidates.find(c => c.date === peakDate) : undefined;
+  const requiredDates = new Set([peakDate, ...coveragePeakDates].filter(Boolean) as string[]);
   const HARD_CAP = 6;
-  let picked = candidates.filter(c => c.isPeak || c.impactScore >= IMPACT_RANK.alto)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, HARD_CAP);
+  const eligible = candidates.filter(c => c.isPeak || c.impactScore >= IMPACT_RANK.alto);
+  const required = Array.from(requiredDates)
+    .map(date => candidates.find(c => c.date === date))
+    .filter(Boolean)
+    .sort((a, b) => (b!.date === peakDate ? 1 : 0) - (a!.date === peakDate ? 1 : 0) || (b!.vol - a!.vol))
+    .slice(0, HARD_CAP) as typeof candidates;
+  let picked = [...required];
+  for (const c of [...eligible].sort((a, b) => b.score - a.score)) {
+    if (picked.length >= HARD_CAP) break;
+    if (!picked.some(p => p.date === c.date)) picked.push(c);
+  }
   if (picked.length === 0) picked = [...candidates].sort((a, b) => b.score - a.score).slice(0, Math.min(3, candidates.length));
   if (peakCandidate && !picked.some(p => p.date === peakCandidate.date)) {
     picked = [peakCandidate, ...picked].sort((a, b) => b.score - a.score).slice(0, HARD_CAP);
@@ -825,7 +860,7 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
                   )}
 
                   {(() => {
-                    const computedAlerts = rangeMilestones.filter(m => m.impact === "alto" || m.kind === "crisis").slice(0, 5);
+                    const computedAlerts = rangeMilestones.slice(0, 6);
                     const items = computedAlerts.length
                       ? computedAlerts.map((m, i) => ({
                           label: `H${i + 1}`,
