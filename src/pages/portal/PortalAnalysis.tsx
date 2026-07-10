@@ -199,7 +199,9 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
         detail: ev?.detail ?? "",
       });
     }
-    return items.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 20);
+    // Keep the full period for milestone selection. Slicing here hid early-period
+    // events in longer ranges (quincena / mensual), so only the UI lists should cap.
+    return items.sort((a, b) => b.date.localeCompare(a.date));
   }, [entries]);
 
   // ---------- Nuevos agregados ----------
