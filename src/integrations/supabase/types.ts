@@ -978,10 +978,12 @@ export type Database = {
           mentions: Json | null
           raw_source_ref: string | null
           sentiment: string | null
+          sentiment_counts: Json | null
           sentiment_score: number | null
           source: string
           summary: string | null
           topics: string[] | null
+          total_mentions: number | null
           updated_at: string
           urgency: string | null
         }
@@ -1002,10 +1004,12 @@ export type Database = {
           mentions?: Json | null
           raw_source_ref?: string | null
           sentiment?: string | null
+          sentiment_counts?: Json | null
           sentiment_score?: number | null
           source?: string
           summary?: string | null
           topics?: string[] | null
+          total_mentions?: number | null
           updated_at?: string
           urgency?: string | null
         }
@@ -1026,10 +1030,12 @@ export type Database = {
           mentions?: Json | null
           raw_source_ref?: string | null
           sentiment?: string | null
+          sentiment_counts?: Json | null
           sentiment_score?: number | null
           source?: string
           summary?: string | null
           topics?: string[] | null
+          total_mentions?: number | null
           updated_at?: string
           urgency?: string | null
         }
