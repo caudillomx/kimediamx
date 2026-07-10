@@ -865,6 +865,26 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
               {DOW_LABELS.map(d => <div key={d} className="text-[9px] text-center text-muted-foreground uppercase tracking-wider">{d}</div>)}
             </div>
           </div>
+          <div className="mt-4 rounded-lg border border-border/40 bg-background/40 p-3">
+            <div className="flex items-center gap-2 mb-2">
+              <Lightbulb className="w-3.5 h-3.5 text-muted-foreground" />
+              <span className="text-[11px] uppercase tracking-widest text-muted-foreground">Lectura del heatmap</span>
+            </div>
+            <ul className="text-xs text-muted-foreground space-y-1 leading-relaxed">
+              {heatmapInsights.pos.day && (
+                <li>• Los <span className="font-semibold text-foreground">{heatmapInsights.pos.day}</span> concentran el mayor volumen positivo ({heatmapInsights.pos.value} menciones): buena ventana para lanzar mensajes propios.</li>
+              )}
+              {heatmapInsights.neg.day && heatmapInsights.neg.value > 0 && (
+                <li>• Los <span className="font-semibold text-foreground">{heatmapInsights.neg.day}</span> son el día más crítico en negativo ({heatmapInsights.neg.value}): reforzar monitoreo y capacidad de respuesta rápida.</li>
+              )}
+              {heatmapInsights.crisis.value > 0 && (
+                <li>• Se registran picos de <span className="font-semibold" style={{ color: SENT_COLORS.crisis }}>crisis</span> los <span className="font-semibold text-foreground">{heatmapInsights.crisis.day}</span>: revisar detonantes recurrentes.</li>
+              )}
+              {(!heatmapInsights.pos.value && !heatmapInsights.neg.value && !heatmapInsights.crisis.value) && (
+                <li>Sin patrones semanales relevantes todavía.</li>
+              )}
+            </ul>
+          </div>
         </Card>
 
         <Card className="p-4 flex flex-col">
@@ -881,8 +901,26 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
               <div className="text-xs font-semibold" style={{ color: reputationScore.color }}>{reputationScore.label}</div>
             </div>
           </div>
-          <div className="text-[10px] text-muted-foreground text-center mt-1">
-            Score: {reputationScore.avg} · crisis: {reputationScore.crisisEvents}
+          <div className="mt-3 space-y-2">
+            <p className="text-[11px] text-muted-foreground leading-relaxed">{reputationBreakdown.explanation}</p>
+            <div className="space-y-1">
+              {reputationBreakdown.parts.map((p) => {
+                const isNeg = p.value < 0;
+                const isPos = p.value > 0;
+                const color = isNeg ? SENT_COLORS.negativo : isPos ? SENT_COLORS.positivo : "#94a3b8";
+                return (
+                  <div key={p.label} className="flex items-center justify-between text-[11px]">
+                    <span className="text-muted-foreground">{p.label}</span>
+                    <span className="font-semibold tabular-nums" style={{ color }}>{p.value > 0 ? "+" : ""}{p.value}</span>
+                  </div>
+                );
+              })}
+              <div className="flex items-center justify-between text-[11px] pt-1 border-t border-border/40">
+                <span className="font-semibold">Score total</span>
+                <span className="font-bold tabular-nums" style={{ color: reputationScore.color }}>{reputationScore.score}</span>
+              </div>
+            </div>
+            <div className="text-[10px] text-muted-foreground">Sentimiento promedio: {reputationScore.avg} · Crisis detectadas: {reputationScore.crisisEvents}</div>
           </div>
         </Card>
       </div>
