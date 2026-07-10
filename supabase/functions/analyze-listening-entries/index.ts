@@ -23,6 +23,8 @@ Devuelve SIEMPRE JSON estricto con estas claves:
   "actors": string[] (nombres del equipo que reportan/participan, si se detectan),
   "summary": string (2-3 oraciones ejecutivas, sin adornos),
 
+  "total_mentions": number (cantidad TOTAL de menciones individuales sobre el cliente encontradas en la bitácora del día — no cuentes el día como 1; cuenta cada tuit, nota, video, post, comentario, columna, mensaje que hable del cliente por separado),
+  "sentiment_counts": { "positivo": number, "neutral": number, "negativo": number, "crisis": number } (cuenta cuántas de esas menciones individuales caen en cada sentimiento; la suma debe ser <= total_mentions),
   "channels": [{ "name": "twitter"|"x"|"facebook"|"instagram"|"tiktok"|"youtube"|"linkedin"|"whatsapp"|"telegram"|"prensa"|"radio"|"tv"|"blog"|"foro"|"otro", "count": number }],
   "entities": [{ "name": string, "type": "persona"|"marca"|"medio"|"institucion"|"politico"|"influencer"|"otro", "sentiment": "positivo"|"neutral"|"negativo"|"crisis", "count": number }],
   "events": [{ "title": string, "kind": "crisis"|"lanzamiento"|"comunicado"|"declaracion"|"nota"|"campaña"|"evento"|"otro", "impact": "bajo"|"medio"|"alto", "detail": string }],
@@ -32,6 +34,8 @@ Devuelve SIEMPRE JSON estricto con estas claves:
 
 Reglas duras:
 - Devuelve arrays vacíos si no hay datos, NUNCA inventes nombres, canales ni citas.
+- "total_mentions" y "sentiment_counts" son OBLIGATORIOS y críticos: cuenta con rigor cada ítem individual (un tuit = 1, una nota de prensa = 1, un video = 1). Si el equipo dice "10 tuits negativos y 3 notas positivas", devuelve total_mentions=13 y sentiment_counts={positivo:3, negativo:10, neutral:0, crisis:0}. NO devuelvas 0 si el texto tiene contenido.
+- "sentiment" (el campo global del día) refleja el TONO PREDOMINANTE del día, no lo confundas con el conteo.
 - "channels": cuenta cuántas menciones vienen de cada canal identificable en el texto (por URL, hashtag, "@usuario", "en el noticiero X", "en el podcast", etc.). Si no se puede inferir, no lo agregues.
 - "entities": personas/marcas/instituciones citadas junto al cliente. Deduplica normalizando mayúsculas.
 - "events": hitos concretos con impacto reputacional (crisis, lanzamientos, comunicados, declaraciones). No listes conversaciones triviales.
@@ -105,6 +109,8 @@ Deno.serve(async (req) => {
       events: Array.isArray(a.events) ? a.events.slice(0, 10) : [],
       key_quotes: Array.isArray(a.key_quotes) ? a.key_quotes.slice(0, 10) : [],
       competitors: Array.isArray(a.competitors) ? a.competitors.slice(0, 15) : [],
+      total_mentions: typeof a.total_mentions === 'number' ? a.total_mentions : 0,
+      sentiment_counts: (a.sentiment_counts && typeof a.sentiment_counts === 'object') ? a.sentiment_counts : {},
       analyzed_at: new Date().toISOString(),
     });
 
