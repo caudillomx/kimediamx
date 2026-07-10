@@ -334,11 +334,11 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
     // Puntaje: volumen del día (dominante) + impacto del evento
     const candidates = Array.from(bestByDate.values()).map(ev => {
       const vol = mentionsByDate.get(ev.date) ?? 0;
-      const impact = Math.max(IMPACT_RANK[ev.impact ?? ""] ?? 0, ev.kind === "crisis" ? IMPACT_RANK.crisis : 0);
-      const score = (vol / maxVol) * 10 + impact; // volumen pesa más que impacto
+      const impactScore = Math.max(IMPACT_RANK[ev.impact ?? ""] ?? 0, ev.kind === "crisis" ? IMPACT_RANK.crisis : 0);
+      const score = (vol / maxVol) * 10 + impactScore; // volumen pesa más que impacto
       const isPeak = vol >= peakThreshold;
       const color = ev.kind === "crisis" || ev.impact === "alto" ? "#ef4444" : ev.impact === "medio" ? "#f59e0b" : "#0ea5e9";
-      return { ...ev, vol, impact, score, isPeak, color };
+      return { ...ev, vol, impactScore, score, isPeak, color };
     });
 
     // El día con el mayor volumen SIEMPRE es hito si tiene evento asociado.
@@ -364,6 +364,7 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
         impact: impact >= IMPACT_RANK.alto ? "alto" : "medio",
         detail: `${vol.toLocaleString("es-MX")} menciones registradas${avgVol ? ` (${ratio.toFixed(1)}× el promedio diario)` : ""}.`,
         vol,
+        impactScore: impact,
         score: (vol / maxVol) * 10 + impact,
         isPeak,
         color: impact >= IMPACT_RANK.alto ? "#ef4444" : "#f59e0b",
@@ -373,7 +374,7 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
     const peakCandidate = peakDate ? candidates.find(c => c.date === peakDate) : undefined;
 
     // Filtrar a picos reales; si el evento es crisis/alto siempre entra
-    let picked = candidates.filter(c => c.isPeak || c.impact >= IMPACT_RANK.alto);
+    let picked = candidates.filter(c => c.isPeak || c.impactScore >= IMPACT_RANK.alto);
     // Fallback: si no hay picos, tomar los 3 días con mayor volumen que tengan evento
     if (picked.length === 0) {
       picked = [...candidates].sort((a, b) => b.score - a.score).slice(0, Math.min(3, candidates.length));
