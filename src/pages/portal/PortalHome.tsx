@@ -262,6 +262,8 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
     })();
   }, [portal.clientId, fromDate, toDate]);
 
+  const weekLabel = current ? fmtWeekShort(current.week_start, current.week_end) : "";
+
   const sentTotals = useMemo(() => {
     const s = rangeAgg.sent;
     const total = s.positivo + s.neutral + s.negativo + s.crisis;
@@ -342,8 +344,6 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
       </div>
     );
   }
-
-  const weekLabel = current ? fmtWeekShort(current.week_start, current.week_end) : "";
 
   return (
     <div className="min-h-screen bg-background text-foreground">
