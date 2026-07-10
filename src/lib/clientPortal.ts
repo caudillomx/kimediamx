@@ -7,6 +7,7 @@ export type ClientPortalConfig = {
   clientName: string;
   displayName: string; // shown in UI
   tagline?: string;
+  logoUrl?: string;
 };
 
 export const CLIENT_PORTALS: Record<string, ClientPortalConfig> = {
