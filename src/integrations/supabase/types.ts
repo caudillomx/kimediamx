@@ -960,6 +960,50 @@ export type Database = {
           },
         ]
       }
+      client_portal_listening_analysis_jobs: {
+        Row: {
+          client_id: string
+          created_at: string
+          error_message: string | null
+          id: string
+          period_end: string
+          period_start: string
+          result: Json | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          period_end: string
+          period_start: string
+          result?: Json | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          period_end?: string
+          period_start?: string
+          result?: Json | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_portal_listening_analysis_jobs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_portal_listening_entries: {
         Row: {
           actors: string[] | null
