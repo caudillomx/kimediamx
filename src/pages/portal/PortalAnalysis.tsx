@@ -296,6 +296,39 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
       .slice(0, 6);
   }, [entries]);
 
+  // Hitos: top 5 eventos por impacto/tipo, únicos por fecha
+  const IMPACT_RANK: Record<string, number> = { crisis: 4, alto: 3, medio: 2, bajo: 1 };
+  const milestones = useMemo(() => {
+    if (!eventsTimeline.length) return [] as { date: string; dateKey: string; title: string; detail: string; kind: string; impact: string; color: string }[];
+    const scored = eventsTimeline.map(e => {
+      const r = Math.max(IMPACT_RANK[e.impact ?? ""] ?? 0, e.kind === "crisis" ? IMPACT_RANK.crisis : 0);
+      const color = e.kind === "crisis" || e.impact === "alto" ? "#ef4444" : e.impact === "medio" ? "#f59e0b" : "#0ea5e9";
+      return { ...e, _r: r, color };
+    });
+    const seen = new Set<string>();
+    const picked: typeof scored = [];
+    for (const ev of [...scored].sort((a, b) => (b._r - a._r) || b.date.localeCompare(a.date))) {
+      if (seen.has(ev.date)) continue;
+      picked.push(ev); seen.add(ev.date);
+      if (picked.length >= 5) break;
+    }
+    return picked
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .map(m => ({ date: m.date, dateKey: m.date.slice(5), title: m.title, detail: m.detail, kind: m.kind, impact: m.impact, color: m.color }));
+  }, [eventsTimeline]);
+
+  // y-value por fecha para cada gráfica temporal
+  const yByDateLine = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const d of volumeByDay) m.set(d.date.slice(5), d.positivo + d.neutral + d.negativo + d.crisis);
+    return m;
+  }, [volumeByDay]);
+  const yByDateBar = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const d of volumeByDay) m.set(d.date, d.positivo + d.neutral + d.negativo + d.crisis);
+    return m;
+  }, [volumeByDay]);
+
   const quotes = useMemo(() => {
     const items: { date: string; text: string; author: string; source: string; sentiment: string }[] = [];
     for (const e of entries) for (const q of (e.key_quotes ?? [])) {
