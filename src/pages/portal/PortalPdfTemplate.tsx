@@ -19,12 +19,23 @@ type Props = {
   logoUrl?: string | null;
   analysis: Analysis | null;
   weekLabel: string;
+  charts?: {
+    volumeByDay: { date: string; positivo: number; neutral: number; negativo: number; crisis: number }[];
+    topChannels: { name: string; value: number }[];
+    topEntities: { name: string; size: number }[];
+    reputation: { score: number; label: string; color: string };
+  } | null;
 };
 
 const fmt = (d: string) =>
   new Date(d + "T00:00:00").toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" });
 
-const PortalPdfTemplate = forwardRef<HTMLDivElement, Props>(({ portal, logoUrl, analysis, weekLabel }, ref) => {
+const SENT_COLORS: Record<string, string> = {
+  positivo: "#10b981", neutral: "#94a3b8", negativo: "#f59e0b", crisis: "#ef4444",
+};
+const PIE_PALETTE = ["#ef6a4d", "#0ea5e9", "#a855f7", "#10b981", "#f59e0b", "#ec4899"];
+
+const PortalPdfTemplate = forwardRef<HTMLDivElement, Props>(({ portal, logoUrl, analysis, weekLabel, charts }, ref) => {
   const sent = analysis?.sentiment_breakdown ?? {};
   const totalSent = Object.values(sent).reduce((a, b) => a + (Number(b) || 0), 0);
   const pct = (n: number) => (totalSent ? Math.round((n / totalSent) * 100) : 0);
@@ -136,6 +147,41 @@ const PortalPdfTemplate = forwardRef<HTMLDivElement, Props>(({ portal, logoUrl, 
               <div style={{ whiteSpace: "pre-wrap", fontSize: 12 }}>{analysis.recommendations_client}</div>
             </Section>
           )}
+
+          {/* ===== Página 2: Gráficos ===== */}
+          {charts && (
+            <div style={{ pageBreakBefore: "always", paddingTop: 12 }}>
+              <h2 style={{ fontSize: 16, margin: "0 0 14px", fontFamily: "'Space Grotesk', system-ui", color: "#0f172a", borderBottom: "2px solid #ef6a4d", paddingBottom: 6 }}>
+                Panorama visual
+              </h2>
+
+              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 14, marginBottom: 18 }}>
+                <ChartBox title="Volumen y sentimiento por día">
+                  <VolumeBarsSvg data={charts.volumeByDay} />
+                </ChartBox>
+                <ChartBox title="Salud reputacional">
+                  <GaugeSvg score={charts.reputation.score} color={charts.reputation.color} label={charts.reputation.label} />
+                </ChartBox>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 18 }}>
+                <ChartBox title="Menciones por canal">
+                  <DonutSvg data={charts.topChannels.map((c, i) => ({ name: c.name, value: c.value, color: PIE_PALETTE[i % PIE_PALETTE.length] }))} />
+                </ChartBox>
+                <ChartBox title="Sentimiento agregado">
+                  <DonutSvg data={(["positivo", "neutral", "negativo", "crisis"] as const)
+                    .map(k => ({ name: k, value: Number(sent[k] ?? 0), color: SENT_COLORS[k] }))
+                    .filter(d => d.value > 0)} />
+                </ChartBox>
+              </div>
+
+              {charts.topEntities.length > 0 && (
+                <ChartBox title="Entidades más citadas">
+                  <EntitiesBarSvg data={charts.topEntities} />
+                </ChartBox>
+              )}
+            </div>
+          )}
         </>
       )}
 
@@ -164,5 +210,145 @@ function KpiBox({ label, value, accent = "#ef6a4d" }: { label: string; value: st
       <div style={{ fontSize: 9, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5 }}>{label}</div>
       <div style={{ fontSize: 22, fontWeight: 700, color: accent, fontFamily: "'Space Grotesk', system-ui", marginTop: 4 }}>{value}</div>
     </div>
+  );
+}
+
+function ChartBox({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div style={{ border: "1px solid #e2e8f0", borderRadius: 8, padding: 12, background: "#fff", pageBreakInside: "avoid" }}>
+      <div style={{ fontSize: 11, fontWeight: 600, color: "#0f172a", marginBottom: 8, fontFamily: "'Space Grotesk', system-ui" }}>{title}</div>
+      {children}
+    </div>
+  );
+}
+
+// ================= SVG CHARTS =================
+
+function VolumeBarsSvg({ data }: { data: { date: string; positivo: number; neutral: number; negativo: number; crisis: number }[] }) {
+  const W = 440, H = 190, P = { l: 30, r: 10, t: 10, b: 30 };
+  if (!data.length) return <EmptyMsg w={W} h={H} />;
+  const totals = data.map(d => d.positivo + d.neutral + d.negativo + d.crisis);
+  const max = Math.max(1, ...totals);
+  const bw = (W - P.l - P.r) / data.length;
+  const scaleY = (v: number) => ((H - P.t - P.b) * v) / max;
+  const keys = ["positivo", "neutral", "negativo", "crisis"] as const;
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H}>
+      {[0, 0.5, 1].map((r, i) => {
+        const y = P.t + (H - P.t - P.b) * (1 - r);
+        return <g key={i}><line x1={P.l} x2={W - P.r} y1={y} y2={y} stroke="#e2e8f0" strokeDasharray="2 3" />
+          <text x={P.l - 4} y={y + 3} fontSize={8} fill="#94a3b8" textAnchor="end">{Math.round(max * r)}</text></g>;
+      })}
+      {data.map((d, i) => {
+        let cursor = H - P.b;
+        return (
+          <g key={i} transform={`translate(${P.l + i * bw}, 0)`}>
+            {keys.map(k => {
+              const h = scaleY(d[k] as number);
+              const y = cursor - h; cursor -= h;
+              if (h <= 0) return null;
+              return <rect key={k} x={2} y={y} width={bw - 4} height={h} fill={SENT_COLORS[k]} />;
+            })}
+            <text x={bw / 2} y={H - P.b + 12} fontSize={7} fill="#64748b" textAnchor="middle">{d.date.slice(5)}</text>
+          </g>
+        );
+      })}
+      <g transform={`translate(${P.l}, ${H - 6})`}>
+        {keys.map((k, i) => (
+          <g key={k} transform={`translate(${i * 70}, 0)`}>
+            <rect width={8} height={8} fill={SENT_COLORS[k]} />
+            <text x={12} y={7} fontSize={8} fill="#334155">{k}</text>
+          </g>
+        ))}
+      </g>
+    </svg>
+  );
+}
+
+function DonutSvg({ data }: { data: { name: string; value: number; color: string }[] }) {
+  const W = 300, H = 190, cx = 90, cy = 95, r = 65, ri = 38;
+  const total = data.reduce((a, b) => a + b.value, 0);
+  if (!total) return <EmptyMsg w={W} h={H} />;
+  let angle = -Math.PI / 2;
+  const arcs = data.map(d => {
+    const slice = (d.value / total) * Math.PI * 2;
+    const a0 = angle, a1 = angle + slice;
+    angle = a1;
+    const large = slice > Math.PI ? 1 : 0;
+    const x0 = cx + r * Math.cos(a0), y0 = cy + r * Math.sin(a0);
+    const x1 = cx + r * Math.cos(a1), y1 = cy + r * Math.sin(a1);
+    const xi0 = cx + ri * Math.cos(a1), yi0 = cy + ri * Math.sin(a1);
+    const xi1 = cx + ri * Math.cos(a0), yi1 = cy + ri * Math.sin(a0);
+    const path = `M${x0},${y0} A${r},${r} 0 ${large} 1 ${x1},${y1} L${xi0},${yi0} A${ri},${ri} 0 ${large} 0 ${xi1},${yi1} Z`;
+    return { d, path, pct: Math.round((d.value / total) * 100) };
+  });
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H}>
+      {arcs.map((a, i) => <path key={i} d={a.path} fill={a.d.color} stroke="#fff" strokeWidth={1.5} />)}
+      <text x={cx} y={cy + 4} fontSize={14} fontWeight={700} textAnchor="middle" fill="#0f172a">{total}</text>
+      <g transform={`translate(175, 20)`}>
+        {arcs.map((a, i) => (
+          <g key={i} transform={`translate(0, ${i * 18})`}>
+            <rect width={10} height={10} fill={a.d.color} />
+            <text x={14} y={9} fontSize={9} fill="#334155">{a.d.name}</text>
+            <text x={115} y={9} fontSize={9} fill="#64748b" textAnchor="end">{a.pct}%</text>
+          </g>
+        ))}
+      </g>
+    </svg>
+  );
+}
+
+function GaugeSvg({ score, color, label }: { score: number; color: string; label: string }) {
+  const W = 220, H = 190, cx = 110, cy = 130, r = 78;
+  const start = Math.PI, end = 2 * Math.PI;
+  const t = score / 100;
+  const angle = start + (end - start) * t;
+  const arc = (a0: number, a1: number) => {
+    const large = a1 - a0 > Math.PI ? 1 : 0;
+    const x0 = cx + r * Math.cos(a0), y0 = cy + r * Math.sin(a0);
+    const x1 = cx + r * Math.cos(a1), y1 = cy + r * Math.sin(a1);
+    return `M${x0},${y0} A${r},${r} 0 ${large} 1 ${x1},${y1}`;
+  };
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H}>
+      <path d={arc(start, end)} stroke="#e2e8f0" strokeWidth={14} fill="none" strokeLinecap="round" />
+      <path d={arc(start, angle)} stroke={color} strokeWidth={14} fill="none" strokeLinecap="round" />
+      <text x={cx} y={cy - 4} fontSize={34} fontWeight={700} textAnchor="middle" fill={color} fontFamily="'Space Grotesk', system-ui">{score}</text>
+      <text x={cx} y={cy + 16} fontSize={11} fontWeight={600} textAnchor="middle" fill={color}>{label}</text>
+      <text x={cx - r} y={cy + 22} fontSize={8} fill="#94a3b8" textAnchor="middle">0</text>
+      <text x={cx + r} y={cy + 22} fontSize={8} fill="#94a3b8" textAnchor="middle">100</text>
+    </svg>
+  );
+}
+
+function EntitiesBarSvg({ data }: { data: { name: string; size: number }[] }) {
+  const W = 700, rowH = 18, P = { l: 130, r: 40, t: 6, b: 6 };
+  const H = P.t + P.b + data.length * rowH;
+  const max = Math.max(1, ...data.map(d => d.size));
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H}>
+      {data.map((d, i) => {
+        const y = P.t + i * rowH;
+        const bw = ((W - P.l - P.r) * d.size) / max;
+        return (
+          <g key={i}>
+            <text x={P.l - 6} y={y + 12} fontSize={9} fill="#334155" textAnchor="end">
+              {d.name.length > 22 ? d.name.slice(0, 21) + "…" : d.name}
+            </text>
+            <rect x={P.l} y={y + 4} width={bw} height={rowH - 8} fill="#ef6a4d" rx={2} />
+            <text x={P.l + bw + 4} y={y + 12} fontSize={9} fill="#64748b">×{d.size}</text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+function EmptyMsg({ w, h }: { w: number; h: number }) {
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} width="100%" height={h}>
+      <text x={w / 2} y={h / 2} fontSize={11} fill="#94a3b8" textAnchor="middle">Sin datos suficientes</text>
+    </svg>
   );
 }
