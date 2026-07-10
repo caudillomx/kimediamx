@@ -349,39 +349,61 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
       if (v > peakVolume) { peakVolume = v; peakDate = d; }
     }
 
+    // En rangos largos, no basta con comparar todo contra el pico global: si el
+    // 6-jul concentra 119 menciones, puede ocultar picos locales reales de la
+    // primera semana. Reservamos el máximo de cada bloque de 7 días con volumen.
+    const coveragePeakDates = new Set<string>();
+    const orderedVolumes = Array.from(mentionsByDate.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+    for (let i = 0; i < orderedVolumes.length; i += 7) {
+      const segment = orderedVolumes.slice(i, i + 7).filter(([, v]) => v > 0);
+      if (!segment.length) continue;
+      const [localDate, localVol] = segment.reduce((best, cur) => cur[1] > best[1] ? cur : best);
+      if (localVol >= Math.max(1, avgVol * 0.55, maxVol * 0.25)) coveragePeakDates.add(localDate);
+    }
+
     // Agregar días pico aunque no tengan evento explícito en la respuesta IA.
     // Esto hace que el corte mensual conserve hitos basados en datos duros.
     for (const [date, vol] of mentionsByDate.entries()) {
       if (candidates.some(c => c.date === date)) continue;
       const isPeak = date === peakDate || vol >= peakThreshold;
-      if (!isPeak) continue;
+      const isCoveragePeak = coveragePeakDates.has(date);
+      if (!isPeak && !isCoveragePeak) continue;
       const ratio = avgVol ? vol / avgVol : 1;
       const impact = date === peakDate || vol >= maxVol * 0.75 ? IMPACT_RANK.alto : IMPACT_RANK.medio;
       candidates.push({
         date,
-        title: date === peakDate ? "Pico de conversación del período" : "Día con conversación destacada",
+        title: date === peakDate ? "Pico de conversación del período" : isCoveragePeak ? "Pico local de conversación" : "Día con conversación destacada",
         kind: "volumen",
         impact: impact >= IMPACT_RANK.alto ? "alto" : "medio",
         detail: `${vol.toLocaleString("es-MX")} menciones registradas${avgVol ? ` (${ratio.toFixed(1)}× el promedio diario)` : ""}.`,
         vol,
         impactScore: impact,
-        score: (vol / maxVol) * 10 + impact,
-        isPeak,
+        score: (vol / maxVol) * 10 + impact + (isCoveragePeak ? 1 : 0),
+        isPeak: isPeak || isCoveragePeak,
         color: impact >= IMPACT_RANK.alto ? "#ef4444" : "#f59e0b",
       });
     }
 
     const peakCandidate = peakDate ? candidates.find(c => c.date === peakDate) : undefined;
+    const requiredDates = new Set([peakDate, ...coveragePeakDates].filter(Boolean) as string[]);
 
     // Filtrar a picos reales; si el evento es crisis/alto siempre entra
-    let picked = candidates.filter(c => c.isPeak || c.impactScore >= IMPACT_RANK.alto);
+    const eligible = candidates.filter(c => c.isPeak || c.impactScore >= IMPACT_RANK.alto);
+    const HARD_CAP = 6;
+    const required = Array.from(requiredDates)
+      .map(date => candidates.find(c => c.date === date))
+      .filter(Boolean)
+      .sort((a, b) => (b!.date === peakDate ? 1 : 0) - (a!.date === peakDate ? 1 : 0) || (b!.vol - a!.vol))
+      .slice(0, HARD_CAP) as typeof candidates;
+    let picked = [...required];
+    for (const c of [...eligible].sort((a, b) => b.score - a.score)) {
+      if (picked.length >= HARD_CAP) break;
+      if (!picked.some(p => p.date === c.date)) picked.push(c);
+    }
     // Fallback: si no hay picos, tomar los 3 días con mayor volumen que tengan evento
     if (picked.length === 0) {
       picked = [...candidates].sort((a, b) => b.score - a.score).slice(0, Math.min(3, candidates.length));
     }
-    // Cap fijo (no depende del período): máximo 6 hitos, ordenados por score
-    const HARD_CAP = 6;
-    picked = [...picked].sort((a, b) => b.score - a.score).slice(0, HARD_CAP);
     // Garantía: el pico absoluto del período SIEMPRE está incluido.
     if (peakCandidate && !picked.some(p => p.date === peakCandidate.date)) {
       // Insertar el pico y desalojar al de menor score para respetar el cap
