@@ -299,49 +299,58 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
       .slice(0, 6);
   }, [entries]);
 
-  // Hitos: top eventos por impacto/tipo, únicos por fecha y distribuidos a lo largo del período
+  // Hitos: selección estricta por pico de menciones + impacto del evento.
+  // El número de hitos NO escala con la duración del período; se limita a los
+  // días verdaderamente destacados (picos de volumen). Un día sin pico no
+  // recibe hito aunque tenga un evento registrado.
   const IMPACT_RANK: Record<string, number> = { crisis: 4, alto: 3, medio: 2, bajo: 1 };
   const milestones = useMemo(() => {
     if (!eventsTimeline.length) return [] as { date: string; dateKey: string; title: string; detail: string; kind: string; impact: string; color: string }[];
-    const scored = eventsTimeline.map(e => {
-      const r = Math.max(IMPACT_RANK[e.impact ?? ""] ?? 0, e.kind === "crisis" ? IMPACT_RANK.crisis : 0);
-      const color = e.kind === "crisis" || e.impact === "alto" ? "#ef4444" : e.impact === "medio" ? "#f59e0b" : "#0ea5e9";
-      return { ...e, _r: r, color };
+
+    // Menciones totales por día (base para detectar picos)
+    const mentionsByDate = new Map<string, number>();
+    for (const d of volumeByDay) {
+      mentionsByDate.set(d.date, d.positivo + d.neutral + d.negativo + d.crisis);
+    }
+    const volumes = Array.from(mentionsByDate.values()).filter(v => v > 0);
+    const maxVol = Math.max(1, ...volumes);
+    const avgVol = volumes.length ? volumes.reduce((a, b) => a + b, 0) / volumes.length : 0;
+    // Umbral de "pico": por encima del promedio y con volumen relevante (>=40% del máximo)
+    const peakThreshold = Math.max(avgVol * 1.15, maxVol * 0.4);
+
+    // Mejor evento por fecha (ranking por impacto)
+    const bestByDate = new Map<string, typeof eventsTimeline[number]>();
+    for (const ev of eventsTimeline) {
+      const cur = bestByDate.get(ev.date);
+      const rNew = Math.max(IMPACT_RANK[ev.impact ?? ""] ?? 0, ev.kind === "crisis" ? IMPACT_RANK.crisis : 0);
+      const rCur = cur ? Math.max(IMPACT_RANK[cur.impact ?? ""] ?? 0, cur.kind === "crisis" ? IMPACT_RANK.crisis : 0) : -1;
+      if (rNew > rCur) bestByDate.set(ev.date, ev);
+    }
+
+    // Puntaje: volumen del día (dominante) + impacto del evento
+    const candidates = Array.from(bestByDate.values()).map(ev => {
+      const vol = mentionsByDate.get(ev.date) ?? 0;
+      const impact = Math.max(IMPACT_RANK[ev.impact ?? ""] ?? 0, ev.kind === "crisis" ? IMPACT_RANK.crisis : 0);
+      const score = (vol / maxVol) * 10 + impact; // volumen pesa más que impacto
+      const isPeak = vol >= peakThreshold;
+      const color = ev.kind === "crisis" || ev.impact === "alto" ? "#ef4444" : ev.impact === "medio" ? "#f59e0b" : "#0ea5e9";
+      return { ...ev, vol, impact, score, isPeak, color };
     });
-    // Determinar cap y buckets según longitud del período
-    const from = new Date(fromDate + "T00:00:00").getTime();
-    const to = new Date(toDate + "T00:00:00").getTime();
-    const days = Math.max(1, Math.round((to - from) / 86400000) + 1);
-    const cap = Math.min(10, Math.max(5, Math.ceil(days / 2)));
-    const nBuckets = cap;
-    const bucketOf = (dateStr: string) => {
-      const t = new Date(dateStr + "T00:00:00").getTime();
-      const idx = Math.floor(((t - from) / 86400000) / (days / nBuckets));
-      return Math.max(0, Math.min(nBuckets - 1, idx));
-    };
-    // Mejor evento por bucket (por impacto, desempate: fecha más temprana del bucket)
-    const byBucket = new Map<number, typeof scored[number]>();
-    const seenDates = new Set<string>();
-    for (const ev of [...scored].sort((a, b) => (b._r - a._r) || a.date.localeCompare(b.date))) {
-      const b = bucketOf(ev.date);
-      if (byBucket.has(b)) continue;
-      if (seenDates.has(ev.date)) continue;
-      byBucket.set(b, ev);
-      seenDates.add(ev.date);
+
+    // Filtrar a picos reales; si el evento es crisis/alto siempre entra
+    let picked = candidates.filter(c => c.isPeak || c.impact >= IMPACT_RANK.alto);
+    // Fallback: si no hay picos, tomar los 3 días con mayor volumen que tengan evento
+    if (picked.length === 0) {
+      picked = [...candidates].sort((a, b) => b.score - a.score).slice(0, Math.min(3, candidates.length));
     }
-    let picked = Array.from(byBucket.values());
-    // Rellenar hasta cap con los siguientes mejores no repetidos
-    if (picked.length < cap) {
-      for (const ev of [...scored].sort((a, b) => (b._r - a._r) || a.date.localeCompare(b.date))) {
-        if (seenDates.has(ev.date)) continue;
-        picked.push(ev); seenDates.add(ev.date);
-        if (picked.length >= cap) break;
-      }
-    }
+    // Cap fijo (no depende del período): máximo 6 hitos, ordenados por score
+    const HARD_CAP = 6;
+    picked = [...picked].sort((a, b) => b.score - a.score).slice(0, HARD_CAP);
+
     return picked
       .sort((a, b) => a.date.localeCompare(b.date))
       .map(m => ({ date: m.date, dateKey: m.date.slice(5), title: m.title, detail: m.detail, kind: m.kind, impact: m.impact, color: m.color }));
-  }, [eventsTimeline, fromDate, toDate]);
+  }, [eventsTimeline, volumeByDay]);
 
   // y-value por fecha para cada gráfica temporal
   const yByDateLine = useMemo(() => {
