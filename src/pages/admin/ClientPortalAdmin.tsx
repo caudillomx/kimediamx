@@ -48,6 +48,7 @@ type Credentials = {
   id?: string;
   portal_email: string | null;
   notes: string | null;
+  portal_user_id?: string | null;
 };
 
 type ListeningEntry = {
@@ -213,7 +214,7 @@ export default function ClientPortalAdmin() {
         .order("week_start", { ascending: false }),
       supabase
         .from("client_portal_credentials")
-        .select("id, portal_email, notes")
+        .select("id, portal_email, notes, portal_user_id")
         .eq("client_id", clientId)
         .maybeSingle(),
       supabase
@@ -365,6 +366,62 @@ export default function ClientPortalAdmin() {
     if (error) { toast.error(error.message); return; }
     toast.success("Credenciales guardadas");
     load();
+  };
+
+  // Portal user auth management
+  const [newPassword, setNewPassword] = useState("");
+  const [portalBusy, setPortalBusy] = useState(false);
+
+  const createOrUpdatePortalUser = async () => {
+    if (!clientId) return;
+    const email = (creds.portal_email ?? "").trim();
+    if (!email) { toast.error("Escribe un email primero"); return; }
+    if (newPassword.length < 8) { toast.error("Contraseña mínima 8 caracteres"); return; }
+    setPortalBusy(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("manage-portal-user", {
+        body: { action: "create", client_id: clientId, email, password: newPassword },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      toast.success("Usuario portal creado/actualizado y acceso otorgado");
+      setNewPassword("");
+      load();
+    } catch (e: any) { toast.error(e.message ?? "Error"); }
+    finally { setPortalBusy(false); }
+  };
+
+  const resetPortalPassword = async () => {
+    if (!clientId) return;
+    if (newPassword.length < 8) { toast.error("Contraseña mínima 8 caracteres"); return; }
+    setPortalBusy(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("manage-portal-user", {
+        body: { action: "set_password", client_id: clientId, password: newPassword },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      toast.success("Contraseña actualizada");
+      setNewPassword("");
+    } catch (e: any) { toast.error(e.message ?? "Error"); }
+    finally { setPortalBusy(false); }
+  };
+
+  const deletePortalUser = async () => {
+    if (!clientId) return;
+    if (!confirm("¿Eliminar el usuario portal y revocar su acceso?")) return;
+    setPortalBusy(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("manage-portal-user", {
+        body: { action: "delete", client_id: clientId },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      toast.success("Usuario portal eliminado");
+      setCreds({ portal_email: "", notes: "", portal_user_id: null });
+      load();
+    } catch (e: any) { toast.error(e.message ?? "Error"); }
+    finally { setPortalBusy(false); }
   };
 
   const handleTxtFile = async (file: File) => {
