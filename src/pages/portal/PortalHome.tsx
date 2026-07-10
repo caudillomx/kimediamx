@@ -89,6 +89,7 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
   const [periodAnalysis, setPeriodAnalysis] = useState<Analysis | null>(null);
   const [periodAnalysisKey, setPeriodAnalysisKey] = useState<string | null>(null);
   const [periodAnalysisErrorKey, setPeriodAnalysisErrorKey] = useState<string | null>(null);
+  const [periodCacheCheckedKey, setPeriodCacheCheckedKey] = useState<string | null>(null);
   const [periodJobId, setPeriodJobId] = useState<string | null>(null);
   const [regenerating, setRegenerating] = useState(false);
   const [pdfChartData, setPdfChartData] = useState<{
@@ -185,10 +186,13 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
       setPeriodAnalysisKey(null);
       setPeriodJobId(null);
     }
+    if (periodCacheCheckedKey && periodCacheCheckedKey !== activePeriodKey) {
+      setPeriodCacheCheckedKey(null);
+    }
     if (periodAnalysisErrorKey && periodAnalysisErrorKey !== activePeriodKey) {
       setPeriodAnalysisErrorKey(null);
     }
-  }, [activePeriodKey, periodAnalysisKey, periodAnalysisErrorKey]);
+  }, [activePeriodKey, periodAnalysisKey, periodAnalysisErrorKey, periodCacheCheckedKey]);
 
   const regeneratePeriod = async (silent = false) => {
     if (!isExtendedPeriod) return;
@@ -278,10 +282,47 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
   }, [periodJobId, isExtendedPeriod, activePeriodKey]);
 
   useEffect(() => {
+    if (!isExtendedPeriod) return;
+    if (periodAnalysisKey === activePeriodKey || periodCacheCheckedKey === activePeriodKey) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from("client_portal_listening_analysis_jobs" as any)
+          .select("result")
+          .eq("client_id", portal.clientId)
+          .eq("period_start", fromDate)
+          .eq("period_end", toDate)
+          .eq("status", "completed")
+          .not("result", "is", null)
+          .order("updated_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (cancelled) return;
+        const cached = (data as any)?.result?.analysis;
+        if (cached) {
+          setPeriodAnalysis(cached as Analysis);
+          setPeriodAnalysisKey(activePeriodKey);
+          setPeriodAnalysisErrorKey(null);
+          setPeriodJobId(null);
+          setRegenerating(false);
+        }
+      } finally {
+        if (!cancelled) setPeriodCacheCheckedKey(activePeriodKey);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [isExtendedPeriod, activePeriodKey, periodAnalysisKey, periodCacheCheckedKey, portal.clientId, fromDate, toDate]);
+
+  useEffect(() => {
     if (!isExtendedPeriod || regenerating || periodJobId) return;
+    if (periodCacheCheckedKey !== activePeriodKey) return;
     if (periodAnalysisKey === activePeriodKey || periodAnalysisErrorKey === activePeriodKey) return;
     regeneratePeriod(true);
-  }, [isExtendedPeriod, regenerating, periodJobId, activePeriodKey, periodAnalysisKey, periodAnalysisErrorKey]);
+  }, [isExtendedPeriod, regenerating, periodJobId, activePeriodKey, periodAnalysisKey, periodAnalysisErrorKey, periodCacheCheckedKey]);
 
   // Effective analysis for display: never show stale weekly text while an extended period is selected
   const effective: Analysis | null = isExtendedPeriod
@@ -648,7 +689,7 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
                           {periodAnalysis
                             ? <>Mostrando análisis y recomendaciones regenerados para <b className="text-foreground">{periodLabel}</b>.</>
                             : regenerating
-                              ? <>Recalculando resumen, hitos, hallazgos y recomendaciones para <b className="text-foreground">{periodLabel}</b>.</>
+                              ? <>Recalculando resumen, hallazgos y recomendaciones para <b className="text-foreground">{periodLabel}</b>.</>
                               : <>No se pudo recalcular automáticamente. Puedes intentarlo de nuevo para cubrir <b className="text-foreground">{periodLabel}</b>.</>}
                         </p>
                       </div>
