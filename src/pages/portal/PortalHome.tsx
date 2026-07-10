@@ -13,7 +13,7 @@ import ReactMarkdown from "react-markdown";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LogOut, FileText, ShieldAlert, Download, Sparkles,
-  Gauge, BarChart3, Lightbulb, History, ChevronLeft, ChevronRight,
+  BarChart3, Lightbulb, History, ChevronLeft, ChevronRight,
   AlertTriangle, TrendingUp, MessageCircle, Sun, Moon, CalendarRange, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -79,6 +79,12 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
   const [selectedWeek, setSelectedWeek] = useState<string | null>(null);
   const [compareKey, setCompareKey] = useState("week");
   const [customRange, setCustomRange] = useState<DateRange | undefined>();
+  const [rangeAgg, setRangeAgg] = useState<{
+    totalMentions: number;
+    entriesInRange: number;
+    sent: { positivo: number; neutral: number; negativo: number; crisis: number };
+  }>({ totalMentions: 0, entriesInRange: 0, sent: { positivo: 0, neutral: 0, negativo: 0, crisis: 0 } });
+  const [prevRangeAgg, setPrevRangeAgg] = useState<{ totalMentions: number } | null>(null);
   const [theme, setTheme] = useState<"dark" | "light">(() => {
     if (typeof window === "undefined") return "dark";
     return (localStorage.getItem("portal-theme") as "dark" | "light") || "dark";
@@ -150,24 +156,67 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
     return { fromDate: start.toISOString().slice(0, 10), toDate: current.week_end };
   }, [current, compareKey, customRange]);
 
-  const sentTotals = useMemo(() => {
-    const s = current?.sentiment_breakdown ?? {};
-    const total = Object.values(s).reduce((a, b) => a + (Number(b) || 0), 0);
-    return {
-      total,
-      positivo: Number(s.positivo ?? 0),
-      negativo: Number(s.negativo ?? 0),
-      crisis: Number(s.crisis ?? 0),
-      neutral: Number(s.neutral ?? 0),
-    };
-  }, [current]);
+  // Aggregate real numbers directly from analyzed entries in the selected range
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("client_portal_listening_entries")
+        .select("entry_date, total_mentions, sentiment_counts, sentiment")
+        .eq("client_id", portal.clientId)
+        .gte("entry_date", fromDate).lte("entry_date", toDate)
+        .not("analyzed_at", "is", null)
+        .limit(500);
+      const rows = (data ?? []) as any[];
+      const sent = { positivo: 0, neutral: 0, negativo: 0, crisis: 0 };
+      let totalMentions = 0;
+      for (const r of rows) {
+        const tm = Number(r.total_mentions ?? 0) || 0;
+        totalMentions += tm;
+        const sc = r.sentiment_counts ?? {};
+        const hasCounts = sc && (sc.positivo || sc.neutral || sc.negativo || sc.crisis);
+        if (hasCounts) {
+          sent.positivo += Number(sc.positivo ?? 0) || 0;
+          sent.neutral  += Number(sc.neutral ?? 0)  || 0;
+          sent.negativo += Number(sc.negativo ?? 0) || 0;
+          sent.crisis   += Number(sc.crisis ?? 0)   || 0;
+        } else if (r.sentiment) {
+          // fallback: use daily overall sentiment weighted by total_mentions (or 1)
+          const w = tm || 1;
+          (sent as any)[r.sentiment] = ((sent as any)[r.sentiment] ?? 0) + w;
+        }
+      }
+      setRangeAgg({ totalMentions, entriesInRange: rows.length, sent });
 
-  const deltaEntries = useMemo(() => {
-    if (!current || !prevWeek) return null;
-    const d = current.entries_count - prevWeek.entries_count;
-    const pct = prevWeek.entries_count ? Math.round((d / prevWeek.entries_count) * 100) : null;
+      // previous equivalent range for delta
+      const from = new Date(fromDate + "T00:00:00");
+      const to = new Date(toDate + "T00:00:00");
+      const days = Math.round((to.getTime() - from.getTime()) / 86400000) + 1;
+      const prevTo = new Date(from); prevTo.setDate(prevTo.getDate() - 1);
+      const prevFrom = new Date(prevTo); prevFrom.setDate(prevFrom.getDate() - days + 1);
+      const { data: prev } = await supabase
+        .from("client_portal_listening_entries")
+        .select("total_mentions")
+        .eq("client_id", portal.clientId)
+        .gte("entry_date", prevFrom.toISOString().slice(0, 10))
+        .lte("entry_date", prevTo.toISOString().slice(0, 10))
+        .not("analyzed_at", "is", null);
+      const prevTotal = ((prev ?? []) as any[]).reduce((s, r) => s + (Number(r.total_mentions ?? 0) || 0), 0);
+      setPrevRangeAgg({ totalMentions: prevTotal });
+    })();
+  }, [portal.clientId, fromDate, toDate]);
+
+  const sentTotals = useMemo(() => {
+    const s = rangeAgg.sent;
+    const total = s.positivo + s.neutral + s.negativo + s.crisis;
+    return { total, ...s };
+  }, [rangeAgg]);
+
+  const deltaMentions = useMemo(() => {
+    if (!prevRangeAgg) return null;
+    const d = rangeAgg.totalMentions - prevRangeAgg.totalMentions;
+    const pct = prevRangeAgg.totalMentions ? Math.round((d / prevRangeAgg.totalMentions) * 100) : null;
     return { d, pct };
-  }, [current, prevWeek]);
+  }, [rangeAgg, prevRangeAgg]);
 
   const goPrev = () => { if (currentIdx < analyses.length - 1) setSelectedWeek(analyses[currentIdx + 1].week_start); };
   const goNext = () => { if (currentIdx > 0) setSelectedWeek(analyses[currentIdx - 1].week_start); };
@@ -335,9 +384,9 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
               <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
                 <KpiCard
                   label="Menciones analizadas"
-                  value={current?.entries_count ?? 0}
-                  delta={deltaEntries ? `${deltaEntries.d > 0 ? "+" : ""}${deltaEntries.d}${deltaEntries.pct !== null ? ` (${deltaEntries.pct > 0 ? "+" : ""}${deltaEntries.pct}%)` : ""}` : null}
-                  positive={deltaEntries ? deltaEntries.d >= 0 : undefined}
+                  value={rangeAgg.totalMentions || rangeAgg.entriesInRange || 0}
+                  delta={deltaMentions ? `${deltaMentions.d > 0 ? "+" : ""}${deltaMentions.d}${deltaMentions.pct !== null ? ` (${deltaMentions.pct > 0 ? "+" : ""}${deltaMentions.pct}%)` : ""}` : null}
+                  positive={deltaMentions ? deltaMentions.d >= 0 : undefined}
                 />
                 <KpiCard
                   label="Sentimiento positivo"
@@ -356,16 +405,15 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
                 />
               </div>
 
-              <Tabs defaultValue="resumen">
+              <Tabs defaultValue="panorama">
                 <TabsList className="bg-background/50 backdrop-blur border border-border/60 rounded-xl p-1 h-auto">
-                  <TabsTrigger value="resumen" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><Gauge className="w-4 h-4 mr-2" />Resumen</TabsTrigger>
-                  <TabsTrigger value="analisis" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><BarChart3 className="w-4 h-4 mr-2" />Análisis</TabsTrigger>
+                  <TabsTrigger value="panorama" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><BarChart3 className="w-4 h-4 mr-2" />Panorama</TabsTrigger>
                   <TabsTrigger value="recomendaciones" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><Lightbulb className="w-4 h-4 mr-2" />Recomendaciones</TabsTrigger>
                   <TabsTrigger value="historico" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><History className="w-4 h-4 mr-2" />Histórico</TabsTrigger>
                 </TabsList>
 
-                {/* Resumen */}
-                <TabsContent value="resumen" className="mt-5 space-y-4">
+                {/* Panorama: resumen ejecutivo + alertas + hallazgos + análisis en un solo tab */}
+                <TabsContent value="panorama" className="mt-5 space-y-5">
                   {current?.executive_summary && (
                     <div className="glass rounded-2xl p-6">
                       <div className="flex items-center gap-2 mb-3">
@@ -373,6 +421,9 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
                         <span className="text-[11px] uppercase tracking-widest text-muted-foreground">Resumen ejecutivo</span>
                       </div>
                       <p className="text-[15px] leading-relaxed">{current.executive_summary}</p>
+                      <p className="text-[11px] text-muted-foreground mt-3 italic">
+                        Nota: los conteos y gráficas de abajo son la fuente de verdad — reflejan cada mención individual detectada en la bitácora.
+                      </p>
                     </div>
                   )}
 
@@ -412,16 +463,10 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
                     </div>
                   )}
 
-                  {!current?.executive_summary && !current?.alerts?.length && !current?.key_findings?.length && (
-                    <div className="glass rounded-2xl p-10 text-center text-muted-foreground text-sm">
-                      Esta semana no tiene resumen ejecutivo publicado todavía.
-                    </div>
-                  )}
-                </TabsContent>
-
-                {/* Análisis */}
-                <TabsContent value="analisis" className="mt-5">
-                  <PortalAnalysis clientId={portal.clientId} fromDate={fromDate} toDate={toDate} />
+                  <div className="pt-2">
+                    <div className="text-[11px] uppercase tracking-widest text-muted-foreground mb-3">Análisis detallado del período</div>
+                    <PortalAnalysis clientId={portal.clientId} fromDate={fromDate} toDate={toDate} />
+                  </div>
                 </TabsContent>
 
                 {/* Recomendaciones — solo semana seleccionada */}
