@@ -5,7 +5,7 @@ const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY')!;
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-const MODEL = 'google/gemini-2.5-pro';
+const MODEL = 'google/gemini-2.5-flash';
 
 const SYSTEM = `Eres jefe de análisis de reputación de KiMedia. Escribes el REPORTE SEMANAL EJECUTIVO para el cliente y para el equipo interno, a partir de datos ya cuantificados de social listening.
 
@@ -158,7 +158,7 @@ Deno.serve(async (req) => {
       total_menciones_dia: e.total_mentions,
       temas: e.topics,
       actores_equipo: e.actors,
-    }));
+    })).slice(-31);
 
     const daysInPeriod = Math.round((end.getTime() - start.getTime()) / 86400000) + 1;
     const periodLabel = daysInPeriod <= 7 ? 'Semana' : daysInPeriod <= 14 ? 'Quincena' : daysInPeriod <= 31 ? 'Mes' : 'Período';
@@ -185,6 +185,7 @@ Deno.serve(async (req) => {
           { role: 'user', content: userPrompt },
         ],
         response_format: { type: 'json_object' },
+        temperature: 0.2,
       }),
     });
     if (!resp.ok) {
