@@ -5,11 +5,9 @@ import { Badge } from "@/components/ui/badge";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   LineChart, Line, PieChart, Pie, Cell, Legend, CartesianGrid,
-  RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
-  AreaChart, Area, ScatterChart, Scatter, ZAxis,
-  RadialBarChart, RadialBar,
+  PolarAngleAxis, RadialBarChart, RadialBar,
 } from "recharts";
-import { Sparkles, Quote, AlertOctagon, Radio, Users, Activity, Grid3x3, Gauge, TrendingUp } from "lucide-react";
+import { Sparkles, Quote, AlertOctagon, Radio, Grid3x3, Gauge, TrendingUp, ArrowUp, ArrowDown, Minus } from "lucide-react";
 
 type Entry = {
   entry_date: string;
@@ -32,24 +30,48 @@ type Entry = {
 const SENT_COLORS: Record<string, string> = {
   positivo: "#10b981",
   neutral: "#94a3b8",
-  negativo: "#f59e0b",
-  crisis: "#ef4444",
+  negativo: "#ef4444",
+  crisis: "#991b1b",
 };
 
-const CHANNEL_COLORS = ["#ef6a4d", "#0ea5e9", "#a855f7", "#10b981", "#f59e0b", "#ec4899", "#14b8a6", "#8b5cf6"];
+// Brand-inspired colors per platform (lower-cased key)
+const PLATFORM_COLORS: Record<string, string> = {
+  "medios digitales": "#3b82f6",
+  "medios": "#3b82f6",
+  "prensa": "#3b82f6",
+  "x": "#0f172a",
+  "twitter": "#1da1f2",
+  "x (twitter)": "#0f172a",
+  "linkedin": "#0a66c2",
+  "facebook": "#1877f2",
+  "instagram": "#e1306c",
+  "youtube": "#ff0000",
+  "tiktok": "#111111",
+  "reddit": "#ff4500",
+  "threads": "#0f172a",
+  "whatsapp": "#25d366",
+  "telegram": "#0088cc",
+  "spotify": "#1db954",
+  "podcast": "#8b5cf6",
+  "blog": "#64748b",
+};
+const CHANNEL_FALLBACK = ["#ef6a4d", "#0ea5e9", "#a855f7", "#10b981", "#f59e0b", "#ec4899", "#14b8a6", "#8b5cf6"];
+function platformColor(name: string, i = 0) {
+  return PLATFORM_COLORS[name.toLowerCase().trim()] ?? CHANNEL_FALLBACK[i % CHANNEL_FALLBACK.length];
+}
 
 const DOW_LABELS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
-const URGENCY_LEVEL: Record<string, number> = { baja: 1, media: 2, alta: 3, critica: 4 };
 const HEAT_COLOR: Record<string, [number, number, number]> = {
   positivo: [16, 185, 129],
   neutral:  [148, 163, 184],
-  negativo: [245, 158, 11],
-  crisis:   [239, 68, 68],
+  negativo: [239, 68, 68],
+  crisis:   [153, 27, 27],
 };
 
 export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientId: string; fromDate: string; toDate: string; }) {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [trendPeriods, setTrendPeriods] = useState<{ label: string; total: number; delta: number | null }[]>([]);
 
   useEffect(() => {
     (async () => {
@@ -62,6 +84,40 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
         .order("entry_date", { ascending: true }).limit(500);
       setEntries((e.data ?? []) as Entry[]);
       setLoading(false);
+    })();
+  }, [clientId, fromDate, toDate]);
+
+  // Tendencia comparativa: 4 periodos con misma longitud que el rango actual
+  useEffect(() => {
+    (async () => {
+      const from = new Date(fromDate + "T00:00:00");
+      const to = new Date(toDate + "T00:00:00");
+      const days = Math.round((to.getTime() - from.getTime()) / 86400000) + 1;
+      if (!days || days < 1) return;
+      const periods: { start: Date; end: Date }[] = [];
+      for (let i = 3; i >= 0; i--) {
+        const end = new Date(from); end.setDate(end.getDate() - 1 - i * days + days);
+        const start = new Date(end); start.setDate(start.getDate() - days + 1);
+        if (i === 0) { periods.push({ start: from, end: to }); }
+        else periods.push({ start, end });
+      }
+      const results = await Promise.all(periods.map(async (p) => {
+        const s = p.start.toISOString().slice(0, 10);
+        const e = p.end.toISOString().slice(0, 10);
+        const { data } = await supabase.from("client_portal_listening_entries")
+          .select("total_mentions")
+          .eq("client_id", clientId)
+          .gte("entry_date", s).lte("entry_date", e)
+          .not("analyzed_at", "is", null);
+        const total = ((data ?? []) as any[]).reduce((acc, r) => acc + (Number(r.total_mentions ?? 0) || 0), 0);
+        const label = p.start.toLocaleDateString("es-MX", { day: "numeric", month: "short" });
+        return { label, total };
+      }));
+      const withDelta = results.map((r, i) => ({
+        ...r,
+        delta: i === 0 ? null : (results[i - 1].total ? Math.round(((r.total - results[i - 1].total) / results[i - 1].total) * 100) : null),
+      }));
+      setTrendPeriods(withDelta);
     })();
   }, [clientId, fromDate, toDate]);
 
@@ -131,32 +187,6 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
     return Array.from(c.entries()).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 8);
   }, [entries]);
 
-  const topEntities = useMemo(() => {
-    const c = new Map<string, { count: number; type?: string; sentiment?: string }>();
-    for (const e of entries) for (const en of (e.entities ?? [])) {
-      const name = typeof en === "string" ? en : en?.name; if (!name) continue;
-      const prev = c.get(name) ?? { count: 0, type: en?.type, sentiment: en?.sentiment };
-      prev.count += typeof en?.count === "number" ? en.count : 1;
-      c.set(name, prev);
-    }
-    return Array.from(c.entries()).map(([name, v]) => ({ name, ...v })).sort((a, b) => b.count - a.count).slice(0, 12);
-  }, [entries]);
-
-  const shareOfVoice = useMemo(() => {
-    const c = new Map<string, number>();
-    let clientCount = 0;
-    for (const e of entries) {
-      clientCount += Number(e.total_mentions ?? 0) || 1;
-      for (const cp of (e.competitors ?? [])) {
-        const name = typeof cp === "string" ? cp : cp?.name; if (!name) continue;
-        const n = typeof cp?.count === "number" ? cp.count : 1;
-        c.set(name, (c.get(name) ?? 0) + n);
-      }
-    }
-    const arr = [{ name: "Cliente", value: clientCount, isClient: true }, ...Array.from(c.entries()).map(([name, value]) => ({ name, value, isClient: false }))];
-    return arr.sort((a, b) => b.value - a.value).slice(0, 6);
-  }, [entries]);
-
   const eventsTimeline = useMemo(() => {
     const items: { date: string; title: string; kind: string; impact: string; detail: string }[] = [];
     for (const e of entries) for (const ev of (e.events ?? [])) {
@@ -192,101 +222,7 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
     return { grid, max };
   }, [entries]);
 
-  // 2) Treemap: entidades por frecuencia + tinte por sentimiento
-  const entitiesTreemap = useMemo(() => {
-    const map = new Map<string, { name: string; size: number; sentiment?: string }>();
-    for (const e of entries) for (const en of (e.entities ?? [])) {
-      const name = typeof en === "string" ? en : en?.name; if (!name) continue;
-      const size = typeof en?.count === "number" ? en.count : 1;
-      const prev = map.get(name) ?? { name, size: 0, sentiment: en?.sentiment };
-      prev.size += size;
-      map.set(name, prev);
-    }
-    if (map.size === 0) {
-      for (const e of entries) for (const m of (e.mentions ?? [])) {
-        const name = typeof m === "string" ? m : m?.name; if (!name) continue;
-        const prev = map.get(name) ?? { name, size: 0 };
-        prev.size += 1;
-        map.set(name, prev);
-      }
-    }
-    return Array.from(map.values()).sort((a, b) => b.size - a.size).slice(0, 25);
-  }, [entries]);
-
-  // 3) Radar canales × sentimiento (normalizado 0-100 por sentimiento)
-  const channelRadar = useMemo(() => {
-    const byChan: Record<string, { positivo: number; neutral: number; negativo: number; crisis: number }> = {};
-    for (const e of entries) for (const ch of (e.channels ?? [])) {
-      const name = typeof ch === "string" ? ch : ch?.name; if (!name) continue;
-      const w = typeof ch?.count === "number" ? ch.count : 1;
-      const s = (ch?.sentiment ?? e.sentiment ?? "neutral") as keyof typeof HEAT_COLOR;
-      const b = byChan[name] ?? { positivo: 0, neutral: 0, negativo: 0, crisis: 0 };
-      (b as any)[s] = ((b as any)[s] ?? 0) + w;
-      byChan[name] = b;
-    }
-    const rows = Object.entries(byChan).map(([channel, v]) => {
-      const total = v.positivo + v.neutral + v.negativo + v.crisis || 1;
-      return {
-        channel,
-        Positivo: Math.round((v.positivo / total) * 100),
-        Negativo: Math.round((v.negativo / total) * 100),
-        Crisis: Math.round((v.crisis / total) * 100),
-        _total: total,
-      };
-    }).sort((a, b) => b._total - a._total).slice(0, 6);
-    return rows;
-  }, [entries]);
-
-  // 4) SoV temporal (área apilada Cliente + competidores)
-  const sovOverTime = useMemo(() => {
-    const dates = Array.from(new Set(entries.map(e => e.entry_date))).sort();
-    const competitorSet = new Set<string>();
-    for (const e of entries) for (const cp of (e.competitors ?? [])) {
-      const name = typeof cp === "string" ? cp : cp?.name; if (name) competitorSet.add(name);
-    }
-    const topCompetitors = (() => {
-      const c = new Map<string, number>();
-      for (const e of entries) for (const cp of (e.competitors ?? [])) {
-        const name = typeof cp === "string" ? cp : cp?.name; if (!name) continue;
-        const n = typeof cp?.count === "number" ? cp.count : 1;
-        c.set(name, (c.get(name) ?? 0) + n);
-      }
-      return Array.from(c.entries()).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([n]) => n);
-    })();
-    const rows = dates.map(d => {
-      const row: any = { date: d, Cliente: 0 };
-      for (const c of topCompetitors) row[c] = 0;
-      return row;
-    });
-    const byDate = new Map(rows.map(r => [r.date, r]));
-    for (const e of entries) {
-      const r = byDate.get(e.entry_date); if (!r) continue;
-      r.Cliente += Number(e.total_mentions ?? 1) || 1;
-      for (const cp of (e.competitors ?? [])) {
-        const name = typeof cp === "string" ? cp : cp?.name; if (!name || !topCompetitors.includes(name)) continue;
-        r[name] = (r[name] ?? 0) + (typeof cp?.count === "number" ? cp.count : 1);
-      }
-    }
-    return { rows, competitors: topCompetitors };
-  }, [entries]);
-
-  // 5) Scatter urgencia × score sentimiento (por canal)
-  const scatterData = useMemo(() => {
-    const byChan: Record<string, { x: number; y: number; z: number }[]> = {};
-    for (const e of entries) {
-      if (typeof e.sentiment_score !== "number" && !e.urgency) continue;
-      const y = typeof e.sentiment_score === "number" ? e.sentiment_score : (e.sentiment === "positivo" ? 0.5 : e.sentiment === "negativo" ? -0.5 : e.sentiment === "crisis" ? -1 : 0);
-      const x = URGENCY_LEVEL[e.urgency ?? "baja"] ?? 1;
-      const z = Number(e.total_mentions ?? 1) || 1;
-      const chan = (e.channels ?? [])[0];
-      const chanName = typeof chan === "string" ? chan : chan?.name ?? "Otro";
-      byChan[chanName] = byChan[chanName] ?? [];
-      byChan[chanName].push({ x, y, z });
-    }
-    return Object.entries(byChan).slice(0, 6).map(([name, pts]) => ({ name, pts }));
-  }, [entries]);
-
-  // 6) Salud reputacional (0-100)
+  // Salud reputacional (0-100)
   const reputationScore = useMemo(() => {
     let sum = 0, n = 0;
     for (const e of entries) {
@@ -299,6 +235,65 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
     const label = score >= 75 ? "Saludable" : score >= 55 ? "Estable" : score >= 40 ? "En riesgo" : "Crítico";
     const color = score >= 75 ? "#10b981" : score >= 55 ? "#0ea5e9" : score >= 40 ? "#f59e0b" : "#ef4444";
     return { score, label, color, avg: +avg.toFixed(2), crisisEvents };
+  }, [entries]);
+
+  // Serie diaria: % positivo / neutral / negativo por día (para "Tonalidad y narrativas")
+  const sentimentDaily = useMemo(() => {
+    return volumeByDay.map(d => {
+      const t = d.positivo + d.neutral + d.negativo + d.crisis || 1;
+      return {
+        date: d.date.slice(5),
+        Positivo: Math.round((d.positivo / t) * 100),
+        Neutral: Math.round((d.neutral / t) * 100),
+        Negativo: Math.round(((d.negativo + d.crisis) / t) * 100),
+      };
+    });
+  }, [volumeByDay]);
+
+  // KPIs slide 1
+  const totals = useMemo(() => {
+    const total = volumeByDay.reduce((a, d) => a + d.positivo + d.neutral + d.negativo + d.crisis, 0);
+    const peak = volumeByDay.reduce((p, d) => {
+      const s = d.positivo + d.neutral + d.negativo + d.crisis;
+      return s > p.value ? { date: d.date, value: s } : p;
+    }, { date: "", value: 0 });
+    const pos = volumeByDay.reduce((a, d) => a + d.positivo, 0);
+    const neg = volumeByDay.reduce((a, d) => a + d.negativo + d.crisis, 0);
+    const neu = volumeByDay.reduce((a, d) => a + d.neutral, 0);
+    const posPct = total ? Math.round((pos / total) * 100) : 0;
+    const negPct = total ? Math.round((neg / total) * 100) : 0;
+    const neuPct = total ? Math.round((neu / total) * 100) : 0;
+    return { total, peak, posPct, negPct, neuPct };
+  }, [volumeByDay]);
+
+  // Plataformas: totales + % + color de marca
+  const platforms = useMemo(() => {
+    const total = channelsBreakdown.reduce((a, c) => a + c.value, 0) || 1;
+    return channelsBreakdown.map((c, i) => ({
+      name: c.name,
+      value: c.value,
+      pct: +((c.value / total) * 100).toFixed(1),
+      color: platformColor(c.name, i),
+    }));
+  }, [channelsBreakdown]);
+
+  // Narrativas dominantes (top topics con % de días en los que aparecen)
+  const narratives = useMemo(() => {
+    const totalDays = new Set(entries.map(e => e.entry_date)).size || 1;
+    const perTopic = new Map<string, Set<string>>();
+    for (const e of entries) for (const t of (e.topics ?? [])) {
+      if (!perTopic.has(t)) perTopic.set(t, new Set());
+      perTopic.get(t)!.add(e.entry_date);
+    }
+    return Array.from(perTopic.entries())
+      .map(([topic, days], i) => ({
+        topic,
+        pct: Math.round((days.size / totalDays) * 100),
+        days: days.size,
+        color: CHANNEL_FALLBACK[i % CHANNEL_FALLBACK.length],
+      }))
+      .sort((a, b) => b.pct - a.pct)
+      .slice(0, 6);
   }, [entries]);
 
   const quotes = useMemo(() => {
@@ -365,7 +360,139 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
         </Card>
       )}
 
-      {/* Grid de gráficas */}
+      {/* ============ SLIDE 1 · Conversación general ============ */}
+      <Card className="p-5 md:p-6">
+        <div className="flex flex-col lg:flex-row gap-6">
+          <div className="flex-1 min-w-0 space-y-4">
+            <div>
+              <div className="text-[10px] uppercase tracking-widest text-muted-foreground">01 · Listening</div>
+              <h3 className="text-2xl font-display font-bold mt-1">Conversación general</h3>
+            </div>
+            {trendPeriods.length > 0 && (
+              <div className="flex items-end gap-6 flex-wrap">
+                <span className="text-[11px] uppercase tracking-widest text-muted-foreground">Tendencia:</span>
+                {trendPeriods.map((p, i) => (
+                  <div key={i}>
+                    <div className="text-[10px] text-muted-foreground">{p.label}</div>
+                    <div className={`text-xl font-display font-bold ${p.delta === null ? "text-foreground" : p.delta >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                      {p.total.toLocaleString("es-MX")}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="h-[260px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={volumeByDay.map(d => ({ date: d.date.slice(5), total: d.positivo + d.neutral + d.negativo + d.crisis }))}>
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
+                  <XAxis dataKey="date" fontSize={10} />
+                  <YAxis fontSize={10} />
+                  <Tooltip />
+                  <Line type="monotone" dataKey="total" stroke="#ef6a4d" strokeWidth={2.5} dot={{ r: 3, fill: "#ef6a4d" }} activeDot={{ r: 5 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+          <div className="lg:w-64 grid grid-cols-1 gap-3">
+            <SlideKpi label="Menciones del período" value={totals.total.toLocaleString("es-MX")} accent="#ef6a4d" />
+            {trendPeriods.length > 1 && trendPeriods[trendPeriods.length - 1].delta !== null && (
+              <SlideKpi
+                label="vs período previo"
+                value={`${trendPeriods[trendPeriods.length - 1].delta! >= 0 ? "▲" : "▼"} ${Math.abs(trendPeriods[trendPeriods.length - 1].delta!)}%`}
+                accent={trendPeriods[trendPeriods.length - 1].delta! >= 0 ? "#10b981" : "#ef4444"}
+              />
+            )}
+            <SlideKpi label="Sentimiento positivo" value={`${totals.posPct}%`} accent="#10b981" />
+            {totals.peak.value > 0 && (
+              <SlideKpi label="Pico del período" value={new Date(totals.peak.date + "T00:00:00").toLocaleDateString("es-MX", { day: "numeric", month: "short" })} accent="#0ea5e9" hint={`${totals.peak.value} menciones`} />
+            )}
+          </div>
+        </div>
+      </Card>
+
+      {/* ============ SLIDE 2 · Plataformas y menciones ============ */}
+      {platforms.length > 0 && (
+        <Card className="p-5 md:p-6">
+          <div className="mb-4">
+            <div className="text-[10px] uppercase tracking-widest text-muted-foreground">01 · Listening</div>
+            <h3 className="text-2xl font-display font-bold mt-1 flex items-center gap-2"><Radio className="w-5 h-5" />Plataformas y menciones</h3>
+          </div>
+          <div className="grid gap-6 lg:grid-cols-2 items-center">
+            <div className="h-[280px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={platforms} dataKey="value" nameKey="name" innerRadius={60} outerRadius={110} paddingAngle={2}
+                    label={({ pct }) => `${pct}%`} labelLine={false}>
+                    {platforms.map((p, i) => <Cell key={i} fill={p.color} stroke="none" />)}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="space-y-2">
+              {platforms.map((p) => (
+                <div key={p.name} className="flex items-center gap-3 pl-3 py-2 rounded-lg border-l-4" style={{ borderLeftColor: p.color, background: `${p.color}0f` }}>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-semibold truncate">{p.name}</div>
+                    <div className="text-[10px] text-muted-foreground">{p.pct}% del volumen</div>
+                  </div>
+                  <div className="text-xl font-display font-bold" style={{ color: p.color }}>{p.value}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* ============ SLIDE 3 · Tonalidad y narrativas ============ */}
+      <Card className="p-5 md:p-6">
+        <div className="mb-4">
+          <div className="text-[10px] uppercase tracking-widest text-muted-foreground">01 · Listening</div>
+          <h3 className="text-2xl font-display font-bold mt-1">Tonalidad y narrativas</h3>
+        </div>
+        <div className="grid gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2 h-[280px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={sentimentDaily}>
+                <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
+                <XAxis dataKey="date" fontSize={10} />
+                <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} fontSize={10} />
+                <Tooltip formatter={(v: number) => `${v}%`} />
+                <Legend wrapperStyle={{ fontSize: 11 }} />
+                <Line type="monotone" dataKey="Positivo" stroke={SENT_COLORS.positivo} strokeWidth={2.5} dot={{ r: 2 }} />
+                <Line type="monotone" dataKey="Neutral" stroke="#f59e0b" strokeWidth={2.5} dot={{ r: 2 }} />
+                <Line type="monotone" dataKey="Negativo" stroke={SENT_COLORS.negativo} strokeWidth={2.5} dot={{ r: 2 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="space-y-3">
+            <SlideKpi label="Positivo" value={`${totals.posPct}%`} accent={SENT_COLORS.positivo} />
+            <SlideKpi label="Neutral" value={`${totals.neuPct}%`} accent="#f59e0b" />
+            <SlideKpi label="Negativo" value={`${totals.negPct}%`} accent={SENT_COLORS.negativo} />
+          </div>
+        </div>
+
+        {narratives.length > 0 && (
+          <div className="mt-6">
+            <div className="text-[11px] uppercase tracking-widest text-muted-foreground mb-3">Narrativas dominantes</div>
+            <div className="grid gap-2 md:grid-cols-2">
+              {narratives.map((n) => (
+                <div key={n.topic} className="flex items-center gap-3 p-3 rounded-lg bg-background/40 border border-border/40">
+                  <div className="w-12 h-12 rounded-lg flex items-center justify-center text-sm font-bold text-white shrink-0" style={{ background: n.color }}>
+                    {n.pct}%
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold truncate">{n.topic}</div>
+                    <div className="text-[10px] text-muted-foreground">Presente en {n.days} día{n.days === 1 ? "" : "s"} del período</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </Card>
+
+      {/* Bloque táctico: volumen apilado + sentimiento agregado */}
       <div className="grid gap-4 md:grid-cols-2">
         <Card className="p-4">
           <h4 className="text-sm font-semibold mb-3">Volumen y sentimiento por día</h4>
@@ -396,103 +523,6 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
               <Tooltip />
             </PieChart>
           </ResponsiveContainer>
-        </Card>
-
-        <Card className="p-4">
-          <h4 className="text-sm font-semibold mb-3 flex items-center gap-2"><Radio className="w-4 h-4" />Menciones por canal</h4>
-          {channelsBreakdown.length === 0 ? (
-            <p className="text-xs text-muted-foreground py-8 text-center">Sin canales identificados. Reprocesa las entradas para extraerlos.</p>
-          ) : (
-            <ResponsiveContainer width="100%" height={220}>
-              <PieChart>
-                <Pie data={channelsBreakdown} dataKey="value" nameKey="name" outerRadius={80} label>
-                  {channelsBreakdown.map((_, i) => <Cell key={i} fill={CHANNEL_COLORS[i % CHANNEL_COLORS.length]} />)}
-                </Pie>
-                <Legend />
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          )}
-        </Card>
-
-        <Card className="p-4">
-          <h4 className="text-sm font-semibold mb-3 flex items-center gap-2"><Users className="w-4 h-4" />Share of voice vs competidores</h4>
-          {shareOfVoice.length <= 1 ? (
-            <p className="text-xs text-muted-foreground py-8 text-center">Sin competidores citados en el período.</p>
-          ) : (
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={shareOfVoice} layout="vertical" margin={{ left: 30 }}>
-                <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                <XAxis type="number" fontSize={10} />
-                <YAxis type="category" dataKey="name" fontSize={10} width={120} />
-                <Tooltip />
-                <Bar dataKey="value">
-                  {shareOfVoice.map((s, i) => <Cell key={i} fill={s.isClient ? "#ef6a4d" : "#94a3b8"} />)}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </Card>
-
-        <Card className="p-4">
-          <h4 className="text-sm font-semibold mb-3">Score de sentimiento (tendencia)</h4>
-          <ResponsiveContainer width="100%" height={220}>
-            <LineChart data={scoreTrend}>
-              <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-              <XAxis dataKey="date" fontSize={10} />
-              <YAxis domain={[-1, 1]} fontSize={10} />
-              <Tooltip />
-              <Line type="monotone" dataKey="score" stroke="#ef6a4d" strokeWidth={2} dot={false} />
-            </LineChart>
-          </ResponsiveContainer>
-        </Card>
-
-        <Card className="p-4">
-          <h4 className="text-sm font-semibold mb-3">Temas más frecuentes</h4>
-          <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={topTopics} layout="vertical" margin={{ left: 30 }}>
-              <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-              <XAxis type="number" fontSize={10} />
-              <YAxis type="category" dataKey="topic" fontSize={10} width={120} />
-              <Tooltip />
-              <Bar dataKey="count" fill="#ef6a4d" />
-            </BarChart>
-          </ResponsiveContainer>
-        </Card>
-
-        <Card className="p-4">
-          <h4 className="text-sm font-semibold mb-3">Entidades más citadas</h4>
-          {topEntities.length === 0 ? (
-            <div className="space-y-2">
-              <p className="text-xs text-muted-foreground">Sin entidades detectadas.</p>
-              {topMentions.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {topMentions.map((m, i) => (
-                    <Badge key={i} variant="secondary" className="text-xs">
-                      {m.name} <span className="ml-1 opacity-60">×{m.count}</span>
-                    </Badge>
-                  ))}
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-1.5">
-              {topEntities.map((e, i) => (
-                <div key={i} className="flex items-center justify-between text-sm py-1 border-b border-border/40 last:border-0">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="truncate">{e.name}</span>
-                    {e.type && <Badge variant="outline" className="text-[9px] shrink-0">{e.type}</Badge>}
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    {e.sentiment && (
-                      <span className="w-2 h-2 rounded-full" style={{ background: SENT_COLORS[e.sentiment] ?? "#94a3b8" }} />
-                    )}
-                    <span className="text-xs text-muted-foreground">×{e.count}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
         </Card>
       </div>
 
@@ -546,88 +576,6 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
         </Card>
       </div>
 
-      {/* Treemap entidades + Radar canales */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card className="p-4">
-          <h4 className="text-sm font-semibold mb-3 flex items-center gap-2"><TrendingUp className="w-4 h-4" />Mapa de entidades</h4>
-          {entitiesTreemap.length === 0 ? (
-            <p className="text-xs text-muted-foreground py-8 text-center">Sin entidades para mapear.</p>
-          ) : (
-            <EntityTreemap data={entitiesTreemap} />
-          )}
-        </Card>
-
-        <Card className="p-4">
-          <h4 className="text-sm font-semibold mb-3 flex items-center gap-2"><Radio className="w-4 h-4" />Radar canales × sentimiento</h4>
-          {channelRadar.length === 0 ? (
-            <p className="text-xs text-muted-foreground py-8 text-center">Sin canales identificados.</p>
-          ) : (
-            <ResponsiveContainer width="100%" height={260}>
-              <RadarChart data={channelRadar} outerRadius={90}>
-                <PolarGrid strokeOpacity={0.3} />
-                <PolarAngleAxis dataKey="channel" fontSize={10} />
-                <PolarRadiusAxis angle={90} domain={[0, 100]} fontSize={9} />
-                <Radar name="Positivo" dataKey="Positivo" stroke="#10b981" fill="#10b981" fillOpacity={0.3} />
-                <Radar name="Negativo" dataKey="Negativo" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.3} />
-                <Radar name="Crisis" dataKey="Crisis" stroke="#ef4444" fill="#ef4444" fillOpacity={0.3} />
-                <Legend wrapperStyle={{ fontSize: 10 }} />
-                <Tooltip />
-              </RadarChart>
-            </ResponsiveContainer>
-          )}
-        </Card>
-      </div>
-
-      {/* Área apilada SoV temporal + Scatter urgencia */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card className="p-4">
-          <h4 className="text-sm font-semibold mb-3 flex items-center gap-2"><Activity className="w-4 h-4" />Share of voice · evolución</h4>
-          {sovOverTime.rows.length === 0 ? (
-            <p className="text-xs text-muted-foreground py-8 text-center">Sin datos temporales.</p>
-          ) : (
-            <ResponsiveContainer width="100%" height={240}>
-              <AreaChart data={sovOverTime.rows}>
-                <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                <XAxis dataKey="date" fontSize={10} />
-                <YAxis fontSize={10} />
-                <Tooltip />
-                <Legend wrapperStyle={{ fontSize: 10 }} />
-                <Area type="monotone" dataKey="Cliente" stackId="1" stroke="#ef6a4d" fill="#ef6a4d" fillOpacity={0.7} />
-                {sovOverTime.competitors.map((c, i) => (
-                  <Area key={c} type="monotone" dataKey={c} stackId="1"
-                    stroke={CHANNEL_COLORS[(i + 1) % CHANNEL_COLORS.length]}
-                    fill={CHANNEL_COLORS[(i + 1) % CHANNEL_COLORS.length]}
-                    fillOpacity={0.5} />
-                ))}
-              </AreaChart>
-            </ResponsiveContainer>
-          )}
-        </Card>
-
-        <Card className="p-4">
-          <h4 className="text-sm font-semibold mb-3">Urgencia × sentimiento (outliers)</h4>
-          {scatterData.length === 0 ? (
-            <p className="text-xs text-muted-foreground py-8 text-center">Sin datos suficientes.</p>
-          ) : (
-            <ResponsiveContainer width="100%" height={240}>
-              <ScatterChart margin={{ left: 10, right: 10 }}>
-                <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                <XAxis type="number" dataKey="x" name="urgencia" domain={[0.5, 4.5]}
-                  ticks={[1, 2, 3, 4]}
-                  tickFormatter={(v) => ["", "Baja", "Media", "Alta", "Crítica"][v] ?? ""} fontSize={10} />
-                <YAxis type="number" dataKey="y" name="sentimiento" domain={[-1, 1]} fontSize={10} />
-                <ZAxis type="number" dataKey="z" range={[40, 300]} name="menciones" />
-                <Tooltip cursor={{ strokeDasharray: "3 3" }} />
-                <Legend wrapperStyle={{ fontSize: 10 }} />
-                {scatterData.map((s, i) => (
-                  <Scatter key={s.name} name={s.name} data={s.pts} fill={CHANNEL_COLORS[i % CHANNEL_COLORS.length]} fillOpacity={0.7} />
-                ))}
-              </ScatterChart>
-            </ResponsiveContainer>
-          )}
-        </Card>
-      </div>
-
       {/* Frases destacadas */}
       {quotes.length > 0 && (
         <div>
@@ -669,30 +617,12 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
   );
 }
 
-function EntityTreemap({ data }: { data: { name: string; size: number; sentiment?: string }[] }) {
-  const sColor: Record<string, string> = {
-    positivo: "#10b981", neutral: "#64748b", negativo: "#f59e0b", crisis: "#ef4444",
-  };
-  const total = Math.max(1, data.reduce((sum, item) => sum + item.size, 0));
+function SlideKpi({ label, value, accent, hint }: { label: string; value: React.ReactNode; accent: string; hint?: string }) {
   return (
-    <div className="h-[260px] flex flex-wrap gap-1 overflow-hidden rounded-lg">
-      {data.map((item) => {
-        const share = item.size / total;
-        const basis = `${Math.max(18, Math.min(62, 100 * Math.sqrt(share)))}%`;
-        const grow = Math.max(1, item.size);
-        const bg = sColor[item.sentiment ?? ""] ?? "#ef6a4d";
-        return (
-          <div
-            key={item.name}
-            className="min-w-[86px] min-h-[54px] flex flex-col justify-between rounded-md p-2 overflow-hidden text-white"
-            style={{ flex: `${grow} 1 ${basis}`, background: bg }}
-            title={`${item.name}: ${item.size}`}
-          >
-            <span className="text-[11px] font-semibold leading-tight line-clamp-2">{item.name}</span>
-            <span className="text-[10px] opacity-85">×{item.size}</span>
-          </div>
-        );
-      })}
+    <div className="rounded-xl border border-border/40 bg-background/40 p-4 border-l-4" style={{ borderLeftColor: accent }}>
+      <div className="text-[10px] uppercase tracking-widest text-muted-foreground">{label}</div>
+      <div className="text-2xl font-display font-bold mt-1" style={{ color: accent }}>{value}</div>
+      {hint && <div className="text-[10px] text-muted-foreground mt-1">{hint}</div>}
     </div>
   );
 }
