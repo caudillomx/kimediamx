@@ -1,89 +1,92 @@
-# Portales de cliente — arquitectura viva
+# Rediseño del Portal Cliente
 
-Evolucionamos el "Portal Actinver" (ya montado como subdominio virtual) a un **patrón reutilizable para cualquier cliente**: `<cliente>.kimedia.mx` → mismo backend KiMedia, UI aislada por hostname. Actinver es la primera instancia; el resto se activan agregando una fila en la config de portales.
+Los 10 puntos se agrupan en 4 frentes: **arquitectura de información**, **inteligencia de datos**, **branding/UX**, y **nuevas capacidades (benchmark)**. Propongo hacerlo en 3 fases para no romper nada y validar contigo la dirección antes de la fase pesada.
 
-## Cómo se accede
+---
 
-- **Password único por cliente (ahora)**: un solo "usuario técnico" por cliente (ej. `portal+actinver@kimedia.mx`) con password que le pasamos al cliente. Todos los del cliente entran con ese mismo login. Cero fricción, cero gestión de invitaciones.
-- **Migración futura a usuarios individuales**: la tabla `client_access(user_id, client_id)` ya existe, así que cuando queramos multi-usuario solo creamos cuentas reales y les damos acceso al mismo `client_id` — sin migrar datos.
-- El admin de KiMedia entra con su cuenta normal y ve **todo** + las recomendaciones internas.
+## Fase 1 — Reestructura de IA + jerarquía semanal (puntos 1, 2, 3, 4, 5, 6, 9)
 
-## Qué ve el cliente al entrar
+**Nueva estructura de navegación** (reemplaza las 4 pestañas actuales):
 
-**Home del portal** = dashboard vivo del cliente, no lista cronológica. Tres bloques principales + filtro global de fechas arriba.
+```text
+┌────────────────────────────────────────────────────┐
+│ [Logo cliente]  Actinver              [PDF] [Salir]│
+├────────────────────────────────────────────────────┤
+│  Semana actual: 4 – 10 nov 2026    [< sem previa] │
+│  ─────────────────────────────────────────────────│
+│  [ Resumen ] [ Análisis ] [ Recomendaciones ] [ Histórico ]
+└────────────────────────────────────────────────────┘
+```
 
-### 1. Panel de datos (Performance)
-Tabs internas:
-- **Redes sociales** — datos de Fanpage Karma (xlsx/csv semanal). Gráficas de evolución (seguidores, engagement, alcance, top posts) y tabla comparativa por red.
-- **Ads** — xlsx/csv de Meta, X, otras plataformas. KPIs (spend, CPM, CTR, conversiones), gráficas por campaña, breakdown por plataforma.
-- **Screenshots / evidencia** — galería con caption y fecha, para métricas que no vienen en export.
-- **Listening (WhatsApp)** — timeline con los mensajes/análisis diarios importados desde `.txt` (lo que ya vamos a construir para Actinver), buscable y filtrable.
+- **Semana actual como default** (no rango arbitrario). Selector de cohorte semanal en el header (semana previa, hace 2, hace 3…) y un botón "Comparar rango" para agrupar N semanas.
+- **Resumen** → Executive summary + alertas + KPIs clave de esa semana (una sola vista de aterrizaje).
+- **Análisis** → Todas las gráficas, tablas y datos derivados **de listening + benchmark** para la semana/cohorte elegida.
+- **Recomendaciones** → Solo las de la semana seleccionada (nunca lista larga).
+- **Histórico** → Timeline navegable de semanas anteriores + descarga de reportes PDF publicados. Aquí vive lo que hoy es "Reportes".
 
-Todo respeta el **filtro de fechas global** (default: últimas 4 semanas). Se puede cambiar a rango custom o a "esta semana / mes / trimestre".
+Se elimina la pestaña "Listening" como bloque de texto. Los reportes diarios se procesan (fase 2) y alimentan Análisis.
 
-### 2. Recomendaciones de la semana
-Dos secciones separadas en la misma pantalla:
-- **Para el cliente** — visible siempre. Bullets accionables + prioridad (alta/media/baja).
-- **Para el equipo KiMedia** — solo visible si el usuario logueado es admin de KiMedia. El cliente NO las ve.
+**Logo del cliente**: agregar `logo_url` en `CLIENT_PORTALS` (ya existe `clients.logo_url` en BD) y renderizarlo en el header.
 
-Se editan desde el panel admin, no desde el portal.
+**PDF**: nueva plantilla que renderiza el mismo contenido de la semana visible (Resumen + gráficas como imágenes + Recomendaciones), no bloques crudos. Se accede solo desde Histórico (un botón por semana) + botón contextual "Descargar esta semana". Se elimina el botón global superior confuso.
 
-### 3. Descarga de reporte en PDF
-Botón "Descargar reporte" arriba a la derecha:
-- Genera PDF con el rango de fechas activo.
-- Incluye: portada co-branded (logo cliente + "powered by KiMedia"), resumen ejecutivo, gráficas de redes/ads, top screenshots, recomendaciones para el cliente. **No incluye** recomendaciones internas.
-- Reutiliza el patrón `html2pdf.js` que ya usamos en el proyecto.
+---
 
-## Cómo lo alimentamos (solo KiMedia admin)
+## Fase 2 — Convertir listening crudo en datos (puntos 6, 7)
 
-Panel admin por cliente en `/admin/cliente/:id/portal` (ya existe la ruta, la expandimos). Tabs:
-- **Datasets** — subir xlsx/csv de Fanpage Karma, subir xlsx/csv de ads (Meta/X/otras), subir screenshots. Cada archivo se etiqueta con `week_start`, `source` (fanpage_karma / meta_ads / x_ads / other), `platform` opcional, y notas.
-- **Listening** — pegar/importar `.txt` de WhatsApp (parser semanal → agrupa por día).
-- **Recomendaciones semanales** — form por semana con dos áreas: cliente / equipo interno.
-- **Reportes narrativos** — lo que ya construimos (`client_portal_reports`) sigue vivo para análisis largos tipo Actinver histórico.
-- **Acceso** — muestra el email/password del "usuario portal" del cliente, permite resetear password y (a futuro) invitar usuarios individuales.
+Los `content_md` diarios son texto libre que hoy solo se muestra. Extenderemos el pipeline existente `analyze-listening-entries` para que cada entrada devuelva JSON estructurado que ya alimenta a `client_portal_listening_entries` (sentiment/topics/mentions). Adicionalmente:
 
-## Modelo de datos nuevo
+- Nueva edge function `extract-listening-metrics` (o extender la existente) que también extraiga: **volumen de menciones por canal**, **share of voice vs competidores nombrados**, **eventos/hitos detectados**, **entidades citadas** (personas, medios, políticos), **claims/frases textuales**.
+- Nuevas columnas o JSONB en `client_portal_listening_entries`: `channels jsonb`, `entities jsonb`, `events jsonb`, `key_quotes jsonb`.
+- Reproceso batch para entradas ya cargadas (botón en admin: "Reprocesar semana X").
+- `PortalAnalysis` gana secciones nuevas: **Menciones por canal**, **Share of voice**, **Actores/entidades más citados**, **Frases textuales destacadas**, **Timeline de eventos**.
 
-Genérico — sirve para Actinver y para cualquier cliente futuro que enchufemos.
+El bloque de texto crudo ya no se muestra al cliente; queda accesible solo en el admin como fuente.
 
-- `client_portal_datasets` — un registro por archivo subido. Campos: `client_id`, `source` (enum: `fanpage_karma`, `meta_ads`, `x_ads`, `tiktok_ads`, `screenshot`, `other`), `platform` (nullable: `facebook`, `instagram`, `x`, `tiktok`, ...), `period_start`, `period_end`, `storage_path`, `parsed_data` (jsonb con las métricas ya normalizadas para graficar), `notes`, `uploaded_by`.
-- `client_portal_listening_entries` — un registro por día. Campos: `client_id`, `entry_date`, `content_md`, `source` (`whatsapp_txt` / `manual`), `raw_source_ref` (opcional).
-- `client_portal_weekly_recommendations` — un registro por semana + cliente. Campos: `client_id`, `week_start`, `for_client_md`, `for_team_md`, `priority`.
-- `client_portal_credentials` — un registro por cliente. Campos: `client_id`, `portal_user_id` (fk a auth.users del "usuario técnico"), notas. Permite mostrar en admin qué cuenta usa cada cliente.
+---
 
-Se conservan tal cual: `client_portal_reports`, `client_portal_attachments`, `client_access`, bucket `client-reports`, rol `client_viewer`.
+## Fase 3 — Módulo Benchmark FanpageKarma (punto 8)
 
-Nuevo bucket privado `client-datasets` para xlsx/csv/screenshots, con RLS equivalente (viewer solo si `has_client_access`, admin todo).
+Nueva pestaña dentro de **Análisis** (sub-tab) llamada **Performance & Benchmark**:
 
-## RLS (resumen en lenguaje humano)
+- Tabla `client_portal_benchmark_datasets` (fuente=fanpagekarma, semana, competidor, métricas jsonb: fans, engagement, posts, interactions_avg, growth, top_post).
+- Ingesta: primero **carga manual CSV/XLSX** desde admin (`ClientPortalAdmin`). Luego, cuando esté claro el formato, evaluamos automatización.
+- Vistas: crecimiento vs competidores, engagement rate comparado, posts top del período, matriz de posicionamiento.
 
-- Cliente logueado ve **solo** las filas de las tablas nuevas cuyo `client_id` esté en su `client_access`, y **nunca** el campo `for_team_md`.
-- Admin de KiMedia ve todo y edita todo.
-- Los archivos en `client-datasets` siguen la misma regla vía `has_client_access`.
+---
 
-## Fases de entrega
+## Fase 4 — Elevar UI/UX (puntos 1, 10)
 
-**Fase A — Fundación multi-cliente (siguiente entrega)**
-1. Migración: tablas nuevas + bucket `client-datasets` + RLS + GRANTs.
-2. Refactor de `src/lib/clientPortal.ts` para que el mapa de portales sea la única fuente de verdad (ya lo es; solo lo dejamos listo para agregar clientes con una línea).
-3. Nuevo home del portal: shell con filtro de fechas global + tabs (Performance / Recomendaciones / Reportes narrativos).
-4. Recomendaciones semanales (lectura en portal, edición en admin) con separación cliente/equipo.
-5. Botón "Descargar PDF" con rango activo.
+- Tema light propio para el portal (superficies cálidas, densidad tipo dashboard financiero — coherente con que Actinver es finanzas).
+- Header con logo cliente + logo KiMedia pequeño.
+- Cards de KPI con jerarquía tipográfica clara (número grande, delta vs semana previa, sparkline).
+- Paleta: mantener acento coral KiMedia pero suavizar fondos (crema/off-white) y usar acentos data (verde/rojo/azul) neutros para métricas.
+- Micro-interacciones: transiciones al cambiar de semana, skeletons en lugar de "Cargando...".
+- Tipografía: Space Grotesk para números/headers, Inter para texto.
 
-**Fase B — Ingesta de datos**
-6. Uploader admin de xlsx/csv de Fanpage Karma con parser → `parsed_data`.
-7. Uploader de ads (Meta primero, X y otras después) con parser.
-8. Uploader de screenshots con caption/fecha.
-9. Importador de `.txt` WhatsApp → `client_portal_listening_entries` (aplica al histórico Actinver que me vas a pegar).
+---
 
-**Fase C — Multi-usuario opcional**
-10. UI para invitar usuarios individuales a un cliente cuando lo pidas. La estructura ya está lista.
+## Detalles técnicos
 
-**Fuera de alcance ahora**: rankings públicos entre industrias, ingesta automática vía API de Fanpage Karma/Meta, generación de recomendaciones con IA (podemos agregar después como asistente al escribirlas).
+**Archivos a tocar:**
+- `src/lib/clientPortal.ts` — agregar `logoUrl` opcional
+- `src/pages/portal/PortalHome.tsx` — reescritura completa (nueva IA de navegación)
+- `src/pages/portal/PortalAnalysis.tsx` — reescritura, se vuelve el core; recibe `weekStart`/`weekEnd` (no rangos arbitrarios)
+- Nuevos: `PortalWeekSelector.tsx`, `PortalKpiCards.tsx`, `PortalBenchmark.tsx`, `PortalPdfTemplate.tsx`
+- `PortalReport.tsx` — sigue existiendo para reportes históricos individuales
+- **Supabase**:
+  - Migración: columnas `channels/entities/events/key_quotes jsonb` en `client_portal_listening_entries`
+  - Migración: tabla `client_portal_benchmark_datasets`
+  - Edge function: extender `analyze-listening-entries` para extracción estructurada
+  - Edge function nueva: `import-benchmark-csv`
+- `src/pages/admin/ClientPortalAdmin.tsx` — agregar sección upload benchmark + botón reprocesar listening
 
-## Lo que necesito de ti para arrancar Fase A
+---
 
-1. **Nombre del cliente Actinver** para el "usuario portal" — sugiero `portal+actinver@kimedia.mx`. ¿OK o prefieres otro?
-2. Un ejemplo de export xlsx/csv de **Fanpage Karma** y uno de **Meta Ads** para diseñar el parser correcto en Fase B (no bloquea Fase A).
-3. El `.txt` completo del histórico de WhatsApp de Actinver cuando quieras (tampoco bloquea Fase A).
+## Preguntas antes de arrancar
+
+1. **¿Arranco por la Fase 1 (reestructura IA + logo + PDF decente) para que la veas viva rápido, y luego iteramos las fases 2–4?** Es la que resuelve 7 de los 10 puntos sin tocar backend, y me deja validar contigo la dirección de diseño antes de invertir en el pipeline pesado de listening y benchmark.
+
+2. **¿Tienes ya un archivo de ejemplo de export de FanpageKarma?** Si me pasas uno, en Fase 3 puedo modelar los campos exactos en vez de suponer.
+
+3. **¿El logo de Actinver lo subo yo desde la web pública o me lo pasas?**
