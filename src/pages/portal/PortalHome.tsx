@@ -172,21 +172,24 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
     return fromDate !== current.week_start || toDate !== current.week_end;
   }, [current, fromDate, toDate]);
 
+  const activePeriodKey = useMemo(
+    () => `${portal.clientId}|${fromDate}|${toDate}`,
+    [portal.clientId, fromDate, toDate]
+  );
+
   // Clear stale period analysis when range changes
   useEffect(() => {
-    const key = `${portal.clientId}|${fromDate}|${toDate}`;
-    if (periodAnalysisKey && periodAnalysisKey !== key) {
+    if (periodAnalysisKey && periodAnalysisKey !== activePeriodKey) {
       setPeriodAnalysis(null);
       setPeriodAnalysisKey(null);
     }
-    if (periodAnalysisErrorKey && periodAnalysisErrorKey !== key) {
+    if (periodAnalysisErrorKey && periodAnalysisErrorKey !== activePeriodKey) {
       setPeriodAnalysisErrorKey(null);
     }
-  }, [portal.clientId, fromDate, toDate, periodAnalysisKey, periodAnalysisErrorKey]);
+  }, [activePeriodKey, periodAnalysisKey, periodAnalysisErrorKey]);
 
   const regeneratePeriod = async (silent = false) => {
     if (!isExtendedPeriod) return;
-    const key = `${portal.clientId}|${fromDate}|${toDate}`;
     setRegenerating(true);
     if (!silent) toast.loading("Regenerando análisis del período…", { id: "regen" });
     try {
@@ -196,14 +199,14 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
       if (error) throw error;
       if (data?.analysis) {
         setPeriodAnalysis(data.analysis as Analysis);
-        setPeriodAnalysisKey(key);
+        setPeriodAnalysisKey(activePeriodKey);
         setPeriodAnalysisErrorKey(null);
         if (!silent) toast.success("Análisis regenerado para el período", { id: "regen" });
       } else {
         throw new Error(data?.error ?? "Sin respuesta");
       }
     } catch (e: any) {
-      setPeriodAnalysisErrorKey(key);
+      setPeriodAnalysisErrorKey(activePeriodKey);
       toast.error(e.message ?? "No se pudo regenerar", { id: "regen" });
     } finally {
       setRegenerating(false);
@@ -212,13 +215,14 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
 
   useEffect(() => {
     if (!isExtendedPeriod || regenerating) return;
-    const key = `${portal.clientId}|${fromDate}|${toDate}`;
-    if (periodAnalysisKey === key || periodAnalysisErrorKey === key) return;
+    if (periodAnalysisKey === activePeriodKey || periodAnalysisErrorKey === activePeriodKey) return;
     regeneratePeriod(true);
-  }, [isExtendedPeriod, regenerating, portal.clientId, fromDate, toDate, periodAnalysisKey, periodAnalysisErrorKey]);
+  }, [isExtendedPeriod, regenerating, activePeriodKey, periodAnalysisKey, periodAnalysisErrorKey]);
 
   // Effective analysis for display: never show stale weekly text while an extended period is selected
-  const effective: Analysis | null = isExtendedPeriod ? periodAnalysis : current;
+  const effective: Analysis | null = isExtendedPeriod
+    ? (periodAnalysisKey === activePeriodKey ? periodAnalysis : null)
+    : current;
 
   // Aggregate real numbers directly from analyzed entries in the selected range
   useEffect(() => {
