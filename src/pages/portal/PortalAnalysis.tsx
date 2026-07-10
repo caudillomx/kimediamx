@@ -541,7 +541,7 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
     }>();
     for (const e of entries) {
       const chs = (e.channels ?? []).map((c: any) => ({
-        name: typeof c === "string" ? c : c?.name,
+        name: canonicalChannel(typeof c === "string" ? c : c?.name),
         count: typeof c?.count === "number" ? c.count : 1,
       })).filter(c => c.name);
       for (const ch of chs) {
