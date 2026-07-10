@@ -1141,12 +1141,12 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
         </div>
       )}
 
-      {/* Timeline de eventos */}
-      {eventsTimeline.length > 0 && (
+      {/* Timeline de hitos */}
+      {milestones.length > 0 && (
         <Card className="p-5">
           <div className="flex items-baseline justify-between mb-4">
             <h4 className="text-sm font-semibold flex items-center gap-2"><Flag className="w-4 h-4" />Timeline de hitos</h4>
-            <span className="text-[10px] uppercase tracking-widest text-muted-foreground">{eventsTimeline.length} eventos</span>
+            <span className="text-[10px] uppercase tracking-widest text-muted-foreground">{milestones.length} hitos</span>
           </div>
           {(() => {
             const impactColor = (imp: string) => imp === "alto" ? SENT_COLORS.negativo : imp === "medio" ? "#f59e0b" : "#94a3b8";
@@ -1161,9 +1161,9 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
             };
             return (
               <ol className="relative border-l-2 border-border/50 ml-3 space-y-4">
-                {eventsTimeline.map((e, i) => {
-                  const c = impactColor(e.impact);
-                  const d = fmt(e.date);
+                {milestones.map((m, i) => {
+                  const c = impactColor(m.impact);
+                  const d = fmt(m.date);
                   return (
                     <li key={i} className="relative pl-5">
                       <span
@@ -1171,7 +1171,7 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
                         style={{ background: c }}
                         title={`Impacto ${e.impact}`}
                       >
-                        {i + 1}
+                        H{i + 1}
                       </span>
                       <div className="flex items-start gap-3">
                         <div className="shrink-0 text-center leading-none rounded-md border border-border/40 bg-background/40 px-2 py-1.5 min-w-[46px]">
@@ -1185,12 +1185,12 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
                               className="text-[9px] uppercase tracking-widest border-0 text-white"
                               style={{ background: c }}
                             >
-                              {e.kind}
+                              {m.kind}
                             </Badge>
-                            <span className="text-[10px] text-muted-foreground">Impacto {e.impact}</span>
+                            <span className="text-[10px] text-muted-foreground">Impacto {m.impact}</span>
                           </div>
-                          <div className="font-medium text-sm leading-snug mt-1">{e.title}</div>
-                          {e.detail && <div className="text-xs text-muted-foreground leading-snug mt-0.5">{e.detail}</div>}
+                          <div className="font-medium text-sm leading-snug mt-1">{m.title || m.kind}</div>
+                          {m.detail && <div className="text-xs text-muted-foreground leading-snug mt-0.5">{m.detail}</div>}
                         </div>
                       </div>
                     </li>
