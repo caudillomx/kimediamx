@@ -45,9 +45,9 @@ type Report = {
 };
 
 const COMPARE_OPTIONS = [
-  { key: "week", label: "Solo esta semana", weeks: 1 },
-  { key: "4w", label: "Últimas 4 semanas", weeks: 4 },
-  { key: "12w", label: "Últimas 12 semanas", weeks: 12 },
+  { key: "week", label: "Corte semanal", weeks: 1 },
+  { key: "biweek", label: "Corte quincenal", weeks: 2 },
+  { key: "month", label: "Corte mensual", weeks: 4 },
 ];
 
 const TYPE_LABEL: Record<string, string> = {
