@@ -342,6 +342,15 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
       return { ...ev, vol, impact, score, isPeak, color };
     });
 
+    // El día con el mayor volumen SIEMPRE es hito si tiene evento asociado.
+    // Es incongruente que otros días marquen hito y el pico no.
+    let peakDate: string | null = null;
+    let peakVolume = 0;
+    for (const [d, v] of mentionsByDate.entries()) {
+      if (v > peakVolume) { peakVolume = v; peakDate = d; }
+    }
+    const peakCandidate = peakDate ? candidates.find(c => c.date === peakDate) : undefined;
+
     // Filtrar a picos reales; si el evento es crisis/alto siempre entra
     let picked = candidates.filter(c => c.isPeak || c.impact >= IMPACT_RANK.alto);
     // Fallback: si no hay picos, tomar los 3 días con mayor volumen que tengan evento
@@ -351,6 +360,14 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
     // Cap fijo (no depende del período): máximo 6 hitos, ordenados por score
     const HARD_CAP = 6;
     picked = [...picked].sort((a, b) => b.score - a.score).slice(0, HARD_CAP);
+    // Garantía: el pico absoluto del período SIEMPRE está incluido si tiene evento.
+    if (peakCandidate && !picked.some(p => p.date === peakCandidate.date)) {
+      // Insertar el pico y desalojar al de menor score para respetar el cap
+      picked = [peakCandidate, ...picked].sort((a, b) => b.score - a.score).slice(0, HARD_CAP);
+      if (!picked.some(p => p.date === peakCandidate.date)) {
+        picked[picked.length - 1] = peakCandidate;
+      }
+    }
 
     return picked
       .sort((a, b) => a.date.localeCompare(b.date))
