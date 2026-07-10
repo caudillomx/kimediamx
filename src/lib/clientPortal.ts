@@ -33,14 +33,13 @@ export function detectClientPortal(): ClientPortalConfig | null {
   }
 
   const host = window.location.hostname.toLowerCase();
-  // First subdomain segment; ignore preview/staging Lovable hosts.
+  // In Lovable preview/staging there are no real subdomains → only ?portal= works.
+  if (host.endsWith("lovable.app") || host.endsWith("lovable.dev") || host === "localhost") {
+    return null;
+  }
   const parts = host.split(".");
   if (parts.length < 2) return null;
   const first = parts[0];
   if (first === "www" || first === "kimedia") return null;
-  if (host.endsWith("lovable.app") || host.endsWith("lovable.dev")) {
-    // Only allow explicit override in Lovable preview environments.
-    return null;
-  }
   return CLIENT_PORTALS[first] ?? null;
 }
