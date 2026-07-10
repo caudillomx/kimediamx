@@ -88,6 +88,7 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
   const [prevRangeAgg, setPrevRangeAgg] = useState<{ totalMentions: number } | null>(null);
   const [periodAnalysis, setPeriodAnalysis] = useState<Analysis | null>(null);
   const [periodAnalysisKey, setPeriodAnalysisKey] = useState<string | null>(null);
+  const [periodAnalysisErrorKey, setPeriodAnalysisErrorKey] = useState<string | null>(null);
   const [regenerating, setRegenerating] = useState(false);
   const [pdfChartData, setPdfChartData] = useState<{
     volumeByDay: { date: string; positivo: number; neutral: number; negativo: number; crisis: number }[];
@@ -178,12 +179,16 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
       setPeriodAnalysis(null);
       setPeriodAnalysisKey(null);
     }
-  }, [portal.clientId, fromDate, toDate, periodAnalysisKey]);
+    if (periodAnalysisErrorKey && periodAnalysisErrorKey !== key) {
+      setPeriodAnalysisErrorKey(null);
+    }
+  }, [portal.clientId, fromDate, toDate, periodAnalysisKey, periodAnalysisErrorKey]);
 
-  const regeneratePeriod = async () => {
+  const regeneratePeriod = async (silent = false) => {
     if (!isExtendedPeriod) return;
+    const key = `${portal.clientId}|${fromDate}|${toDate}`;
     setRegenerating(true);
-    toast.loading("Regenerando análisis del período…", { id: "regen" });
+    if (!silent) toast.loading("Regenerando análisis del período…", { id: "regen" });
     try {
       const { data, error } = await supabase.functions.invoke("generate-listening-weekly-summary", {
         body: { client_id: portal.clientId, from_date: fromDate, to_date: toDate, persist: false },
@@ -191,17 +196,26 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
       if (error) throw error;
       if (data?.analysis) {
         setPeriodAnalysis(data.analysis as Analysis);
-        setPeriodAnalysisKey(`${portal.clientId}|${fromDate}|${toDate}`);
-        toast.success("Análisis regenerado para el período", { id: "regen" });
+        setPeriodAnalysisKey(key);
+        setPeriodAnalysisErrorKey(null);
+        if (!silent) toast.success("Análisis regenerado para el período", { id: "regen" });
       } else {
         throw new Error(data?.error ?? "Sin respuesta");
       }
     } catch (e: any) {
+      setPeriodAnalysisErrorKey(key);
       toast.error(e.message ?? "No se pudo regenerar", { id: "regen" });
     } finally {
       setRegenerating(false);
     }
   };
+
+  useEffect(() => {
+    if (!isExtendedPeriod || regenerating) return;
+    const key = `${portal.clientId}|${fromDate}|${toDate}`;
+    if (periodAnalysisKey === key || periodAnalysisErrorKey === key) return;
+    regeneratePeriod(true);
+  }, [isExtendedPeriod, regenerating, portal.clientId, fromDate, toDate, periodAnalysisKey, periodAnalysisErrorKey]);
 
   // Effective analysis for display: period override wins over stored weekly
   const effective: Analysis | null = periodAnalysis ?? current;
@@ -555,10 +569,12 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
                         <p className="text-sm text-muted-foreground mt-1">
                           {periodAnalysis
                             ? <>Mostrando análisis y recomendaciones regenerados para <b className="text-foreground">{periodLabel}</b>.</>
-                            : <>El resumen, hallazgos y recomendaciones abajo siguen anclados a la semana <b className="text-foreground">{weekLabel}</b>. Regénéralos para cubrir <b className="text-foreground">{periodLabel}</b>.</>}
+                            : regenerating
+                              ? <>Recalculando resumen, hitos, hallazgos y recomendaciones para <b className="text-foreground">{periodLabel}</b>.</>
+                              : <>No se pudo recalcular automáticamente. Puedes intentarlo de nuevo para cubrir <b className="text-foreground">{periodLabel}</b>.</>}
                         </p>
                       </div>
-                      <Button size="sm" onClick={regeneratePeriod} disabled={regenerating} className="shrink-0">
+                      <Button size="sm" onClick={() => regeneratePeriod(false)} disabled={regenerating} className="shrink-0">
                         <RefreshCw className={`w-4 h-4 mr-2 ${regenerating ? "animate-spin" : ""}`} />
                         {periodAnalysis ? "Regenerar de nuevo" : "Regenerar para el período"}
                       </Button>
