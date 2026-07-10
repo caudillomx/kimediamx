@@ -306,18 +306,17 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
 
   // Hitos: selección estricta por pico de menciones + impacto del evento.
   // El número de hitos NO escala con la duración del período; se limita a los
-  // días verdaderamente destacados (picos de volumen). Un día sin pico no
-  // recibe hito aunque tenga un evento registrado.
+  // días verdaderamente destacados. Si el análisis IA no trajo eventos para un
+  // día pico, se crea un hito por volumen para no dejar vacío el corte mensual.
   const IMPACT_RANK: Record<string, number> = { crisis: 4, alto: 3, medio: 2, bajo: 1 };
   const milestones = useMemo(() => {
-    if (!eventsTimeline.length) return [] as { date: string; dateKey: string; title: string; detail: string; kind: string; impact: string; color: string }[];
-
     // Menciones totales por día (base para detectar picos)
     const mentionsByDate = new Map<string, number>();
     for (const d of volumeByDay) {
       mentionsByDate.set(d.date, d.positivo + d.neutral + d.negativo + d.crisis);
     }
     const volumes = Array.from(mentionsByDate.values()).filter(v => v > 0);
+    if (!volumes.length) return [] as { date: string; dateKey: string; title: string; detail: string; kind: string; impact: string; color: string }[];
     const maxVol = Math.max(1, ...volumes);
     const avgVol = volumes.length ? volumes.reduce((a, b) => a + b, 0) / volumes.length : 0;
     // Umbral de "pico": por encima del promedio y con volumen relevante (>=40% del máximo)
@@ -349,6 +348,28 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
     for (const [d, v] of mentionsByDate.entries()) {
       if (v > peakVolume) { peakVolume = v; peakDate = d; }
     }
+
+    // Agregar días pico aunque no tengan evento explícito en la respuesta IA.
+    // Esto hace que el corte mensual conserve hitos basados en datos duros.
+    for (const [date, vol] of mentionsByDate.entries()) {
+      if (candidates.some(c => c.date === date)) continue;
+      const isPeak = date === peakDate || vol >= peakThreshold;
+      if (!isPeak) continue;
+      const ratio = avgVol ? vol / avgVol : 1;
+      const impact = date === peakDate || vol >= maxVol * 0.75 ? IMPACT_RANK.alto : IMPACT_RANK.medio;
+      candidates.push({
+        date,
+        title: date === peakDate ? "Pico de conversación del período" : "Día con conversación destacada",
+        kind: "volumen",
+        impact: impact >= IMPACT_RANK.alto ? "alto" : "medio",
+        detail: `${vol.toLocaleString("es-MX")} menciones registradas${avgVol ? ` (${ratio.toFixed(1)}× el promedio diario)` : ""}.`,
+        vol,
+        score: (vol / maxVol) * 10 + impact,
+        isPeak,
+        color: impact >= IMPACT_RANK.alto ? "#ef4444" : "#f59e0b",
+      });
+    }
+
     const peakCandidate = peakDate ? candidates.find(c => c.date === peakDate) : undefined;
 
     // Filtrar a picos reales; si el evento es crisis/alto siempre entra
@@ -360,7 +381,7 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
     // Cap fijo (no depende del período): máximo 6 hitos, ordenados por score
     const HARD_CAP = 6;
     picked = [...picked].sort((a, b) => b.score - a.score).slice(0, HARD_CAP);
-    // Garantía: el pico absoluto del período SIEMPRE está incluido si tiene evento.
+    // Garantía: el pico absoluto del período SIEMPRE está incluido.
     if (peakCandidate && !picked.some(p => p.date === peakCandidate.date)) {
       // Insertar el pico y desalojar al de menor score para respetar el cap
       picked = [peakCandidate, ...picked].sort((a, b) => b.score - a.score).slice(0, HARD_CAP);
