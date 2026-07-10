@@ -45,6 +45,14 @@ type Report = {
   summary_md: string | null;
 };
 
+type PeriodMilestone = {
+  date: string;
+  title: string;
+  detail: string;
+  kind: string;
+  impact: string;
+};
+
 const COMPARE_OPTIONS = [
   { key: "week", label: "Corte semanal", weeks: 1 },
   { key: "biweek", label: "Corte quincenal", weeks: 2 },
@@ -70,6 +78,89 @@ function fmtWeekShort(start: string, end: string) {
   return `${sa} – ${sb}`;
 }
 
+function buildMilestonesFromRows(rows: any[]): PeriodMilestone[] {
+  const IMPACT_RANK: Record<string, number> = { crisis: 4, alto: 3, medio: 2, bajo: 1 };
+  const mentionsByDate = new Map<string, number>();
+  const events: PeriodMilestone[] = [];
+
+  for (const r of rows) {
+    const sc = r.sentiment_counts ?? {};
+    const hasCounts = sc && (sc.positivo || sc.neutral || sc.negativo || sc.crisis);
+    const total = hasCounts
+      ? Number(sc.positivo ?? 0) + Number(sc.neutral ?? 0) + Number(sc.negativo ?? 0) + Number(sc.crisis ?? 0)
+      : (Number(r.total_mentions ?? 0) || 1);
+    mentionsByDate.set(r.entry_date, (mentionsByDate.get(r.entry_date) ?? 0) + total);
+
+    for (const ev of (r.events ?? [])) {
+      events.push({
+        date: r.entry_date,
+        title: ev?.title ?? "",
+        kind: ev?.kind ?? "evento",
+        impact: ev?.impact ?? "medio",
+        detail: ev?.detail ?? "",
+      });
+    }
+  }
+
+  const volumes = Array.from(mentionsByDate.values()).filter(v => v > 0);
+  if (!volumes.length) return [];
+  const maxVol = Math.max(1, ...volumes);
+  const avgVol = volumes.reduce((a, b) => a + b, 0) / volumes.length;
+  const peakThreshold = Math.max(avgVol * 1.15, maxVol * 0.4);
+
+  let peakDate: string | null = null;
+  let peakVolume = 0;
+  for (const [d, v] of mentionsByDate.entries()) {
+    if (v > peakVolume) { peakVolume = v; peakDate = d; }
+  }
+
+  const bestByDate = new Map<string, PeriodMilestone>();
+  for (const ev of events) {
+    const cur = bestByDate.get(ev.date);
+    const nextRank = Math.max(IMPACT_RANK[ev.impact ?? ""] ?? 0, ev.kind === "crisis" ? IMPACT_RANK.crisis : 0);
+    const curRank = cur ? Math.max(IMPACT_RANK[cur.impact ?? ""] ?? 0, cur.kind === "crisis" ? IMPACT_RANK.crisis : 0) : -1;
+    if (nextRank > curRank) bestByDate.set(ev.date, ev);
+  }
+
+  const candidates = Array.from(bestByDate.values()).map(ev => {
+    const vol = mentionsByDate.get(ev.date) ?? 0;
+    const impactScore = Math.max(IMPACT_RANK[ev.impact ?? ""] ?? 0, ev.kind === "crisis" ? IMPACT_RANK.crisis : 0);
+    return { ...ev, vol, impactScore, score: (vol / maxVol) * 10 + impactScore, isPeak: vol >= peakThreshold };
+  });
+
+  for (const [date, vol] of mentionsByDate.entries()) {
+    if (candidates.some(c => c.date === date)) continue;
+    const isPeak = date === peakDate || vol >= peakThreshold;
+    if (!isPeak) continue;
+    const ratio = avgVol ? vol / avgVol : 1;
+    const impactScore = date === peakDate || vol >= maxVol * 0.75 ? IMPACT_RANK.alto : IMPACT_RANK.medio;
+    candidates.push({
+      date,
+      title: date === peakDate ? "Pico de conversación del período" : "Día con conversación destacada",
+      kind: "volumen",
+      impact: impactScore >= IMPACT_RANK.alto ? "alto" : "medio",
+      detail: `${vol.toLocaleString("es-MX")} menciones registradas${avgVol ? ` (${ratio.toFixed(1)}× el promedio diario)` : ""}.`,
+      vol,
+      impactScore,
+      score: (vol / maxVol) * 10 + impactScore,
+      isPeak,
+    });
+  }
+
+  const peakCandidate = peakDate ? candidates.find(c => c.date === peakDate) : undefined;
+  const HARD_CAP = 6;
+  let picked = candidates.filter(c => c.isPeak || c.impactScore >= IMPACT_RANK.alto)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, HARD_CAP);
+  if (picked.length === 0) picked = [...candidates].sort((a, b) => b.score - a.score).slice(0, Math.min(3, candidates.length));
+  if (peakCandidate && !picked.some(p => p.date === peakCandidate.date)) {
+    picked = [peakCandidate, ...picked].sort((a, b) => b.score - a.score).slice(0, HARD_CAP);
+    if (!picked.some(p => p.date === peakCandidate.date)) picked[picked.length - 1] = peakCandidate;
+  }
+
+  return picked.sort((a, b) => a.date.localeCompare(b.date)).map(({ date, title, detail, kind, impact }) => ({ date, title, detail, kind, impact }));
+}
+
 export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
   const navigate = useNavigate();
   const [logoUrl, setLogoUrl] = useState<string | null>(portal.logoUrl ?? null);
@@ -86,6 +177,7 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
     sent: { positivo: number; neutral: number; negativo: number; crisis: number };
   }>({ totalMentions: 0, entriesInRange: 0, sent: { positivo: 0, neutral: 0, negativo: 0, crisis: 0 } });
   const [prevRangeAgg, setPrevRangeAgg] = useState<{ totalMentions: number } | null>(null);
+  const [rangeMilestones, setRangeMilestones] = useState<PeriodMilestone[]>([]);
   const [periodAnalysis, setPeriodAnalysis] = useState<Analysis | null>(null);
   const [periodAnalysisKey, setPeriodAnalysisKey] = useState<string | null>(null);
   const [periodAnalysisErrorKey, setPeriodAnalysisErrorKey] = useState<string | null>(null);
@@ -369,6 +461,7 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
         .not("analyzed_at", "is", null)
         .limit(500);
       const richRows = (rich ?? []) as any[];
+      setRangeMilestones(buildMilestonesFromRows(richRows));
       const volMap = new Map<string, { date: string; positivo: number; neutral: number; negativo: number; crisis: number }>();
       const chanMap = new Map<string, number>();
       const entMap = new Map<string, number>();
@@ -725,21 +818,37 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
                     </div>
                   )}
 
-                  {effective?.alerts && effective.alerts.length > 0 && (
+                  {(() => {
+                    const computedAlerts = rangeMilestones.filter(m => m.impact === "alto" || m.kind === "crisis").slice(0, 5);
+                    const items = computedAlerts.length
+                      ? computedAlerts.map((m, i) => ({
+                          label: `H${i + 1}`,
+                          detail: m.detail || m.title || m.kind,
+                          title: m.title || m.kind,
+                        }))
+                      : (effective?.alerts ?? []).map((a: any) => ({
+                          label: a.level ?? "alerta",
+                          detail: a.detail ?? a.summary ?? String(a),
+                          title: "",
+                        }));
+                    if (!items.length) return null;
+                    return (
                     <div className="grid gap-2">
-                      {effective.alerts.map((a: any, i: number) => (
+                      {items.map((a: any, i: number) => (
                         <div key={i} className="flex items-start gap-3 p-4 rounded-xl bg-red-500/5 border border-red-500/30">
                           <AlertTriangle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
-                              <Badge variant="destructive" className="text-[10px] uppercase">{a.level ?? "alerta"}</Badge>
+                              <Badge variant="destructive" className="text-[10px] uppercase">{a.label}</Badge>
+                              {a.title && <span className="text-sm font-semibold">{a.title}</span>}
                             </div>
-                            <p className="text-sm">{a.detail ?? a.summary ?? String(a)}</p>
+                            <p className="text-sm">{a.detail}</p>
                           </div>
                         </div>
                       ))}
                     </div>
-                  )}
+                    );
+                  })()}
 
                   {effective?.key_findings && effective.key_findings.length > 0 && (
                     <div>
