@@ -422,9 +422,18 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
                   <YAxis fontSize={10} />
                   <Tooltip />
                   <Line type="monotone" dataKey="total" stroke="#ef6a4d" strokeWidth={2.5} dot={{ r: 3, fill: "#ef6a4d" }} activeDot={{ r: 5 }} />
+                  {milestones.map((m, i) => {
+                    const y = yByDateLine.get(m.dateKey);
+                    if (y === undefined) return null;
+                    return (
+                      <ReferenceDot key={i} x={m.dateKey} y={y} r={7} fill={m.color} stroke="#fff" strokeWidth={2}
+                        label={{ value: `H${i + 1}`, position: "top", fontSize: 10, fontWeight: 700, fill: m.color }} />
+                    );
+                  })}
                 </LineChart>
               </ResponsiveContainer>
             </div>
+            {milestones.length > 0 && <MilestonesLegend items={milestones} />}
           </div>
           <div className="lg:w-64 grid grid-cols-1 gap-3">
             <SlideKpi label="Menciones del período" value={totals.total.toLocaleString("es-MX")} accent="#ef6a4d" />
@@ -495,6 +504,10 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
                 <Line type="monotone" dataKey="Positivo" stroke={SENT_COLORS.positivo} strokeWidth={2.5} dot={{ r: 2 }} />
                 <Line type="monotone" dataKey="Neutral" stroke="#f59e0b" strokeWidth={2.5} dot={{ r: 2 }} />
                 <Line type="monotone" dataKey="Negativo" stroke={SENT_COLORS.negativo} strokeWidth={2.5} dot={{ r: 2 }} />
+                {milestones.map((m, i) => (
+                  <ReferenceDot key={i} x={m.dateKey} y={95} r={6} fill={m.color} stroke="#fff" strokeWidth={2}
+                    label={{ value: `H${i + 1}`, position: "top", fontSize: 10, fontWeight: 700, fill: m.color }} />
+                ))}
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -539,6 +552,14 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
               <Bar dataKey="neutral" stackId="a" fill={SENT_COLORS.neutral} />
               <Bar dataKey="negativo" stackId="a" fill={SENT_COLORS.negativo} />
               <Bar dataKey="crisis" stackId="a" fill={SENT_COLORS.crisis} />
+              {milestones.map((m, i) => {
+                const y = yByDateBar.get(m.date);
+                if (y === undefined) return null;
+                return (
+                  <ReferenceDot key={i} x={m.date} y={y} r={6} fill={m.color} stroke="#fff" strokeWidth={2}
+                    label={{ value: `H${i + 1}`, position: "top", fontSize: 9, fontWeight: 700, fill: m.color }} />
+                );
+              })}
             </BarChart>
           </ResponsiveContainer>
         </Card>
