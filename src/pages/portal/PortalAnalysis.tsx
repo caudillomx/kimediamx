@@ -392,7 +392,11 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
     }
 
     return picked
-      .sort((a, b) => a.date.localeCompare(b.date))
+      .sort((a, b) => {
+        if (a.date === peakDate) return -1;
+        if (b.date === peakDate) return 1;
+        return b.score - a.score || a.date.localeCompare(b.date);
+      })
       .map(m => ({ date: m.date, dateKey: m.date.slice(5), title: m.title, detail: m.detail, kind: m.kind, impact: m.impact, color: m.color }));
   }, [eventsTimeline, volumeByDay]);
 
