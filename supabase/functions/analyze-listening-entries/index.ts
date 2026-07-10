@@ -11,6 +11,8 @@ type Entry = { id: string; entry_date: string; content_md: string };
 
 const SYSTEM = `Eres un analista senior de social listening y reputación. Analizas bitácoras diarias (WhatsApp del equipo o notas manuales) sobre lo que se dice del cliente en medios, redes y grupos.
 
+Tu trabajo es CONVERTIR texto libre en datos ESTRUCTURADOS para un dashboard ejecutivo. Sé literal, no inventes, no rellenes.
+
 Devuelve SIEMPRE JSON estricto con estas claves:
 {
   "sentiment": "positivo" | "neutral" | "negativo" | "crisis",
@@ -19,10 +21,23 @@ Devuelve SIEMPRE JSON estricto con estas claves:
   "topics": string[] (3-6 temas cortos, en minúsculas, en español),
   "mentions": [{ "name": string, "type": "persona"|"marca"|"medio"|"institucion"|"otro" }],
   "actors": string[] (nombres del equipo que reportan/participan, si se detectan),
-  "summary": string (2-3 oraciones ejecutivas, sin adornos)
+  "summary": string (2-3 oraciones ejecutivas, sin adornos),
+
+  "channels": [{ "name": "twitter"|"x"|"facebook"|"instagram"|"tiktok"|"youtube"|"linkedin"|"whatsapp"|"telegram"|"prensa"|"radio"|"tv"|"blog"|"foro"|"otro", "count": number }],
+  "entities": [{ "name": string, "type": "persona"|"marca"|"medio"|"institucion"|"politico"|"influencer"|"otro", "sentiment": "positivo"|"neutral"|"negativo"|"crisis", "count": number }],
+  "events": [{ "title": string, "kind": "crisis"|"lanzamiento"|"comunicado"|"declaracion"|"nota"|"campaña"|"evento"|"otro", "impact": "bajo"|"medio"|"alto", "detail": string }],
+  "key_quotes": [{ "text": string, "author": string, "source": string, "sentiment": "positivo"|"neutral"|"negativo"|"crisis" }],
+  "competitors": [{ "name": string, "count": number, "sentiment": "positivo"|"neutral"|"negativo"|"crisis" }]
 }
 
-Reglas: No inventes. Si algo no aparece, omite. "crisis" solo si hay riesgo reputacional o legal claro. Ignora saludos, stickers, "🙂🙏", "ok" y ruido.`;
+Reglas duras:
+- Devuelve arrays vacíos si no hay datos, NUNCA inventes nombres, canales ni citas.
+- "channels": cuenta cuántas menciones vienen de cada canal identificable en el texto (por URL, hashtag, "@usuario", "en el noticiero X", "en el podcast", etc.). Si no se puede inferir, no lo agregues.
+- "entities": personas/marcas/instituciones citadas junto al cliente. Deduplica normalizando mayúsculas.
+- "events": hitos concretos con impacto reputacional (crisis, lanzamientos, comunicados, declaraciones). No listes conversaciones triviales.
+- "key_quotes": frases textuales entrecomilladas o parafraseadas breves (máx 240 caracteres) que valga la pena citar en el reporte. Si no hay citas claras, devuelve [].
+- "competitors": otras marcas/organizaciones del mismo sector citadas de forma comparativa. Solo si el texto lo evidencia.
+- "crisis" solo si hay riesgo reputacional o legal claro. Ignora saludos, stickers, "🙂🙏", "ok" y ruido.`;
 
 async function analyzeOne(entry: Entry) {
   const resp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -52,7 +67,7 @@ async function analyzeOne(entry: Entry) {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   try {
-    const { client_id, entry_ids, only_unanalyzed = true, limit = 10, background = false } = await req.json();
+    const { client_id, entry_ids, only_unanalyzed = true, limit = 10, background = false, from_date, to_date } = await req.json();
     if (!client_id) throw new Error('client_id requerido');
 
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
@@ -65,8 +80,10 @@ Deno.serve(async (req) => {
       query = admin.from('client_portal_listening_entries')
         .select('id, entry_date, content_md, analyzed_at')
         .in('id', entry_ids);
-    } else if (only_unanalyzed) {
-      query = query.is('analyzed_at', null);
+    } else {
+      if (only_unanalyzed) query = query.is('analyzed_at', null);
+      if (from_date) query = query.gte('entry_date', from_date);
+      if (to_date) query = query.lte('entry_date', to_date);
     }
     const { data: entries, error } = await query;
     if (error) throw error;
@@ -75,21 +92,28 @@ Deno.serve(async (req) => {
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
+    const buildUpdate = (a: any) => ({
+      sentiment: a.sentiment ?? null,
+      sentiment_score: typeof a.sentiment_score === 'number' ? a.sentiment_score : null,
+      urgency: a.urgency ?? null,
+      topics: Array.isArray(a.topics) ? a.topics.slice(0, 8) : [],
+      mentions: Array.isArray(a.mentions) ? a.mentions.slice(0, 20) : [],
+      actors: Array.isArray(a.actors) ? a.actors.slice(0, 15) : [],
+      summary: typeof a.summary === 'string' ? a.summary : null,
+      channels: Array.isArray(a.channels) ? a.channels.slice(0, 15) : [],
+      entities: Array.isArray(a.entities) ? a.entities.slice(0, 30) : [],
+      events: Array.isArray(a.events) ? a.events.slice(0, 10) : [],
+      key_quotes: Array.isArray(a.key_quotes) ? a.key_quotes.slice(0, 10) : [],
+      competitors: Array.isArray(a.competitors) ? a.competitors.slice(0, 15) : [],
+      analyzed_at: new Date().toISOString(),
+    });
+
     const processAll = async () => {
       let ok = 0;
       for (const e of entries) {
         try {
           const a = await analyzeOne(e as Entry);
-          await admin.from('client_portal_listening_entries').update({
-            sentiment: a.sentiment ?? null,
-            sentiment_score: typeof a.sentiment_score === 'number' ? a.sentiment_score : null,
-            urgency: a.urgency ?? null,
-            topics: Array.isArray(a.topics) ? a.topics.slice(0, 8) : [],
-            mentions: Array.isArray(a.mentions) ? a.mentions.slice(0, 20) : [],
-            actors: Array.isArray(a.actors) ? a.actors.slice(0, 15) : [],
-            summary: typeof a.summary === 'string' ? a.summary : null,
-            analyzed_at: new Date().toISOString(),
-          }).eq('id', e.id);
+          await admin.from('client_portal_listening_entries').update(buildUpdate(a)).eq('id', e.id);
           ok++;
         } catch (err: any) {
           console.error('analyze error', e.id, err.message);
@@ -110,16 +134,7 @@ Deno.serve(async (req) => {
     for (const e of entries) {
       try {
         const a = await analyzeOne(e as Entry);
-        const { error: upErr } = await admin.from('client_portal_listening_entries').update({
-          sentiment: a.sentiment ?? null,
-          sentiment_score: typeof a.sentiment_score === 'number' ? a.sentiment_score : null,
-          urgency: a.urgency ?? null,
-          topics: Array.isArray(a.topics) ? a.topics.slice(0, 8) : [],
-          mentions: Array.isArray(a.mentions) ? a.mentions.slice(0, 20) : [],
-          actors: Array.isArray(a.actors) ? a.actors.slice(0, 15) : [],
-          summary: typeof a.summary === 'string' ? a.summary : null,
-          analyzed_at: new Date().toISOString(),
-        }).eq('id', e.id);
+        const { error: upErr } = await admin.from('client_portal_listening_entries').update(buildUpdate(a)).eq('id', e.id);
         if (upErr) throw upErr;
         ok++;
       } catch (err: any) {
