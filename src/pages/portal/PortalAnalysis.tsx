@@ -517,6 +517,7 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
             <SlideKpi label="Negativo" value={`${totals.negPct}%`} accent={SENT_COLORS.negativo} />
           </div>
         </div>
+        {milestones.length > 0 && <MilestonesLegend items={milestones} />}
 
         {narratives.length > 0 && (
           <div className="mt-6">
@@ -562,6 +563,7 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
               })}
             </BarChart>
           </ResponsiveContainer>
+          {milestones.length > 0 && <MilestonesLegend items={milestones} />}
         </Card>
 
         <Card className="p-4">
