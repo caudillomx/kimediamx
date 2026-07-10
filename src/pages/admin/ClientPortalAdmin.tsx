@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { ArrowLeft, Plus, Trash2, Paperclip, Upload, X, Users, FileText, Lightbulb, KeyRound, Save, MessageSquare, Sparkles, BarChart3 } from "lucide-react";
 import { toast } from "sonner";
 import { parseWhatsappTxt } from "@/lib/whatsappParser";
+import { CLIENT_PORTALS } from "@/lib/clientPortal";
 
 type Report = {
   id: string;
@@ -71,7 +72,11 @@ const TYPE_OPTIONS = [
 ];
 
 export default function ClientPortalAdmin() {
-  const { clientId } = useParams<{ clientId: string }>();
+  const { clientId: rawClientId } = useParams<{ clientId: string }>();
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const clientId = rawClientId && UUID_RE.test(rawClientId)
+    ? rawClientId
+    : (rawClientId ? CLIENT_PORTALS[rawClientId]?.clientId : undefined);
   const navigate = useNavigate();
   const [checking, setChecking] = useState(true);
   const [clientName, setClientName] = useState("");
