@@ -30,6 +30,25 @@ Devuelve SIEMPRE JSON estricto con estas claves:
   "events": [{ "title": string, "kind": "crisis"|"lanzamiento"|"comunicado"|"declaracion"|"nota"|"campaña"|"evento"|"otro", "impact": "bajo"|"medio"|"alto", "detail": string }],
   "key_quotes": [{ "text": string, "author": string, "source": string, "sentiment": "positivo"|"neutral"|"negativo"|"crisis" }],
   "competitors": [{ "name": string, "count": number, "sentiment": "positivo"|"neutral"|"negativo"|"crisis" }]
+  ,
+  "media_mentions": [{
+    "outlet": string,           // Nombre del medio o portal (ej: "El Universal", "Enfoque Noticias", "Forbes México")
+    "url": string | null,        // URL directa a la nota si aparece en la bitácora, si no null
+    "type": "prensa"|"radio"|"tv"|"portal"|"blog"|"podcast"|"otro",
+    "topic": string,             // Tema o ángulo de la nota (corto, minúsculas)
+    "headline": string | null,   // Titular o descripción breve de la cobertura
+    "quote": string | null,      // Cita textual breve si la hay (máx 240 chars)
+    "sentiment": "positivo"|"neutral"|"negativo"|"crisis"
+  }],
+  "social_mentions": [{
+    "profile": string,           // Nombre visible del perfil (ej: "Carlos Loret de Mola")
+    "handle": string | null,     // @usuario si aparece, si no null
+    "platform": "x"|"facebook"|"instagram"|"youtube"|"tiktok"|"reddit"|"linkedin",
+    "url": string | null,        // URL del post si aparece
+    "topic": string,             // Tema del post (corto, minúsculas)
+    "quote": string | null,      // Fragmento o cita del post (máx 240 chars)
+    "sentiment": "positivo"|"neutral"|"negativo"|"crisis"
+  }]
 }
 
 Reglas duras:
@@ -51,6 +70,18 @@ Reglas duras:
 - "key_quotes": frases textuales entrecomilladas o parafraseadas breves (máx 240 caracteres) que valga la pena citar en el reporte. Si no hay citas claras, devuelve [].
 - "competitors": otras marcas/organizaciones del mismo sector citadas de forma comparativa. Solo si el texto lo evidencia.
 - "crisis" solo si hay riesgo reputacional o legal claro. Ignora saludos, stickers, "🙂🙏", "ok" y ruido.`;
+// ↑ Reglas adicionales para las nuevas claves:
+// - "media_mentions": UN ítem por cobertura mediática identificable. Extrae el nombre del outlet
+//   tal cual aparece (El Universal, Milenio, Reforma, Enfoque Noticias, Forbes México, ADN40, etc).
+//   Si hay URL en la bitácora, cópiala EXACTA. Si dos coberturas son del mismo outlet pero
+//   distintos ángulos, crea dos ítems (uno por nota). No inventes URLs ni titulares.
+// - "social_mentions": UN ítem por post/tuit/video/reel identificable en redes.
+//   platform debe ser una de las 7 sociales permitidas. Extrae @handle si aparece.
+//   Si solo dice "5 tuits negativos" sin identificar perfiles, NO generes ítems inventados —
+//   déjalos fuera (el conteo agregado ya vive en "channels").
+// - Para AMBAS listas: prefiere calidad sobre cantidad. Máximo 40 media_mentions y
+//   40 social_mentions por día. Si el texto es puramente resumen agregado sin
+//   detalle por medio/perfil, devuelve [].
 
 // Taxonomía canónica de plataformas (fuente de verdad, única)
 const CANONICAL_CHANNELS = ['medios digitales','x','facebook','instagram','youtube','tiktok','reddit','linkedin'] as const;
@@ -252,6 +283,8 @@ Deno.serve(async (req) => {
       competitors: Array.isArray(a.competitors) ? a.competitors.slice(0, 15) : [],
       total_mentions: typeof a.total_mentions === 'number' ? a.total_mentions : 0,
       sentiment_counts: (a.sentiment_counts && typeof a.sentiment_counts === 'object') ? a.sentiment_counts : {},
+      media_mentions: Array.isArray(a.media_mentions) ? a.media_mentions.slice(0, 40) : [],
+      social_mentions: Array.isArray(a.social_mentions) ? a.social_mentions.slice(0, 40) : [],
       analyzed_at: new Date().toISOString(),
     });
 
