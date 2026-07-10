@@ -55,7 +55,7 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
     (async () => {
       setLoading(true);
       const e = await supabase.from("client_portal_listening_entries")
-        .select("entry_date, sentiment, sentiment_score, urgency, topics, mentions, summary, analyzed_at, channels, entities, events, key_quotes, competitors")
+        .select("entry_date, sentiment, sentiment_score, urgency, topics, mentions, summary, analyzed_at, channels, entities, events, key_quotes, competitors, total_mentions, sentiment_counts")
         .eq("client_id", clientId)
         .gte("entry_date", fromDate).lte("entry_date", toDate)
         .not("analyzed_at", "is", null)
@@ -69,9 +69,20 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
     const map = new Map<string, { date: string; total: number; positivo: number; neutral: number; negativo: number; crisis: number }>();
     for (const e of entries) {
       const row = map.get(e.entry_date) ?? { date: e.entry_date, total: 0, positivo: 0, neutral: 0, negativo: 0, crisis: 0 };
-      row.total++;
-      const s = (e.sentiment ?? "neutral") as keyof typeof SENT_COLORS;
-      (row as any)[s] = ((row as any)[s] ?? 0) + 1;
+      const sc = e.sentiment_counts ?? {};
+      const hasCounts = sc && (sc.positivo || sc.neutral || sc.negativo || sc.crisis);
+      if (hasCounts) {
+        row.positivo += Number(sc.positivo ?? 0) || 0;
+        row.neutral += Number(sc.neutral ?? 0) || 0;
+        row.negativo += Number(sc.negativo ?? 0) || 0;
+        row.crisis += Number(sc.crisis ?? 0) || 0;
+        row.total += Number(sc.positivo ?? 0) + Number(sc.neutral ?? 0) + Number(sc.negativo ?? 0) + Number(sc.crisis ?? 0);
+      } else {
+        const weight = Number(e.total_mentions ?? 0) || 1;
+        row.total += weight;
+        const s = (e.sentiment ?? "neutral") as keyof typeof SENT_COLORS;
+        (row as any)[s] = ((row as any)[s] ?? 0) + weight;
+      }
       map.set(e.entry_date, row);
     }
     return Array.from(map.values()).sort((a, b) => a.date.localeCompare(b.date));
@@ -79,7 +90,19 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
 
   const sentimentBreakdown = useMemo(() => {
     const c: Record<string, number> = { positivo: 0, neutral: 0, negativo: 0, crisis: 0 };
-    for (const e of entries) { const s = e.sentiment ?? "neutral"; c[s] = (c[s] ?? 0) + 1; }
+    for (const e of entries) {
+      const sc = e.sentiment_counts ?? {};
+      const hasCounts = sc && (sc.positivo || sc.neutral || sc.negativo || sc.crisis);
+      if (hasCounts) {
+        c.positivo += Number(sc.positivo ?? 0) || 0;
+        c.neutral += Number(sc.neutral ?? 0) || 0;
+        c.negativo += Number(sc.negativo ?? 0) || 0;
+        c.crisis += Number(sc.crisis ?? 0) || 0;
+      } else {
+        const s = e.sentiment ?? "neutral";
+        c[s] = (c[s] ?? 0) + (Number(e.total_mentions ?? 0) || 1);
+      }
+    }
     return Object.entries(c).filter(([_, v]) => v > 0).map(([name, value]) => ({ name, value }));
   }, [entries]);
 
@@ -123,7 +146,7 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
     const c = new Map<string, number>();
     let clientCount = 0;
     for (const e of entries) {
-      clientCount++;
+      clientCount += Number(e.total_mentions ?? 0) || 1;
       for (const cp of (e.competitors ?? [])) {
         const name = typeof cp === "string" ? cp : cp?.name; if (!name) continue;
         const n = typeof cp?.count === "number" ? cp.count : 1;
@@ -654,22 +677,24 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
 }
 
 function TreemapCell(props: any) {
-  const { x, y, width, height, name, size, sentiment, root } = props;
+  const { x, y, width, height, size, sentiment, root } = props;
   if (width < 2 || height < 2) return null;
   const sColor: Record<string, string> = {
     positivo: "#10b981", neutral: "#64748b", negativo: "#f59e0b", crisis: "#ef4444",
   };
+  const name = String(props?.name ?? props?.payload?.name ?? "");
   const node = (root?.children ?? []).find((n: any) => n.name === name);
   const s = node?.sentiment ?? sentiment;
   const fill = sColor[s] ?? "#ef6a4d";
   const showLabel = width > 60 && height > 24;
   const showCount = width > 60 && height > 40;
+  const maxChars = Math.max(1, Math.floor(width / 7) - 1);
   return (
     <g>
       <rect x={x} y={y} width={width} height={height} fill={fill} fillOpacity={0.75} stroke="#fff" strokeWidth={2} />
       {showLabel && (
         <text x={x + 6} y={y + 16} fill="#fff" fontSize={11} fontWeight={600}>
-          {name.length > Math.floor(width / 7) ? name.slice(0, Math.floor(width / 7) - 1) + "…" : name}
+          {name.length > maxChars ? name.slice(0, maxChars) + "…" : name}
         </text>
       )}
       {showCount && (
