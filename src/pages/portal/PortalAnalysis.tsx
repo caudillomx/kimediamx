@@ -652,3 +652,31 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
     </div>
   );
 }
+
+function TreemapCell(props: any) {
+  const { x, y, width, height, name, size, sentiment, root } = props;
+  if (width < 2 || height < 2) return null;
+  const sColor: Record<string, string> = {
+    positivo: "#10b981", neutral: "#64748b", negativo: "#f59e0b", crisis: "#ef4444",
+  };
+  const node = (root?.children ?? []).find((n: any) => n.name === name);
+  const s = node?.sentiment ?? sentiment;
+  const fill = sColor[s] ?? "#ef6a4d";
+  const showLabel = width > 60 && height > 24;
+  const showCount = width > 60 && height > 40;
+  return (
+    <g>
+      <rect x={x} y={y} width={width} height={height} fill={fill} fillOpacity={0.75} stroke="#fff" strokeWidth={2} />
+      {showLabel && (
+        <text x={x + 6} y={y + 16} fill="#fff" fontSize={11} fontWeight={600}>
+          {name.length > Math.floor(width / 7) ? name.slice(0, Math.floor(width / 7) - 1) + "…" : name}
+        </text>
+      )}
+      {showCount && (
+        <text x={x + 6} y={y + 30} fill="#fff" fontSize={10} fillOpacity={0.85}>
+          ×{size}
+        </text>
+      )}
+    </g>
+  );
+}
