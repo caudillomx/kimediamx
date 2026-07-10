@@ -879,6 +879,42 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
               <Tooltip />
             </PieChart>
           </ResponsiveContainer>
+          {(() => {
+            const total = sentimentBreakdown.reduce((a, s) => a + s.value, 0);
+            if (!total) return null;
+            const get = (n: string) => sentimentBreakdown.find(s => s.name === n)?.value ?? 0;
+            const pos = get("positivo"), neg = get("negativo"), neu = get("neutral"), cri = get("crisis");
+            const pct = (v: number) => Math.round((v / total) * 100);
+            const dominante = [
+              { k: "positivo", v: pos }, { k: "neutral", v: neu }, { k: "negativo", v: neg }, { k: "crisis", v: cri }
+            ].sort((a, b) => b.v - a.v)[0];
+            const balance = pos - (neg + cri);
+            const lectura = (() => {
+              const bits: string[] = [];
+              bits.push(`De ${total} menciones, el ${pct(dominante.v)}% son ${dominante.k}.`);
+              if (balance > 0) bits.push(`La conversación se inclina a favor (${pos} positivas vs ${neg + cri} negativas).`);
+              else if (balance < 0) bits.push(`La conversación pesa en contra (${neg + cri} negativas vs ${pos} positivas).`);
+              else bits.push(`Positivo y negativo se equilibran.`);
+              if (cri > 0) bits.push(`Hay ${cri} mención(es) de crisis que requieren atención inmediata.`);
+              if (neu / total > 0.5) bits.push(`Más de la mitad del ruido es neutral: espacio para empujar mensajes propios.`);
+              return bits.join(" ");
+            })();
+            return (
+              <div className="mt-3 rounded-lg border border-border/40 bg-background/40 p-3">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <Lightbulb className="w-3.5 h-3.5 text-muted-foreground" />
+                  <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">Lectura</span>
+                </div>
+                <p className="text-[11px] text-muted-foreground leading-relaxed">{lectura}</p>
+                <div className="mt-2 flex flex-wrap gap-1.5 text-[10px]">
+                  <span className="px-1.5 py-0.5 rounded" style={{ background: `${SENT_COLORS.positivo}1a`, color: SENT_COLORS.positivo }}>Positivo {pct(pos)}%</span>
+                  <span className="px-1.5 py-0.5 rounded" style={{ background: `${SENT_COLORS.neutral}1a`, color: SENT_COLORS.neutral }}>Neutral {pct(neu)}%</span>
+                  <span className="px-1.5 py-0.5 rounded" style={{ background: `${SENT_COLORS.negativo}1a`, color: SENT_COLORS.negativo }}>Negativo {pct(neg)}%</span>
+                  {cri > 0 && <span className="px-1.5 py-0.5 rounded" style={{ background: `${SENT_COLORS.crisis}1a`, color: SENT_COLORS.crisis }}>Crisis {pct(cri)}%</span>}
+                </div>
+              </div>
+            );
+          })()}
         </Card>
       </div>
 
