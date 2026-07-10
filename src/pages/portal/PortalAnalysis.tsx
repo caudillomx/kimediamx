@@ -306,18 +306,17 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
 
   // Hitos: selección estricta por pico de menciones + impacto del evento.
   // El número de hitos NO escala con la duración del período; se limita a los
-  // días verdaderamente destacados (picos de volumen). Un día sin pico no
-  // recibe hito aunque tenga un evento registrado.
+  // días verdaderamente destacados. Si el análisis IA no trajo eventos para un
+  // día pico, se crea un hito por volumen para no dejar vacío el corte mensual.
   const IMPACT_RANK: Record<string, number> = { crisis: 4, alto: 3, medio: 2, bajo: 1 };
   const milestones = useMemo(() => {
-    if (!eventsTimeline.length) return [] as { date: string; dateKey: string; title: string; detail: string; kind: string; impact: string; color: string }[];
-
     // Menciones totales por día (base para detectar picos)
     const mentionsByDate = new Map<string, number>();
     for (const d of volumeByDay) {
       mentionsByDate.set(d.date, d.positivo + d.neutral + d.negativo + d.crisis);
     }
     const volumes = Array.from(mentionsByDate.values()).filter(v => v > 0);
+    if (!volumes.length) return [] as { date: string; dateKey: string; title: string; detail: string; kind: string; impact: string; color: string }[];
     const maxVol = Math.max(1, ...volumes);
     const avgVol = volumes.length ? volumes.reduce((a, b) => a + b, 0) / volumes.length : 0;
     // Umbral de "pico": por encima del promedio y con volumen relevante (>=40% del máximo)
@@ -335,11 +334,11 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
     // Puntaje: volumen del día (dominante) + impacto del evento
     const candidates = Array.from(bestByDate.values()).map(ev => {
       const vol = mentionsByDate.get(ev.date) ?? 0;
-      const impact = Math.max(IMPACT_RANK[ev.impact ?? ""] ?? 0, ev.kind === "crisis" ? IMPACT_RANK.crisis : 0);
-      const score = (vol / maxVol) * 10 + impact; // volumen pesa más que impacto
+      const impactScore = Math.max(IMPACT_RANK[ev.impact ?? ""] ?? 0, ev.kind === "crisis" ? IMPACT_RANK.crisis : 0);
+      const score = (vol / maxVol) * 10 + impactScore; // volumen pesa más que impacto
       const isPeak = vol >= peakThreshold;
       const color = ev.kind === "crisis" || ev.impact === "alto" ? "#ef4444" : ev.impact === "medio" ? "#f59e0b" : "#0ea5e9";
-      return { ...ev, vol, impact, score, isPeak, color };
+      return { ...ev, vol, impactScore, score, isPeak, color };
     });
 
     // El día con el mayor volumen SIEMPRE es hito si tiene evento asociado.
@@ -349,10 +348,33 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
     for (const [d, v] of mentionsByDate.entries()) {
       if (v > peakVolume) { peakVolume = v; peakDate = d; }
     }
+
+    // Agregar días pico aunque no tengan evento explícito en la respuesta IA.
+    // Esto hace que el corte mensual conserve hitos basados en datos duros.
+    for (const [date, vol] of mentionsByDate.entries()) {
+      if (candidates.some(c => c.date === date)) continue;
+      const isPeak = date === peakDate || vol >= peakThreshold;
+      if (!isPeak) continue;
+      const ratio = avgVol ? vol / avgVol : 1;
+      const impact = date === peakDate || vol >= maxVol * 0.75 ? IMPACT_RANK.alto : IMPACT_RANK.medio;
+      candidates.push({
+        date,
+        title: date === peakDate ? "Pico de conversación del período" : "Día con conversación destacada",
+        kind: "volumen",
+        impact: impact >= IMPACT_RANK.alto ? "alto" : "medio",
+        detail: `${vol.toLocaleString("es-MX")} menciones registradas${avgVol ? ` (${ratio.toFixed(1)}× el promedio diario)` : ""}.`,
+        vol,
+        impactScore: impact,
+        score: (vol / maxVol) * 10 + impact,
+        isPeak,
+        color: impact >= IMPACT_RANK.alto ? "#ef4444" : "#f59e0b",
+      });
+    }
+
     const peakCandidate = peakDate ? candidates.find(c => c.date === peakDate) : undefined;
 
     // Filtrar a picos reales; si el evento es crisis/alto siempre entra
-    let picked = candidates.filter(c => c.isPeak || c.impact >= IMPACT_RANK.alto);
+    let picked = candidates.filter(c => c.isPeak || c.impactScore >= IMPACT_RANK.alto);
     // Fallback: si no hay picos, tomar los 3 días con mayor volumen que tengan evento
     if (picked.length === 0) {
       picked = [...candidates].sort((a, b) => b.score - a.score).slice(0, Math.min(3, candidates.length));
@@ -360,7 +382,7 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
     // Cap fijo (no depende del período): máximo 6 hitos, ordenados por score
     const HARD_CAP = 6;
     picked = [...picked].sort((a, b) => b.score - a.score).slice(0, HARD_CAP);
-    // Garantía: el pico absoluto del período SIEMPRE está incluido si tiene evento.
+    // Garantía: el pico absoluto del período SIEMPRE está incluido.
     if (peakCandidate && !picked.some(p => p.date === peakCandidate.date)) {
       // Insertar el pico y desalojar al de menor score para respetar el cap
       picked = [peakCandidate, ...picked].sort((a, b) => b.score - a.score).slice(0, HARD_CAP);
@@ -1119,12 +1141,12 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
         </div>
       )}
 
-      {/* Timeline de eventos */}
-      {eventsTimeline.length > 0 && (
+      {/* Timeline de hitos */}
+      {milestones.length > 0 && (
         <Card className="p-5">
           <div className="flex items-baseline justify-between mb-4">
             <h4 className="text-sm font-semibold flex items-center gap-2"><Flag className="w-4 h-4" />Timeline de hitos</h4>
-            <span className="text-[10px] uppercase tracking-widest text-muted-foreground">{eventsTimeline.length} eventos</span>
+            <span className="text-[10px] uppercase tracking-widest text-muted-foreground">{milestones.length} hitos</span>
           </div>
           {(() => {
             const impactColor = (imp: string) => imp === "alto" ? SENT_COLORS.negativo : imp === "medio" ? "#f59e0b" : "#94a3b8";
@@ -1139,17 +1161,17 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
             };
             return (
               <ol className="relative border-l-2 border-border/50 ml-3 space-y-4">
-                {eventsTimeline.map((e, i) => {
-                  const c = impactColor(e.impact);
-                  const d = fmt(e.date);
+                {milestones.map((m, i) => {
+                  const c = impactColor(m.impact);
+                  const d = fmt(m.date);
                   return (
                     <li key={i} className="relative pl-5">
                       <span
                         className="absolute -left-[13px] top-1 flex items-center justify-center w-6 h-6 rounded-full text-[10px] font-bold text-white ring-4 ring-background"
                         style={{ background: c }}
-                        title={`Impacto ${e.impact}`}
+                        title={`Impacto ${m.impact}`}
                       >
-                        {i + 1}
+                        H{i + 1}
                       </span>
                       <div className="flex items-start gap-3">
                         <div className="shrink-0 text-center leading-none rounded-md border border-border/40 bg-background/40 px-2 py-1.5 min-w-[46px]">
@@ -1163,12 +1185,12 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
                               className="text-[9px] uppercase tracking-widest border-0 text-white"
                               style={{ background: c }}
                             >
-                              {e.kind}
+                              {m.kind}
                             </Badge>
-                            <span className="text-[10px] text-muted-foreground">Impacto {e.impact}</span>
+                            <span className="text-[10px] text-muted-foreground">Impacto {m.impact}</span>
                           </div>
-                          <div className="font-medium text-sm leading-snug mt-1">{e.title}</div>
-                          {e.detail && <div className="text-xs text-muted-foreground leading-snug mt-0.5">{e.detail}</div>}
+                          <div className="font-medium text-sm leading-snug mt-1">{m.title || m.kind}</div>
+                          {m.detail && <div className="text-xs text-muted-foreground leading-snug mt-0.5">{m.detail}</div>}
                         </div>
                       </div>
                     </li>
