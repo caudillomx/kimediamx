@@ -755,10 +755,13 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
             ) : (
               <div className="space-y-1.5 text-xs">
                 {sentimentDrivers.posTopics.length > 0 && (
-                  <div><span className="text-muted-foreground">Temas: </span><span className="font-medium">{sentimentDrivers.posTopics.map(t => t.topic).join(", ")}</span></div>
+                  <div><span className="text-muted-foreground">Temas: </span><span className="font-medium">{sentimentDrivers.posTopics.map(t => `${t.topic} (${t.count})`).join(", ")}</span></div>
                 )}
                 {sentimentDrivers.posEntities.length > 0 && (
-                  <div><span className="text-muted-foreground">Voces / actores: </span><span className="font-medium">{sentimentDrivers.posEntities.map(e => e.name).join(", ")}</span></div>
+                  <div><span className="text-muted-foreground">Voces / actores: </span><span className="font-medium">{sentimentDrivers.posEntities.map(e => `${e.name} (${e.count})`).join(", ")}</span></div>
+                )}
+                {sentimentDrivers.posReading && (
+                  <p className="pt-1 text-[11px] text-muted-foreground leading-relaxed">{sentimentDrivers.posReading}</p>
                 )}
                 {sentimentDrivers.posQuote && (
                   <blockquote className="mt-2 pl-2 border-l-2 italic text-[11px] text-muted-foreground" style={{ borderColor: SENT_COLORS.positivo }}>
@@ -778,10 +781,13 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
             ) : (
               <div className="space-y-1.5 text-xs">
                 {sentimentDrivers.negTopics.length > 0 && (
-                  <div><span className="text-muted-foreground">Temas: </span><span className="font-medium">{sentimentDrivers.negTopics.map(t => t.topic).join(", ")}</span></div>
+                  <div><span className="text-muted-foreground">Temas: </span><span className="font-medium">{sentimentDrivers.negTopics.map(t => `${t.topic} (${t.count})`).join(", ")}</span></div>
                 )}
                 {sentimentDrivers.negEntities.length > 0 && (
-                  <div><span className="text-muted-foreground">Voces / actores: </span><span className="font-medium">{sentimentDrivers.negEntities.map(e => e.name).join(", ")}</span></div>
+                  <div><span className="text-muted-foreground">Voces / actores: </span><span className="font-medium">{sentimentDrivers.negEntities.map(e => `${e.name} (${e.count})`).join(", ")}</span></div>
+                )}
+                {sentimentDrivers.negReading && (
+                  <p className="pt-1 text-[11px] text-muted-foreground leading-relaxed">{sentimentDrivers.negReading}</p>
                 )}
                 {sentimentDrivers.negQuote && (
                   <blockquote className="mt-2 pl-2 border-l-2 italic text-[11px] text-muted-foreground" style={{ borderColor: SENT_COLORS.negativo }}>
