@@ -912,7 +912,7 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
             <BarChart data={volumeByDay}>
               <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
               <XAxis dataKey="date" fontSize={10} />
-              <YAxis fontSize={10} />
+              <YAxis fontSize={10} domain={[0, (max: number) => Math.ceil(max * 1.18)]} allowDecimals={false} />
               <Tooltip />
               <Bar dataKey="positivo" stackId="a" fill={SENT_COLORS.positivo} />
               <Bar dataKey="neutral" stackId="a" fill={SENT_COLORS.neutral} />
