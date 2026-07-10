@@ -1019,11 +1019,13 @@ export type Database = {
           events: Json | null
           id: string
           key_quotes: Json | null
+          media_mentions: Json
           mentions: Json | null
           raw_source_ref: string | null
           sentiment: string | null
           sentiment_counts: Json | null
           sentiment_score: number | null
+          social_mentions: Json
           source: string
           summary: string | null
           topics: string[] | null
@@ -1045,11 +1047,13 @@ export type Database = {
           events?: Json | null
           id?: string
           key_quotes?: Json | null
+          media_mentions?: Json
           mentions?: Json | null
           raw_source_ref?: string | null
           sentiment?: string | null
           sentiment_counts?: Json | null
           sentiment_score?: number | null
+          social_mentions?: Json
           source?: string
           summary?: string | null
           topics?: string[] | null
@@ -1071,11 +1075,13 @@ export type Database = {
           events?: Json | null
           id?: string
           key_quotes?: Json | null
+          media_mentions?: Json
           mentions?: Json | null
           raw_source_ref?: string | null
           sentiment?: string | null
           sentiment_counts?: Json | null
           sentiment_score?: number | null
+          social_mentions?: Json
           source?: string
           summary?: string | null
           topics?: string[] | null
