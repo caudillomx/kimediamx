@@ -559,6 +559,7 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
                 dataKey="size"
                 stroke="#fff"
                 content={<TreemapCell />}
+                isAnimationActive={false}
               />
             </ResponsiveContainer>
           )}
@@ -678,7 +679,9 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
 
 function TreemapCell(props: any) {
   const { x, y, width, height, size, sentiment, root } = props;
-  if (width < 2 || height < 2) return null;
+  const safeWidth = Math.max(0, Number(width) || 0);
+  const safeHeight = Math.max(0, Number(height) || 0);
+  if (safeWidth < 2 || safeHeight < 2) return null;
   const sColor: Record<string, string> = {
     positivo: "#10b981", neutral: "#64748b", negativo: "#f59e0b", crisis: "#ef4444",
   };
@@ -686,12 +689,12 @@ function TreemapCell(props: any) {
   const node = (root?.children ?? []).find((n: any) => n.name === name);
   const s = node?.sentiment ?? sentiment;
   const fill = sColor[s] ?? "#ef6a4d";
-  const showLabel = width > 60 && height > 24;
-  const showCount = width > 60 && height > 40;
-  const maxChars = Math.max(1, Math.floor(width / 7) - 1);
+  const showLabel = safeWidth > 60 && safeHeight > 24;
+  const showCount = safeWidth > 60 && safeHeight > 40;
+  const maxChars = Math.max(1, Math.floor(safeWidth / 7) - 1);
   return (
     <g>
-      <rect x={x} y={y} width={width} height={height} fill={fill} fillOpacity={0.75} stroke="#fff" strokeWidth={2} />
+      <rect x={x} y={y} width={safeWidth} height={safeHeight} fill={fill} fillOpacity={0.75} stroke="#fff" strokeWidth={2} />
       {showLabel && (
         <text x={x + 6} y={y + 16} fill="#fff" fontSize={11} fontWeight={600}>
           {name.length > maxChars ? name.slice(0, maxChars) + "…" : name}
