@@ -85,6 +85,12 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
     sent: { positivo: number; neutral: number; negativo: number; crisis: number };
   }>({ totalMentions: 0, entriesInRange: 0, sent: { positivo: 0, neutral: 0, negativo: 0, crisis: 0 } });
   const [prevRangeAgg, setPrevRangeAgg] = useState<{ totalMentions: number } | null>(null);
+  const [pdfChartData, setPdfChartData] = useState<{
+    volumeByDay: { date: string; positivo: number; neutral: number; negativo: number; crisis: number }[];
+    topChannels: { name: string; value: number }[];
+    topEntities: { name: string; size: number }[];
+    reputation: { score: number; label: string; color: string };
+  } | null>(null);
   const [theme, setTheme] = useState<"dark" | "light">(() => {
     if (typeof window === "undefined") return "dark";
     return (localStorage.getItem("portal-theme") as "dark" | "light") || "dark";
@@ -186,6 +192,57 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
         }
       }
       setRangeAgg({ totalMentions, entriesInRange: rows.length, sent });
+
+      // aggregates for PDF SVG charts
+      const { data: rich } = await supabase
+        .from("client_portal_listening_entries")
+        .select("entry_date, sentiment, sentiment_score, sentiment_counts, total_mentions, channels, entities, events")
+        .eq("client_id", portal.clientId)
+        .gte("entry_date", fromDate).lte("entry_date", toDate)
+        .not("analyzed_at", "is", null)
+        .limit(500);
+      const richRows = (rich ?? []) as any[];
+      const volMap = new Map<string, { date: string; positivo: number; neutral: number; negativo: number; crisis: number }>();
+      const chanMap = new Map<string, number>();
+      const entMap = new Map<string, number>();
+      let scSum = 0, scN = 0, crisisEvts = 0;
+      for (const r of richRows) {
+        const row = volMap.get(r.entry_date) ?? { date: r.entry_date, positivo: 0, neutral: 0, negativo: 0, crisis: 0 };
+        const sc = r.sentiment_counts ?? {};
+        const has = sc && (sc.positivo || sc.neutral || sc.negativo || sc.crisis);
+        if (has) {
+          row.positivo += Number(sc.positivo ?? 0) || 0;
+          row.neutral  += Number(sc.neutral ?? 0)  || 0;
+          row.negativo += Number(sc.negativo ?? 0) || 0;
+          row.crisis   += Number(sc.crisis ?? 0)   || 0;
+        } else if (r.sentiment) {
+          (row as any)[r.sentiment] += Number(r.total_mentions ?? 1) || 1;
+        }
+        volMap.set(r.entry_date, row);
+        for (const ch of (r.channels ?? [])) {
+          const name = typeof ch === "string" ? ch : ch?.name; if (!name) continue;
+          const n = typeof ch?.count === "number" ? ch.count : 1;
+          chanMap.set(name, (chanMap.get(name) ?? 0) + n);
+        }
+        for (const en of (r.entities ?? [])) {
+          const name = typeof en === "string" ? en : en?.name; if (!name) continue;
+          const n = typeof en?.count === "number" ? en.count : 1;
+          entMap.set(name, (entMap.get(name) ?? 0) + n);
+        }
+        if (typeof r.sentiment_score === "number") { scSum += r.sentiment_score; scN++; }
+        crisisEvts += ((r.events ?? []) as any[]).filter(e => e?.impact === "alto" || e?.kind === "crisis").length;
+      }
+      const avg = scN ? scSum / scN : 0;
+      const raw = 50 + 50 * avg - Math.min(30, crisisEvts * 6);
+      const score = Math.max(0, Math.min(100, Math.round(raw)));
+      const label = score >= 75 ? "Saludable" : score >= 55 ? "Estable" : score >= 40 ? "En riesgo" : "Crítico";
+      const color = score >= 75 ? "#10b981" : score >= 55 ? "#0ea5e9" : score >= 40 ? "#f59e0b" : "#ef4444";
+      setPdfChartData({
+        volumeByDay: Array.from(volMap.values()).sort((a, b) => a.date.localeCompare(b.date)),
+        topChannels: Array.from(chanMap.entries()).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 6),
+        topEntities: Array.from(entMap.entries()).map(([name, size]) => ({ name, size })).sort((a, b) => b.size - a.size).slice(0, 12),
+        reputation: { score, label, color },
+      });
 
       // previous equivalent range for delta
       const from = new Date(fromDate + "T00:00:00");
@@ -545,7 +602,7 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
 
         {/* Hidden PDF template */}
         <div className="fixed -left-[10000px] top-0" aria-hidden>
-          <PortalPdfTemplate ref={pdfRef} portal={portal} logoUrl={logoUrl} analysis={current} weekLabel={weekLabel} />
+          <PortalPdfTemplate ref={pdfRef} portal={portal} logoUrl={logoUrl} analysis={current} weekLabel={weekLabel} charts={pdfChartData} />
         </div>
       </main>
 
