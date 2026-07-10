@@ -53,26 +53,30 @@ function extractDeclaredTotals(md: string): { total?: number; counts?: Record<st
     /total\s*(?:general|de\s+menciones)?\s*[:\-–]?\s*(\d{1,5})\s*menciones/i,
     /(\d{1,5})\s*menciones\s*(?:únicas|unicas|totales|en\s+total)/i,
     /se\s+identificaron\s+(\d{1,5})\s*menciones/i,
-    /volumen\s+total\s+de\s+menciones[^0-9]{0,60}(\d{1,5})/i,
   ];
-  let best = 0;
+  let bestTotal = 0;
   for (const re of totalPatterns) {
     const m = text.match(re);
-    if (m) { const n = parseInt(m[1], 10); if (Number.isFinite(n) && n > best) best = n; }
+    if (m) { const n = parseInt(m[1], 10); if (Number.isFinite(n) && n > bestTotal) bestTotal = n; }
   }
-  if (best > 0) out.total = best;
+  if (bestTotal > 0) out.total = bestTotal;
 
   const grab = (labels: string[]): number | undefined => {
     for (const label of labels) {
-      const re = new RegExp(`${label}[^0-9\\-]{0,40}(?:~|aprox\\.?|cerca\\s+de\\s+)?\\(?\\s*~?\\s*(\\d{1,5})\\s*menciones?\\)?`, 'i');
-      const m = text.match(re);
-      if (m) { const n = parseInt(m[1], 10); if (Number.isFinite(n)) return n; }
+      // "label ... ( N menciones )" — conteo explícito entre paréntesis
+      const re1 = new RegExp(`\\b${label}\\b[^()]{0,40}\\(\\s*~?\\s*(\\d{1,5})\\s*menciones?\\s*\\)`, 'i');
+      const m1 = text.match(re1);
+      if (m1) return parseInt(m1[1], 10);
+      // "label: N menciones" — directo tras dos puntos o guión, sin porcentaje
+      const re2 = new RegExp(`\\b${label}\\b\\s*[:\\-]\\s*(\\d{1,5})\\s*menciones?`, 'i');
+      const m2 = text.match(re2);
+      if (m2) return parseInt(m2[1], 10);
     }
     return undefined;
   };
   const positivo = grab(['positivo', 'positivas']);
   const neutral  = grab(['neutral', 'neutrales', 'neutro']);
-  const negativo = grab(['negativo', 'negativas', 'negativo\\s*/\\s*riesgo', 'riesgo\\s*con\\s*contexto']);
+  const negativo = grab(['negativo', 'negativas']);
   const crisis   = grab(['crisis']);
   if (positivo || neutral || negativo || crisis) {
     out.counts = {
