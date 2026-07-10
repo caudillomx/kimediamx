@@ -687,7 +687,7 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
                 <LineChart data={volumeByDay.map(d => ({ date: d.date.slice(5), total: d.positivo + d.neutral + d.negativo + d.crisis }))}>
                   <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
                   <XAxis dataKey="date" fontSize={10} />
-                  <YAxis fontSize={10} />
+                  <YAxis fontSize={10} domain={[0, (max: number) => Math.ceil(max * 1.18)]} allowDecimals={false} />
                   <Tooltip />
                   <Line type="monotone" dataKey="total" stroke="#ef6a4d" strokeWidth={2.5} dot={{ r: 3, fill: "#ef6a4d" }} activeDot={{ r: 5 }} />
                   {milestones.map((m, i) => {
