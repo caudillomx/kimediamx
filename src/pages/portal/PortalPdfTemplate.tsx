@@ -31,9 +31,18 @@ const fmt = (d: string) =>
   new Date(d + "T00:00:00").toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" });
 
 const SENT_COLORS: Record<string, string> = {
-  positivo: "#10b981", neutral: "#94a3b8", negativo: "#f59e0b", crisis: "#ef4444",
+  positivo: "#10b981", neutral: "#94a3b8", negativo: "#ef4444", crisis: "#991b1b",
 };
-const PIE_PALETTE = ["#ef6a4d", "#0ea5e9", "#a855f7", "#10b981", "#f59e0b", "#ec4899"];
+const PLATFORM_COLORS_PDF: Record<string, string> = {
+  "medios digitales": "#3b82f6", "medios": "#3b82f6", "prensa": "#3b82f6",
+  "x": "#0f172a", "twitter": "#1da1f2", "x (twitter)": "#0f172a",
+  "linkedin": "#0a66c2", "facebook": "#1877f2", "instagram": "#e1306c",
+  "youtube": "#ff0000", "tiktok": "#111111", "reddit": "#ff4500",
+  "threads": "#0f172a", "whatsapp": "#25d366", "telegram": "#0088cc",
+};
+const PIE_FALLBACK = ["#ef6a4d", "#0ea5e9", "#a855f7", "#10b981", "#f59e0b", "#ec4899"];
+const pdfPlatformColor = (name: string, i: number) =>
+  PLATFORM_COLORS_PDF[name.toLowerCase().trim()] ?? PIE_FALLBACK[i % PIE_FALLBACK.length];
 
 const PortalPdfTemplate = forwardRef<HTMLDivElement, Props>(({ portal, logoUrl, analysis, weekLabel, charts }, ref) => {
   const sent = analysis?.sentiment_breakdown ?? {};
@@ -166,7 +175,7 @@ const PortalPdfTemplate = forwardRef<HTMLDivElement, Props>(({ portal, logoUrl, 
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 18 }}>
                 <ChartBox title="Menciones por canal">
-                  <DonutSvg data={charts.topChannels.map((c, i) => ({ name: c.name, value: c.value, color: PIE_PALETTE[i % PIE_PALETTE.length] }))} />
+                  <DonutSvg data={charts.topChannels.map((c, i) => ({ name: c.name, value: c.value, color: pdfPlatformColor(c.name, i) }))} />
                 </ChartBox>
                 <ChartBox title="Sentimiento agregado">
                   <DonutSvg data={(["positivo", "neutral", "negativo", "crisis"] as const)
