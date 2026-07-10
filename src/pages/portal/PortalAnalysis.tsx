@@ -2,13 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { motion } from "framer-motion";
-import ReactMarkdown from "react-markdown";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   LineChart, Line, PieChart, Pie, Cell, Legend, CartesianGrid,
 } from "recharts";
-import { Sparkles, AlertTriangle, TrendingUp } from "lucide-react";
+import { Sparkles } from "lucide-react";
 
 type Entry = {
   entry_date: string;
@@ -21,20 +19,6 @@ type Entry = {
   analyzed_at: string | null;
 };
 
-type Analysis = {
-  id: string;
-  week_start: string;
-  week_end: string;
-  entries_count: number;
-  executive_summary: string | null;
-  key_findings: any[];
-  alerts: any[];
-  recommendations_client: string | null;
-  sentiment_breakdown: Record<string, number>;
-  top_topics: { topic: string; count: number }[];
-  top_mentions: { name: string; type: string; count: number }[];
-};
-
 const SENT_COLORS: Record<string, string> = {
   positivo: "#10b981",
   neutral: "#94a3b8",
@@ -44,27 +28,18 @@ const SENT_COLORS: Record<string, string> = {
 
 export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientId: string; fromDate: string; toDate: string; }) {
   const [entries, setEntries] = useState<Entry[]>([]);
-  const [analyses, setAnalyses] = useState<Analysis[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     (async () => {
       setLoading(true);
-      const [e, a] = await Promise.all([
-        supabase.from("client_portal_listening_entries")
-          .select("entry_date, sentiment, sentiment_score, urgency, topics, mentions, summary, analyzed_at")
-          .eq("client_id", clientId)
-          .gte("entry_date", fromDate).lte("entry_date", toDate)
-          .not("analyzed_at", "is", null)
-          .order("entry_date", { ascending: true }).limit(500),
-        supabase.from("client_portal_listening_analyses")
-          .select("*")
-          .eq("client_id", clientId)
-          .gte("week_start", fromDate).lte("week_start", toDate)
-          .order("week_start", { ascending: false }),
-      ]);
+      const e = await supabase.from("client_portal_listening_entries")
+        .select("entry_date, sentiment, sentiment_score, urgency, topics, mentions, summary, analyzed_at")
+        .eq("client_id", clientId)
+        .gte("entry_date", fromDate).lte("entry_date", toDate)
+        .not("analyzed_at", "is", null)
+        .order("entry_date", { ascending: true }).limit(500);
       setEntries((e.data ?? []) as Entry[]);
-      setAnalyses(((a.data ?? []) as unknown) as Analysis[]);
       setLoading(false);
     })();
   }, [clientId, fromDate, toDate]);
@@ -115,13 +90,13 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
 
   if (loading) return <div className="text-center py-12 text-muted-foreground">Cargando análisis...</div>;
 
-  if (entries.length === 0 && analyses.length === 0) {
+  if (entries.length === 0) {
     return (
       <div className="glass rounded-xl p-10 text-center space-y-2">
         <Sparkles className="w-8 h-8 text-coral mx-auto" />
-        <h3 className="font-semibold">Análisis IA en construcción</h3>
+        <h3 className="font-semibold">Sin datos enriquecidos en este rango</h3>
         <p className="text-sm text-muted-foreground max-w-md mx-auto">
-          Aún no hay entradas de listening enriquecidas por IA en este rango. El equipo KiMedia procesará las próximas entradas y aparecerán aquí.
+          Aún no hay entradas de listening procesadas por IA en la ventana seleccionada. Prueba ampliar la comparación o esperar al próximo corte.
         </p>
       </div>
     );
@@ -129,53 +104,6 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
 
   return (
     <div className="space-y-6">
-      {/* Última narrativa semanal */}
-      {analyses[0] && (
-        <Card className="p-5 border-coral/30 bg-coral/5">
-          <div className="flex items-center gap-2 mb-3">
-            <Sparkles className="w-4 h-4 text-coral" />
-            <span className="text-xs uppercase tracking-wider text-muted-foreground">Resumen ejecutivo · semana {analyses[0].week_start} → {analyses[0].week_end}</span>
-          </div>
-          {analyses[0].executive_summary && (
-            <p className="text-sm leading-relaxed mb-4">{analyses[0].executive_summary}</p>
-          )}
-          {analyses[0].alerts?.length > 0 && (
-            <div className="space-y-2 mb-4">
-              {analyses[0].alerts.map((a: any, i: number) => (
-                <div key={i} className="flex items-start gap-2 text-sm p-2 rounded bg-red-500/10 border border-red-500/30">
-                  <AlertTriangle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
-                  <div>
-                    <Badge className="text-[10px] mr-2">{a.level}</Badge>
-                    {a.detail}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-          {analyses[0].key_findings?.length > 0 && (
-            <div className="grid gap-2 mb-4">
-              {analyses[0].key_findings.map((f: any, i: number) => (
-                <div key={i} className="p-2 rounded bg-background/50 border border-border">
-                  <div className="flex items-center gap-2 text-sm font-medium mb-1">
-                    <TrendingUp className="w-3 h-3" /> {f.title}
-                    <Badge variant="outline" className="text-[10px] ml-auto">impacto {f.impact}</Badge>
-                  </div>
-                  <p className="text-xs text-muted-foreground">{f.detail}</p>
-                </div>
-              ))}
-            </div>
-          )}
-          {analyses[0].recommendations_client && (
-            <div>
-              <div className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Recomendaciones</div>
-              <div className="prose prose-invert prose-sm max-w-none prose-p:my-1 prose-li:my-0">
-                <ReactMarkdown>{analyses[0].recommendations_client}</ReactMarkdown>
-              </div>
-            </div>
-          )}
-        </Card>
-      )}
-
       {/* Grid de gráficas */}
       <div className="grid gap-4 md:grid-cols-2">
         <Card className="p-4">
@@ -250,28 +178,6 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
           )}
         </Card>
       </div>
-
-      {/* Semanas anteriores */}
-      {analyses.length > 1 && (
-        <div className="space-y-3">
-          <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">Semanas anteriores</h3>
-          {analyses.slice(1).map((a, i) => (
-            <motion.div key={a.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}>
-              <Card className="p-4">
-                <div className="text-xs text-muted-foreground mb-2">
-                  Semana {a.week_start} → {a.week_end} · {a.entries_count} entradas
-                </div>
-                {a.executive_summary && <p className="text-sm mb-2">{a.executive_summary}</p>}
-                {a.recommendations_client && (
-                  <div className="prose prose-invert prose-sm max-w-none prose-p:my-1 prose-li:my-0">
-                    <ReactMarkdown>{a.recommendations_client}</ReactMarkdown>
-                  </div>
-                )}
-              </Card>
-            </motion.div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
