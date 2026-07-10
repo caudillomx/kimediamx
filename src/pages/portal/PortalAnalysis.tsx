@@ -356,6 +356,169 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
       .map(r => ({ date: r.date, score: +(r.sum / r.n).toFixed(2) }));
   }, [entries]);
 
+  // ---------- Insights narrativos (explicaciones) ----------
+
+  // Drivers de tonalidad: topics y entidades más asociados a cada polaridad
+  const sentimentDrivers = useMemo(() => {
+    const topicPolarity = new Map<string, { pos: number; neg: number; neu: number }>();
+    const entityPolarity = new Map<string, { pos: number; neg: number; neu: number; count: number }>();
+    for (const e of entries) {
+      const s = (e.sentiment ?? "neutral") as string;
+      const bucket = s === "positivo" ? "pos" : (s === "negativo" || s === "crisis") ? "neg" : "neu";
+      for (const t of (e.topics ?? [])) {
+        const row = topicPolarity.get(t) ?? { pos: 0, neg: 0, neu: 0 };
+        (row as any)[bucket]++;
+        topicPolarity.set(t, row);
+      }
+      for (const ent of (e.entities ?? [])) {
+        const name = typeof ent === "string" ? ent : ent?.name; if (!name) continue;
+        const localSent = (typeof ent === "object" && ent?.sentiment) ? ent.sentiment : s;
+        const b = localSent === "positivo" ? "pos" : (localSent === "negativo" || localSent === "crisis") ? "neg" : "neu";
+        const row = entityPolarity.get(name) ?? { pos: 0, neg: 0, neu: 0, count: 0 };
+        (row as any)[b]++; row.count++;
+        entityPolarity.set(name, row);
+      }
+    }
+    const negTopics = Array.from(topicPolarity.entries())
+      .filter(([_, v]) => v.neg > 0)
+      .sort((a, b) => b[1].neg - a[1].neg).slice(0, 4)
+      .map(([topic, v]) => ({ topic, count: v.neg }));
+    const posTopics = Array.from(topicPolarity.entries())
+      .filter(([_, v]) => v.pos > 0)
+      .sort((a, b) => b[1].pos - a[1].pos).slice(0, 4)
+      .map(([topic, v]) => ({ topic, count: v.pos }));
+    const negEntities = Array.from(entityPolarity.entries())
+      .filter(([_, v]) => v.neg > 0)
+      .sort((a, b) => b[1].neg - a[1].neg).slice(0, 3)
+      .map(([name, v]) => ({ name, count: v.neg }));
+    const posEntities = Array.from(entityPolarity.entries())
+      .filter(([_, v]) => v.pos > 0)
+      .sort((a, b) => b[1].pos - a[1].pos).slice(0, 3)
+      .map(([name, v]) => ({ name, count: v.pos }));
+    // Representative quotes
+    const negQuote = quotes.find(q => q.sentiment === "negativo" || q.sentiment === "crisis");
+    const posQuote = quotes.find(q => q.sentiment === "positivo");
+    return { negTopics, posTopics, negEntities, posEntities, negQuote, posQuote };
+  }, [entries, quotes]);
+
+  // Heatmap insights: día pico negativo y día pico positivo
+  const heatmapInsights = useMemo(() => {
+    const scan = (key: "positivo" | "negativo" | "crisis") => {
+      const row = heatmap.grid[key] ?? {};
+      let best = { day: "", value: 0 };
+      for (const d of DOW_LABELS) {
+        const v = row[d] ?? 0;
+        if (v > best.value) best = { day: d, value: v };
+      }
+      return best;
+    };
+    return {
+      pos: scan("positivo"),
+      neg: scan("negativo"),
+      crisis: scan("crisis"),
+    };
+  }, [heatmap]);
+
+  // Salud reputacional: desglose explicativo
+  const reputationBreakdown = useMemo(() => {
+    const baseline = 50;
+    const sentimentComponent = Math.round(50 * reputationScore.avg);
+    const crisisPenalty = Math.min(30, reputationScore.crisisEvents * 6);
+    const parts = [
+      { label: "Base neutral", value: baseline, tone: "neutral" as const },
+      { label: "Aporte del sentimiento promedio", value: sentimentComponent, tone: sentimentComponent >= 0 ? "positivo" : "negativo" as any },
+      { label: "Penalización por crisis / alto impacto", value: -crisisPenalty, tone: crisisPenalty > 0 ? "negativo" : "neutral" as any },
+    ];
+    const explanation = (() => {
+      const bits: string[] = [];
+      if (sentimentComponent > 15) bits.push("el tono predominante fue claramente positivo");
+      else if (sentimentComponent > 0) bits.push("el tono predominante fue ligeramente positivo");
+      else if (sentimentComponent < -15) bits.push("el tono predominante fue marcadamente negativo");
+      else if (sentimentComponent < 0) bits.push("el tono predominante fue ligeramente negativo");
+      else bits.push("el tono predominante fue neutral");
+      if (crisisPenalty > 0) bits.push(`se detectaron ${reputationScore.crisisEvents} evento(s) de alto impacto que restan al score`);
+      else bits.push("no se detectaron eventos de crisis o alto impacto");
+      return bits.join(" y ") + ".";
+    })();
+    return { parts, explanation };
+  }, [reputationScore]);
+
+  // Insights por plataforma: qué está pasando en cada una
+  const platformInsights = useMemo(() => {
+    // Agrupa entradas por plataforma (una entrada puede aparecer en varias plataformas)
+    const perPlatform = new Map<string, {
+      total: number;
+      pos: number; neg: number; neu: number; crisis: number;
+      topics: Map<string, number>;
+      entities: Map<string, number>;
+    }>();
+    for (const e of entries) {
+      const chs = (e.channels ?? []).map((c: any) => ({
+        name: typeof c === "string" ? c : c?.name,
+        count: typeof c?.count === "number" ? c.count : 1,
+      })).filter(c => c.name);
+      for (const ch of chs) {
+        const key = ch.name;
+        const row = perPlatform.get(key) ?? { total: 0, pos: 0, neg: 0, neu: 0, crisis: 0, topics: new Map(), entities: new Map() };
+        row.total += ch.count;
+        const s = (e.sentiment ?? "neutral") as string;
+        if (s === "positivo") row.pos += ch.count;
+        else if (s === "negativo") row.neg += ch.count;
+        else if (s === "crisis") row.crisis += ch.count;
+        else row.neu += ch.count;
+        for (const t of (e.topics ?? []).slice(0, 3)) row.topics.set(t, (row.topics.get(t) ?? 0) + 1);
+        for (const ent of (e.entities ?? []).slice(0, 3)) {
+          const nm = typeof ent === "string" ? ent : ent?.name;
+          if (nm) row.entities.set(nm, (row.entities.get(nm) ?? 0) + 1);
+        }
+        perPlatform.set(key, row);
+      }
+    }
+    return platforms.map(p => {
+      const row = perPlatform.get(p.name);
+      if (!row) return { ...p, insight: "", dominant: "neutral", topTopics: [] as string[], topEntities: [] as string[] };
+      const totalSent = row.pos + row.neg + row.neu + row.crisis || 1;
+      const negPct = Math.round(((row.neg + row.crisis) / totalSent) * 100);
+      const posPct = Math.round((row.pos / totalSent) * 100);
+      const dominant = row.crisis > 0 && (row.crisis + row.neg) >= row.pos ? "crisis"
+        : row.neg > row.pos ? "negativo"
+        : row.pos > row.neg ? "positivo" : "neutral";
+      const topTopics = Array.from(row.topics.entries()).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([t]) => t);
+      const topEntities = Array.from(row.entities.entries()).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([n]) => n);
+      const insight = (() => {
+        const parts: string[] = [];
+        if (dominant === "positivo") parts.push(`Conversación mayoritariamente positiva (${posPct}%)`);
+        else if (dominant === "negativo") parts.push(`Predomina la crítica (${negPct}% negativo)`);
+        else if (dominant === "crisis") parts.push(`Foco de crisis activo (${negPct}% negativo)`);
+        else parts.push(`Volumen neutral, sin polarización clara`);
+        if (topTopics.length) parts.push(`Ejes: ${topTopics.join(", ")}`);
+        if (topEntities.length) parts.push(`Actores citados: ${topEntities.join(", ")}`);
+        return parts.join(". ") + ".";
+      })();
+      return { ...p, insight, dominant, negPct, posPct, topTopics, topEntities };
+    });
+  }, [entries, platforms]);
+
+  // Detalles por narrativa: sentimiento dominante + snippet + fechas
+  const narrativeDetails = useMemo(() => {
+    return narratives.map(n => {
+      const related = entries.filter(e => (e.topics ?? []).includes(n.topic));
+      const sentCount: Record<string, number> = { positivo: 0, neutral: 0, negativo: 0, crisis: 0 };
+      for (const e of related) sentCount[e.sentiment ?? "neutral"] = (sentCount[e.sentiment ?? "neutral"] ?? 0) + 1;
+      const dominant = (Object.entries(sentCount).sort((a, b) => b[1] - a[1])[0] ?? ["neutral"])[0];
+      const snippet = related.map(e => e.summary).filter(Boolean)[0] ?? "";
+      const entities = new Set<string>();
+      for (const e of related) for (const ent of (e.entities ?? []).slice(0, 3)) {
+        const nm = typeof ent === "string" ? ent : ent?.name;
+        if (nm) entities.add(nm);
+        if (entities.size >= 4) break;
+      }
+      const firstDate = related.map(e => e.entry_date).sort()[0] ?? "";
+      const lastDate = related.map(e => e.entry_date).sort().slice(-1)[0] ?? "";
+      return { ...n, dominant, snippet, entities: Array.from(entities), firstDate, lastDate };
+    });
+  }, [entries, narratives]);
+
   if (loading) return <div className="text-center py-12 text-muted-foreground">Cargando análisis...</div>;
 
   if (entries.length === 0) {
