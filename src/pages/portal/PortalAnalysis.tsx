@@ -5,9 +5,9 @@ import { Badge } from "@/components/ui/badge";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   LineChart, Line, PieChart, Pie, Cell, Legend, CartesianGrid,
-  PolarAngleAxis, RadialBarChart, RadialBar,
+  PolarAngleAxis, RadialBarChart, RadialBar, ReferenceDot,
 } from "recharts";
-import { Sparkles, Quote, AlertOctagon, Radio, Grid3x3, Gauge, TrendingUp, ArrowUp, ArrowDown, Minus } from "lucide-react";
+import { Sparkles, Quote, AlertOctagon, Radio, Grid3x3, Gauge, TrendingUp, Flag } from "lucide-react";
 
 type Entry = {
   entry_date: string;
@@ -296,6 +296,39 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
       .slice(0, 6);
   }, [entries]);
 
+  // Hitos: top 5 eventos por impacto/tipo, únicos por fecha
+  const IMPACT_RANK: Record<string, number> = { crisis: 4, alto: 3, medio: 2, bajo: 1 };
+  const milestones = useMemo(() => {
+    if (!eventsTimeline.length) return [] as { date: string; dateKey: string; title: string; detail: string; kind: string; impact: string; color: string }[];
+    const scored = eventsTimeline.map(e => {
+      const r = Math.max(IMPACT_RANK[e.impact ?? ""] ?? 0, e.kind === "crisis" ? IMPACT_RANK.crisis : 0);
+      const color = e.kind === "crisis" || e.impact === "alto" ? "#ef4444" : e.impact === "medio" ? "#f59e0b" : "#0ea5e9";
+      return { ...e, _r: r, color };
+    });
+    const seen = new Set<string>();
+    const picked: typeof scored = [];
+    for (const ev of [...scored].sort((a, b) => (b._r - a._r) || b.date.localeCompare(a.date))) {
+      if (seen.has(ev.date)) continue;
+      picked.push(ev); seen.add(ev.date);
+      if (picked.length >= 5) break;
+    }
+    return picked
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .map(m => ({ date: m.date, dateKey: m.date.slice(5), title: m.title, detail: m.detail, kind: m.kind, impact: m.impact, color: m.color }));
+  }, [eventsTimeline]);
+
+  // y-value por fecha para cada gráfica temporal
+  const yByDateLine = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const d of volumeByDay) m.set(d.date.slice(5), d.positivo + d.neutral + d.negativo + d.crisis);
+    return m;
+  }, [volumeByDay]);
+  const yByDateBar = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const d of volumeByDay) m.set(d.date, d.positivo + d.neutral + d.negativo + d.crisis);
+    return m;
+  }, [volumeByDay]);
+
   const quotes = useMemo(() => {
     const items: { date: string; text: string; author: string; source: string; sentiment: string }[] = [];
     for (const e of entries) for (const q of (e.key_quotes ?? [])) {
@@ -389,9 +422,18 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
                   <YAxis fontSize={10} />
                   <Tooltip />
                   <Line type="monotone" dataKey="total" stroke="#ef6a4d" strokeWidth={2.5} dot={{ r: 3, fill: "#ef6a4d" }} activeDot={{ r: 5 }} />
+                  {milestones.map((m, i) => {
+                    const y = yByDateLine.get(m.dateKey);
+                    if (y === undefined) return null;
+                    return (
+                      <ReferenceDot key={i} x={m.dateKey} y={y} r={7} fill={m.color} stroke="#fff" strokeWidth={2}
+                        label={{ value: `H${i + 1}`, position: "top", fontSize: 10, fontWeight: 700, fill: m.color }} />
+                    );
+                  })}
                 </LineChart>
               </ResponsiveContainer>
             </div>
+            {milestones.length > 0 && <MilestonesLegend items={milestones} />}
           </div>
           <div className="lg:w-64 grid grid-cols-1 gap-3">
             <SlideKpi label="Menciones del período" value={totals.total.toLocaleString("es-MX")} accent="#ef6a4d" />
@@ -462,6 +504,10 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
                 <Line type="monotone" dataKey="Positivo" stroke={SENT_COLORS.positivo} strokeWidth={2.5} dot={{ r: 2 }} />
                 <Line type="monotone" dataKey="Neutral" stroke="#f59e0b" strokeWidth={2.5} dot={{ r: 2 }} />
                 <Line type="monotone" dataKey="Negativo" stroke={SENT_COLORS.negativo} strokeWidth={2.5} dot={{ r: 2 }} />
+                {milestones.map((m, i) => (
+                  <ReferenceDot key={i} x={m.dateKey} y={95} r={6} fill={m.color} stroke="#fff" strokeWidth={2}
+                    label={{ value: `H${i + 1}`, position: "top", fontSize: 10, fontWeight: 700, fill: m.color }} />
+                ))}
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -506,6 +552,14 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
               <Bar dataKey="neutral" stackId="a" fill={SENT_COLORS.neutral} />
               <Bar dataKey="negativo" stackId="a" fill={SENT_COLORS.negativo} />
               <Bar dataKey="crisis" stackId="a" fill={SENT_COLORS.crisis} />
+              {milestones.map((m, i) => {
+                const y = yByDateBar.get(m.date);
+                if (y === undefined) return null;
+                return (
+                  <ReferenceDot key={i} x={m.date} y={y} r={6} fill={m.color} stroke="#fff" strokeWidth={2}
+                    label={{ value: `H${i + 1}`, position: "top", fontSize: 9, fontWeight: 700, fill: m.color }} />
+                );
+              })}
             </BarChart>
           </ResponsiveContainer>
         </Card>
@@ -623,6 +677,30 @@ function SlideKpi({ label, value, accent, hint }: { label: string; value: React.
       <div className="text-[10px] uppercase tracking-widest text-muted-foreground">{label}</div>
       <div className="text-2xl font-display font-bold mt-1" style={{ color: accent }}>{value}</div>
       {hint && <div className="text-[10px] text-muted-foreground mt-1">{hint}</div>}
+    </div>
+  );
+}
+
+function MilestonesLegend({ items }: { items: { date: string; title: string; detail: string; kind: string; color: string }[] }) {
+  return (
+    <div className="mt-3 rounded-lg border border-border/40 bg-background/30 p-3">
+      <div className="flex items-center gap-2 mb-2">
+        <Flag className="w-3.5 h-3.5 text-muted-foreground" />
+        <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Hitos del período</span>
+      </div>
+      <div className="grid gap-1.5 md:grid-cols-2">
+        {items.map((m, i) => (
+          <div key={i} className="flex items-start gap-2 text-xs">
+            <span className="mt-0.5 shrink-0 inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold text-white" style={{ background: m.color }}>H{i + 1}</span>
+            <div className="min-w-0">
+              <div className="font-medium leading-tight truncate">{m.title || m.kind}</div>
+              <div className="text-[10px] text-muted-foreground">
+                {new Date(m.date + "T00:00:00").toLocaleDateString("es-MX", { day: "numeric", month: "short" })} · {m.kind}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
