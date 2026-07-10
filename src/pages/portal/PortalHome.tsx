@@ -89,6 +89,7 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
   const [periodAnalysis, setPeriodAnalysis] = useState<Analysis | null>(null);
   const [periodAnalysisKey, setPeriodAnalysisKey] = useState<string | null>(null);
   const [periodAnalysisErrorKey, setPeriodAnalysisErrorKey] = useState<string | null>(null);
+  const [periodJobId, setPeriodJobId] = useState<string | null>(null);
   const [regenerating, setRegenerating] = useState(false);
   const [pdfChartData, setPdfChartData] = useState<{
     volumeByDay: { date: string; positivo: number; neutral: number; negativo: number; crisis: number }[];
@@ -182,6 +183,7 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
     if (periodAnalysisKey && periodAnalysisKey !== activePeriodKey) {
       setPeriodAnalysis(null);
       setPeriodAnalysisKey(null);
+      setPeriodJobId(null);
     }
     if (periodAnalysisErrorKey && periodAnalysisErrorKey !== activePeriodKey) {
       setPeriodAnalysisErrorKey(null);
@@ -191,13 +193,18 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
   const regeneratePeriod = async (silent = false) => {
     if (!isExtendedPeriod) return;
     setRegenerating(true);
+    setPeriodJobId(null);
     if (!silent) toast.loading("Regenerando análisis del período…", { id: "regen" });
     try {
       const { data, error } = await supabase.functions.invoke("generate-listening-weekly-summary", {
-        body: { client_id: portal.clientId, from_date: fromDate, to_date: toDate, persist: false },
+        body: { client_id: portal.clientId, from_date: fromDate, to_date: toDate, persist: false, async: true },
       });
       if (error) throw error;
-      if (data?.analysis) {
+      if (data?.job_id) {
+        setPeriodJobId(data.job_id);
+        setPeriodAnalysisErrorKey(null);
+        if (!silent) toast.loading("Análisis en proceso…", { id: "regen" });
+      } else if (data?.analysis) {
         setPeriodAnalysis(data.analysis as Analysis);
         setPeriodAnalysisKey(activePeriodKey);
         setPeriodAnalysisErrorKey(null);
@@ -207,11 +214,65 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
       }
     } catch (e: any) {
       setPeriodAnalysisErrorKey(activePeriodKey);
+      setPeriodJobId(null);
       toast.error(e.message ?? "No se pudo regenerar", { id: "regen" });
     } finally {
-      setRegenerating(false);
+      if (!periodJobId) setRegenerating(false);
     }
   };
+
+  useEffect(() => {
+    if (!periodJobId || !isExtendedPeriod) return;
+    let cancelled = false;
+    let attempts = 0;
+    const poll = async () => {
+      attempts += 1;
+      const { data, error } = await supabase
+        .from("client_portal_listening_analysis_jobs" as any)
+        .select("status, result, error_message")
+        .eq("id", periodJobId)
+        .maybeSingle();
+
+      if (cancelled) return;
+      if (error) {
+        setRegenerating(false);
+        setPeriodAnalysisErrorKey(activePeriodKey);
+        toast.error("No se pudo leer el recálculo", { id: "regen" });
+        return;
+      }
+
+      const job = data as any;
+      if (job?.status === "completed" && job.result?.analysis) {
+        setPeriodAnalysis(job.result.analysis as Analysis);
+        setPeriodAnalysisKey(activePeriodKey);
+        setPeriodAnalysisErrorKey(null);
+        setPeriodJobId(null);
+        setRegenerating(false);
+        toast.success("Análisis regenerado para el período", { id: "regen" });
+        return;
+      }
+
+      if (job?.status === "failed") {
+        setRegenerating(false);
+        setPeriodJobId(null);
+        setPeriodAnalysisErrorKey(activePeriodKey);
+        toast.error(job.error_message ?? "No se pudo regenerar", { id: "regen" });
+        return;
+      }
+
+      if (attempts >= 40) {
+        setRegenerating(false);
+        setPeriodAnalysisErrorKey(activePeriodKey);
+        toast.error("El análisis tardó demasiado. Inténtalo de nuevo.", { id: "regen" });
+        return;
+      }
+
+      window.setTimeout(poll, 2500);
+    };
+
+    const timer = window.setTimeout(poll, 1200);
+    return () => { cancelled = true; window.clearTimeout(timer); };
+  }, [periodJobId, isExtendedPeriod, activePeriodKey]);
 
   useEffect(() => {
     if (!isExtendedPeriod || regenerating) return;
