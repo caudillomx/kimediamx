@@ -7,7 +7,7 @@ import {
   LineChart, Line, PieChart, Pie, Cell, Legend, CartesianGrid,
   PolarAngleAxis, RadialBarChart, RadialBar, ReferenceDot,
 } from "recharts";
-import { Sparkles, Quote, AlertOctagon, Radio, Grid3x3, Gauge, TrendingUp, Flag } from "lucide-react";
+import { Sparkles, Quote, AlertOctagon, Radio, Grid3x3, Gauge, TrendingUp, Flag, Newspaper, AtSign, ExternalLink } from "lucide-react";
 import { Lightbulb } from "lucide-react";
 
 type Entry = {
@@ -26,6 +26,8 @@ type Entry = {
   competitors: any[] | null;
   total_mentions?: number | null;
   sentiment_counts?: any | null;
+  media_mentions?: any[] | null;
+  social_mentions?: any[] | null;
 };
 
 const SENT_COLORS: Record<string, string> = {
@@ -82,7 +84,7 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
     (async () => {
       setLoading(true);
       const e = await supabase.from("client_portal_listening_entries")
-        .select("entry_date, sentiment, sentiment_score, urgency, topics, mentions, summary, analyzed_at, channels, entities, events, key_quotes, competitors, total_mentions, sentiment_counts")
+        .select("entry_date, sentiment, sentiment_score, urgency, topics, mentions, summary, analyzed_at, channels, entities, events, key_quotes, competitors, total_mentions, sentiment_counts, media_mentions, social_mentions")
         .eq("client_id", clientId)
         .gte("entry_date", fromDate).lte("entry_date", toDate)
         .not("analyzed_at", "is", null)
