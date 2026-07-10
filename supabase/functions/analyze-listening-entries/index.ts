@@ -283,6 +283,8 @@ Deno.serve(async (req) => {
       competitors: Array.isArray(a.competitors) ? a.competitors.slice(0, 15) : [],
       total_mentions: typeof a.total_mentions === 'number' ? a.total_mentions : 0,
       sentiment_counts: (a.sentiment_counts && typeof a.sentiment_counts === 'object') ? a.sentiment_counts : {},
+      media_mentions: Array.isArray(a.media_mentions) ? a.media_mentions.slice(0, 40) : [],
+      social_mentions: Array.isArray(a.social_mentions) ? a.social_mentions.slice(0, 40) : [],
       analyzed_at: new Date().toISOString(),
     });
 
