@@ -5,9 +5,9 @@ import { Badge } from "@/components/ui/badge";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   LineChart, Line, PieChart, Pie, Cell, Legend, CartesianGrid,
-  PolarAngleAxis, RadialBarChart, RadialBar,
+  PolarAngleAxis, RadialBarChart, RadialBar, ReferenceDot,
 } from "recharts";
-import { Sparkles, Quote, AlertOctagon, Radio, Grid3x3, Gauge, TrendingUp, ArrowUp, ArrowDown, Minus } from "lucide-react";
+import { Sparkles, Quote, AlertOctagon, Radio, Grid3x3, Gauge, TrendingUp, Flag } from "lucide-react";
 
 type Entry = {
   entry_date: string;
