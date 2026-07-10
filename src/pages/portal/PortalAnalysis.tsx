@@ -362,9 +362,16 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
   const sentimentDrivers = useMemo(() => {
     const topicPolarity = new Map<string, { pos: number; neg: number; neu: number }>();
     const entityPolarity = new Map<string, { pos: number; neg: number; neu: number; count: number }>();
+    const negDates: string[] = [];
+    const posDates: string[] = [];
+    let posEntries = 0, negEntries = 0, neuEntries = 0, crisisEntries = 0;
     for (const e of entries) {
       const s = (e.sentiment ?? "neutral") as string;
       const bucket = s === "positivo" ? "pos" : (s === "negativo" || s === "crisis") ? "neg" : "neu";
+      if (s === "positivo") { posEntries++; posDates.push(e.entry_date); }
+      else if (s === "negativo") { negEntries++; negDates.push(e.entry_date); }
+      else if (s === "crisis") { crisisEntries++; negDates.push(e.entry_date); }
+      else neuEntries++;
       for (const t of (e.topics ?? [])) {
         const row = topicPolarity.get(t) ?? { pos: 0, neg: 0, neu: 0 };
         (row as any)[bucket]++;
@@ -398,7 +405,39 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
     // Representative quotes
     const negQuote = quotes.find(q => q.sentiment === "negativo" || q.sentiment === "crisis");
     const posQuote = quotes.find(q => q.sentiment === "positivo");
-    return { negTopics, posTopics, negEntities, posEntities, negQuote, posQuote };
+    const fmt = (d: string) => new Date(d + "T00:00:00").toLocaleDateString("es-MX", { day: "numeric", month: "short" });
+    const uniq = (arr: string[]) => Array.from(new Set(arr)).sort();
+    const negDatesU = uniq(negDates); const posDatesU = uniq(posDates);
+    const negReading = (() => {
+      if (negEntries + crisisEntries === 0) return "";
+      const who = negEntities.length ? negEntities.map(e => e.name).join(", ") : "";
+      const what = negTopics.length ? negTopics.map(t => t.topic).slice(0, 3).join(", ") : "";
+      const when = negDatesU.length ? negDatesU.slice(0, 3).map(fmt).join(", ") + (negDatesU.length > 3 ? "…" : "") : "";
+      const parts: string[] = [];
+      parts.push(`Se detectaron ${negEntries + crisisEntries} día(s) con carga negativa${crisisEntries ? ` (incluyendo ${crisisEntries} de crisis)` : ""}.`);
+      if (what) parts.push(`El ruido gira en torno a ${what}.`);
+      if (who) parts.push(`Las voces más asociadas son ${who}.`);
+      if (when) parts.push(`Fechas clave: ${when}.`);
+      return parts.join(" ");
+    })();
+    const posReading = (() => {
+      if (posEntries === 0) return "";
+      const who = posEntities.length ? posEntities.map(e => e.name).join(", ") : "";
+      const what = posTopics.length ? posTopics.map(t => t.topic).slice(0, 3).join(", ") : "";
+      const when = posDatesU.length ? posDatesU.slice(0, 3).map(fmt).join(", ") + (posDatesU.length > 3 ? "…" : "") : "";
+      const parts: string[] = [];
+      parts.push(`Se registraron ${posEntries} día(s) con tono positivo.`);
+      if (what) parts.push(`Los temas que jalan son ${what}.`);
+      if (who) parts.push(`Impulsados por ${who}.`);
+      if (when) parts.push(`Fechas: ${when}.`);
+      return parts.join(" ");
+    })();
+    return {
+      negTopics, posTopics, negEntities, posEntities, negQuote, posQuote,
+      posEntries, negEntries, neuEntries, crisisEntries,
+      negDates: negDatesU, posDates: posDatesU,
+      negReading, posReading,
+    };
   }, [entries, quotes]);
 
   // Heatmap insights: día pico negativo y día pico positivo
