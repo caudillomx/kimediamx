@@ -8,6 +8,7 @@ import {
   PolarAngleAxis, RadialBarChart, RadialBar, ReferenceDot,
 } from "recharts";
 import { Sparkles, Quote, AlertOctagon, Radio, Grid3x3, Gauge, TrendingUp, Flag } from "lucide-react";
+import { Lightbulb } from "lucide-react";
 
 type Entry = {
   entry_date: string;
