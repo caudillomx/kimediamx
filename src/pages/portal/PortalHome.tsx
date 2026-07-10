@@ -14,7 +14,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   LogOut, FileText, ShieldAlert, Download, Sparkles,
   BarChart3, Lightbulb, History, ChevronLeft, ChevronRight,
-  AlertTriangle, TrendingUp, MessageCircle, Sun, Moon, CalendarRange, X,
+  AlertTriangle, TrendingUp, MessageCircle, Sun, Moon, CalendarRange, X, RefreshCw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ClientPortalConfig } from "@/lib/clientPortal";
@@ -86,6 +86,9 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
     sent: { positivo: number; neutral: number; negativo: number; crisis: number };
   }>({ totalMentions: 0, entriesInRange: 0, sent: { positivo: 0, neutral: 0, negativo: 0, crisis: 0 } });
   const [prevRangeAgg, setPrevRangeAgg] = useState<{ totalMentions: number } | null>(null);
+  const [periodAnalysis, setPeriodAnalysis] = useState<Analysis | null>(null);
+  const [periodAnalysisKey, setPeriodAnalysisKey] = useState<string | null>(null);
+  const [regenerating, setRegenerating] = useState(false);
   const [pdfChartData, setPdfChartData] = useState<{
     volumeByDay: { date: string; positivo: number; neutral: number; negativo: number; crisis: number }[];
     topChannels: { name: string; value: number }[];
@@ -162,6 +165,46 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
     const start = new Date(end); start.setDate(start.getDate() - 7 * weeks + 1);
     return { fromDate: start.toISOString().slice(0, 10), toDate: current.week_end };
   }, [current, compareKey, customRange]);
+
+  const isExtendedPeriod = useMemo(() => {
+    if (!current) return false;
+    return fromDate !== current.week_start || toDate !== current.week_end;
+  }, [current, fromDate, toDate]);
+
+  // Clear stale period analysis when range changes
+  useEffect(() => {
+    const key = `${portal.clientId}|${fromDate}|${toDate}`;
+    if (periodAnalysisKey && periodAnalysisKey !== key) {
+      setPeriodAnalysis(null);
+      setPeriodAnalysisKey(null);
+    }
+  }, [portal.clientId, fromDate, toDate, periodAnalysisKey]);
+
+  const regeneratePeriod = async () => {
+    if (!isExtendedPeriod) return;
+    setRegenerating(true);
+    toast.loading("Regenerando análisis del período…", { id: "regen" });
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-listening-weekly-summary", {
+        body: { client_id: portal.clientId, from_date: fromDate, to_date: toDate, persist: false },
+      });
+      if (error) throw error;
+      if (data?.analysis) {
+        setPeriodAnalysis(data.analysis as Analysis);
+        setPeriodAnalysisKey(`${portal.clientId}|${fromDate}|${toDate}`);
+        toast.success("Análisis regenerado para el período", { id: "regen" });
+      } else {
+        throw new Error(data?.error ?? "Sin respuesta");
+      }
+    } catch (e: any) {
+      toast.error(e.message ?? "No se pudo regenerar", { id: "regen" });
+    } finally {
+      setRegenerating(false);
+    }
+  };
+
+  // Effective analysis for display: period override wins over stored weekly
+  const effective: Analysis | null = periodAnalysis ?? current;
 
   // Aggregate real numbers directly from analyzed entries in the selected range
   useEffect(() => {
@@ -272,9 +315,9 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
   }, [rangeAgg]);
 
   const displayExecutiveSummary = useMemo(() => {
-    const summary = current?.executive_summary ?? "";
+    const summary = effective?.executive_summary ?? "";
     const contradictsCounts = /no se detectaron|volumen nulo|silencio digital|sin actividad relevante/i.test(summary);
-    if (!current || !contradictsCounts || rangeAgg.totalMentions <= 0) return summary;
+    if (!effective || !contradictsCounts || rangeAgg.totalMentions <= 0) return summary;
 
     const posPct = sentTotals.total ? Math.round((sentTotals.positivo / sentTotals.total) * 100) : null;
     const negPct = sentTotals.total ? Math.round((sentTotals.negativo / sentTotals.total) * 100) : null;
@@ -283,23 +326,23 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
       ? `El balance de sentimiento fue ${posPct}% positivo, ${negPct}% negativo y ${crisisPct}% crisis, calculado directamente desde la bitácora procesada.`
       : "El balance de sentimiento se muestra en las tarjetas y gráficas a partir de la bitácora procesada.";
 
-    return `Durante la semana ${weekLabel}, se analizaron ${rangeAgg.totalMentions} menciones detectadas en el monitoreo. ${sentimentLine} Las gráficas de esta vista son la fuente operativa para volumen, canales, entidades y evolución del período.`;
-  }, [current, rangeAgg.totalMentions, sentTotals, weekLabel]);
+    return `Durante ${weekLabel}, se analizaron ${rangeAgg.totalMentions} menciones detectadas en el monitoreo. ${sentimentLine} Las gráficas de esta vista son la fuente operativa para volumen, canales, entidades y evolución del período.`;
+  }, [effective, rangeAgg.totalMentions, sentTotals, weekLabel]);
 
   const pdfAnalysis = useMemo(() => {
-    if (!current) return null;
+    if (!effective) return null;
     return {
-      ...current,
+      ...effective,
       executive_summary: displayExecutiveSummary,
-      entries_count: rangeAgg.totalMentions || current.entries_count,
+      entries_count: rangeAgg.totalMentions || effective.entries_count,
       sentiment_breakdown: sentTotals.total ? {
         positivo: sentTotals.positivo,
         neutral: sentTotals.neutral,
         negativo: sentTotals.negativo,
         crisis: sentTotals.crisis,
-      } : current.sentiment_breakdown,
+      } : effective.sentiment_breakdown,
     };
-  }, [current, displayExecutiveSummary, rangeAgg.totalMentions, sentTotals]);
+  }, [effective, displayExecutiveSummary, rangeAgg.totalMentions, sentTotals]);
 
   const deltaMentions = useMemo(() => {
     if (!prevRangeAgg) return null;
