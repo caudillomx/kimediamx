@@ -5,8 +5,11 @@ import { Badge } from "@/components/ui/badge";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   LineChart, Line, PieChart, Pie, Cell, Legend, CartesianGrid,
+  Treemap, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
+  AreaChart, Area, ScatterChart, Scatter, ZAxis,
+  RadialBarChart, RadialBar,
 } from "recharts";
-import { Sparkles, Quote, AlertOctagon, Radio, Users } from "lucide-react";
+import { Sparkles, Quote, AlertOctagon, Radio, Users, Activity, Grid3x3, Gauge, TrendingUp } from "lucide-react";
 
 type Entry = {
   entry_date: string;
@@ -22,6 +25,8 @@ type Entry = {
   events: any[] | null;
   key_quotes: any[] | null;
   competitors: any[] | null;
+  total_mentions?: number | null;
+  sentiment_counts?: any | null;
 };
 
 const SENT_COLORS: Record<string, string> = {
@@ -32,6 +37,15 @@ const SENT_COLORS: Record<string, string> = {
 };
 
 const CHANNEL_COLORS = ["#ef6a4d", "#0ea5e9", "#a855f7", "#10b981", "#f59e0b", "#ec4899", "#14b8a6", "#8b5cf6"];
+
+const DOW_LABELS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+const URGENCY_LEVEL: Record<string, number> = { baja: 1, media: 2, alta: 3, critica: 4 };
+const HEAT_COLOR: Record<string, [number, number, number]> = {
+  positivo: [16, 185, 129],
+  neutral:  [148, 163, 184],
+  negativo: [245, 158, 11],
+  crisis:   [239, 68, 68],
+};
 
 export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientId: string; fromDate: string; toDate: string; }) {
   const [entries, setEntries] = useState<Entry[]>([]);
@@ -132,6 +146,136 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
       });
     }
     return items.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 20);
+  }, [entries]);
+
+  // ---------- Nuevos agregados ----------
+
+  // 1) Heatmap día-de-semana × sentimiento
+  const heatmap = useMemo(() => {
+    const grid: Record<string, Record<string, number>> = {};
+    for (const s of Object.keys(HEAT_COLOR)) grid[s] = Object.fromEntries(DOW_LABELS.map(d => [d, 0]));
+    for (const e of entries) {
+      const dow = DOW_LABELS[new Date(e.entry_date + "T00:00:00").getDay()];
+      const sc = e.sentiment_counts ?? {};
+      const hasCounts = sc && (sc.positivo || sc.neutral || sc.negativo || sc.crisis);
+      if (hasCounts) {
+        for (const k of Object.keys(HEAT_COLOR)) grid[k][dow] += Number(sc[k] ?? 0) || 0;
+      } else if (e.sentiment) {
+        grid[e.sentiment as string] = grid[e.sentiment as string] ?? {};
+        grid[e.sentiment as string][dow] = (grid[e.sentiment as string][dow] ?? 0) + (Number(e.total_mentions ?? 0) || 1);
+      }
+    }
+    const max = Math.max(1, ...Object.values(grid).flatMap(r => Object.values(r)));
+    return { grid, max };
+  }, [entries]);
+
+  // 2) Treemap: entidades por frecuencia + tinte por sentimiento
+  const entitiesTreemap = useMemo(() => {
+    const map = new Map<string, { name: string; size: number; sentiment?: string }>();
+    for (const e of entries) for (const en of (e.entities ?? [])) {
+      const name = typeof en === "string" ? en : en?.name; if (!name) continue;
+      const size = typeof en?.count === "number" ? en.count : 1;
+      const prev = map.get(name) ?? { name, size: 0, sentiment: en?.sentiment };
+      prev.size += size;
+      map.set(name, prev);
+    }
+    if (map.size === 0) {
+      for (const e of entries) for (const m of (e.mentions ?? [])) {
+        const name = typeof m === "string" ? m : m?.name; if (!name) continue;
+        const prev = map.get(name) ?? { name, size: 0 };
+        prev.size += 1;
+        map.set(name, prev);
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => b.size - a.size).slice(0, 25);
+  }, [entries]);
+
+  // 3) Radar canales × sentimiento (normalizado 0-100 por sentimiento)
+  const channelRadar = useMemo(() => {
+    const byChan: Record<string, { positivo: number; neutral: number; negativo: number; crisis: number }> = {};
+    for (const e of entries) for (const ch of (e.channels ?? [])) {
+      const name = typeof ch === "string" ? ch : ch?.name; if (!name) continue;
+      const w = typeof ch?.count === "number" ? ch.count : 1;
+      const s = (ch?.sentiment ?? e.sentiment ?? "neutral") as keyof typeof HEAT_COLOR;
+      const b = byChan[name] ?? { positivo: 0, neutral: 0, negativo: 0, crisis: 0 };
+      (b as any)[s] = ((b as any)[s] ?? 0) + w;
+      byChan[name] = b;
+    }
+    const rows = Object.entries(byChan).map(([channel, v]) => {
+      const total = v.positivo + v.neutral + v.negativo + v.crisis || 1;
+      return {
+        channel,
+        Positivo: Math.round((v.positivo / total) * 100),
+        Negativo: Math.round((v.negativo / total) * 100),
+        Crisis: Math.round((v.crisis / total) * 100),
+        _total: total,
+      };
+    }).sort((a, b) => b._total - a._total).slice(0, 6);
+    return rows;
+  }, [entries]);
+
+  // 4) SoV temporal (área apilada Cliente + competidores)
+  const sovOverTime = useMemo(() => {
+    const dates = Array.from(new Set(entries.map(e => e.entry_date))).sort();
+    const competitorSet = new Set<string>();
+    for (const e of entries) for (const cp of (e.competitors ?? [])) {
+      const name = typeof cp === "string" ? cp : cp?.name; if (name) competitorSet.add(name);
+    }
+    const topCompetitors = (() => {
+      const c = new Map<string, number>();
+      for (const e of entries) for (const cp of (e.competitors ?? [])) {
+        const name = typeof cp === "string" ? cp : cp?.name; if (!name) continue;
+        const n = typeof cp?.count === "number" ? cp.count : 1;
+        c.set(name, (c.get(name) ?? 0) + n);
+      }
+      return Array.from(c.entries()).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([n]) => n);
+    })();
+    const rows = dates.map(d => {
+      const row: any = { date: d, Cliente: 0 };
+      for (const c of topCompetitors) row[c] = 0;
+      return row;
+    });
+    const byDate = new Map(rows.map(r => [r.date, r]));
+    for (const e of entries) {
+      const r = byDate.get(e.entry_date); if (!r) continue;
+      r.Cliente += Number(e.total_mentions ?? 1) || 1;
+      for (const cp of (e.competitors ?? [])) {
+        const name = typeof cp === "string" ? cp : cp?.name; if (!name || !topCompetitors.includes(name)) continue;
+        r[name] = (r[name] ?? 0) + (typeof cp?.count === "number" ? cp.count : 1);
+      }
+    }
+    return { rows, competitors: topCompetitors };
+  }, [entries]);
+
+  // 5) Scatter urgencia × score sentimiento (por canal)
+  const scatterData = useMemo(() => {
+    const byChan: Record<string, { x: number; y: number; z: number }[]> = {};
+    for (const e of entries) {
+      if (typeof e.sentiment_score !== "number" && !e.urgency) continue;
+      const y = typeof e.sentiment_score === "number" ? e.sentiment_score : (e.sentiment === "positivo" ? 0.5 : e.sentiment === "negativo" ? -0.5 : e.sentiment === "crisis" ? -1 : 0);
+      const x = URGENCY_LEVEL[e.urgency ?? "baja"] ?? 1;
+      const z = Number(e.total_mentions ?? 1) || 1;
+      const chan = (e.channels ?? [])[0];
+      const chanName = typeof chan === "string" ? chan : chan?.name ?? "Otro";
+      byChan[chanName] = byChan[chanName] ?? [];
+      byChan[chanName].push({ x, y, z });
+    }
+    return Object.entries(byChan).slice(0, 6).map(([name, pts]) => ({ name, pts }));
+  }, [entries]);
+
+  // 6) Salud reputacional (0-100)
+  const reputationScore = useMemo(() => {
+    let sum = 0, n = 0;
+    for (const e of entries) {
+      if (typeof e.sentiment_score === "number") { sum += e.sentiment_score; n++; }
+    }
+    const avg = n ? sum / n : 0;
+    const crisisEvents = entries.reduce((acc, e) => acc + (e.events ?? []).filter((ev: any) => ev?.impact === "alto" || ev?.kind === "crisis").length, 0);
+    const raw = 50 + 50 * avg - Math.min(30, crisisEvents * 6);
+    const score = Math.max(0, Math.min(100, Math.round(raw)));
+    const label = score >= 75 ? "Saludable" : score >= 55 ? "Estable" : score >= 40 ? "En riesgo" : "Crítico";
+    const color = score >= 75 ? "#10b981" : score >= 55 ? "#0ea5e9" : score >= 40 ? "#f59e0b" : "#ef4444";
+    return { score, label, color, avg: +avg.toFixed(2), crisisEvents };
   }, [entries]);
 
   const quotes = useMemo(() => {
@@ -329,6 +473,145 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
         </Card>
       </div>
 
+      {/* Bloque avanzado: heatmap + salud reputacional */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card className="p-4 md:col-span-2">
+          <h4 className="text-sm font-semibold mb-3 flex items-center gap-2"><Grid3x3 className="w-4 h-4" />Heatmap día-semana × sentimiento</h4>
+          <div className="space-y-2">
+            {(["positivo", "neutral", "negativo", "crisis"] as const).map(s => (
+              <div key={s} className="flex items-center gap-2">
+                <div className="w-16 text-[11px] capitalize text-muted-foreground">{s}</div>
+                <div className="grid grid-cols-7 gap-1 flex-1">
+                  {DOW_LABELS.map(d => {
+                    const v = heatmap.grid[s]?.[d] ?? 0;
+                    const ratio = v / heatmap.max;
+                    const [r, g, b] = HEAT_COLOR[s];
+                    const bg = `rgba(${r}, ${g}, ${b}, ${0.08 + ratio * 0.85})`;
+                    return (
+                      <div key={d} title={`${d}: ${v}`} className="h-10 rounded flex items-center justify-center text-[10px] font-medium"
+                        style={{ background: bg, color: ratio > 0.5 ? "#fff" : undefined }}>
+                        {v > 0 ? v : ""}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+            <div className="grid grid-cols-7 gap-1 pl-[72px] pt-1">
+              {DOW_LABELS.map(d => <div key={d} className="text-[9px] text-center text-muted-foreground uppercase tracking-wider">{d}</div>)}
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-4 flex flex-col">
+          <h4 className="text-sm font-semibold mb-3 flex items-center gap-2"><Gauge className="w-4 h-4" />Salud reputacional</h4>
+          <div className="flex-1 flex flex-col items-center justify-center relative">
+            <ResponsiveContainer width="100%" height={180}>
+              <RadialBarChart innerRadius="70%" outerRadius="100%" data={[{ name: "score", value: reputationScore.score, fill: reputationScore.color }]} startAngle={210} endAngle={-30}>
+                <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
+                <RadialBar background={{ fill: "rgba(148,163,184,0.15)" } as any} dataKey="value" cornerRadius={10} />
+              </RadialBarChart>
+            </ResponsiveContainer>
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+              <div className="text-4xl font-display font-bold" style={{ color: reputationScore.color }}>{reputationScore.score}</div>
+              <div className="text-xs font-semibold" style={{ color: reputationScore.color }}>{reputationScore.label}</div>
+            </div>
+          </div>
+          <div className="text-[10px] text-muted-foreground text-center mt-1">
+            Score: {reputationScore.avg} · crisis: {reputationScore.crisisEvents}
+          </div>
+        </Card>
+      </div>
+
+      {/* Treemap entidades + Radar canales */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card className="p-4">
+          <h4 className="text-sm font-semibold mb-3 flex items-center gap-2"><TrendingUp className="w-4 h-4" />Mapa de entidades</h4>
+          {entitiesTreemap.length === 0 ? (
+            <p className="text-xs text-muted-foreground py-8 text-center">Sin entidades para mapear.</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={260}>
+              <Treemap
+                data={entitiesTreemap}
+                dataKey="size"
+                stroke="#fff"
+                content={<TreemapCell />}
+              />
+            </ResponsiveContainer>
+          )}
+        </Card>
+
+        <Card className="p-4">
+          <h4 className="text-sm font-semibold mb-3 flex items-center gap-2"><Radio className="w-4 h-4" />Radar canales × sentimiento</h4>
+          {channelRadar.length === 0 ? (
+            <p className="text-xs text-muted-foreground py-8 text-center">Sin canales identificados.</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={260}>
+              <RadarChart data={channelRadar} outerRadius={90}>
+                <PolarGrid strokeOpacity={0.3} />
+                <PolarAngleAxis dataKey="channel" fontSize={10} />
+                <PolarRadiusAxis angle={90} domain={[0, 100]} fontSize={9} />
+                <Radar name="Positivo" dataKey="Positivo" stroke="#10b981" fill="#10b981" fillOpacity={0.3} />
+                <Radar name="Negativo" dataKey="Negativo" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.3} />
+                <Radar name="Crisis" dataKey="Crisis" stroke="#ef4444" fill="#ef4444" fillOpacity={0.3} />
+                <Legend wrapperStyle={{ fontSize: 10 }} />
+                <Tooltip />
+              </RadarChart>
+            </ResponsiveContainer>
+          )}
+        </Card>
+      </div>
+
+      {/* Área apilada SoV temporal + Scatter urgencia */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card className="p-4">
+          <h4 className="text-sm font-semibold mb-3 flex items-center gap-2"><Activity className="w-4 h-4" />Share of voice · evolución</h4>
+          {sovOverTime.rows.length === 0 ? (
+            <p className="text-xs text-muted-foreground py-8 text-center">Sin datos temporales.</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={240}>
+              <AreaChart data={sovOverTime.rows}>
+                <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                <XAxis dataKey="date" fontSize={10} />
+                <YAxis fontSize={10} />
+                <Tooltip />
+                <Legend wrapperStyle={{ fontSize: 10 }} />
+                <Area type="monotone" dataKey="Cliente" stackId="1" stroke="#ef6a4d" fill="#ef6a4d" fillOpacity={0.7} />
+                {sovOverTime.competitors.map((c, i) => (
+                  <Area key={c} type="monotone" dataKey={c} stackId="1"
+                    stroke={CHANNEL_COLORS[(i + 1) % CHANNEL_COLORS.length]}
+                    fill={CHANNEL_COLORS[(i + 1) % CHANNEL_COLORS.length]}
+                    fillOpacity={0.5} />
+                ))}
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
+        </Card>
+
+        <Card className="p-4">
+          <h4 className="text-sm font-semibold mb-3">Urgencia × sentimiento (outliers)</h4>
+          {scatterData.length === 0 ? (
+            <p className="text-xs text-muted-foreground py-8 text-center">Sin datos suficientes.</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={240}>
+              <ScatterChart margin={{ left: 10, right: 10 }}>
+                <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                <XAxis type="number" dataKey="x" name="urgencia" domain={[0.5, 4.5]}
+                  ticks={[1, 2, 3, 4]}
+                  tickFormatter={(v) => ["", "Baja", "Media", "Alta", "Crítica"][v] ?? ""} fontSize={10} />
+                <YAxis type="number" dataKey="y" name="sentimiento" domain={[-1, 1]} fontSize={10} />
+                <ZAxis type="number" dataKey="z" range={[40, 300]} name="menciones" />
+                <Tooltip cursor={{ strokeDasharray: "3 3" }} />
+                <Legend wrapperStyle={{ fontSize: 10 }} />
+                {scatterData.map((s, i) => (
+                  <Scatter key={s.name} name={s.name} data={s.pts} fill={CHANNEL_COLORS[i % CHANNEL_COLORS.length]} fillOpacity={0.7} />
+                ))}
+              </ScatterChart>
+            </ResponsiveContainer>
+          )}
+        </Card>
+      </div>
+
       {/* Frases destacadas */}
       {quotes.length > 0 && (
         <div>
@@ -367,5 +650,33 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
         </Card>
       )}
     </div>
+  );
+}
+
+function TreemapCell(props: any) {
+  const { x, y, width, height, name, size, sentiment, root } = props;
+  if (width < 2 || height < 2) return null;
+  const sColor: Record<string, string> = {
+    positivo: "#10b981", neutral: "#64748b", negativo: "#f59e0b", crisis: "#ef4444",
+  };
+  const node = (root?.children ?? []).find((n: any) => n.name === name);
+  const s = node?.sentiment ?? sentiment;
+  const fill = sColor[s] ?? "#ef6a4d";
+  const showLabel = width > 60 && height > 24;
+  const showCount = width > 60 && height > 40;
+  return (
+    <g>
+      <rect x={x} y={y} width={width} height={height} fill={fill} fillOpacity={0.75} stroke="#fff" strokeWidth={2} />
+      {showLabel && (
+        <text x={x + 6} y={y + 16} fill="#fff" fontSize={11} fontWeight={600}>
+          {name.length > Math.floor(width / 7) ? name.slice(0, Math.floor(width / 7) - 1) + "…" : name}
+        </text>
+      )}
+      {showCount && (
+        <text x={x + 6} y={y + 30} fill="#fff" fontSize={10} fillOpacity={0.85}>
+          ×{size}
+        </text>
+      )}
+    </g>
   );
 }
