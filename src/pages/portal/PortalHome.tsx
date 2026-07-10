@@ -88,6 +88,7 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
   const [prevRangeAgg, setPrevRangeAgg] = useState<{ totalMentions: number } | null>(null);
   const [periodAnalysis, setPeriodAnalysis] = useState<Analysis | null>(null);
   const [periodAnalysisKey, setPeriodAnalysisKey] = useState<string | null>(null);
+  const [periodAnalysisErrorKey, setPeriodAnalysisErrorKey] = useState<string | null>(null);
   const [regenerating, setRegenerating] = useState(false);
   const [pdfChartData, setPdfChartData] = useState<{
     volumeByDay: { date: string; positivo: number; neutral: number; negativo: number; crisis: number }[];
@@ -171,19 +172,26 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
     return fromDate !== current.week_start || toDate !== current.week_end;
   }, [current, fromDate, toDate]);
 
+  const activePeriodKey = useMemo(
+    () => `${portal.clientId}|${fromDate}|${toDate}`,
+    [portal.clientId, fromDate, toDate]
+  );
+
   // Clear stale period analysis when range changes
   useEffect(() => {
-    const key = `${portal.clientId}|${fromDate}|${toDate}`;
-    if (periodAnalysisKey && periodAnalysisKey !== key) {
+    if (periodAnalysisKey && periodAnalysisKey !== activePeriodKey) {
       setPeriodAnalysis(null);
       setPeriodAnalysisKey(null);
     }
-  }, [portal.clientId, fromDate, toDate, periodAnalysisKey]);
+    if (periodAnalysisErrorKey && periodAnalysisErrorKey !== activePeriodKey) {
+      setPeriodAnalysisErrorKey(null);
+    }
+  }, [activePeriodKey, periodAnalysisKey, periodAnalysisErrorKey]);
 
-  const regeneratePeriod = async () => {
+  const regeneratePeriod = async (silent = false) => {
     if (!isExtendedPeriod) return;
     setRegenerating(true);
-    toast.loading("Regenerando análisis del período…", { id: "regen" });
+    if (!silent) toast.loading("Regenerando análisis del período…", { id: "regen" });
     try {
       const { data, error } = await supabase.functions.invoke("generate-listening-weekly-summary", {
         body: { client_id: portal.clientId, from_date: fromDate, to_date: toDate, persist: false },
@@ -191,20 +199,30 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
       if (error) throw error;
       if (data?.analysis) {
         setPeriodAnalysis(data.analysis as Analysis);
-        setPeriodAnalysisKey(`${portal.clientId}|${fromDate}|${toDate}`);
-        toast.success("Análisis regenerado para el período", { id: "regen" });
+        setPeriodAnalysisKey(activePeriodKey);
+        setPeriodAnalysisErrorKey(null);
+        if (!silent) toast.success("Análisis regenerado para el período", { id: "regen" });
       } else {
         throw new Error(data?.error ?? "Sin respuesta");
       }
     } catch (e: any) {
+      setPeriodAnalysisErrorKey(activePeriodKey);
       toast.error(e.message ?? "No se pudo regenerar", { id: "regen" });
     } finally {
       setRegenerating(false);
     }
   };
 
-  // Effective analysis for display: period override wins over stored weekly
-  const effective: Analysis | null = periodAnalysis ?? current;
+  useEffect(() => {
+    if (!isExtendedPeriod || regenerating) return;
+    if (periodAnalysisKey === activePeriodKey || periodAnalysisErrorKey === activePeriodKey) return;
+    regeneratePeriod(true);
+  }, [isExtendedPeriod, regenerating, activePeriodKey, periodAnalysisKey, periodAnalysisErrorKey]);
+
+  // Effective analysis for display: never show stale weekly text while an extended period is selected
+  const effective: Analysis | null = isExtendedPeriod
+    ? (periodAnalysisKey === activePeriodKey ? periodAnalysis : null)
+    : current;
 
   // Aggregate real numbers directly from analyzed entries in the selected range
   useEffect(() => {
@@ -330,8 +348,8 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
       ? `El balance de sentimiento fue ${posPct}% positivo, ${negPct}% negativo y ${crisisPct}% crisis, calculado directamente desde la bitácora procesada.`
       : "El balance de sentimiento se muestra en las tarjetas y gráficas a partir de la bitácora procesada.";
 
-    return `Durante ${weekLabel}, se analizaron ${rangeAgg.totalMentions} menciones detectadas en el monitoreo. ${sentimentLine} Las gráficas de esta vista son la fuente operativa para volumen, canales, entidades y evolución del período.`;
-  }, [effective, rangeAgg.totalMentions, sentTotals, weekLabel]);
+    return `Durante ${periodLabel}, se analizaron ${rangeAgg.totalMentions} menciones detectadas en el monitoreo. ${sentimentLine} Las gráficas de esta vista son la fuente operativa para volumen, canales, entidades y evolución del período.`;
+  }, [effective, rangeAgg.totalMentions, sentTotals, periodLabel]);
 
   const pdfAnalysis = useMemo(() => {
     if (!effective) return null;
@@ -555,10 +573,12 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
                         <p className="text-sm text-muted-foreground mt-1">
                           {periodAnalysis
                             ? <>Mostrando análisis y recomendaciones regenerados para <b className="text-foreground">{periodLabel}</b>.</>
-                            : <>El resumen, hallazgos y recomendaciones abajo siguen anclados a la semana <b className="text-foreground">{weekLabel}</b>. Regénéralos para cubrir <b className="text-foreground">{periodLabel}</b>.</>}
+                            : regenerating
+                              ? <>Recalculando resumen, hitos, hallazgos y recomendaciones para <b className="text-foreground">{periodLabel}</b>.</>
+                              : <>No se pudo recalcular automáticamente. Puedes intentarlo de nuevo para cubrir <b className="text-foreground">{periodLabel}</b>.</>}
                         </p>
                       </div>
-                      <Button size="sm" onClick={regeneratePeriod} disabled={regenerating} className="shrink-0">
+                      <Button size="sm" onClick={() => regeneratePeriod(false)} disabled={regenerating} className="shrink-0">
                         <RefreshCw className={`w-4 h-4 mr-2 ${regenerating ? "animate-spin" : ""}`} />
                         {periodAnalysis ? "Regenerar de nuevo" : "Regenerar para el período"}
                       </Button>
@@ -574,6 +594,18 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
                       <p className="text-[15px] leading-relaxed">{displayExecutiveSummary}</p>
                       <p className="text-[11px] text-muted-foreground mt-3 italic">
                         Nota: los conteos y gráficas de abajo son la fuente de verdad — reflejan cada mención individual detectada en la bitácora.
+                      </p>
+                    </div>
+                  )}
+
+                  {isExtendedPeriod && !periodAnalysis && (
+                    <div className="glass rounded-2xl p-6 border border-coral/20 bg-coral/5">
+                      <div className="flex items-center gap-2 mb-2">
+                        <RefreshCw className={`w-4 h-4 text-coral ${regenerating ? "animate-spin" : ""}`} />
+                        <span className="text-[11px] uppercase tracking-widest text-coral font-semibold">Análisis contextual en proceso</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                        Las métricas y gráficas ya reflejan <b className="text-foreground">{periodLabel}</b>. El resumen, hallazgos y recomendaciones se mostrarán aquí únicamente cuando estén recalculados para ese mismo período.
                       </p>
                     </div>
                   )}
