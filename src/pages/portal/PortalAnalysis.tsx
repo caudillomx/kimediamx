@@ -1074,38 +1074,109 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
       {/* Frases destacadas */}
       {quotes.length > 0 && (
         <div>
-          <h4 className="text-sm font-semibold mb-3 flex items-center gap-2"><Quote className="w-4 h-4" />Frases destacadas</h4>
-          <div className="grid gap-3 md:grid-cols-2">
-            {quotes.map((q, i) => (
-              <Card key={i} className="p-4 border-l-4" style={{ borderLeftColor: SENT_COLORS[q.sentiment] ?? "#94a3b8" }}>
-                <p className="text-sm italic leading-relaxed mb-2">"{q.text}"</p>
-                <div className="text-xs text-muted-foreground flex items-center gap-2 flex-wrap">
-                  {q.author && <span className="font-medium">{q.author}</span>}
-                  {q.source && <span>· {q.source}</span>}
-                  <span className="ml-auto">{q.date}</span>
-                </div>
-              </Card>
-            ))}
+          <div className="flex items-baseline justify-between mb-3">
+            <h4 className="text-sm font-semibold flex items-center gap-2"><Quote className="w-4 h-4" />Frases destacadas</h4>
+            <span className="text-[10px] uppercase tracking-widest text-muted-foreground">{quotes.length} citas</span>
           </div>
+          {(() => {
+            const groups: { key: "positivo" | "neutral" | "negativo"; label: string }[] = [
+              { key: "positivo", label: "Positivas" },
+              { key: "neutral", label: "Neutras" },
+              { key: "negativo", label: "Negativas" },
+            ];
+            const buckets = groups.map(g => ({
+              ...g,
+              color: SENT_COLORS[g.key],
+              items: quotes.filter(q => (q.sentiment === "crisis" ? "negativo" : q.sentiment) === g.key),
+            })).filter(b => b.items.length > 0);
+            if (!buckets.length) return null;
+            return (
+              <div className={`grid gap-3 ${buckets.length === 1 ? "" : buckets.length === 2 ? "md:grid-cols-2" : "md:grid-cols-3"}`}>
+                {buckets.map(b => (
+                  <div key={b.key} className="rounded-xl border border-border/40 bg-background/30 overflow-hidden flex flex-col">
+                    <div className="flex items-center justify-between px-3 py-2 border-b border-border/40" style={{ background: `${b.color}12` }}>
+                      <span className="text-[11px] uppercase tracking-widest font-semibold" style={{ color: b.color }}>{b.label}</span>
+                      <span className="text-[10px] font-bold tabular-nums px-1.5 py-0.5 rounded" style={{ background: `${b.color}22`, color: b.color }}>{b.items.length}</span>
+                    </div>
+                    <ul className="divide-y divide-border/40">
+                      {b.items.map((q, i) => (
+                        <li key={i} className="p-3 relative">
+                          <Quote className="absolute top-2 right-2 w-3 h-3 opacity-20" style={{ color: b.color }} />
+                          <p className="text-[13px] italic leading-snug pr-4">"{q.text}"</p>
+                          <div className="text-[10px] text-muted-foreground flex items-center gap-1.5 flex-wrap mt-1.5">
+                            {q.author && <span className="font-medium text-foreground/80">{q.author}</span>}
+                            {q.source && <span>· {q.source}</span>}
+                            <span className="ml-auto tabular-nums">{q.date}</span>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
         </div>
       )}
 
       {/* Timeline de eventos */}
       {eventsTimeline.length > 0 && (
         <Card className="p-5">
-          <h4 className="text-sm font-semibold mb-3">Timeline de hitos</h4>
-          <div className="space-y-2">
-            {eventsTimeline.map((e, i) => (
-              <div key={i} className="flex items-start gap-3 text-sm py-2 border-b border-border/40 last:border-0">
-                <span className="text-xs text-muted-foreground w-24 shrink-0 pt-0.5">{e.date}</span>
-                <Badge variant={e.impact === "alto" ? "destructive" : "outline"} className="text-[10px] shrink-0">{e.kind}</Badge>
-                <div className="min-w-0 flex-1">
-                  <div className="font-medium">{e.title}</div>
-                  {e.detail && <div className="text-xs text-muted-foreground">{e.detail}</div>}
-                </div>
-              </div>
-            ))}
+          <div className="flex items-baseline justify-between mb-4">
+            <h4 className="text-sm font-semibold flex items-center gap-2"><Flag className="w-4 h-4" />Timeline de hitos</h4>
+            <span className="text-[10px] uppercase tracking-widest text-muted-foreground">{eventsTimeline.length} eventos</span>
           </div>
+          {(() => {
+            const impactColor = (imp: string) => imp === "alto" ? SENT_COLORS.negativo : imp === "medio" ? "#f59e0b" : "#94a3b8";
+            const fmt = (d: string) => {
+              try {
+                const dt = new Date(d + "T00:00:00");
+                return {
+                  day: dt.toLocaleDateString("es-MX", { day: "2-digit" }),
+                  mon: dt.toLocaleDateString("es-MX", { month: "short" }).replace(".", ""),
+                };
+              } catch { return { day: d, mon: "" }; }
+            };
+            return (
+              <ol className="relative border-l-2 border-border/50 ml-3 space-y-4">
+                {eventsTimeline.map((e, i) => {
+                  const c = impactColor(e.impact);
+                  const d = fmt(e.date);
+                  return (
+                    <li key={i} className="relative pl-5">
+                      <span
+                        className="absolute -left-[13px] top-1 flex items-center justify-center w-6 h-6 rounded-full text-[10px] font-bold text-white ring-4 ring-background"
+                        style={{ background: c }}
+                        title={`Impacto ${e.impact}`}
+                      >
+                        {i + 1}
+                      </span>
+                      <div className="flex items-start gap-3">
+                        <div className="shrink-0 text-center leading-none rounded-md border border-border/40 bg-background/40 px-2 py-1.5 min-w-[46px]">
+                          <div className="text-sm font-bold tabular-nums">{d.day}</div>
+                          <div className="text-[9px] uppercase tracking-widest text-muted-foreground">{d.mon}</div>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge
+                              variant="outline"
+                              className="text-[9px] uppercase tracking-widest border-0 text-white"
+                              style={{ background: c }}
+                            >
+                              {e.kind}
+                            </Badge>
+                            <span className="text-[10px] text-muted-foreground">Impacto {e.impact}</span>
+                          </div>
+                          <div className="font-medium text-sm leading-snug mt-1">{e.title}</div>
+                          {e.detail && <div className="text-xs text-muted-foreground leading-snug mt-0.5">{e.detail}</div>}
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ol>
+            );
+          })()}
         </Card>
       )}
     </div>
