@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 import type { ClientPortalConfig } from "@/lib/clientPortal";
 import PortalAnalysis from "./PortalAnalysis";
 import PortalPdfTemplate from "./PortalPdfTemplate";
+import RecommendationsBlock from "@/components/portal/RecommendationsBlock";
 import type { DateRange } from "react-day-picker";
 
 type Analysis = {
@@ -556,15 +557,7 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
 
                   {/* Recomendaciones al cierre del análisis */}
                   {current?.recommendations_client && (
-                    <div className="glass rounded-2xl p-6">
-                      <div className="flex items-center gap-2 mb-4">
-                        <Lightbulb className="w-4 h-4 text-coral" />
-                        <span className="text-[11px] uppercase tracking-widest text-muted-foreground">Recomendaciones estratégicas · {weekLabel}</span>
-                      </div>
-                      <div className="prose prose-invert max-w-none prose-p:my-2 prose-li:my-1 prose-headings:font-display prose-a:text-coral">
-                        <ReactMarkdown>{current.recommendations_client}</ReactMarkdown>
-                      </div>
-                    </div>
+                    <RecommendationsBlock markdown={current.recommendations_client} weekLabel={weekLabel} />
                   )}
                 </TabsContent>
 
