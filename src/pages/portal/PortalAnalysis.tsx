@@ -297,7 +297,7 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
       .slice(0, 6);
   }, [entries]);
 
-  // Hitos: top 5 eventos por impacto/tipo, únicos por fecha
+  // Hitos: top eventos por impacto/tipo, únicos por fecha y distribuidos a lo largo del período
   const IMPACT_RANK: Record<string, number> = { crisis: 4, alto: 3, medio: 2, bajo: 1 };
   const milestones = useMemo(() => {
     if (!eventsTimeline.length) return [] as { date: string; dateKey: string; title: string; detail: string; kind: string; impact: string; color: string }[];
@@ -306,17 +306,40 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
       const color = e.kind === "crisis" || e.impact === "alto" ? "#ef4444" : e.impact === "medio" ? "#f59e0b" : "#0ea5e9";
       return { ...e, _r: r, color };
     });
-    const seen = new Set<string>();
-    const picked: typeof scored = [];
-    for (const ev of [...scored].sort((a, b) => (b._r - a._r) || b.date.localeCompare(a.date))) {
-      if (seen.has(ev.date)) continue;
-      picked.push(ev); seen.add(ev.date);
-      if (picked.length >= 5) break;
+    // Determinar cap y buckets según longitud del período
+    const from = new Date(fromDate + "T00:00:00").getTime();
+    const to = new Date(toDate + "T00:00:00").getTime();
+    const days = Math.max(1, Math.round((to - from) / 86400000) + 1);
+    const cap = Math.min(10, Math.max(5, Math.ceil(days / 2)));
+    const nBuckets = cap;
+    const bucketOf = (dateStr: string) => {
+      const t = new Date(dateStr + "T00:00:00").getTime();
+      const idx = Math.floor(((t - from) / 86400000) / (days / nBuckets));
+      return Math.max(0, Math.min(nBuckets - 1, idx));
+    };
+    // Mejor evento por bucket (por impacto, desempate: fecha más temprana del bucket)
+    const byBucket = new Map<number, typeof scored[number]>();
+    const seenDates = new Set<string>();
+    for (const ev of [...scored].sort((a, b) => (b._r - a._r) || a.date.localeCompare(b.date))) {
+      const b = bucketOf(ev.date);
+      if (byBucket.has(b)) continue;
+      if (seenDates.has(ev.date)) continue;
+      byBucket.set(b, ev);
+      seenDates.add(ev.date);
+    }
+    let picked = Array.from(byBucket.values());
+    // Rellenar hasta cap con los siguientes mejores no repetidos
+    if (picked.length < cap) {
+      for (const ev of [...scored].sort((a, b) => (b._r - a._r) || a.date.localeCompare(b.date))) {
+        if (seenDates.has(ev.date)) continue;
+        picked.push(ev); seenDates.add(ev.date);
+        if (picked.length >= cap) break;
+      }
     }
     return picked
       .sort((a, b) => a.date.localeCompare(b.date))
       .map(m => ({ date: m.date, dateKey: m.date.slice(5), title: m.title, detail: m.detail, kind: m.kind, impact: m.impact, color: m.color }));
-  }, [eventsTimeline]);
+  }, [eventsTimeline, fromDate, toDate]);
 
   // y-value por fecha para cada gráfica temporal
   const yByDateLine = useMemo(() => {
