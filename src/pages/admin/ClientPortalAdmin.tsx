@@ -128,16 +128,22 @@ export default function ClientPortalAdmin() {
   });
   const [genSummary, setGenSummary] = useState(false);
 
-  const analyzePending = async () => {
+  const analyzeEntries = async (opts: { forceAll?: boolean } = {}) => {
     if (!clientId) return;
+    if (opts.forceAll && !confirm("Reprocesar TODAS las entradas (incluidas las ya analizadas) para extraer canales, entidades, eventos y citas. ¿Continuar?")) return;
     setAnalyzing(true);
     try {
       const { data, error } = await supabase.functions.invoke("analyze-listening-entries", {
-        body: { client_id: clientId, only_unanalyzed: true, limit: 100, background: true },
+        body: {
+          client_id: clientId,
+          only_unanalyzed: !opts.forceAll,
+          limit: opts.forceAll ? 500 : 100,
+          background: true,
+        },
       });
       if (error) throw error;
       if (data?.background) {
-        toast.success(`Analizando ${data.total} entradas en segundo plano. Recarga en 1-2 min.`);
+        toast.success(`Procesando ${data.total} entradas en segundo plano. Recarga en 1-3 min.`);
       } else {
         toast.success(`Analizadas ${data?.processed ?? 0} entradas`);
       }
@@ -146,6 +152,8 @@ export default function ClientPortalAdmin() {
       toast.error(e.message ?? "Error al analizar");
     } finally { setAnalyzing(false); }
   };
+  const analyzePending = () => analyzeEntries();
+  const reprocessAll = () => analyzeEntries({ forceAll: true });
 
   const generateWeeklySummary = async () => {
     if (!clientId || !weeklyDate) return;
@@ -823,6 +831,9 @@ export default function ClientPortalAdmin() {
                 <div className="ml-auto flex flex-wrap gap-2">
                   <Button size="sm" onClick={analyzePending} disabled={analyzing}>
                     <Sparkles className="w-4 h-4 mr-1" /> {analyzing ? "Analizando..." : "Analizar pendientes (30)"}
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={reprocessAll} disabled={analyzing} title="Reprocesa TODO para extraer canales, entidades, eventos y citas">
+                    <Sparkles className="w-4 h-4 mr-1" /> Reprocesar todo (v2)
                   </Button>
                 </div>
               </div>
