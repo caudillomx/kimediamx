@@ -495,7 +495,6 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
               <Tabs defaultValue="panorama">
                 <TabsList className="bg-background/50 backdrop-blur border border-border/60 rounded-xl p-1 h-auto">
                   <TabsTrigger value="panorama" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><BarChart3 className="w-4 h-4 mr-2" />Panorama</TabsTrigger>
-                  <TabsTrigger value="recomendaciones" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><Lightbulb className="w-4 h-4 mr-2" />Recomendaciones</TabsTrigger>
                   <TabsTrigger value="historico" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><History className="w-4 h-4 mr-2" />Histórico</TabsTrigger>
                 </TabsList>
 
@@ -554,23 +553,17 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
                     <div className="text-[11px] uppercase tracking-widest text-muted-foreground mb-3">Análisis detallado del período</div>
                     <PortalAnalysis clientId={portal.clientId} fromDate={fromDate} toDate={toDate} />
                   </div>
-                </TabsContent>
 
-                {/* Recomendaciones — solo semana seleccionada */}
-                <TabsContent value="recomendaciones" className="mt-5">
-                  {current?.recommendations_client ? (
+                  {/* Recomendaciones al cierre del análisis */}
+                  {current?.recommendations_client && (
                     <div className="glass rounded-2xl p-6">
                       <div className="flex items-center gap-2 mb-4">
                         <Lightbulb className="w-4 h-4 text-coral" />
-                        <span className="text-[11px] uppercase tracking-widest text-muted-foreground">Recomendaciones · {weekLabel}</span>
+                        <span className="text-[11px] uppercase tracking-widest text-muted-foreground">Recomendaciones estratégicas · {weekLabel}</span>
                       </div>
                       <div className="prose prose-invert max-w-none prose-p:my-2 prose-li:my-1 prose-headings:font-display prose-a:text-coral">
                         <ReactMarkdown>{current.recommendations_client}</ReactMarkdown>
                       </div>
-                    </div>
-                  ) : (
-                    <div className="glass rounded-2xl p-10 text-center text-muted-foreground text-sm">
-                      Sin recomendaciones publicadas para esta semana.
                     </div>
                   )}
                 </TabsContent>
