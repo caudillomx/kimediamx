@@ -131,7 +131,7 @@ function loadMatrix(file: File): Promise<{ matrix: unknown[][]; sheetName: strin
   return readWorkbook(file).then((wb) => {
     const sheetName = wb.SheetNames[0];
     const sheet = wb.Sheets[sheetName];
-    const matrix = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, defval: null, raw: true, blankrows: false });
+    const matrix = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, defval: null, raw: true, blankrows: true });
     return { matrix, sheetName };
   });
 }
