@@ -71,6 +71,18 @@ export const useObjectivesData = () => {
 
   useEffect(() => {
     fetchObjectives();
+
+    const channel = supabase
+      .channel("objectives_realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "client_objectives" }, () => {
+        fetchObjectives();
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "client_weekly_milestones" }, () => {
+        fetchObjectives();
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, [fetchObjectives]);
 
   const toggleMilestone = useCallback(async (milestoneId: string, completed: boolean) => {

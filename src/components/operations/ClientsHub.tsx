@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { ActionItem } from "@/hooks/useOperationsData";
@@ -30,14 +30,27 @@ const ClientsHub = ({ items, deals, objectives, interactions, onOpenClient }: Pr
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<"resumen" | "salud">("resumen");
 
-  useEffect(() => {
-    supabase
+  const fetchClients = useCallback(() => {
+    return supabase
       .from("clients")
       .select("id, name, is_active")
       .eq("is_active", true)
       .order("name")
       .then(({ data }) => setClients((data as ClientRow[]) || []));
   }, []);
+
+  useEffect(() => {
+    fetchClients();
+
+    const channel = supabase
+      .channel("clients_hub_realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "clients" }, () => {
+        fetchClients();
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [fetchClients]);
 
   const stats = useMemo(() => {
     const map = new Map<string, {

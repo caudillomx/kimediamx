@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -73,7 +73,7 @@ const FirefliesInbox = ({ onImported }: { onImported?: () => void }) => {
   const [newRuleClient, setNewRuleClient] = useState("");
   const [newRuleField, setNewRuleField] = useState("title");
 
-  const fetchAll = async () => {
+  const fetchAll = useCallback(async () => {
     setLoading(true);
     const [m, r] = await Promise.all([
       supabase.from("fireflies_meetings").select("*").order("meeting_date", { ascending: false }).limit(200),
@@ -82,9 +82,23 @@ const FirefliesInbox = ({ onImported }: { onImported?: () => void }) => {
     if (m.data) setMeetings(m.data as Meeting[]);
     if (r.data) setRules(r.data as Rule[]);
     setLoading(false);
-  };
+  }, []);
 
-  useEffect(() => { fetchAll(); }, []);
+  useEffect(() => {
+    fetchAll();
+
+    const channel = supabase
+      .channel("fireflies_inbox_realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "fireflies_meetings" }, () => {
+        fetchAll();
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "fireflies_filter_rules" }, () => {
+        fetchAll();
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [fetchAll]);
 
   const handleSync = async () => {
     setSyncing(true);
