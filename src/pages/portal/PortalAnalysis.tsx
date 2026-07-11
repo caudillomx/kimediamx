@@ -2,12 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   LineChart, Line, PieChart, Pie, Cell, Legend, CartesianGrid,
   PolarAngleAxis, RadialBarChart, RadialBar, ReferenceDot,
 } from "recharts";
-import { Sparkles, Quote, AlertOctagon, Radio, Grid3x3, Gauge, TrendingUp, Flag, Newspaper, AtSign, ExternalLink } from "lucide-react";
+import { Sparkles, Quote, AlertOctagon, Radio, Grid3x3, Gauge, TrendingUp, Flag, Newspaper, AtSign, ExternalLink, Search, Download, X } from "lucide-react";
 import { Lightbulb } from "lucide-react";
 
 type Entry = {
@@ -79,6 +81,11 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
   const [entries, setEntries] = useState<Entry[]>([]);
   const [loading, setLoading] = useState(true);
   const [trendPeriods, setTrendPeriods] = useState<{ label: string; total: number; delta: number | null }[]>([]);
+  // Buscador de menciones
+  const [searchQ, setSearchQ] = useState("");
+  const [searchPlatform, setSearchPlatform] = useState<string>("todas");
+  const [searchSent, setSearchSent] = useState<string>("todos");
+  const [searchLimit, setSearchLimit] = useState<number>(50);
 
   useEffect(() => {
     (async () => {
@@ -417,6 +424,110 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
         .sort((a, b) => b.total - a.total),
     };
   }, [entries]);
+
+  // ---------- Índice de menciones para buscador ----------
+  type MentionRow = {
+    kind: "media" | "social";
+    date: string;
+    who: string;         // outlet o profile
+    handle: string | null;
+    platform: string;    // canonical (medios digitales / x / facebook / ...)
+    type: string;        // media type (portal/radio/tv/prensa/...) o platform
+    topic: string;
+    headline: string | null;
+    quote: string | null;
+    url: string;
+    sentiment: string;
+    haystack: string;
+  };
+  const mentionIndex = useMemo<MentionRow[]>(() => {
+    const rows: MentionRow[] = [];
+    for (const e of entries) {
+      for (const m of (e.media_mentions ?? [])) {
+        const outlet = String(m?.outlet ?? "").trim();
+        if (!outlet) continue;
+        const row: MentionRow = {
+          kind: "media",
+          date: e.entry_date,
+          who: outlet,
+          handle: null,
+          platform: "medios digitales",
+          type: String(m?.type ?? "portal"),
+          topic: String(m?.topic ?? ""),
+          headline: m?.headline ?? null,
+          quote: m?.quote ?? null,
+          url: String(m?.url ?? ""),
+          sentiment: String(m?.sentiment ?? "neutral"),
+          haystack: "",
+        };
+        row.haystack = [row.who, row.topic, row.headline, row.quote, row.type, row.url]
+          .filter(Boolean).join(" ").toLowerCase();
+        rows.push(row);
+      }
+      for (const p of (e.social_mentions ?? [])) {
+        const profile = String(p?.profile ?? "").trim();
+        const handle = p?.handle ? String(p.handle).trim() : null;
+        if (!profile && !handle) continue;
+        const platform = canonicalChannel(String(p?.platform ?? ""));
+        const row: MentionRow = {
+          kind: "social",
+          date: e.entry_date,
+          who: profile || handle || "",
+          handle,
+          platform,
+          type: platform,
+          topic: String(p?.topic ?? ""),
+          headline: null,
+          quote: p?.quote ?? null,
+          url: String(p?.url ?? ""),
+          sentiment: String(p?.sentiment ?? "neutral"),
+          haystack: "",
+        };
+        row.haystack = [row.who, row.handle, row.topic, row.quote, row.platform, row.url]
+          .filter(Boolean).join(" ").toLowerCase();
+        rows.push(row);
+      }
+    }
+    return rows.sort((a, b) => (a.date < b.date ? 1 : -1));
+  }, [entries]);
+
+  const searchResults = useMemo(() => {
+    const q = searchQ.trim().toLowerCase();
+    const terms = q ? q.split(/\s+/).filter(Boolean) : [];
+    return mentionIndex.filter(r => {
+      if (searchPlatform !== "todas" && r.platform !== searchPlatform) return false;
+      if (searchSent !== "todos") {
+        if (searchSent === "negativo") { if (r.sentiment !== "negativo" && r.sentiment !== "crisis") return false; }
+        else if (r.sentiment !== searchSent) return false;
+      }
+      if (terms.length && !terms.every(t => r.haystack.includes(t))) return false;
+      return true;
+    });
+  }, [mentionIndex, searchQ, searchPlatform, searchSent]);
+
+  const searchStats = useMemo(() => {
+    const total = searchResults.length;
+    const media = searchResults.filter(r => r.kind === "media").length;
+    const social = total - media;
+    return { total, media, social };
+  }, [searchResults]);
+
+  const exportSearchCsv = () => {
+    const header = ["fecha","tipo","quien","handle","plataforma","tema","titular","cita","url","sentimiento"];
+    const esc = (v: any) => {
+      const s = v == null ? "" : String(v);
+      return `"${s.replace(/"/g, '""')}"`;
+    };
+    const lines = [header.join(",")].concat(
+      searchResults.map(r => [r.date, r.kind, r.who, r.handle ?? "", r.platform, r.topic, r.headline ?? "", r.quote ?? "", r.url, r.sentiment].map(esc).join(","))
+    );
+    const blob = new Blob(["\uFEFF" + lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `menciones_${fromDate}_${toDate}.csv`;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  };
 
   // Hitos: selección estricta por pico de menciones + impacto del evento.
   // El número de hitos NO escala con la duración del período; se limita a los
@@ -1232,6 +1343,138 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
               Este período fue analizado antes de habilitar el desglose por medio/perfil. Se activará automáticamente con los próximos análisis.
             </p>
           )}
+        </Card>
+      )}
+
+      {/* ============ Buscador de menciones ============ */}
+      {mentionIndex.length > 0 && (
+        <Card className="p-5 md:p-6">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <span className="text-[11px] uppercase tracking-widest text-muted-foreground">Buscador</span>
+              <h3 className="text-2xl font-display font-bold mt-1 flex items-center gap-2">
+                <Search className="w-5 h-5" />Buscar menciones
+              </h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                Filtra por texto, plataforma o sentimiento sobre todas las menciones detectadas en el período.
+              </p>
+            </div>
+            <div className="text-right text-[11px] text-muted-foreground tabular-nums">
+              <div><span className="font-bold text-foreground">{searchStats.total}</span> resultados</div>
+              <div>{searchStats.media} medios · {searchStats.social} redes</div>
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-2 md:grid-cols-[1fr_auto_auto_auto]">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                value={searchQ}
+                onChange={(e) => { setSearchQ(e.target.value); setSearchLimit(50); }}
+                placeholder="Buscar por outlet, perfil, tema, cita o URL…"
+                className="pl-9 pr-8"
+              />
+              {searchQ && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQ("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-background/60"
+                  aria-label="Limpiar búsqueda"
+                >
+                  <X className="w-3.5 h-3.5 text-muted-foreground" />
+                </button>
+              )}
+            </div>
+            <select
+              value={searchPlatform}
+              onChange={(e) => setSearchPlatform(e.target.value)}
+              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+            >
+              <option value="todas">Todas las plataformas</option>
+              <option value="medios digitales">Medios digitales</option>
+              <option value="x">X</option>
+              <option value="facebook">Facebook</option>
+              <option value="instagram">Instagram</option>
+              <option value="youtube">YouTube</option>
+              <option value="tiktok">TikTok</option>
+              <option value="linkedin">LinkedIn</option>
+              <option value="reddit">Reddit</option>
+            </select>
+            <select
+              value={searchSent}
+              onChange={(e) => setSearchSent(e.target.value)}
+              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+            >
+              <option value="todos">Todo sentimiento</option>
+              <option value="positivo">Positivo</option>
+              <option value="neutral">Neutral</option>
+              <option value="negativo">Negativo / crisis</option>
+            </select>
+            <Button variant="outline" size="sm" onClick={exportSearchCsv} disabled={searchResults.length === 0} className="h-10">
+              <Download className="w-4 h-4 mr-1" />CSV
+            </Button>
+          </div>
+
+          <div className="mt-4 rounded-xl border border-border/40 bg-background/30 overflow-hidden">
+            {searchResults.length === 0 ? (
+              <div className="p-6 text-center text-sm text-muted-foreground italic">
+                No hay menciones que coincidan con los filtros.
+              </div>
+            ) : (
+              <>
+                <ul className="divide-y divide-border/40 max-h-[560px] overflow-auto">
+                  {searchResults.slice(0, searchLimit).map((r, i) => {
+                    const c = SENT_COLORS[r.sentiment === "crisis" ? "crisis" : r.sentiment] ?? SENT_COLORS.neutral;
+                    return (
+                      <li key={i} className="p-3 hover:bg-background/40">
+                        <div className="flex items-start gap-3">
+                          <span className="w-1.5 self-stretch rounded-full shrink-0" style={{ background: c }} />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap text-xs">
+                              <span className="tabular-nums text-muted-foreground">{r.date}</span>
+                              <span className="w-1 h-1 rounded-full bg-muted-foreground/50" />
+                              <span className="uppercase tracking-widest text-[10px] font-semibold" style={{ color: platformColor(r.platform) }}>
+                                {r.platform}
+                              </span>
+                              <span className="text-[10px] uppercase tracking-widest text-muted-foreground border border-border/40 rounded px-1.5 py-0.5">
+                                {r.kind === "media" ? "medio" : "red"}
+                              </span>
+                              {r.topic && (
+                                <span className="text-[10px] px-2 py-0.5 rounded-full bg-background/60 border border-border/40 text-muted-foreground">{r.topic}</span>
+                              )}
+                            </div>
+                            <div className="mt-1 font-semibold text-sm truncate">
+                              {r.who}
+                              {r.handle && <span className="ml-1.5 text-xs font-normal text-muted-foreground">{r.handle.startsWith("@") ? r.handle : `@${r.handle}`}</span>}
+                            </div>
+                            {r.headline && (
+                              <div className="text-sm text-foreground/90 mt-0.5 line-clamp-2">{r.headline}</div>
+                            )}
+                            {r.quote && (
+                              <div className="text-xs italic text-muted-foreground mt-1 line-clamp-2">"{r.quote}"</div>
+                            )}
+                            {r.url && (
+                              <a href={r.url} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex items-center gap-1 text-[11px] text-primary hover:underline truncate max-w-full">
+                                <ExternalLink className="w-3 h-3 shrink-0" />
+                                <span className="truncate">{r.url}</span>
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+                {searchResults.length > searchLimit && (
+                  <div className="p-3 border-t border-border/40 text-center">
+                    <Button variant="ghost" size="sm" onClick={() => setSearchLimit(l => l + 50)}>
+                      Ver más ({searchResults.length - searchLimit} restantes)
+                    </Button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </Card>
       )}
 
