@@ -21,6 +21,7 @@ import type { ClientPortalConfig } from "@/lib/clientPortal";
 import PortalAnalysis from "./PortalAnalysis";
 import PortalPdfTemplate from "./PortalPdfTemplate";
 import RecommendationsBlock from "@/components/portal/RecommendationsBlock";
+import PortalBenchmark from "@/components/portal/PortalBenchmark";
 import type { DateRange } from "react-day-picker";
 
 type Analysis = {
@@ -810,6 +811,7 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
               <Tabs defaultValue="panorama">
                 <TabsList className="bg-background/50 backdrop-blur border border-border/60 rounded-xl p-1 h-auto">
                   <TabsTrigger value="panorama" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><BarChart3 className="w-4 h-4 mr-2" />Panorama</TabsTrigger>
+                  <TabsTrigger value="benchmark" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><TrendingUp className="w-4 h-4 mr-2" />Benchmark</TabsTrigger>
                   <TabsTrigger value="historico" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><History className="w-4 h-4 mr-2" />Histórico</TabsTrigger>
                 </TabsList>
 
@@ -920,6 +922,11 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
                   {effective?.recommendations_client && (
                     <RecommendationsBlock markdown={effective.recommendations_client} weekLabel={periodAnalysis ? periodLabel : weekLabel} />
                   )}
+                </TabsContent>
+
+                {/* Benchmark */}
+                <TabsContent value="benchmark" className="mt-5 space-y-4">
+                  <PortalBenchmark clientId={portal.clientId} clientName={portal.displayName} />
                 </TabsContent>
 
                 {/* Histórico */}
