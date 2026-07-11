@@ -2,12 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   LineChart, Line, PieChart, Pie, Cell, Legend, CartesianGrid,
   PolarAngleAxis, RadialBarChart, RadialBar, ReferenceDot,
 } from "recharts";
-import { Sparkles, Quote, AlertOctagon, Radio, Grid3x3, Gauge, TrendingUp, Flag, Newspaper, AtSign, ExternalLink } from "lucide-react";
+import { Sparkles, Quote, AlertOctagon, Radio, Grid3x3, Gauge, TrendingUp, Flag, Newspaper, AtSign, ExternalLink, Search, Download, X } from "lucide-react";
 import { Lightbulb } from "lucide-react";
 
 type Entry = {
