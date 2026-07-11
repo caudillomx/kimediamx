@@ -1346,6 +1346,138 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
         </Card>
       )}
 
+      {/* ============ Buscador de menciones ============ */}
+      {mentionIndex.length > 0 && (
+        <Card className="p-5 md:p-6">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <span className="text-[11px] uppercase tracking-widest text-muted-foreground">Buscador</span>
+              <h3 className="text-2xl font-display font-bold mt-1 flex items-center gap-2">
+                <Search className="w-5 h-5" />Buscar menciones
+              </h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                Filtra por texto, plataforma o sentimiento sobre todas las menciones detectadas en el período.
+              </p>
+            </div>
+            <div className="text-right text-[11px] text-muted-foreground tabular-nums">
+              <div><span className="font-bold text-foreground">{searchStats.total}</span> resultados</div>
+              <div>{searchStats.media} medios · {searchStats.social} redes</div>
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-2 md:grid-cols-[1fr_auto_auto_auto]">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                value={searchQ}
+                onChange={(e) => { setSearchQ(e.target.value); setSearchLimit(50); }}
+                placeholder="Buscar por outlet, perfil, tema, cita o URL…"
+                className="pl-9 pr-8"
+              />
+              {searchQ && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQ("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-background/60"
+                  aria-label="Limpiar búsqueda"
+                >
+                  <X className="w-3.5 h-3.5 text-muted-foreground" />
+                </button>
+              )}
+            </div>
+            <select
+              value={searchPlatform}
+              onChange={(e) => setSearchPlatform(e.target.value)}
+              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+            >
+              <option value="todas">Todas las plataformas</option>
+              <option value="medios digitales">Medios digitales</option>
+              <option value="x">X</option>
+              <option value="facebook">Facebook</option>
+              <option value="instagram">Instagram</option>
+              <option value="youtube">YouTube</option>
+              <option value="tiktok">TikTok</option>
+              <option value="linkedin">LinkedIn</option>
+              <option value="reddit">Reddit</option>
+            </select>
+            <select
+              value={searchSent}
+              onChange={(e) => setSearchSent(e.target.value)}
+              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+            >
+              <option value="todos">Todo sentimiento</option>
+              <option value="positivo">Positivo</option>
+              <option value="neutral">Neutral</option>
+              <option value="negativo">Negativo / crisis</option>
+            </select>
+            <Button variant="outline" size="sm" onClick={exportSearchCsv} disabled={searchResults.length === 0} className="h-10">
+              <Download className="w-4 h-4 mr-1" />CSV
+            </Button>
+          </div>
+
+          <div className="mt-4 rounded-xl border border-border/40 bg-background/30 overflow-hidden">
+            {searchResults.length === 0 ? (
+              <div className="p-6 text-center text-sm text-muted-foreground italic">
+                No hay menciones que coincidan con los filtros.
+              </div>
+            ) : (
+              <>
+                <ul className="divide-y divide-border/40 max-h-[560px] overflow-auto">
+                  {searchResults.slice(0, searchLimit).map((r, i) => {
+                    const c = SENT_COLORS[r.sentiment === "crisis" ? "crisis" : r.sentiment] ?? SENT_COLORS.neutral;
+                    return (
+                      <li key={i} className="p-3 hover:bg-background/40">
+                        <div className="flex items-start gap-3">
+                          <span className="w-1.5 self-stretch rounded-full shrink-0" style={{ background: c }} />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap text-xs">
+                              <span className="tabular-nums text-muted-foreground">{r.date}</span>
+                              <span className="w-1 h-1 rounded-full bg-muted-foreground/50" />
+                              <span className="uppercase tracking-widest text-[10px] font-semibold" style={{ color: platformColor(r.platform) }}>
+                                {r.platform}
+                              </span>
+                              <span className="text-[10px] uppercase tracking-widest text-muted-foreground border border-border/40 rounded px-1.5 py-0.5">
+                                {r.kind === "media" ? "medio" : "red"}
+                              </span>
+                              {r.topic && (
+                                <span className="text-[10px] px-2 py-0.5 rounded-full bg-background/60 border border-border/40 text-muted-foreground">{r.topic}</span>
+                              )}
+                            </div>
+                            <div className="mt-1 font-semibold text-sm truncate">
+                              {r.who}
+                              {r.handle && <span className="ml-1.5 text-xs font-normal text-muted-foreground">{r.handle.startsWith("@") ? r.handle : `@${r.handle}`}</span>}
+                            </div>
+                            {r.headline && (
+                              <div className="text-sm text-foreground/90 mt-0.5 line-clamp-2">{r.headline}</div>
+                            )}
+                            {r.quote && (
+                              <div className="text-xs italic text-muted-foreground mt-1 line-clamp-2">"{r.quote}"</div>
+                            )}
+                            {r.url && (
+                              <a href={r.url} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex items-center gap-1 text-[11px] text-primary hover:underline truncate max-w-full">
+                                <ExternalLink className="w-3 h-3 shrink-0" />
+                                <span className="truncate">{r.url}</span>
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+                {searchResults.length > searchLimit && (
+                  <div className="p-3 border-t border-border/40 text-center">
+                    <Button variant="ghost" size="sm" onClick={() => setSearchLimit(l => l + 50)}>
+                      Ver más ({searchResults.length - searchLimit} restantes)
+                    </Button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </Card>
+      )}
+
       {/* Bloque táctico: volumen apilado + sentimiento agregado */}
       <div className="grid gap-4 md:grid-cols-2">
         <Card className="p-4">
