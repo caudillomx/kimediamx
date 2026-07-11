@@ -51,7 +51,6 @@ const ClientsHub = ({ items, deals, objectives, interactions, onOpenClient }: Pr
 
     return () => { supabase.removeChannel(channel); };
   }, [fetchClients]);
-  }, []);
 
   const stats = useMemo(() => {
     const map = new Map<string, {
