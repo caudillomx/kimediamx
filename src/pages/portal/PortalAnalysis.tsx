@@ -1475,7 +1475,6 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
             )}
           </div>
         </Card>
-      )}
 
       {/* Bloque táctico: volumen apilado + sentimiento agregado */}
       <div className="grid gap-4 md:grid-cols-2">
