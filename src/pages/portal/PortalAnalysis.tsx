@@ -1347,8 +1347,7 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
       )}
 
       {/* ============ Buscador de menciones ============ */}
-      {mentionIndex.length > 0 && (
-        <Card className="p-5 md:p-6">
+      <Card className="p-5 md:p-6">
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div>
               <span className="text-[11px] uppercase tracking-widest text-muted-foreground">Buscador</span>
