@@ -7,153 +7,155 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   LineChart, Line, PieChart, Pie, Cell, Legend, CartesianGrid,
 } from "recharts";
-import { BarChart3, Download, TrendingUp, PieChart as PieIcon, Table as TableIcon } from "lucide-react";
+import { BarChart3, Download, TrendingUp, PieChart as PieIcon, Table as TableIcon, Newspaper } from "lucide-react";
 
-type Competitor = { id: string; name: string; brand_color: string; active: boolean };
-type Week = { id: string; week_start: string; week_end: string };
-type Metric = {
-  id: string;
-  week_id: string;
-  competitor_id: string | null;
-  is_self: boolean;
-  brand_name: string;
-  platform: string;
-  fans: number | null;
-  fan_change: number | null;
-  followers: number | null;
-  posts: number | null;
-  interactions: number | null;
-  engagement_rate: number | null;
-  reach: number | null;
-  video_views: number | null;
-};
+type Competitor = { id: string; name: string; network: string; brand_color: string; active: boolean; is_client: boolean; image_url: string | null; external_url: string | null };
+type Period = { id: string; period_label: string; period_start: string; period_end: string };
+type Metric = { id: string; period_id: string; competitor_id: string; network: string; performance_index: number | null; followers: number | null; follower_growth_rate: number | null; engagement_rate: number | null; posts_per_day: number | null; reach_per_day: number | null; interaction_per_impression: number | null };
+type Daily = { period_id: string; competitor_id: string; network: string; day: string; delta: number };
+type Post = { id: string; period_id: string; competitor_id: string | null; network: string; profile_name: string; posted_at: string | null; message: string | null; likes: number | null; comments: number | null; interactions: number | null; engagement_rate: number | null; link: string | null; image_link: string | null };
 
-const METRICS: { key: keyof Metric; label: string; format: (n: number) => string }[] = [
-  { key: "fans", label: "Fans / Seguidores", format: (n) => n.toLocaleString("es-MX") },
-  { key: "interactions", label: "Interacciones", format: (n) => n.toLocaleString("es-MX") },
-  { key: "engagement_rate", label: "Engagement rate (%)", format: (n) => n.toFixed(2) + "%" },
-  { key: "posts", label: "Posts publicados", format: (n) => n.toLocaleString("es-MX") },
-  { key: "reach", label: "Alcance", format: (n) => n.toLocaleString("es-MX") },
+const METRICS: { key: keyof Metric; label: string; fmt: (n: number) => string }[] = [
+  { key: "followers", label: "Seguidores", fmt: (n) => n.toLocaleString("es-MX") },
+  { key: "engagement_rate", label: "Tasa de interacción", fmt: (n) => (n * 100).toFixed(2) + "%" },
+  { key: "follower_growth_rate", label: "Crecimiento de seguidores / día", fmt: (n) => (n * 100).toFixed(3) + "%" },
+  { key: "posts_per_day", label: "Publicaciones por día", fmt: (n) => n.toFixed(2) },
+  { key: "performance_index", label: "Índice de rendimiento", fmt: (n) => n.toFixed(2) },
+  { key: "interaction_per_impression", label: "Interacción / impresión", fmt: (n) => (n * 100).toFixed(3) + "%" },
 ];
-
-const RANGES = [
-  { value: "4", label: "Últimas 4 semanas" },
-  { value: "8", label: "Últimas 8 semanas" },
-  { value: "12", label: "Últimas 12 semanas" },
-  { value: "all", label: "Todas las semanas" },
-];
-
-const CLIENT_COLOR = "#ef6a4d"; // coral
 
 export default function PortalBenchmark({ clientId, clientName }: { clientId: string; clientName: string }) {
   const [competitors, setCompetitors] = useState<Competitor[]>([]);
-  const [weeks, setWeeks] = useState<Week[]>([]);
+  const [periods, setPeriods] = useState<Period[]>([]);
   const [metrics, setMetrics] = useState<Metric[]>([]);
+  const [daily, setDaily] = useState<Daily[]>([]);
+  const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedMetric, setSelectedMetric] = useState<string>("interactions");
-  const [range, setRange] = useState<string>("4");
+  const [selectedPeriod, setSelectedPeriod] = useState<string>("");
+  const [selectedMetric, setSelectedMetric] = useState<string>("followers");
+  const [networkFilter, setNetworkFilter] = useState<string>("all");
 
   useEffect(() => {
     (async () => {
       setLoading(true);
-      const [c, w] = await Promise.all([
-        supabase.from("client_portal_benchmark_competitors").select("id, name, brand_color, active").eq("client_id", clientId).eq("active", true).order("sort_order"),
-        supabase.from("client_portal_benchmark_weeks").select("id, week_start, week_end").eq("client_id", clientId).order("week_start", { ascending: true }),
+      const [c, p] = await Promise.all([
+        supabase.from("client_portal_benchmark_competitors").select("*").eq("client_id", clientId).eq("active", true).order("is_client", { ascending: false }).order("name"),
+        supabase.from("client_portal_benchmark_periods").select("*").eq("client_id", clientId).order("period_start", { ascending: true }),
       ]);
+      const ps = (p.data ?? []) as Period[];
       setCompetitors((c.data ?? []) as Competitor[]);
-      setWeeks((w.data ?? []) as Week[]);
-      if ((w.data ?? []).length > 0) {
-        const weekIds = (w.data as Week[]).map(x => x.id);
-        const m = await supabase.from("client_portal_benchmark_metrics").select("*").in("week_id", weekIds);
+      setPeriods(ps);
+      if (ps.length) {
+        setSelectedPeriod(ps[ps.length - 1].id);
+        const periodIds = ps.map((x) => x.id);
+        const [m, d, po] = await Promise.all([
+          supabase.from("client_portal_benchmark_metrics").select("*").in("period_id", periodIds),
+          supabase.from("client_portal_benchmark_follower_daily").select("*").in("period_id", periodIds),
+          supabase.from("client_portal_benchmark_posts").select("*").in("period_id", periodIds).order("interactions", { ascending: false }).limit(200),
+        ]);
         setMetrics((m.data ?? []) as Metric[]);
+        setDaily((d.data ?? []) as Daily[]);
+        setPosts((po.data ?? []) as Post[]);
       }
       setLoading(false);
     })();
   }, [clientId]);
 
-  const filteredWeeks = useMemo(() => {
-    if (range === "all") return weeks;
-    return weeks.slice(-parseInt(range));
-  }, [weeks, range]);
+  const compMap = useMemo(() => new Map(competitors.map((c) => [c.id, c])), [competitors]);
+  const currentPeriod = periods.find((p) => p.id === selectedPeriod) ?? null;
+  const currentMetric = METRICS.find((m) => m.key === selectedMetric) ?? METRICS[0];
 
-  const filteredWeekIds = useMemo(() => new Set(filteredWeeks.map(w => w.id)), [filteredWeeks]);
-  const filteredMetrics = useMemo(() => metrics.filter(m => filteredWeekIds.has(m.week_id)), [metrics, filteredWeekIds]);
+  const networks = useMemo(() => {
+    const set = new Set<string>();
+    metrics.forEach((m) => set.add(m.network));
+    return ["all", ...Array.from(set).sort()];
+  }, [metrics]);
 
-  const lastWeek = filteredWeeks[filteredWeeks.length - 1];
-  const currentMetric = METRICS.find(m => m.key === selectedMetric) ?? METRICS[0];
+  const periodMetrics = useMemo(() => {
+    return metrics.filter((m) => m.period_id === selectedPeriod && (networkFilter === "all" || m.network === networkFilter));
+  }, [metrics, selectedPeriod, networkFilter]);
 
-  // Colores por marca (cliente = CLIENT_COLOR, competidores por brand_color)
-  const brandColor = (brandName: string, isSelf: boolean): string => {
-    if (isSelf) return CLIENT_COLOR;
-    const c = competitors.find(x => x.name.toLowerCase() === brandName.toLowerCase());
-    return c?.brand_color ?? "#94a3b8";
-  };
-
-  // ---------- Ranking (última semana del rango) ----------
+  // Ranking
   const rankingData = useMemo(() => {
-    if (!lastWeek) return [];
-    return filteredMetrics
-      .filter(m => m.week_id === lastWeek.id)
-      .map(m => ({
-        brand: m.brand_name,
-        value: Number(m[selectedMetric as keyof Metric] ?? 0),
-        isSelf: m.is_self,
-        color: brandColor(m.brand_name, m.is_self),
-      }))
-      .filter(r => r.value > 0)
+    return periodMetrics
+      .map((m) => {
+        const c = compMap.get(m.competitor_id);
+        const v = Number(m[selectedMetric as keyof Metric] ?? 0);
+        return { brand: c ? `${c.name}${networkFilter === "all" ? ` · ${m.network}` : ""}` : m.competitor_id, value: v, color: c?.brand_color ?? "#94a3b8", isClient: !!c?.is_client };
+      })
+      .filter((r) => Number.isFinite(r.value) && r.value !== 0)
       .sort((a, b) => b.value - a.value);
-  }, [filteredMetrics, lastWeek, selectedMetric, competitors]);
+  }, [periodMetrics, selectedMetric, compMap, networkFilter]);
 
-  // ---------- Evolución semanal ----------
+  const shareTotal = rankingData.reduce((a, b) => a + b.value, 0);
+
+  // Evolution (usa periodos: métrica agregada por periodo/competidor)
   const evolutionData = useMemo(() => {
-    const brands = new Set<string>();
-    filteredMetrics.forEach(m => brands.add(m.brand_name));
-    const byWeek = new Map<string, Record<string, any>>();
-    for (const w of filteredWeeks) {
-      byWeek.set(w.id, { week: w.week_start });
+    if (!periods.length) return [];
+    const byPeriod = new Map<string, Record<string, any>>();
+    periods.forEach((p) => byPeriod.set(p.id, { period: p.period_label }));
+    for (const m of metrics) {
+      if (networkFilter !== "all" && m.network !== networkFilter) continue;
+      const row = byPeriod.get(m.period_id);
+      if (!row) continue;
+      const c = compMap.get(m.competitor_id);
+      if (!c) continue;
+      const key = `${c.name}${networkFilter === "all" ? ` · ${m.network}` : ""}`;
+      const v = Number(m[selectedMetric as keyof Metric] ?? 0);
+      // If multiple networks under "all", sum for the same competitor
+      row[key] = (row[key] ?? 0) + (Number.isFinite(v) ? v : 0);
     }
-    for (const m of filteredMetrics) {
-      const row = byWeek.get(m.week_id);
-      if (row) row[m.brand_name] = Number(m[selectedMetric as keyof Metric] ?? 0);
-    }
-    return Array.from(byWeek.values());
-  }, [filteredMetrics, filteredWeeks, selectedMetric]);
+    return Array.from(byPeriod.values());
+  }, [metrics, periods, selectedMetric, compMap, networkFilter]);
 
   const brandsList = useMemo(() => {
-    const seen = new Map<string, { name: string; isSelf: boolean; color: string }>();
-    for (const m of filteredMetrics) {
-      if (!seen.has(m.brand_name)) {
-        seen.set(m.brand_name, {
-          name: m.brand_name,
-          isSelf: m.is_self,
-          color: brandColor(m.brand_name, m.is_self),
-        });
-      }
+    const seen = new Map<string, { key: string; color: string; isClient: boolean }>();
+    for (const m of metrics) {
+      if (networkFilter !== "all" && m.network !== networkFilter) continue;
+      const c = compMap.get(m.competitor_id);
+      if (!c) continue;
+      const key = `${c.name}${networkFilter === "all" ? ` · ${m.network}` : ""}`;
+      if (!seen.has(key)) seen.set(key, { key, color: c.brand_color, isClient: c.is_client });
     }
-    return Array.from(seen.values()).sort((a, b) => (a.isSelf === b.isSelf ? 0 : a.isSelf ? -1 : 1));
-  }, [filteredMetrics, competitors]);
+    return Array.from(seen.values()).sort((a, b) => (a.isClient === b.isClient ? 0 : a.isClient ? -1 : 1));
+  }, [metrics, compMap, networkFilter]);
 
-  // ---------- Share of engagement (última semana) ----------
-  const shareData = useMemo(() => {
-    return rankingData.map(r => ({ name: r.brand, value: r.value, color: r.color }));
-  }, [rankingData]);
-  const shareTotal = shareData.reduce((a, b) => a + b.value, 0);
+  // Daily followers evolution (line chart) — para el periodo seleccionado
+  const dailyEvolution = useMemo(() => {
+    if (!selectedPeriod) return [];
+    const days = new Set<string>();
+    const byDay = new Map<string, Record<string, any>>();
+    for (const d of daily) {
+      if (d.period_id !== selectedPeriod) continue;
+      if (networkFilter !== "all" && d.network !== networkFilter) continue;
+      days.add(d.day);
+      if (!byDay.has(d.day)) byDay.set(d.day, { day: d.day });
+      const c = compMap.get(d.competitor_id);
+      if (!c) continue;
+      const key = `${c.name}${networkFilter === "all" ? ` · ${d.network}` : ""}`;
+      byDay.get(d.day)![key] = (byDay.get(d.day)![key] ?? 0) + d.delta;
+    }
+    return Array.from(byDay.values()).sort((a, b) => a.day.localeCompare(b.day));
+  }, [daily, selectedPeriod, networkFilter, compMap]);
 
-  // ---------- Export CSV ----------
+  // Top posts
+  const topPosts = useMemo(() => {
+    return posts
+      .filter((p) => p.period_id === selectedPeriod && (networkFilter === "all" || p.network === networkFilter))
+      .sort((a, b) => (b.interactions ?? 0) - (a.interactions ?? 0))
+      .slice(0, 20);
+  }, [posts, selectedPeriod, networkFilter]);
+
   function exportCsv() {
-    const header = ["semana_inicio", "semana_fin", "marca", "es_cliente", "plataforma", "fans", "fan_change", "posts", "interacciones", "engagement_rate", "alcance", "video_views"];
-    const weekMap = new Map(filteredWeeks.map(w => [w.id, w]));
-    const rows = filteredMetrics.map(m => {
-      const w = weekMap.get(m.week_id);
-      return [
-        w?.week_start ?? "", w?.week_end ?? "", m.brand_name,
-        m.is_self ? "si" : "no", m.platform,
-        m.fans ?? "", m.fan_change ?? "", m.posts ?? "",
-        m.interactions ?? "", m.engagement_rate ?? "", m.reach ?? "", m.video_views ?? "",
-      ];
+    const header = ["periodo", "perfil", "red", "seguidores", "crecimiento_rate", "engagement_rate", "posts_dia", "alcance_dia", "indice_rendimiento", "interaccion_por_impresion"];
+    const periodMap = new Map(periods.map((p) => [p.id, p]));
+    const rows = metrics.map((m) => {
+      const p = periodMap.get(m.period_id);
+      const c = compMap.get(m.competitor_id);
+      return [p?.period_label ?? "", c?.name ?? "", m.network, m.followers ?? "", m.follower_growth_rate ?? "", m.engagement_rate ?? "", m.posts_per_day ?? "", m.reach_per_day ?? "", m.performance_index ?? "", m.interaction_per_impression ?? ""];
     });
     const esc = (v: any) => `"${String(v ?? "").replace(/"/g, '""')}"`;
-    const csv = [header.join(","), ...rows.map(r => r.map(esc).join(","))].join("\n");
+    const csv = [header.join(","), ...rows.map((r) => r.map(esc).join(","))].join("\n");
     const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -162,42 +164,39 @@ export default function PortalBenchmark({ clientId, clientName }: { clientId: st
     URL.revokeObjectURL(url);
   }
 
-  if (loading) {
-    return <Card className="p-8 text-center text-sm text-muted-foreground">Cargando benchmark…</Card>;
-  }
-
-  if (weeks.length === 0) {
+  if (loading) return <Card className="p-8 text-center text-sm text-muted-foreground">Cargando benchmark…</Card>;
+  if (periods.length === 0) {
     return (
       <Card className="p-8 text-center">
         <BarChart3 className="w-10 h-10 mx-auto text-muted-foreground mb-3" />
         <h3 className="font-display font-bold text-lg">Sin datos de benchmark todavía</h3>
-        <p className="text-sm text-muted-foreground mt-2">
-          El equipo de KiMedia aún no ha cargado el primer export de FanpageKarma para este cliente.
-        </p>
+        <p className="text-sm text-muted-foreground mt-2">El equipo de KiMedia aún no ha cargado el primer export de FanpageKarma para este cliente.</p>
       </Card>
     );
   }
 
   return (
     <div className="space-y-5">
-      {/* Controles */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-2">
-          <span className="text-xs uppercase tracking-widest text-muted-foreground">Métrica</span>
-          <Select value={selectedMetric} onValueChange={setSelectedMetric}>
-            <SelectTrigger className="w-[220px] h-9"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {METRICS.map(m => <SelectItem key={m.key as string} value={m.key as string}>{m.label}</SelectItem>)}
-            </SelectContent>
+          <span className="text-xs uppercase tracking-widest text-muted-foreground">Periodo</span>
+          <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+            <SelectTrigger className="w-[200px] h-9"><SelectValue /></SelectTrigger>
+            <SelectContent>{periods.slice().reverse().map((p) => <SelectItem key={p.id} value={p.id}>{p.period_label}</SelectItem>)}</SelectContent>
           </Select>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-xs uppercase tracking-widest text-muted-foreground">Rango</span>
-          <Select value={range} onValueChange={setRange}>
-            <SelectTrigger className="w-[180px] h-9"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {RANGES.map(r => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}
-            </SelectContent>
+          <span className="text-xs uppercase tracking-widest text-muted-foreground">Métrica</span>
+          <Select value={selectedMetric} onValueChange={setSelectedMetric}>
+            <SelectTrigger className="w-[240px] h-9"><SelectValue /></SelectTrigger>
+            <SelectContent>{METRICS.map((m) => <SelectItem key={m.key as string} value={m.key as string}>{m.label}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs uppercase tracking-widest text-muted-foreground">Red</span>
+          <Select value={networkFilter} onValueChange={setNetworkFilter}>
+            <SelectTrigger className="w-[140px] h-9"><SelectValue /></SelectTrigger>
+            <SelectContent>{networks.map((n) => <SelectItem key={n} value={n}>{n === "all" ? "Todas" : n}</SelectItem>)}</SelectContent>
           </Select>
         </div>
         <div className="ml-auto">
@@ -207,31 +206,28 @@ export default function PortalBenchmark({ clientId, clientName }: { clientId: st
         </div>
       </div>
 
-      {/* Ranking + Share */}
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="p-5">
           <div className="flex items-center gap-2 mb-3">
             <BarChart3 className="w-4 h-4 text-muted-foreground" />
-            <h4 className="font-semibold text-sm">Ranking de la semana — {currentMetric.label}</h4>
+            <h4 className="font-semibold text-sm">Ranking — {currentMetric.label}</h4>
           </div>
           {rankingData.length === 0 ? (
-            <p className="text-sm text-muted-foreground italic">Sin datos para esta métrica.</p>
+            <p className="text-sm text-muted-foreground italic">Sin datos para esta selección.</p>
           ) : (
-            <ResponsiveContainer width="100%" height={Math.max(200, rankingData.length * 34)}>
+            <ResponsiveContainer width="100%" height={Math.max(220, rankingData.length * 28)}>
               <BarChart data={rankingData} layout="vertical" margin={{ left: 8, right: 24 }}>
                 <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
                 <XAxis type="number" fontSize={10} tickFormatter={(v) => v > 999 ? `${(v / 1000).toFixed(1)}k` : String(v)} />
-                <YAxis type="category" dataKey="brand" fontSize={11} width={110} />
-                <Tooltip formatter={(v: number) => currentMetric.format(v)} />
+                <YAxis type="category" dataKey="brand" fontSize={11} width={170} />
+                <Tooltip formatter={(v: number) => currentMetric.fmt(v)} />
                 <Bar dataKey="value" radius={[0, 6, 6, 0]}>
                   {rankingData.map((r, i) => <Cell key={i} fill={r.color} />)}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
           )}
-          {lastWeek && (
-            <p className="text-[11px] text-muted-foreground mt-2 italic">Semana del {lastWeek.week_start} al {lastWeek.week_end}</p>
-          )}
+          {currentPeriod && <p className="text-[11px] text-muted-foreground mt-2 italic">Periodo: {currentPeriod.period_label}</p>}
         </Card>
 
         <Card className="p-5">
@@ -239,106 +235,161 @@ export default function PortalBenchmark({ clientId, clientName }: { clientId: st
             <PieIcon className="w-4 h-4 text-muted-foreground" />
             <h4 className="font-semibold text-sm">Share del sector — {currentMetric.label}</h4>
           </div>
-          {shareData.length === 0 ? (
-            <p className="text-sm text-muted-foreground italic">Sin datos para esta métrica.</p>
+          {rankingData.length === 0 ? (
+            <p className="text-sm text-muted-foreground italic">Sin datos.</p>
           ) : (
-            <ResponsiveContainer width="100%" height={260}>
+            <ResponsiveContainer width="100%" height={280}>
               <PieChart>
-                <Pie data={shareData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={2}>
-                  {shareData.map((s, i) => <Cell key={i} fill={s.color} />)}
+                <Pie data={rankingData} dataKey="value" nameKey="brand" cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={2}>
+                  {rankingData.map((r, i) => <Cell key={i} fill={r.color} />)}
                 </Pie>
-                <Tooltip formatter={(v: number, _n, p) => [`${currentMetric.format(v)} (${((v / shareTotal) * 100).toFixed(1)}%)`, String(p.payload.name)]} />
-                <Legend wrapperStyle={{ fontSize: 11 }} />
+                <Tooltip formatter={(v: number, _n, p: any) => [`${currentMetric.fmt(v)} (${((v / shareTotal) * 100).toFixed(1)}%)`, String(p.payload.brand)]} />
+                <Legend wrapperStyle={{ fontSize: 10 }} />
               </PieChart>
             </ResponsiveContainer>
           )}
         </Card>
       </div>
 
-      {/* Evolución */}
       <Card className="p-5">
         <div className="flex items-center gap-2 mb-3">
           <TrendingUp className="w-4 h-4 text-muted-foreground" />
-          <h4 className="font-semibold text-sm">Evolución semanal — {currentMetric.label}</h4>
+          <h4 className="font-semibold text-sm">Evolución por periodo — {currentMetric.label}</h4>
         </div>
         {evolutionData.length === 0 ? (
-          <p className="text-sm text-muted-foreground italic">Sin datos para el rango seleccionado.</p>
+          <p className="text-sm text-muted-foreground italic">Necesitas al menos 2 periodos cargados para ver evolución.</p>
         ) : (
-          <ResponsiveContainer width="100%" height={300}>
+          <ResponsiveContainer width="100%" height={320}>
             <LineChart data={evolutionData}>
               <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-              <XAxis dataKey="week" fontSize={10} />
+              <XAxis dataKey="period" fontSize={10} />
               <YAxis fontSize={10} tickFormatter={(v) => v > 999 ? `${(v / 1000).toFixed(1)}k` : String(v)} />
-              <Tooltip formatter={(v: number) => currentMetric.format(v)} />
-              <Legend wrapperStyle={{ fontSize: 11 }} />
+              <Tooltip formatter={(v: number) => currentMetric.fmt(v)} />
+              <Legend wrapperStyle={{ fontSize: 10 }} />
               {brandsList.map((b) => (
-                <Line
-                  key={b.name}
-                  type="monotone"
-                  dataKey={b.name}
-                  stroke={b.color}
-                  strokeWidth={b.isSelf ? 3 : 1.5}
-                  dot={{ r: b.isSelf ? 4 : 2 }}
-                  activeDot={{ r: b.isSelf ? 6 : 4 }}
-                />
+                <Line key={b.key} type="monotone" dataKey={b.key} stroke={b.color}
+                  strokeWidth={b.isClient ? 3 : 1.5} dot={{ r: b.isClient ? 4 : 2 }} activeDot={{ r: b.isClient ? 6 : 4 }} />
               ))}
             </LineChart>
           </ResponsiveContainer>
         )}
       </Card>
 
-      {/* Tabla detallada */}
+      <Card className="p-5">
+        <div className="flex items-center gap-2 mb-3">
+          <TrendingUp className="w-4 h-4 text-muted-foreground" />
+          <h4 className="font-semibold text-sm">Crecimiento diario de seguidores — {currentPeriod?.period_label}</h4>
+        </div>
+        {dailyEvolution.length === 0 ? (
+          <p className="text-sm text-muted-foreground italic">No hay datos diarios de seguidores para este periodo (sube el archivo "Seguidores").</p>
+        ) : (
+          <ResponsiveContainer width="100%" height={320}>
+            <LineChart data={dailyEvolution}>
+              <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+              <XAxis dataKey="day" fontSize={10} />
+              <YAxis fontSize={10} tickFormatter={(v) => v > 999 ? `${(v / 1000).toFixed(1)}k` : String(v)} />
+              <Tooltip />
+              <Legend wrapperStyle={{ fontSize: 10 }} />
+              {brandsList.map((b) => (
+                <Line key={b.key} type="monotone" dataKey={b.key} stroke={b.color}
+                  strokeWidth={b.isClient ? 3 : 1.5} dot={false} activeDot={{ r: b.isClient ? 5 : 3 }} />
+              ))}
+            </LineChart>
+          </ResponsiveContainer>
+        )}
+      </Card>
+
+      <Card className="p-5">
+        <div className="flex items-center gap-2 mb-3">
+          <Newspaper className="w-4 h-4 text-muted-foreground" />
+          <h4 className="font-semibold text-sm">Top 20 publicaciones — {currentPeriod?.period_label}</h4>
+        </div>
+        {topPosts.length === 0 ? (
+          <p className="text-sm text-muted-foreground italic">Sin publicaciones cargadas para este periodo.</p>
+        ) : (
+          <div className="overflow-auto max-h-[500px] border border-border/40 rounded-lg">
+            <table className="w-full text-xs">
+              <thead className="bg-background/60 sticky top-0">
+                <tr>
+                  <th className="text-left p-2">Perfil</th>
+                  <th className="text-left p-2">Red</th>
+                  <th className="text-left p-2">Fecha</th>
+                  <th className="text-left p-2">Mensaje</th>
+                  <th className="text-right p-2">Likes</th>
+                  <th className="text-right p-2">Coment.</th>
+                  <th className="text-right p-2">Interacc.</th>
+                  <th className="text-right p-2">Eng.%</th>
+                  <th className="p-2">Link</th>
+                </tr>
+              </thead>
+              <tbody>
+                {topPosts.map((p) => {
+                  const c = p.competitor_id ? compMap.get(p.competitor_id) : null;
+                  return (
+                    <tr key={p.id} className={`border-t border-border/30 ${c?.is_client ? "bg-primary/5 font-medium" : ""}`}>
+                      <td className="p-2">
+                        <span className="inline-flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full" style={{ background: c?.brand_color ?? "#94a3b8" }} />
+                          {p.profile_name}
+                        </span>
+                      </td>
+                      <td className="p-2">{p.network}</td>
+                      <td className="p-2 text-muted-foreground">{p.posted_at ? new Date(p.posted_at).toLocaleDateString("es-MX") : "—"}</td>
+                      <td className="p-2 max-w-xs truncate" title={p.message ?? ""}>{p.message ?? "—"}</td>
+                      <td className="p-2 text-right tabular-nums">{p.likes?.toLocaleString("es-MX") ?? "—"}</td>
+                      <td className="p-2 text-right tabular-nums">{p.comments?.toLocaleString("es-MX") ?? "—"}</td>
+                      <td className="p-2 text-right tabular-nums">{p.interactions?.toLocaleString("es-MX") ?? "—"}</td>
+                      <td className="p-2 text-right tabular-nums">{p.engagement_rate != null ? (p.engagement_rate * 100).toFixed(2) + "%" : "—"}</td>
+                      <td className="p-2">{p.link ? <a href={p.link} target="_blank" rel="noreferrer" className="text-primary hover:underline">↗</a> : "—"}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+
       <Card className="p-5">
         <div className="flex items-center gap-2 mb-3">
           <TableIcon className="w-4 h-4 text-muted-foreground" />
-          <h4 className="font-semibold text-sm">Tabla detallada</h4>
+          <h4 className="font-semibold text-sm">Tabla detallada — {currentPeriod?.period_label}</h4>
         </div>
         <div className="overflow-auto max-h-[500px] border border-border/40 rounded-lg">
           <table className="w-full text-xs">
             <thead className="bg-background/60 sticky top-0">
               <tr>
-                <th className="text-left p-2">Semana</th>
-                <th className="text-left p-2">Marca</th>
-                <th className="text-right p-2">Fans</th>
-                <th className="text-right p-2">Δ Fans</th>
-                <th className="text-right p-2">Posts</th>
-                <th className="text-right p-2">Interacc.</th>
-                <th className="text-right p-2">Eng.%</th>
-                <th className="text-right p-2">Alcance</th>
+                <th className="text-left p-2">Perfil</th>
+                <th className="text-left p-2">Red</th>
+                <th className="text-right p-2">Seguidores</th>
+                <th className="text-right p-2">Crec.%/día</th>
+                <th className="text-right p-2">Engagement</th>
+                <th className="text-right p-2">Posts/día</th>
+                <th className="text-right p-2">Alcance/día</th>
+                <th className="text-right p-2">Índice</th>
               </tr>
             </thead>
             <tbody>
-              {filteredMetrics
+              {periodMetrics
                 .slice()
-                .sort((a, b) => {
-                  const wa = filteredWeeks.find(w => w.id === a.week_id)?.week_start ?? "";
-                  const wb = filteredWeeks.find(w => w.id === b.week_id)?.week_start ?? "";
-                  if (wa !== wb) return wa < wb ? 1 : -1;
-                  return a.is_self === b.is_self ? 0 : a.is_self ? -1 : 1;
-                })
-                .map(m => {
-                  const w = filteredWeeks.find(x => x.id === m.week_id);
+                .sort((a, b) => (b.followers ?? 0) - (a.followers ?? 0))
+                .map((m) => {
+                  const c = compMap.get(m.competitor_id);
                   return (
-                    <tr key={m.id} className={`border-t border-border/30 ${m.is_self ? "bg-coral/5 font-medium" : ""}`}>
-                      <td className="p-2 tabular-nums text-muted-foreground">{w?.week_start ?? "—"}</td>
+                    <tr key={m.id} className={`border-t border-border/30 ${c?.is_client ? "bg-primary/5 font-medium" : ""}`}>
                       <td className="p-2">
                         <span className="inline-flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full" style={{ background: brandColor(m.brand_name, m.is_self) }} />
-                          {m.brand_name}
+                          <span className="w-2 h-2 rounded-full" style={{ background: c?.brand_color ?? "#94a3b8" }} />
+                          {c?.name ?? "?"}
                         </span>
                       </td>
-                      <td className="p-2 text-right tabular-nums">{m.fans?.toLocaleString("es-MX") ?? "—"}</td>
-                      <td className="p-2 text-right tabular-nums">
-                        {m.fan_change != null ? (
-                          <span className={m.fan_change >= 0 ? "text-emerald-600" : "text-rose-600"}>
-                            {m.fan_change > 0 ? "+" : ""}{m.fan_change.toLocaleString("es-MX")}
-                          </span>
-                        ) : "—"}
-                      </td>
-                      <td className="p-2 text-right tabular-nums">{m.posts ?? "—"}</td>
-                      <td className="p-2 text-right tabular-nums">{m.interactions?.toLocaleString("es-MX") ?? "—"}</td>
-                      <td className="p-2 text-right tabular-nums">{m.engagement_rate != null ? m.engagement_rate.toFixed(2) + "%" : "—"}</td>
-                      <td className="p-2 text-right tabular-nums">{m.reach?.toLocaleString("es-MX") ?? "—"}</td>
+                      <td className="p-2">{m.network}</td>
+                      <td className="p-2 text-right tabular-nums">{m.followers?.toLocaleString("es-MX") ?? "—"}</td>
+                      <td className="p-2 text-right tabular-nums">{m.follower_growth_rate != null ? (m.follower_growth_rate * 100).toFixed(3) + "%" : "—"}</td>
+                      <td className="p-2 text-right tabular-nums">{m.engagement_rate != null ? (m.engagement_rate * 100).toFixed(2) + "%" : "—"}</td>
+                      <td className="p-2 text-right tabular-nums">{m.posts_per_day != null ? m.posts_per_day.toFixed(2) : "—"}</td>
+                      <td className="p-2 text-right tabular-nums">{m.reach_per_day != null ? m.reach_per_day.toFixed(0) : "—"}</td>
+                      <td className="p-2 text-right tabular-nums">{m.performance_index != null ? m.performance_index.toFixed(2) : "—"}</td>
                     </tr>
                   );
                 })}
