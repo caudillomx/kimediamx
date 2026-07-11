@@ -798,11 +798,16 @@ export type Database = {
           brand_color: string
           client_id: string
           created_at: string
+          external_url: string | null
           handle: string | null
           id: string
+          image_url: string | null
+          is_client: boolean
           is_default: boolean
           name: string
+          network: string
           platform: string
+          profile_external_id: string | null
           sort_order: number
           updated_at: string
         }
@@ -811,11 +816,16 @@ export type Database = {
           brand_color?: string
           client_id: string
           created_at?: string
+          external_url?: string | null
           handle?: string | null
           id?: string
+          image_url?: string | null
+          is_client?: boolean
           is_default?: boolean
           name: string
+          network?: string
           platform?: string
+          profile_external_id?: string | null
           sort_order?: number
           updated_at?: string
         }
@@ -824,11 +834,16 @@ export type Database = {
           brand_color?: string
           client_id?: string
           created_at?: string
+          external_url?: string | null
           handle?: string | null
           id?: string
+          image_url?: string | null
+          is_client?: boolean
           is_default?: boolean
           name?: string
+          network?: string
           platform?: string
+          profile_external_id?: string | null
           sort_order?: number
           updated_at?: string
         }
@@ -842,66 +857,109 @@ export type Database = {
           },
         ]
       }
-      client_portal_benchmark_metrics: {
+      client_portal_benchmark_follower_daily: {
         Row: {
-          brand_name: string
           client_id: string
-          competitor_id: string | null
+          competitor_id: string
           created_at: string
-          engagement_rate: number | null
-          fan_change: number | null
-          fans: number | null
-          followers: number | null
+          day: string
+          delta: number
           id: string
-          interactions: number | null
-          is_self: boolean
-          platform: string
-          posts: number | null
-          raw: Json
-          reach: number | null
-          updated_at: string
-          video_views: number | null
-          week_id: string
+          network: string
+          period_id: string
         }
         Insert: {
-          brand_name: string
           client_id: string
-          competitor_id?: string | null
+          competitor_id: string
           created_at?: string
-          engagement_rate?: number | null
-          fan_change?: number | null
-          fans?: number | null
-          followers?: number | null
+          day: string
+          delta?: number
           id?: string
-          interactions?: number | null
-          is_self?: boolean
-          platform?: string
-          posts?: number | null
-          raw?: Json
-          reach?: number | null
-          updated_at?: string
-          video_views?: number | null
-          week_id: string
+          network: string
+          period_id: string
         }
         Update: {
-          brand_name?: string
           client_id?: string
-          competitor_id?: string | null
+          competitor_id?: string
+          created_at?: string
+          day?: string
+          delta?: number
+          id?: string
+          network?: string
+          period_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_portal_benchmark_follower_daily_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_portal_benchmark_follower_daily_competitor_id_fkey"
+            columns: ["competitor_id"]
+            isOneToOne: false
+            referencedRelation: "client_portal_benchmark_competitors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_portal_benchmark_follower_daily_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "client_portal_benchmark_periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_portal_benchmark_metrics: {
+        Row: {
+          client_id: string
+          competitor_id: string
+          created_at: string
+          engagement_rate: number | null
+          follower_growth_rate: number | null
+          followers: number | null
+          id: string
+          interaction_per_impression: number | null
+          network: string
+          performance_index: number | null
+          period_id: string
+          posts_per_day: number | null
+          raw: Json | null
+          reach_per_day: number | null
+        }
+        Insert: {
+          client_id: string
+          competitor_id: string
           created_at?: string
           engagement_rate?: number | null
-          fan_change?: number | null
-          fans?: number | null
+          follower_growth_rate?: number | null
           followers?: number | null
           id?: string
-          interactions?: number | null
-          is_self?: boolean
-          platform?: string
-          posts?: number | null
-          raw?: Json
-          reach?: number | null
-          updated_at?: string
-          video_views?: number | null
-          week_id?: string
+          interaction_per_impression?: number | null
+          network: string
+          performance_index?: number | null
+          period_id: string
+          posts_per_day?: number | null
+          raw?: Json | null
+          reach_per_day?: number | null
+        }
+        Update: {
+          client_id?: string
+          competitor_id?: string
+          created_at?: string
+          engagement_rate?: number | null
+          follower_growth_rate?: number | null
+          followers?: number | null
+          id?: string
+          interaction_per_impression?: number | null
+          network?: string
+          performance_index?: number | null
+          period_id?: string
+          posts_per_day?: number | null
+          raw?: Json | null
+          reach_per_day?: number | null
         }
         Relationships: [
           {
@@ -919,54 +977,190 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "client_portal_benchmark_metrics_week_id_fkey"
-            columns: ["week_id"]
+            foreignKeyName: "client_portal_benchmark_metrics_period_id_fkey"
+            columns: ["period_id"]
             isOneToOne: false
-            referencedRelation: "client_portal_benchmark_weeks"
+            referencedRelation: "client_portal_benchmark_periods"
             referencedColumns: ["id"]
           },
         ]
       }
-      client_portal_benchmark_weeks: {
+      client_portal_benchmark_periods: {
         Row: {
           client_id: string
           created_at: string
           id: string
           notes: string | null
+          period_end: string
+          period_label: string
+          period_start: string
+          period_type: string
           updated_at: string
-          uploaded_by: string | null
-          uploaded_file_name: string | null
-          week_end: string
-          week_start: string
         }
         Insert: {
           client_id: string
           created_at?: string
           id?: string
           notes?: string | null
+          period_end: string
+          period_label: string
+          period_start: string
+          period_type?: string
           updated_at?: string
-          uploaded_by?: string | null
-          uploaded_file_name?: string | null
-          week_end: string
-          week_start: string
         }
         Update: {
           client_id?: string
           created_at?: string
           id?: string
           notes?: string | null
+          period_end?: string
+          period_label?: string
+          period_start?: string
+          period_type?: string
           updated_at?: string
-          uploaded_by?: string | null
-          uploaded_file_name?: string | null
-          week_end?: string
-          week_start?: string
         }
         Relationships: [
           {
-            foreignKeyName: "client_portal_benchmark_weeks_client_id_fkey"
+            foreignKeyName: "client_portal_benchmark_periods_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_portal_benchmark_posts: {
+        Row: {
+          client_id: string
+          comments: number | null
+          competitor_id: string | null
+          created_at: string
+          engagement_rate: number | null
+          id: string
+          image_link: string | null
+          interaction_per_impression: number | null
+          interactions: number | null
+          likes: number | null
+          link: string | null
+          message: string | null
+          message_external_id: string | null
+          network: string
+          period_id: string
+          posted_at: string | null
+          profile_name: string
+          raw: Json | null
+          reach: number | null
+        }
+        Insert: {
+          client_id: string
+          comments?: number | null
+          competitor_id?: string | null
+          created_at?: string
+          engagement_rate?: number | null
+          id?: string
+          image_link?: string | null
+          interaction_per_impression?: number | null
+          interactions?: number | null
+          likes?: number | null
+          link?: string | null
+          message?: string | null
+          message_external_id?: string | null
+          network: string
+          period_id: string
+          posted_at?: string | null
+          profile_name: string
+          raw?: Json | null
+          reach?: number | null
+        }
+        Update: {
+          client_id?: string
+          comments?: number | null
+          competitor_id?: string | null
+          created_at?: string
+          engagement_rate?: number | null
+          id?: string
+          image_link?: string | null
+          interaction_per_impression?: number | null
+          interactions?: number | null
+          likes?: number | null
+          link?: string | null
+          message?: string | null
+          message_external_id?: string | null
+          network?: string
+          period_id?: string
+          posted_at?: string | null
+          profile_name?: string
+          raw?: Json | null
+          reach?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_portal_benchmark_posts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_portal_benchmark_posts_competitor_id_fkey"
+            columns: ["competitor_id"]
+            isOneToOne: false
+            referencedRelation: "client_portal_benchmark_competitors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_portal_benchmark_posts_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "client_portal_benchmark_periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_portal_benchmark_uploads: {
+        Row: {
+          client_id: string
+          created_at: string
+          file_name: string
+          id: string
+          period_id: string
+          row_count: number
+          upload_type: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          file_name: string
+          id?: string
+          period_id: string
+          row_count?: number
+          upload_type: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          file_name?: string
+          id?: string
+          period_id?: string
+          row_count?: number
+          upload_type?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_portal_benchmark_uploads_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_portal_benchmark_uploads_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "client_portal_benchmark_periods"
             referencedColumns: ["id"]
           },
         ]
