@@ -166,7 +166,7 @@ export default function BenchmarkAdmin({ clientId, clientName }: { clientId: str
           engagement_rate: r.engagementRate,
           reach: r.reach,
           video_views: r.videoViews,
-          raw: r.raw,
+          raw: r.raw as any,
         }));
       if (toInsert.length === 0) {
         toast.error("No hay filas mapeadas para guardar");
