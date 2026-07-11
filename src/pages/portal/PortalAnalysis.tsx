@@ -81,6 +81,11 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
   const [entries, setEntries] = useState<Entry[]>([]);
   const [loading, setLoading] = useState(true);
   const [trendPeriods, setTrendPeriods] = useState<{ label: string; total: number; delta: number | null }[]>([]);
+  // Buscador de menciones
+  const [searchQ, setSearchQ] = useState("");
+  const [searchPlatform, setSearchPlatform] = useState<string>("todas");
+  const [searchSent, setSearchSent] = useState<string>("todos");
+  const [searchLimit, setSearchLimit] = useState<number>(50);
 
   useEffect(() => {
     (async () => {
