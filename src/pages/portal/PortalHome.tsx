@@ -924,6 +924,11 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
                   )}
                 </TabsContent>
 
+                {/* Benchmark */}
+                <TabsContent value="benchmark" className="mt-5 space-y-4">
+                  <PortalBenchmark clientId={portal.clientId} clientName={portal.displayName} />
+                </TabsContent>
+
                 {/* Histórico */}
                 <TabsContent value="historico" className="mt-5 space-y-4">
                   <div>
