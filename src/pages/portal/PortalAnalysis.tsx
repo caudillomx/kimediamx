@@ -425,6 +425,110 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
     };
   }, [entries]);
 
+  // ---------- Índice de menciones para buscador ----------
+  type MentionRow = {
+    kind: "media" | "social";
+    date: string;
+    who: string;         // outlet o profile
+    handle: string | null;
+    platform: string;    // canonical (medios digitales / x / facebook / ...)
+    type: string;        // media type (portal/radio/tv/prensa/...) o platform
+    topic: string;
+    headline: string | null;
+    quote: string | null;
+    url: string;
+    sentiment: string;
+    haystack: string;
+  };
+  const mentionIndex = useMemo<MentionRow[]>(() => {
+    const rows: MentionRow[] = [];
+    for (const e of entries) {
+      for (const m of (e.media_mentions ?? [])) {
+        const outlet = String(m?.outlet ?? "").trim();
+        if (!outlet) continue;
+        const row: MentionRow = {
+          kind: "media",
+          date: e.entry_date,
+          who: outlet,
+          handle: null,
+          platform: "medios digitales",
+          type: String(m?.type ?? "portal"),
+          topic: String(m?.topic ?? ""),
+          headline: m?.headline ?? null,
+          quote: m?.quote ?? null,
+          url: String(m?.url ?? ""),
+          sentiment: String(m?.sentiment ?? "neutral"),
+          haystack: "",
+        };
+        row.haystack = [row.who, row.topic, row.headline, row.quote, row.type, row.url]
+          .filter(Boolean).join(" ").toLowerCase();
+        rows.push(row);
+      }
+      for (const p of (e.social_mentions ?? [])) {
+        const profile = String(p?.profile ?? "").trim();
+        const handle = p?.handle ? String(p.handle).trim() : null;
+        if (!profile && !handle) continue;
+        const platform = canonicalChannel(String(p?.platform ?? ""));
+        const row: MentionRow = {
+          kind: "social",
+          date: e.entry_date,
+          who: profile || handle || "",
+          handle,
+          platform,
+          type: platform,
+          topic: String(p?.topic ?? ""),
+          headline: null,
+          quote: p?.quote ?? null,
+          url: String(p?.url ?? ""),
+          sentiment: String(p?.sentiment ?? "neutral"),
+          haystack: "",
+        };
+        row.haystack = [row.who, row.handle, row.topic, row.quote, row.platform, row.url]
+          .filter(Boolean).join(" ").toLowerCase();
+        rows.push(row);
+      }
+    }
+    return rows.sort((a, b) => (a.date < b.date ? 1 : -1));
+  }, [entries]);
+
+  const searchResults = useMemo(() => {
+    const q = searchQ.trim().toLowerCase();
+    const terms = q ? q.split(/\s+/).filter(Boolean) : [];
+    return mentionIndex.filter(r => {
+      if (searchPlatform !== "todas" && r.platform !== searchPlatform) return false;
+      if (searchSent !== "todos") {
+        if (searchSent === "negativo") { if (r.sentiment !== "negativo" && r.sentiment !== "crisis") return false; }
+        else if (r.sentiment !== searchSent) return false;
+      }
+      if (terms.length && !terms.every(t => r.haystack.includes(t))) return false;
+      return true;
+    });
+  }, [mentionIndex, searchQ, searchPlatform, searchSent]);
+
+  const searchStats = useMemo(() => {
+    const total = searchResults.length;
+    const media = searchResults.filter(r => r.kind === "media").length;
+    const social = total - media;
+    return { total, media, social };
+  }, [searchResults]);
+
+  const exportSearchCsv = () => {
+    const header = ["fecha","tipo","quien","handle","plataforma","tema","titular","cita","url","sentimiento"];
+    const esc = (v: any) => {
+      const s = v == null ? "" : String(v);
+      return `"${s.replace(/"/g, '""')}"`;
+    };
+    const lines = [header.join(",")].concat(
+      searchResults.map(r => [r.date, r.kind, r.who, r.handle ?? "", r.platform, r.topic, r.headline ?? "", r.quote ?? "", r.url, r.sentiment].map(esc).join(","))
+    );
+    const blob = new Blob(["\uFEFF" + lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `menciones_${fromDate}_${toDate}.csv`;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  };
+
   // Hitos: selección estricta por pico de menciones + impacto del evento.
   // El número de hitos NO escala con la duración del período; se limita a los
   // días verdaderamente destacados. Si el análisis IA no trajo eventos para un
