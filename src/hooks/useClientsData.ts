@@ -35,7 +35,18 @@ export function useClientsData() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { refetch(); }, [refetch]);
+  useEffect(() => {
+    refetch();
+
+    const channel = supabase
+      .channel("clients_realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "clients" }, () => {
+        refetch();
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [refetch]);
 
   const createClient = useCallback(async (payload: Partial<Client> & { name: string }) => {
     const { data, error } = await supabase

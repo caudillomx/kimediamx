@@ -96,7 +96,7 @@ export function useOperationsData() {
     fetchAll();
 
     const channel = supabase
-      .channel("action_items_realtime")
+      .channel("operations_realtime")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "action_items" }, () => {
         // Only full-refetch on inserts (e.g. new minute parsed)
         fetchAll();
@@ -110,6 +110,16 @@ export function useOperationsData() {
         }
         // Apply single-item update from another source
         setActionItems(prev => prev.map(item => item.id === updated.id ? updated : item));
+      })
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "action_items" }, (payload) => {
+        const deleted = payload.old as Pick<ActionItem, "id">;
+        setActionItems(prev => prev.filter(item => item.id !== deleted.id));
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "team_members" }, () => {
+        fetchAll();
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "minutes" }, () => {
+        fetchAll();
       })
       .subscribe();
 

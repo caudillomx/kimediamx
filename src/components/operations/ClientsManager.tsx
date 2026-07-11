@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,15 +28,26 @@ export default function ClientsManager() {
   const [mergeTo, setMergeTo] = useState<string>("");
   const [search, setSearch] = useState("");
 
-  const fetchClients = async () => {
+  const fetchClients = useCallback(async () => {
     setLoading(true);
     const { data, error } = await supabase.from("clients").select("*").order("name");
     if (error) toast.error(error.message);
     else setClients((data || []) as Client[]);
     setLoading(false);
-  };
+  }, []);
 
-  useEffect(() => { fetchClients(); }, []);
+  useEffect(() => {
+    fetchClients();
+
+    const channel = supabase
+      .channel("clients_manager_realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "clients" }, () => {
+        fetchClients();
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [fetchClients]);
 
   const handleSave = async () => {
     if (!editing || !editing.name.trim()) return toast.error("El nombre es requerido");
