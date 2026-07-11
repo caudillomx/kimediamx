@@ -6,179 +6,325 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Plus, Trash2, Upload, Save, X, CheckCircle2, AlertCircle } from "lucide-react";
-import { parseFanpageKarma, matchCompetitor, type ParsedRow } from "@/lib/fanpageKarmaParser";
+import { Trash2, Upload, Save, X, FileSpreadsheet, Users, TrendingUp, Newspaper } from "lucide-react";
+import {
+  parseComparativa, parseSeguidores, parsePosts, detectType,
+  type ComparativaRow, type FollowerDailyRow, type PostRow, type PeriodInfo,
+} from "@/lib/fanpageKarmaParser";
 
 type Competitor = {
   id: string;
   client_id: string;
   name: string;
+  network: string;
   handle: string | null;
-  platform: string;
+  profile_external_id: string | null;
   brand_color: string;
+  image_url: string | null;
+  external_url: string | null;
   active: boolean;
+  is_client: boolean;
+  is_default: boolean;
   sort_order: number;
 };
 
-type Week = {
+type Period = {
   id: string;
-  week_start: string;
-  week_end: string;
-  uploaded_file_name: string | null;
+  period_type: string;
+  period_label: string;
+  period_start: string;
+  period_end: string;
   notes: string | null;
   created_at: string;
 };
 
-type MatchedRow = ParsedRow & {
-  competitorId: string | null;
-  isSelf: boolean;
-  needsMapping: boolean;
+type UploadRow = {
+  id: string;
+  period_id: string;
+  upload_type: "comparativa" | "seguidores" | "posts";
+  file_name: string;
+  row_count: number;
+  created_at: string;
 };
 
-const PLATFORMS = ["multi", "facebook", "x", "instagram", "youtube", "tiktok", "linkedin"];
+type FileType = "comparativa" | "seguidores" | "posts";
 
-// Devuelve el lunes de la semana ISO para una fecha dada (YYYY-MM-DD)
-function isoWeekStart(dateStr: string): string {
-  const d = new Date(dateStr + "T00:00:00");
-  const day = d.getDay(); // 0=dom
-  const diff = day === 0 ? -6 : 1 - day;
-  d.setDate(d.getDate() + diff);
-  return d.toISOString().slice(0, 10);
-}
-function isoWeekEnd(weekStart: string): string {
-  const d = new Date(weekStart + "T00:00:00");
-  d.setDate(d.getDate() + 6);
-  return d.toISOString().slice(0, 10);
-}
+const NETWORKS = ["facebook", "instagram", "tiktok", "youtube", "x", "linkedin", "multi", "unknown"];
+const PALETTE = ["#ef4444","#f59e0b","#10b981","#8b5cf6","#ec4899","#06b6d4","#eab308","#f97316","#14b8a6","#a855f7","#f43f5e","#6366f1"];
+
+const TYPE_META: Record<FileType, { label: string; icon: React.ComponentType<{ className?: string }>; desc: string }> = {
+  comparativa: { label: "Comparativa (Resumen de métricas)", icon: FileSpreadsheet, desc: "Snapshot agregado del periodo por perfil+red" },
+  seguidores: { label: "Seguidores (Crecimiento diario)", icon: TrendingUp, desc: "Delta diario de seguidores por perfil+red" },
+  posts: { label: "Posts (Top publicaciones)", icon: Newspaper, desc: "Publicaciones individuales del periodo" },
+};
 
 export default function BenchmarkAdmin({ clientId, clientName }: { clientId: string; clientName: string }) {
   const [competitors, setCompetitors] = useState<Competitor[]>([]);
-  const [weeks, setWeeks] = useState<Week[]>([]);
+  const [periods, setPeriods] = useState<Period[]>([]);
+  const [uploads, setUploads] = useState<UploadRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [newComp, setNewComp] = useState({ name: "", handle: "", platform: "multi", brand_color: "#94a3b8" });
 
-  // Uploader
+  // Uploader state
   const [file, setFile] = useState<File | null>(null);
-  const today = new Date().toISOString().slice(0, 10);
-  const [weekStart, setWeekStart] = useState<string>(isoWeekStart(today));
-  const [notes, setNotes] = useState("");
-  const [parsedRows, setParsedRows] = useState<MatchedRow[] | null>(null);
+  const [detectedType, setDetectedType] = useState<FileType | null>(null);
+  const [parsedPreview, setParsedPreview] = useState<null | {
+    type: FileType;
+    period: PeriodInfo;
+    label: string;
+    comparativa?: ComparativaRow[];
+    seguidores?: FollowerDailyRow[];
+    posts?: PostRow[];
+    profileKeys: Array<{ profile: string; network: string; externalId: string | null; externalUrl: string | null; imageUrl: string | null; isNew: boolean }>;
+  }>(null);
   const [saving, setSaving] = useState(false);
 
   async function loadAll() {
     setLoading(true);
-    const [c, w] = await Promise.all([
-      supabase.from("client_portal_benchmark_competitors").select("*").eq("client_id", clientId).order("sort_order"),
-      supabase.from("client_portal_benchmark_weeks").select("*").eq("client_id", clientId).order("week_start", { ascending: false }),
+    const [c, p, u] = await Promise.all([
+      supabase.from("client_portal_benchmark_competitors").select("*").eq("client_id", clientId).order("sort_order").order("name"),
+      supabase.from("client_portal_benchmark_periods").select("*").eq("client_id", clientId).order("period_start", { ascending: false }),
+      supabase.from("client_portal_benchmark_uploads").select("*").eq("client_id", clientId).order("created_at", { ascending: false }),
     ]);
     setCompetitors((c.data ?? []) as Competitor[]);
-    setWeeks((w.data ?? []) as Week[]);
+    setPeriods((p.data ?? []) as Period[]);
+    setUploads((u.data ?? []) as UploadRow[]);
     setLoading(false);
   }
 
   useEffect(() => { loadAll(); }, [clientId]);
 
-  // ---------- Competidores ----------
-  async function addCompetitor() {
-    if (!newComp.name.trim()) return;
-    const { error } = await supabase.from("client_portal_benchmark_competitors").insert({
-      client_id: clientId,
-      name: newComp.name.trim(),
-      handle: newComp.handle.trim() || null,
-      platform: newComp.platform,
-      brand_color: newComp.brand_color,
-      sort_order: competitors.length + 1,
-    });
-    if (error) { toast.error(error.message); return; }
-    setNewComp({ name: "", handle: "", platform: "multi", brand_color: "#94a3b8" });
-    loadAll();
-  }
   async function updateCompetitor(id: string, patch: Partial<Competitor>) {
     const { error } = await supabase.from("client_portal_benchmark_competitors").update(patch).eq("id", id);
     if (error) { toast.error(error.message); return; }
-    setCompetitors(cs => cs.map(c => c.id === id ? { ...c, ...patch } as Competitor : c));
+    setCompetitors((cs) => cs.map((c) => (c.id === id ? { ...c, ...patch } as Competitor : c)));
   }
   async function deleteCompetitor(id: string) {
-    if (!confirm("¿Eliminar este competidor y todas sus métricas?")) return;
+    if (!confirm("Eliminar este perfil y todas sus métricas asociadas?")) return;
     const { error } = await supabase.from("client_portal_benchmark_competitors").delete().eq("id", id);
     if (error) { toast.error(error.message); return; }
     loadAll();
   }
 
-  // ---------- Uploader ----------
-  async function handleParse() {
-    if (!file) { toast.error("Selecciona un archivo XLSX o CSV"); return; }
+  // ---------- Parsing ----------
+  async function handleFileChosen(f: File | null) {
+    setFile(f);
+    setParsedPreview(null);
+    setDetectedType(null);
+    if (!f) return;
     try {
-      const rows = await parseFanpageKarma(file);
-      if (rows.length === 0) { toast.error("No se detectaron filas con marca/página en el archivo"); return; }
-      const matched: MatchedRow[] = rows.map(r => {
-        const m = matchCompetitor(r, competitors, clientName);
-        return {
-          ...r,
-          competitorId: m.competitor?.id ?? null,
-          isSelf: m.isSelf,
-          needsMapping: !m.isSelf && !m.competitor,
-        };
-      });
-      setParsedRows(matched);
-      toast.success(`${rows.length} filas detectadas — revisa el mapeo antes de guardar`);
+      const t = await detectType(f);
+      if (!t) {
+        toast.error("No se pudo detectar el tipo de archivo. ¿Estás seguro que es un export de FanpageKarma?");
+        return;
+      }
+      setDetectedType(t);
     } catch (e: any) {
       toast.error(`Error al leer el archivo: ${e.message}`);
     }
   }
 
+  async function handleParse() {
+    if (!file || !detectedType) return;
+    try {
+      let profileKeys: Map<string, { profile: string; network: string; externalId: string | null; externalUrl: string | null; imageUrl: string | null }> = new Map();
+      const addKey = (profile: string, network: string, externalId: string | null, externalUrl: string | null, imageUrl: string | null) => {
+        const k = `${profile.toLowerCase()}|${network.toLowerCase()}`;
+        if (!profileKeys.has(k)) profileKeys.set(k, { profile, network, externalId, externalUrl, imageUrl });
+      };
+      let preview: any = { type: detectedType };
+      if (detectedType === "comparativa") {
+        const p = await parseComparativa(file);
+        preview = { ...preview, period: p.period, comparativa: p.rows };
+        p.rows.forEach((r) => addKey(r.profile, r.network, r.profileExternalId, r.externalUrl, r.imageUrl));
+      } else if (detectedType === "seguidores") {
+        const p = await parseSeguidores(file);
+        preview = { ...preview, period: p.period, seguidores: p.rows };
+        p.rows.forEach((r) => addKey(r.profile, r.network, r.profileExternalId, r.externalUrl, r.imageUrl));
+      } else {
+        const p = await parsePosts(file);
+        preview = { ...preview, period: p.period, posts: p.rows };
+        p.rows.forEach((r) => addKey(r.profile, r.network, r.profileExternalId, null, null));
+      }
+      const existingKeys = new Set(competitors.map((c) => `${c.name.toLowerCase()}|${c.network.toLowerCase()}`));
+      preview.profileKeys = Array.from(profileKeys.values()).map((k) => ({
+        ...k,
+        isNew: !existingKeys.has(`${k.profile.toLowerCase()}|${k.network.toLowerCase()}`),
+      }));
+      preview.label = defaultLabelForPeriod(preview.period);
+      setParsedPreview(preview);
+      toast.success(`Archivo procesado: ${preview.profileKeys.length} perfiles detectados`);
+    } catch (e: any) {
+      toast.error(`Error al procesar: ${e.message}`);
+    }
+  }
+
+  function defaultLabelForPeriod(p: PeriodInfo): string {
+    // "1 ene 2026 – 31 ene 2026" -> "Enero 2026"
+    const d = new Date(p.start + "T00:00:00");
+    const monthNames = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+    return `${monthNames[d.getMonth()]} ${d.getFullYear()}`;
+  }
+
+  // ---------- Save ----------
   async function handleSave() {
-    if (!parsedRows) return;
+    if (!parsedPreview || !file) return;
     setSaving(true);
     try {
-      const wEnd = isoWeekEnd(weekStart);
-      // upsert de semana
-      const { data: weekRow, error: weekErr } = await supabase
-        .from("client_portal_benchmark_weeks")
-        .upsert({
-          client_id: clientId,
-          week_start: weekStart,
-          week_end: wEnd,
-          uploaded_file_name: file?.name ?? null,
-          notes: notes || null,
-        }, { onConflict: "client_id,week_start" })
+      // 1) upsert period
+      const { data: periodRow, error: pErr } = await supabase
+        .from("client_portal_benchmark_periods")
+        .upsert(
+          {
+            client_id: clientId,
+            period_type: "monthly",
+            period_label: parsedPreview.label,
+            period_start: parsedPreview.period.start,
+            period_end: parsedPreview.period.end,
+          },
+          { onConflict: "client_id,period_start,period_end" }
+        )
         .select()
         .single();
-      if (weekErr) throw weekErr;
+      if (pErr) throw pErr;
 
-      // borra métricas previas de esa semana antes de re-insertar
-      await supabase.from("client_portal_benchmark_metrics").delete().eq("week_id", weekRow.id);
-
-      const toInsert = parsedRows
-        .filter(r => r.isSelf || r.competitorId)
-        .map(r => ({
-          week_id: weekRow.id,
+      // 2) auto-register competitors
+      const toCreate = parsedPreview.profileKeys.filter((k) => k.isNew);
+      let nextColor = competitors.length;
+      if (toCreate.length > 0) {
+        const rows = toCreate.map((k, i) => ({
           client_id: clientId,
-          competitor_id: r.isSelf ? null : r.competitorId,
-          is_self: r.isSelf,
-          brand_name: r.brandName,
-          platform: r.platform,
-          fans: r.fans,
-          fan_change: r.fanChange,
-          followers: r.followers,
-          posts: r.posts,
+          name: k.profile,
+          network: k.network,
+          handle: null as string | null,
+          profile_external_id: k.externalId,
+          external_url: k.externalUrl,
+          image_url: k.imageUrl,
+          brand_color: PALETTE[(nextColor + i) % PALETTE.length],
+          platform: k.network,
+          is_default: false,
+          active: true,
+          is_client: k.profile.toLowerCase().includes(clientName.toLowerCase()),
+          sort_order: competitors.length + i + 1,
+        }));
+        const { error: cErr } = await supabase.from("client_portal_benchmark_competitors").insert(rows);
+        if (cErr) throw cErr;
+      }
+
+      // reload competitors to get IDs
+      const { data: refreshed } = await supabase
+        .from("client_portal_benchmark_competitors")
+        .select("*")
+        .eq("client_id", clientId);
+      const compMap = new Map(
+        (refreshed ?? []).map((c: any) => [`${c.name.toLowerCase()}|${c.network.toLowerCase()}`, c.id as string])
+      );
+
+      const findCompId = (profile: string, network: string) =>
+        compMap.get(`${profile.toLowerCase()}|${network.toLowerCase()}`) ?? null;
+
+      // 3) upsert upload registry (delete previous of same type)
+      await supabase.from("client_portal_benchmark_uploads")
+        .delete()
+        .eq("period_id", periodRow.id)
+        .eq("upload_type", parsedPreview.type);
+
+      const rowCount =
+        parsedPreview.type === "comparativa" ? parsedPreview.comparativa!.length :
+        parsedPreview.type === "seguidores" ? parsedPreview.seguidores!.length :
+        parsedPreview.posts!.length;
+
+      const { data: userRes } = await supabase.auth.getUser();
+      await supabase.from("client_portal_benchmark_uploads").insert({
+        client_id: clientId,
+        period_id: periodRow.id,
+        upload_type: parsedPreview.type,
+        file_name: file.name,
+        row_count: rowCount,
+        uploaded_by: userRes.user?.id ?? null,
+      });
+
+      // 4) Replace data for this period + type
+      if (parsedPreview.type === "comparativa") {
+        await supabase.from("client_portal_benchmark_metrics").delete().eq("period_id", periodRow.id);
+        const rows = parsedPreview.comparativa!
+          .map((r) => {
+            const cid = findCompId(r.profile, r.network);
+            if (!cid) return null;
+            return {
+              client_id: clientId,
+              period_id: periodRow.id,
+              competitor_id: cid,
+              network: r.network,
+              performance_index: r.performanceIndex,
+              followers: r.followers,
+              follower_growth_rate: r.followerGrowthRate,
+              engagement_rate: r.engagementRate,
+              posts_per_day: r.postsPerDay,
+              reach_per_day: r.reachPerDay,
+              interaction_per_impression: r.interactionPerImpression,
+              raw: r.raw as any,
+            };
+          })
+          .filter(Boolean) as any[];
+        if (rows.length) {
+          const { error } = await supabase.from("client_portal_benchmark_metrics").insert(rows);
+          if (error) throw error;
+        }
+      } else if (parsedPreview.type === "seguidores") {
+        await supabase.from("client_portal_benchmark_follower_daily").delete().eq("period_id", periodRow.id);
+        const rows: any[] = [];
+        for (const r of parsedPreview.seguidores!) {
+          const cid = findCompId(r.profile, r.network);
+          if (!cid) continue;
+          for (const d of r.days) {
+            rows.push({
+              client_id: clientId,
+              period_id: periodRow.id,
+              competitor_id: cid,
+              network: r.network,
+              day: d.date,
+              delta: d.delta,
+            });
+          }
+        }
+        // Chunk inserts to avoid payload limits
+        const CHUNK = 500;
+        for (let i = 0; i < rows.length; i += CHUNK) {
+          const { error } = await supabase.from("client_portal_benchmark_follower_daily").insert(rows.slice(i, i + CHUNK));
+          if (error) throw error;
+        }
+      } else {
+        await supabase.from("client_portal_benchmark_posts").delete().eq("period_id", periodRow.id);
+        const rows = parsedPreview.posts!.map((r) => ({
+          client_id: clientId,
+          period_id: periodRow.id,
+          competitor_id: findCompId(r.profile, r.network),
+          network: r.network,
+          profile_name: r.profile,
+          message_external_id: r.messageExternalId,
+          posted_at: r.postedAt,
+          message: r.message,
+          likes: r.likes,
+          comments: r.comments,
           interactions: r.interactions,
           engagement_rate: r.engagementRate,
           reach: r.reach,
-          video_views: r.videoViews,
+          interaction_per_impression: r.interactionPerImpression,
+          link: r.link,
+          image_link: r.imageLink,
           raw: r.raw as any,
         }));
-      if (toInsert.length === 0) {
-        toast.error("No hay filas mapeadas para guardar");
-        setSaving(false);
-        return;
+        const CHUNK = 500;
+        for (let i = 0; i < rows.length; i += CHUNK) {
+          const { error } = await supabase.from("client_portal_benchmark_posts").insert(rows.slice(i, i + CHUNK));
+          if (error) throw error;
+        }
       }
-      const { error: mErr } = await supabase.from("client_portal_benchmark_metrics").insert(toInsert);
-      if (mErr) throw mErr;
-      toast.success(`Guardadas ${toInsert.length} filas para la semana del ${weekStart}`);
-      setParsedRows(null);
+
+      toast.success(`Guardado: ${parsedPreview.label} — ${rowCount} filas (${parsedPreview.type})`);
       setFile(null);
-      setNotes("");
+      setParsedPreview(null);
+      setDetectedType(null);
       loadAll();
     } catch (e: any) {
       toast.error(`Error al guardar: ${e.message}`);
@@ -187,230 +333,221 @@ export default function BenchmarkAdmin({ clientId, clientName }: { clientId: str
     }
   }
 
-  async function deleteWeek(id: string) {
-    if (!confirm("¿Eliminar esta semana y todas sus métricas?")) return;
-    const { error } = await supabase.from("client_portal_benchmark_weeks").delete().eq("id", id);
+  async function deletePeriod(id: string) {
+    if (!confirm("Eliminar este periodo y TODAS sus métricas, posts y follower daily?")) return;
+    const { error } = await supabase.from("client_portal_benchmark_periods").delete().eq("id", id);
     if (error) { toast.error(error.message); return; }
     loadAll();
   }
 
-  const mappingSummary = useMemo(() => {
-    if (!parsedRows) return null;
-    const self = parsedRows.filter(r => r.isSelf).length;
-    const mapped = parsedRows.filter(r => !r.isSelf && r.competitorId).length;
-    const unmapped = parsedRows.filter(r => r.needsMapping).length;
-    return { self, mapped, unmapped, total: parsedRows.length };
-  }, [parsedRows]);
+  const uploadsByPeriod = useMemo(() => {
+    const m = new Map<string, UploadRow[]>();
+    for (const u of uploads) {
+      if (!m.has(u.period_id)) m.set(u.period_id, []);
+      m.get(u.period_id)!.push(u);
+    }
+    return m;
+  }, [uploads]);
 
   return (
     <div className="space-y-6">
-      {/* Competidores */}
-      <Card className="p-5">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="font-display font-bold text-lg">Competidores</h3>
-            <p className="text-xs text-muted-foreground">Marcas contra las que se compara {clientName} en cada semana cargada.</p>
-          </div>
-        </div>
-
-        <div className="grid gap-2">
-          {competitors.map(c => (
-            <div key={c.id} className="grid grid-cols-[auto_1fr_1fr_140px_120px_auto_auto] gap-2 items-center border border-border/40 rounded-lg p-2">
-              <input
-                type="color"
-                value={c.brand_color}
-                onChange={(e) => updateCompetitor(c.id, { brand_color: e.target.value })}
-                className="w-8 h-8 rounded border border-border/40 cursor-pointer"
-              />
-              <Input value={c.name} onChange={(e) => updateCompetitor(c.id, { name: e.target.value })} placeholder="Nombre" />
-              <Input value={c.handle ?? ""} onChange={(e) => updateCompetitor(c.id, { handle: e.target.value })} placeholder="@handle" />
-              <Select value={c.platform} onValueChange={(v) => updateCompetitor(c.id, { platform: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{PLATFORMS.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
-              </Select>
-              <label className="flex items-center gap-2 text-xs">
-                <input type="checkbox" checked={c.active} onChange={(e) => updateCompetitor(c.id, { active: e.target.checked })} />
-                Activo
-              </label>
-              <Input
-                type="number"
-                value={c.sort_order}
-                onChange={(e) => updateCompetitor(c.id, { sort_order: parseInt(e.target.value) || 0 })}
-                className="w-16"
-              />
-              <Button variant="ghost" size="sm" onClick={() => deleteCompetitor(c.id)}>
-                <Trash2 className="w-4 h-4 text-destructive" />
-              </Button>
-            </div>
-          ))}
-          {competitors.length === 0 && !loading && (
-            <p className="text-sm text-muted-foreground italic py-4">Sin competidores. Agrega el primero abajo.</p>
-          )}
-        </div>
-
-        {/* Nuevo competidor */}
-        <div className="mt-4 grid grid-cols-[auto_1fr_1fr_140px_auto] gap-2 items-end border-t border-border/40 pt-4">
-          <input
-            type="color"
-            value={newComp.brand_color}
-            onChange={(e) => setNewComp({ ...newComp, brand_color: e.target.value })}
-            className="w-8 h-8 rounded border border-border/40 cursor-pointer"
-          />
-          <div>
-            <Label className="text-xs">Nombre</Label>
-            <Input value={newComp.name} onChange={(e) => setNewComp({ ...newComp, name: e.target.value })} placeholder="Ej: GBM" />
-          </div>
-          <div>
-            <Label className="text-xs">Handle</Label>
-            <Input value={newComp.handle} onChange={(e) => setNewComp({ ...newComp, handle: e.target.value })} placeholder="@GBMmx" />
-          </div>
-          <div>
-            <Label className="text-xs">Plataforma</Label>
-            <Select value={newComp.platform} onValueChange={(v) => setNewComp({ ...newComp, platform: v })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>{PLATFORMS.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
-            </Select>
-          </div>
-          <Button onClick={addCompetitor}><Plus className="w-4 h-4 mr-1" />Agregar</Button>
-        </div>
-      </Card>
-
       {/* Uploader */}
       <Card className="p-5">
-        <h3 className="font-display font-bold text-lg mb-1">Cargar semana desde FanpageKarma</h3>
-        <p className="text-xs text-muted-foreground mb-4">Sube el export XLSX/CSV. El sistema detecta columnas y mapea contra el catálogo de competidores.</p>
-
-        <div className="grid gap-3 md:grid-cols-[1fr_180px]">
+        <div className="flex items-start gap-3 mb-4">
+          <Upload className="w-5 h-5 text-primary mt-1" />
           <div>
-            <Label className="text-xs">Archivo (XLSX o CSV)</Label>
-            <div className="border-2 border-dashed border-border/60 rounded-lg p-4 text-center">
-              <input
-                id="fpk-file"
-                type="file"
-                accept=".xlsx,.xls,.csv"
-                className="hidden"
-                onChange={(e) => { setFile(e.target.files?.[0] ?? null); setParsedRows(null); }}
-              />
-              <label htmlFor="fpk-file" className="cursor-pointer inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
-                <Upload className="w-4 h-4" />{file ? file.name : "Seleccionar archivo"}
-              </label>
-            </div>
-          </div>
-          <div>
-            <Label className="text-xs">Semana (lunes)</Label>
-            <Input type="date" value={weekStart} onChange={(e) => setWeekStart(isoWeekStart(e.target.value))} />
+            <h3 className="font-display font-bold text-lg">Cargar archivo FanpageKarma</h3>
+            <p className="text-xs text-muted-foreground">
+              Sube uno de los tres exports (Comparativa, Seguidores o Posts). El sistema detecta el tipo, el periodo y los perfiles automáticamente.
+            </p>
           </div>
         </div>
 
-        <div className="mt-3">
-          <Label className="text-xs">Notas (opcional)</Label>
-          <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Ej: incluye Facebook + Instagram, sin TikTok" />
+        <div className="grid gap-3 md:grid-cols-[1fr_auto]">
+          <div className="border-2 border-dashed border-border/60 rounded-lg p-4">
+            <input
+              id="fpk-file"
+              type="file"
+              accept=".xlsx,.xls"
+              className="hidden"
+              onChange={(e) => handleFileChosen(e.target.files?.[0] ?? null)}
+            />
+            <label htmlFor="fpk-file" className="cursor-pointer inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+              <Upload className="w-4 h-4" />{file ? file.name : "Seleccionar archivo XLSX"}
+            </label>
+            {detectedType && (
+              <p className="text-xs mt-2">
+                Tipo detectado: <span className="font-semibold text-primary">{TYPE_META[detectedType].label}</span>
+              </p>
+            )}
+          </div>
+          <div className="flex items-end gap-2">
+            <Button onClick={handleParse} disabled={!file || !detectedType} variant="outline">
+              <FileSpreadsheet className="w-4 h-4 mr-1" />Analizar
+            </Button>
+            {parsedPreview && (
+              <>
+                <Button onClick={handleSave} disabled={saving}>
+                  <Save className="w-4 h-4 mr-1" />{saving ? "Guardando…" : "Guardar"}
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setParsedPreview(null)}>
+                  <X className="w-4 h-4" />
+                </Button>
+              </>
+            )}
+          </div>
         </div>
 
-        <div className="mt-4 flex items-center gap-2">
-          <Button onClick={handleParse} disabled={!file} variant="outline">
-            <Upload className="w-4 h-4 mr-1" />Analizar archivo
-          </Button>
-          {parsedRows && (
-            <Button onClick={handleSave} disabled={saving}>
-              <Save className="w-4 h-4 mr-1" />{saving ? "Guardando…" : `Guardar ${(mappingSummary?.self ?? 0) + (mappingSummary?.mapped ?? 0)} filas`}
-            </Button>
-          )}
-          {parsedRows && (
-            <Button variant="ghost" size="sm" onClick={() => setParsedRows(null)}>
-              <X className="w-4 h-4 mr-1" />Cancelar
-            </Button>
-          )}
-        </div>
-
-        {parsedRows && mappingSummary && (
-          <div className="mt-4 space-y-3">
-            <div className="flex flex-wrap gap-2 text-xs">
-              <span className="px-2 py-1 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
-                <CheckCircle2 className="w-3 h-3 inline mr-1" />{mappingSummary.self} cliente
-              </span>
-              <span className="px-2 py-1 rounded bg-blue-500/10 text-blue-700 dark:text-blue-400">
-                {mappingSummary.mapped} competidores mapeados
-              </span>
-              {mappingSummary.unmapped > 0 && (
-                <span className="px-2 py-1 rounded bg-amber-500/10 text-amber-700 dark:text-amber-400">
-                  <AlertCircle className="w-3 h-3 inline mr-1" />{mappingSummary.unmapped} sin mapeo (no se guardarán)
-                </span>
-              )}
+        {parsedPreview && (
+          <div className="mt-5 space-y-3">
+            <div className="grid gap-3 md:grid-cols-3 text-xs">
+              <div className="rounded border border-border/40 p-3">
+                <div className="text-muted-foreground uppercase text-[10px] tracking-widest">Tipo</div>
+                <div className="font-semibold">{TYPE_META[parsedPreview.type].label}</div>
+              </div>
+              <div className="rounded border border-border/40 p-3">
+                <div className="text-muted-foreground uppercase text-[10px] tracking-widest">Periodo detectado</div>
+                <div className="font-semibold">{parsedPreview.period.start} → {parsedPreview.period.end}</div>
+              </div>
+              <div>
+                <Label className="text-[10px] uppercase tracking-widest text-muted-foreground">Etiqueta del periodo</Label>
+                <Input
+                  value={parsedPreview.label}
+                  onChange={(e) => setParsedPreview({ ...parsedPreview!, label: e.target.value })}
+                  className="h-8"
+                />
+              </div>
             </div>
 
-            <div className="max-h-[400px] overflow-auto border border-border/40 rounded-lg">
-              <table className="w-full text-xs">
-                <thead className="bg-background/60 sticky top-0">
-                  <tr>
-                    <th className="text-left p-2">Marca detectada</th>
-                    <th className="text-left p-2">Plataforma</th>
-                    <th className="text-right p-2">Fans</th>
-                    <th className="text-right p-2">Posts</th>
-                    <th className="text-right p-2">Interacc.</th>
-                    <th className="text-right p-2">Eng.%</th>
-                    <th className="text-left p-2">Mapeo</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {parsedRows.map((r, i) => (
-                    <tr key={i} className="border-t border-border/30">
-                      <td className="p-2 font-medium">{r.brandName}</td>
-                      <td className="p-2">{r.platform}</td>
-                      <td className="p-2 text-right tabular-nums">{r.fans?.toLocaleString() ?? "—"}</td>
-                      <td className="p-2 text-right tabular-nums">{r.posts ?? "—"}</td>
-                      <td className="p-2 text-right tabular-nums">{r.interactions?.toLocaleString() ?? "—"}</td>
-                      <td className="p-2 text-right tabular-nums">{r.engagementRate != null ? r.engagementRate.toFixed(2) : "—"}</td>
-                      <td className="p-2">
-                        {r.isSelf ? (
-                          <span className="text-emerald-600 dark:text-emerald-400">→ {clientName} (cliente)</span>
-                        ) : (
-                          <Select
-                            value={r.competitorId ?? "__none"}
-                            onValueChange={(v) => setParsedRows(rows => rows!.map((row, idx) => idx === i
-                              ? { ...row, competitorId: v === "__none" ? null : v, needsMapping: v === "__none" }
-                              : row))}
-                          >
-                            <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Sin mapear" /></SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="__none">— Sin mapear —</SelectItem>
-                              {competitors.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                            </SelectContent>
-                          </Select>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="rounded border border-border/40 p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <Users className="w-4 h-4 text-muted-foreground" />
+                <span className="text-xs font-semibold">Perfiles detectados ({parsedPreview.profileKeys.length})</span>
+                {parsedPreview.profileKeys.some((k) => k.isNew) && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-700 dark:text-amber-400">
+                    {parsedPreview.profileKeys.filter((k) => k.isNew).length} nuevos se registrarán automáticamente
+                  </span>
+                )}
+              </div>
+              <div className="max-h-48 overflow-auto text-xs grid grid-cols-2 md:grid-cols-3 gap-1">
+                {parsedPreview.profileKeys.map((k) => (
+                  <div key={`${k.profile}|${k.network}`} className={`px-2 py-1 rounded border ${k.isNew ? "border-amber-500/40 bg-amber-500/5" : "border-border/40"}`}>
+                    <span className="font-medium">{k.profile}</span>
+                    <span className="text-muted-foreground"> · {k.network}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}
       </Card>
 
-      {/* Historial de semanas */}
+      {/* Periods & uploads */}
       <Card className="p-5">
-        <h3 className="font-display font-bold text-lg mb-1">Semanas cargadas</h3>
-        <p className="text-xs text-muted-foreground mb-4">Historial de exports procesados.</p>
-
-        {weeks.length === 0 ? (
-          <p className="text-sm text-muted-foreground italic">Aún no hay semanas cargadas.</p>
+        <h3 className="font-display font-bold text-lg mb-1">Periodos cargados</h3>
+        <p className="text-xs text-muted-foreground mb-4">Historial por periodo con los archivos procesados.</p>
+        {periods.length === 0 ? (
+          <p className="text-sm text-muted-foreground italic">Aún no hay periodos. Sube el primer XLSX arriba.</p>
         ) : (
           <div className="grid gap-2">
-            {weeks.map(w => (
-              <div key={w.id} className="flex items-center justify-between border border-border/40 rounded-lg p-3">
-                <div>
-                  <div className="font-semibold text-sm">Semana del {w.week_start} al {w.week_end}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {w.uploaded_file_name ?? "sin archivo"} · cargada el {new Date(w.created_at).toLocaleDateString("es-MX")}
+            {periods.map((p) => {
+              const list = uploadsByPeriod.get(p.id) ?? [];
+              return (
+                <div key={p.id} className="border border-border/40 rounded-lg p-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-semibold text-sm">{p.period_label}</div>
+                      <div className="text-xs text-muted-foreground">{p.period_start} → {p.period_end}</div>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={() => deletePeriod(p.id)}>
+                      <Trash2 className="w-4 h-4 text-destructive" />
+                    </Button>
                   </div>
-                  {w.notes && <div className="text-xs text-muted-foreground mt-1 italic">{w.notes}</div>}
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {(["comparativa","seguidores","posts"] as FileType[]).map((t) => {
+                      const u = list.find((x) => x.upload_type === t);
+                      const Icon = TYPE_META[t].icon;
+                      return (
+                        <span
+                          key={t}
+                          className={`inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded ${u ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400" : "bg-muted text-muted-foreground"}`}
+                          title={u ? `${u.file_name} · ${u.row_count} filas` : `Sin archivo ${t}`}
+                        >
+                          <Icon className="w-3 h-3" />
+                          {t}{u ? ` (${u.row_count})` : ""}
+                        </span>
+                      );
+                    })}
+                  </div>
                 </div>
-                <Button variant="ghost" size="sm" onClick={() => deleteWeek(w.id)}>
-                  <Trash2 className="w-4 h-4 text-destructive" />
-                </Button>
-              </div>
-            ))}
+              );
+            })}
+          </div>
+        )}
+      </Card>
+
+      {/* Competitor catalog */}
+      <Card className="p-5">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h3 className="font-display font-bold text-lg">Catálogo de perfiles</h3>
+            <p className="text-xs text-muted-foreground">
+              Marca "Cliente" para identificar los perfiles propios de {clientName}. Se auto-registran al procesar cada XLSX.
+            </p>
+          </div>
+        </div>
+        {loading ? (
+          <p className="text-sm text-muted-foreground italic">Cargando…</p>
+        ) : competitors.length === 0 ? (
+          <p className="text-sm text-muted-foreground italic">Sin perfiles. Sube tu primer XLSX y se crearán automáticamente.</p>
+        ) : (
+          <div className="max-h-[420px] overflow-auto">
+            <table className="w-full text-xs">
+              <thead className="sticky top-0 bg-background">
+                <tr className="text-left">
+                  <th className="p-2">Color</th>
+                  <th className="p-2">Perfil</th>
+                  <th className="p-2">Red</th>
+                  <th className="p-2 text-center">Cliente</th>
+                  <th className="p-2 text-center">Activo</th>
+                  <th className="p-2"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {competitors.map((c) => (
+                  <tr key={c.id} className="border-t border-border/30">
+                    <td className="p-2">
+                      <input
+                        type="color"
+                        value={c.brand_color}
+                        onChange={(e) => updateCompetitor(c.id, { brand_color: e.target.value })}
+                        className="w-6 h-6 rounded border border-border/40 cursor-pointer"
+                      />
+                    </td>
+                    <td className="p-2">
+                      <Input value={c.name} onChange={(e) => updateCompetitor(c.id, { name: e.target.value })} className="h-7 text-xs" />
+                    </td>
+                    <td className="p-2">
+                      <Select value={c.network} onValueChange={(v) => updateCompetitor(c.id, { network: v })}>
+                        <SelectTrigger className="h-7 text-xs w-[130px]"><SelectValue /></SelectTrigger>
+                        <SelectContent>{NETWORKS.map((n) => <SelectItem key={n} value={n}>{n}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </td>
+                    <td className="p-2 text-center">
+                      <input type="checkbox" checked={c.is_client} onChange={(e) => updateCompetitor(c.id, { is_client: e.target.checked })} />
+                    </td>
+                    <td className="p-2 text-center">
+                      <input type="checkbox" checked={c.active} onChange={(e) => updateCompetitor(c.id, { active: e.target.checked })} />
+                    </td>
+                    <td className="p-2 text-right">
+                      <Button variant="ghost" size="sm" onClick={() => deleteCompetitor(c.id)}>
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </Card>
