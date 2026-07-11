@@ -1,92 +1,79 @@
-# Rediseño del Portal Cliente
+# Fase 3 — Benchmark de performance (FanpageKarma)
 
-Los 10 puntos se agrupan en 4 frentes: **arquitectura de información**, **inteligencia de datos**, **branding/UX**, y **nuevas capacidades (benchmark)**. Propongo hacerlo en 3 fases para no romper nada y validar contigo la dirección antes de la fase pesada.
+Módulo comparativo dentro del portal del cliente para responder: *"¿cómo va Actinver vs sus competidores en redes, semana a semana?"*.
 
----
+## Alcance funcional
 
-## Fase 1 — Reestructura de IA + jerarquía semanal (puntos 1, 2, 3, 4, 5, 6, 9)
+1. **Universo de competidores editable por cliente** — lista base (ej. GBM, Kuspit, Bursanet, Vector, CI Banco), con marcar/desmarcar por semana desde el admin.
+2. **Carga de datos vía XLSX/CSV desde admin** — parser del export de FanpageKarma. Se sube un archivo por semana; el sistema deduplica por (cliente, semana, competidor).
+3. **Cuatro vistas en la pestaña Análisis → sub-tab "Benchmark":**
+   - **Ranking por métrica** (barras horizontales): fans, engagement rate, posts, interacciones. Cliente resaltado.
+   - **Evolución semanal** (líneas): N semanas de tendencia por marca en la métrica seleccionada.
+   - **Share of voice / engagement** (donut): % del total del sector.
+   - **Tabla detallada exportable** (CSV): todas las métricas por competidor y semana.
 
-**Nueva estructura de navegación** (reemplaza las 4 pestañas actuales):
+## Diseño técnico
+
+### Base de datos (una sola migración)
 
 ```text
-┌────────────────────────────────────────────────────┐
-│ [Logo cliente]  Actinver              [PDF] [Salir]│
-├────────────────────────────────────────────────────┤
-│  Semana actual: 4 – 10 nov 2026    [< sem previa] │
-│  ─────────────────────────────────────────────────│
-│  [ Resumen ] [ Análisis ] [ Recomendaciones ] [ Histórico ]
-└────────────────────────────────────────────────────┘
+client_portal_benchmark_competitors      -- catálogo por cliente
+  client_id, name, handle, platform, brand_color, is_default, active
+
+client_portal_benchmark_weeks            -- una fila por semana cargada
+  client_id, week_start, week_end, uploaded_file_name
+
+client_portal_benchmark_metrics          -- datos crudos por marca y semana
+  week_id, competitor_id (nullable → NULL = el propio cliente),
+  fans, followers, posts, interactions,
+  engagement_rate, reach, video_views,
+  raw jsonb  -- todo lo demás del export intacto
 ```
 
-- **Semana actual como default** (no rango arbitrario). Selector de cohorte semanal en el header (semana previa, hace 2, hace 3…) y un botón "Comparar rango" para agrupar N semanas.
-- **Resumen** → Executive summary + alertas + KPIs clave de esa semana (una sola vista de aterrizaje).
-- **Análisis** → Todas las gráficas, tablas y datos derivados **de listening + benchmark** para la semana/cohorte elegida.
-- **Recomendaciones** → Solo las de la semana seleccionada (nunca lista larga).
-- **Histórico** → Timeline navegable de semanas anteriores + descarga de reportes PDF publicados. Aquí vive lo que hoy es "Reportes".
+RLS: solo `admin` puede insertar/editar; el portal (con `portal_token`) puede leer los datos del cliente al que pertenece la sesión.
 
-Se elimina la pestaña "Listening" como bloque de texto. Los reportes diarios se procesan (fase 2) y alimentan Análisis.
+### Edge function `benchmark-import`
 
-**Logo del cliente**: agregar `logo_url` en `CLIENT_PORTALS` (ya existe `clients.logo_url` en BD) y renderizarlo en el header.
+- Recibe XLSX/CSV + `client_id` + `week_start`.
+- Parsea con `xlsx` (npm). Detecta columnas de FanpageKarma (Fans, Fan Change, Post Interactions, Engagement Rate, Number of Posts, Reach…).
+- Mapea filas a competidores del catálogo (fuzzy por nombre/handle); las que no matchean se devuelven al admin para que las asigne o cree.
+- Inserta en `benchmark_weeks` + `benchmark_metrics` con `raw` completo por trazabilidad.
 
-**PDF**: nueva plantilla que renderiza el mismo contenido de la semana visible (Resumen + gráficas como imágenes + Recomendaciones), no bloques crudos. Se accede solo desde Histórico (un botón por semana) + botón contextual "Descargar esta semana". Se elimina el botón global superior confuso.
+### Admin (`/admin/cliente/:id/portal` → nueva pestaña "Benchmark")
 
----
+- Gestor de competidores (tabla editable: nombre, handle, color, activo).
+- Uploader semanal (drag-drop XLSX). Preview de matches antes de confirmar.
+- Historial de semanas cargadas (borrar / re-subir).
 
-## Fase 2 — Convertir listening crudo en datos (puntos 6, 7)
+### Portal (`PortalHome` → tab Análisis)
 
-Los `content_md` diarios son texto libre que hoy solo se muestra. Extenderemos el pipeline existente `analyze-listening-entries` para que cada entrada devuelva JSON estructurado que ya alimenta a `client_portal_listening_entries` (sentiment/topics/mentions). Adicionalmente:
+- Nuevo componente `PortalBenchmark.tsx` con las 4 vistas + selector de métrica y de rango (1, 4, 12 semanas).
+- El cliente ya está resaltado con acento visual; competidores usan el `brand_color` del catálogo.
+- Botón "Exportar CSV" reutiliza el patrón del buscador de menciones.
 
-- Nueva edge function `extract-listening-metrics` (o extender la existente) que también extraiga: **volumen de menciones por canal**, **share of voice vs competidores nombrados**, **eventos/hitos detectados**, **entidades citadas** (personas, medios, políticos), **claims/frases textuales**.
-- Nuevas columnas o JSONB en `client_portal_listening_entries`: `channels jsonb`, `entities jsonb`, `events jsonb`, `key_quotes jsonb`.
-- Reproceso batch para entradas ya cargadas (botón en admin: "Reprocesar semana X").
-- `PortalAnalysis` gana secciones nuevas: **Menciones por canal**, **Share of voice**, **Actores/entidades más citados**, **Frases textuales destacadas**, **Timeline de eventos**.
+## Entregable de Fase 3
 
-El bloque de texto crudo ya no se muestra al cliente; queda accesible solo en el admin como fuente.
+- Migración con las 3 tablas + RLS + grants.
+- Edge function `benchmark-import` desplegada.
+- Admin: pestaña Benchmark con gestor + uploader.
+- Portal: sub-tab Benchmark con las 4 vistas.
+- Pre-carga del catálogo de competidores para Actinver (GBM, Kuspit, Bursanet, Vector, CI Banco — ajustable).
 
----
-
-## Fase 3 — Módulo Benchmark FanpageKarma (punto 8)
-
-Nueva pestaña dentro de **Análisis** (sub-tab) llamada **Performance & Benchmark**:
-
-- Tabla `client_portal_benchmark_datasets` (fuente=fanpagekarma, semana, competidor, métricas jsonb: fans, engagement, posts, interactions_avg, growth, top_post).
-- Ingesta: primero **carga manual CSV/XLSX** desde admin (`ClientPortalAdmin`). Luego, cuando esté claro el formato, evaluamos automatización.
-- Vistas: crecimiento vs competidores, engagement rate comparado, posts top del período, matriz de posicionamiento.
+**Pendiente antes de empezar:** necesito un XLSX real de FanpageKarma (idealmente de Actinver + al menos 2 competidores) para modelar el parser con nombres de columna exactos. Sin él arranco con un mapeo estándar y afinamos al probar.
 
 ---
 
-## Fase 4 — Elevar UI/UX (puntos 1, 10)
+# Roadmap después de Fase 3
 
-- Tema light propio para el portal (superficies cálidas, densidad tipo dashboard financiero — coherente con que Actinver es finanzas).
-- Header con logo cliente + logo KiMedia pequeño.
-- Cards de KPI con jerarquía tipográfica clara (número grande, delta vs semana previa, sparkline).
-- Paleta: mantener acento coral KiMedia pero suavizar fondos (crema/off-white) y usar acentos data (verde/rojo/azul) neutros para métricas.
-- Micro-interacciones: transiciones al cambiar de semana, skeletons en lugar de "Cargando...".
-- Tipografía: Space Grotesk para números/headers, Inter para texto.
+## Fase 4 — UI/UX polish
+- Tema light dedicado tipo dashboard financiero para el portal externo (hoy hereda dark del admin).
+- Gradientes de datos, micro-interacciones, tipografía display en KPIs.
+- Onboarding visual del portal la primera vez que entra el cliente.
 
----
+## Fase 5 — Automatización e inteligencia
+- **Auto-síntesis semanal**: edge function que corre cada lunes, cruza listening + benchmark de la semana anterior y genera el `weekly_recommendations` sin intervención manual.
+- **Alertas proactivas por email/WhatsApp** cuando: (a) sentimiento cae >X%, (b) competidor supera al cliente en engagement, (c) crisis detectada en la bitácora.
+- **Comparador multi-cliente** interno (solo admin KiMedia): ver desempeño agregado de toda la cartera.
+- **Auto-ingest de FanpageKarma** vía su API (si Actinver tiene contrato con acceso), reemplaza la subida manual.
 
-## Detalles técnicos
-
-**Archivos a tocar:**
-- `src/lib/clientPortal.ts` — agregar `logoUrl` opcional
-- `src/pages/portal/PortalHome.tsx` — reescritura completa (nueva IA de navegación)
-- `src/pages/portal/PortalAnalysis.tsx` — reescritura, se vuelve el core; recibe `weekStart`/`weekEnd` (no rangos arbitrarios)
-- Nuevos: `PortalWeekSelector.tsx`, `PortalKpiCards.tsx`, `PortalBenchmark.tsx`, `PortalPdfTemplate.tsx`
-- `PortalReport.tsx` — sigue existiendo para reportes históricos individuales
-- **Supabase**:
-  - Migración: columnas `channels/entities/events/key_quotes jsonb` en `client_portal_listening_entries`
-  - Migración: tabla `client_portal_benchmark_datasets`
-  - Edge function: extender `analyze-listening-entries` para extracción estructurada
-  - Edge function nueva: `import-benchmark-csv`
-- `src/pages/admin/ClientPortalAdmin.tsx` — agregar sección upload benchmark + botón reprocesar listening
-
----
-
-## Preguntas antes de arrancar
-
-1. **¿Arranco por la Fase 1 (reestructura IA + logo + PDF decente) para que la veas viva rápido, y luego iteramos las fases 2–4?** Es la que resuelve 7 de los 10 puntos sin tocar backend, y me deja validar contigo la dirección de diseño antes de invertir en el pipeline pesado de listening y benchmark.
-
-2. **¿Tienes ya un archivo de ejemplo de export de FanpageKarma?** Si me pasas uno, en Fase 3 puedo modelar los campos exactos en vez de suponer.
-
-3. **¿El logo de Actinver lo subo yo desde la web pública o me lo pasas?**
+¿Arranco con Fase 3 tal cual, o quieres ajustar competidores base / métricas antes?
