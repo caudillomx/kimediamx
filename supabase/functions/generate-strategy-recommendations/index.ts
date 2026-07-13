@@ -105,6 +105,9 @@ Deno.serve(async (req) => {
       `CLIENTE: ${clientName}`,
       `Rango analizado: ${range_start} → ${range_end}`,
       '',
+      'REPUTACIÓN (usar tal cual, no recalcular):',
+      JSON.stringify(computeReputation(sentBreak, totalMentions, events), null, 2),
+      '',
       'LISTENING — señales de audiencia:',
       JSON.stringify({
         total_menciones: totalMentions,
