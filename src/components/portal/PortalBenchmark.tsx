@@ -5,11 +5,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   LineChart, Line, PieChart, Pie, Cell, Legend, CartesianGrid,
 } from "recharts";
-import { BarChart3, Download, TrendingUp, TrendingDown, PieChart as PieIcon, Table as TableIcon, Newspaper, Trophy, Target, AlertTriangle, Sparkles, Minus, ArrowUp, ArrowDown } from "lucide-react";
+import { BarChart3, Download, TrendingUp, TrendingDown, PieChart as PieIcon, Table as TableIcon, Newspaper, Trophy, Target, AlertTriangle, Sparkles, Minus, ArrowUp, ArrowDown, CalendarIcon, Lightbulb } from "lucide-react";
 
 type Competitor = { id: string; name: string; network: string; brand_color: string; active: boolean; is_client: boolean; image_url: string | null; external_url: string | null };
 type Period = { id: string; period_label: string; period_start: string; period_end: string };
@@ -36,6 +39,9 @@ export default function PortalBenchmark({ clientId, clientName }: { clientId: st
   const [selectedPeriod, setSelectedPeriod] = useState<string>("");
   const [selectedMetric, setSelectedMetric] = useState<string>("followers");
   const [networkFilter, setNetworkFilter] = useState<string>("all");
+  const [rangeMode, setRangeMode] = useState<"period" | "custom">("period");
+  const [rangeFrom, setRangeFrom] = useState<Date | undefined>(undefined);
+  const [rangeTo, setRangeTo] = useState<Date | undefined>(undefined);
 
   useEffect(() => {
     (async () => {
@@ -67,6 +73,55 @@ export default function PortalBenchmark({ clientId, clientName }: { clientId: st
   const currentPeriod = periods.find((p) => p.id === selectedPeriod) ?? null;
   const currentMetric = METRICS.find((m) => m.key === selectedMetric) ?? METRICS[0];
 
+  // ---------- DATE RANGE MODE ----------
+  // effective date range for filtering posts/daily.
+  // In "period" mode we derive it from selectedPeriod. In "custom" we use rangeFrom/rangeTo.
+  const effectiveRange = useMemo<{ from: Date; to: Date; label: string } | null>(() => {
+    if (rangeMode === "custom" && rangeFrom && rangeTo) {
+      const from = rangeFrom < rangeTo ? rangeFrom : rangeTo;
+      const to = rangeFrom < rangeTo ? rangeTo : rangeFrom;
+      const fmt = (d: Date) => d.toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" });
+      return { from, to, label: `${fmt(from)} — ${fmt(to)}` };
+    }
+    if (currentPeriod) {
+      return {
+        from: new Date(currentPeriod.period_start),
+        to: new Date(currentPeriod.period_end),
+        label: currentPeriod.period_label,
+      };
+    }
+    return null;
+  }, [rangeMode, rangeFrom, rangeTo, currentPeriod]);
+
+  // Periods that overlap effective range (used when custom range spans multiple months)
+  const activePeriodIds = useMemo<string[]>(() => {
+    if (rangeMode === "period") return selectedPeriod ? [selectedPeriod] : [];
+    if (!effectiveRange) return [];
+    return periods
+      .filter((p) => {
+        const s = new Date(p.period_start);
+        const e = new Date(p.period_end);
+        return s <= effectiveRange.to && e >= effectiveRange.from;
+      })
+      .map((p) => p.id);
+  }, [rangeMode, selectedPeriod, periods, effectiveRange]);
+
+  const inRange = (isoOrDate: string | Date | null): boolean => {
+    if (!effectiveRange || !isoOrDate) return false;
+    const d = typeof isoOrDate === "string" ? new Date(isoOrDate) : isoOrDate;
+    if (isNaN(d.getTime())) return false;
+    return d >= effectiveRange.from && d <= new Date(effectiveRange.to.getTime() + 86_400_000 - 1);
+  };
+
+  // Preset helper
+  const applyPreset = (days: number) => {
+    const to = new Date();
+    const from = new Date(to.getTime() - (days - 1) * 86_400_000);
+    setRangeMode("custom");
+    setRangeFrom(from);
+    setRangeTo(to);
+  };
+
   const networks = useMemo(() => {
     const set = new Set<string>();
     metrics.forEach((m) => set.add(m.network));
@@ -74,8 +129,31 @@ export default function PortalBenchmark({ clientId, clientName }: { clientId: st
   }, [metrics]);
 
   const periodMetrics = useMemo(() => {
-    return metrics.filter((m) => m.period_id === selectedPeriod && (networkFilter === "all" || m.network === networkFilter));
-  }, [metrics, selectedPeriod, networkFilter]);
+    // In custom range with multiple overlapping periods, we average scale metrics
+    // and rate metrics per (competitor, network) across those periods.
+    const base = metrics.filter((m) => activePeriodIds.includes(m.period_id) && (networkFilter === "all" || m.network === networkFilter));
+    if (activePeriodIds.length <= 1) return base;
+    const isRateKey = (k: string) => k === "engagement_rate" || k === "follower_growth_rate" || k === "interaction_per_impression" || k === "performance_index";
+    const bucket = new Map<string, { rows: Metric[] }>();
+    for (const r of base) {
+      const k = `${r.competitor_id}::${r.network}`;
+      if (!bucket.has(k)) bucket.set(k, { rows: [] });
+      bucket.get(k)!.rows.push(r);
+    }
+    const out: Metric[] = [];
+    bucket.forEach(({ rows }, k) => {
+      const first = rows[0];
+      const merged: any = { ...first, id: `agg-${k}` };
+      for (const M of METRICS) {
+        const vals = rows.map((r) => Number(r[M.key])).filter((v) => Number.isFinite(v));
+        if (!vals.length) { merged[M.key] = null; continue; }
+        const s = vals.reduce((a, b) => a + b, 0);
+        merged[M.key] = isRateKey(M.key as string) ? s / vals.length : s / vals.length; // avg for both in range mode
+      }
+      out.push(merged as Metric);
+    });
+    return out;
+  }, [metrics, activePeriodIds, networkFilter]);
 
   // Ranking
   const rankingData = useMemo(() => {
@@ -124,11 +202,12 @@ export default function PortalBenchmark({ clientId, clientName }: { clientId: st
 
   // Daily followers evolution (line chart) — para el periodo seleccionado
   const dailyEvolution = useMemo(() => {
-    if (!selectedPeriod) return [];
+    if (!effectiveRange) return [];
     const days = new Set<string>();
     const byDay = new Map<string, Record<string, any>>();
     for (const d of daily) {
-      if (d.period_id !== selectedPeriod) continue;
+      if (!activePeriodIds.includes(d.period_id)) continue;
+      if (!inRange(d.day)) continue;
       if (networkFilter !== "all" && d.network !== networkFilter) continue;
       days.add(d.day);
       if (!byDay.has(d.day)) byDay.set(d.day, { day: d.day });
@@ -138,15 +217,16 @@ export default function PortalBenchmark({ clientId, clientName }: { clientId: st
       byDay.get(d.day)![key] = (byDay.get(d.day)![key] ?? 0) + d.delta;
     }
     return Array.from(byDay.values()).sort((a, b) => a.day.localeCompare(b.day));
-  }, [daily, selectedPeriod, networkFilter, compMap]);
+  }, [daily, activePeriodIds, effectiveRange, networkFilter, compMap]);
 
   // Top posts
   const topPosts = useMemo(() => {
     return posts
-      .filter((p) => p.period_id === selectedPeriod && (networkFilter === "all" || p.network === networkFilter))
+      .filter((p) => activePeriodIds.includes(p.period_id) && (networkFilter === "all" || p.network === networkFilter))
+      .filter((p) => rangeMode === "period" ? true : inRange(p.posted_at))
       .sort((a, b) => (b.interactions ?? 0) - (a.interactions ?? 0))
       .slice(0, 20);
-  }, [posts, selectedPeriod, networkFilter]);
+  }, [posts, activePeriodIds, networkFilter, rangeMode, effectiveRange]);
 
   // Identify client competitor(s)
   const clientCompetitorIds = useMemo(
@@ -154,16 +234,29 @@ export default function PortalBenchmark({ clientId, clientName }: { clientId: st
     [competitors],
   );
 
-  // Previous period (chronological)
+  // Robust client-post detector (falls back to profile_name match when competitor_id is missing)
+  const isClientPost = (p: Post): boolean => {
+    if (p.competitor_id && clientCompetitorIds.has(p.competitor_id)) return true;
+    if (!p.profile_name) return false;
+    const a = p.profile_name.toLowerCase();
+    const b = clientName.toLowerCase();
+    return a.includes(b) || b.includes(a);
+  };
+
+  // Previous period (chronological). In custom range mode, "previous" = first period before range.from.
   const prevPeriod = useMemo(() => {
+    if (rangeMode === "custom" && effectiveRange) {
+      const before = periods.filter((p) => new Date(p.period_end) < effectiveRange.from);
+      return before.length ? before[before.length - 1] : null;
+    }
     const idx = periods.findIndex((p) => p.id === selectedPeriod);
     return idx > 0 ? periods[idx - 1] : null;
-  }, [periods, selectedPeriod]);
+  }, [periods, selectedPeriod, rangeMode, effectiveRange]);
 
   // Insights layer — deterministic templates, no LLM
   const insights = useMemo(() => {
     const netFilter = (m: { network: string }) => networkFilter === "all" || m.network === networkFilter;
-    const currentAll = metrics.filter((m) => m.period_id === selectedPeriod && netFilter(m));
+    const currentAll = metrics.filter((m) => activePeriodIds.includes(m.period_id) && netFilter(m));
     const prevAll = prevPeriod ? metrics.filter((m) => m.period_id === prevPeriod.id && netFilter(m)) : [];
 
     // Aggregate helper: value by competitor for a metric key (sum across networks when "all")
@@ -249,8 +342,25 @@ export default function PortalBenchmark({ clientId, clientName }: { clientId: st
     const followersVsSector = pct(followersClient, followersSector);
 
     // Best post of the period (client) by interactions
-    const clientPosts = posts.filter((p) => p.period_id === selectedPeriod && p.competitor_id && clientCompetitorIds.has(p.competitor_id) && (networkFilter === "all" || p.network === networkFilter));
-    const bestPost = clientPosts.slice().sort((a, b) => (b.interactions ?? 0) - (a.interactions ?? 0))[0] ?? null;
+    const clientPostsForBest = posts.filter((p) =>
+      activePeriodIds.includes(p.period_id)
+      && (networkFilter === "all" || p.network === networkFilter)
+      && (rangeMode === "period" || inRange(p.posted_at))
+      && isClientPost(p),
+    );
+    let bestPost = clientPostsForBest.slice().sort((a, b) => (b.interactions ?? 0) - (a.interactions ?? 0))[0] ?? null;
+    let bestPostFromSector = false;
+    if (!bestPost) {
+      // Fallback: show the sector's best so the KPI never reads empty when filters exclude the client
+      const sectorPostsForBest = posts.filter((p) =>
+        activePeriodIds.includes(p.period_id)
+        && (networkFilter === "all" || p.network === networkFilter)
+        && (rangeMode === "period" || inRange(p.posted_at))
+        && !isClientPost(p),
+      );
+      bestPost = sectorPostsForBest.slice().sort((a, b) => (b.interactions ?? 0) - (a.interactions ?? 0))[0] ?? null;
+      bestPostFromSector = !!bestPost;
+    }
 
     // Streak on followers growth (consecutive positive months)
     let streak = 0;
@@ -309,13 +419,13 @@ export default function PortalBenchmark({ clientId, clientName }: { clientId: st
       engagementRank,
       followersClient, followersDelta, followersVsSector,
       engClient, engDelta, engVsSector, engSector,
-      bestPost,
+      bestPost, bestPostFromSector,
       streak,
       bestMetric, worstMetric,
       headline,
       alerts,
     };
-  }, [metrics, posts, selectedPeriod, prevPeriod, networkFilter, clientCompetitorIds, clientName, periods, currentPeriod]);
+  }, [metrics, posts, activePeriodIds, prevPeriod, networkFilter, clientCompetitorIds, clientName, periods, currentPeriod, rangeMode, effectiveRange]);
 
   // Client's own evolution across all periods (for Actinver tab)
   const clientEvolution = useMemo(() => {
@@ -369,22 +479,141 @@ export default function PortalBenchmark({ clientId, clientName }: { clientId: st
   const deltaColor = (v: number | null) => v == null ? "text-muted-foreground" : v > 0 ? "text-emerald-500" : v < 0 ? "text-rose-500" : "text-muted-foreground";
   const DeltaIcon = ({ v }: { v: number | null }) => v == null ? <Minus className="w-3.5 h-3.5" /> : v > 0 ? <ArrowUp className="w-3.5 h-3.5" /> : v < 0 ? <ArrowDown className="w-3.5 h-3.5" /> : <Minus className="w-3.5 h-3.5" />;
 
-  const clientPostsPeriod = posts.filter((p) => p.period_id === selectedPeriod && p.competitor_id && clientCompetitorIds.has(p.competitor_id) && (networkFilter === "all" || p.network === networkFilter))
+  const postsInScope = posts.filter((p) =>
+    activePeriodIds.includes(p.period_id)
+    && (networkFilter === "all" || p.network === networkFilter)
+    && (rangeMode === "period" || inRange(p.posted_at)),
+  );
+  const clientPostsPeriod = postsInScope.filter(isClientPost)
     .sort((a, b) => (b.interactions ?? 0) - (a.interactions ?? 0));
-  const sectorPostsPeriod = posts.filter((p) => p.period_id === selectedPeriod && p.competitor_id && !clientCompetitorIds.has(p.competitor_id) && (networkFilter === "all" || p.network === networkFilter))
+  const sectorPostsPeriod = postsInScope.filter((p) => !isClientPost(p))
     .sort((a, b) => (b.interactions ?? 0) - (a.interactions ?? 0));
+
+  // ---------- Deeper content insights ----------
+  const contentInsights = (() => {
+    const avg = (arr: number[]) => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
+    const median = (arr: number[]) => {
+      if (!arr.length) return 0;
+      const s = arr.slice().sort((a, b) => a - b);
+      const mid = Math.floor(s.length / 2);
+      return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
+    };
+    const cInter = clientPostsPeriod.map((p) => p.interactions ?? 0);
+    const sInter = sectorPostsPeriod.map((p) => p.interactions ?? 0);
+    // Best day of week for client
+    const dayNames = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+    const dayAgg = new Array(7).fill(0).map(() => ({ total: 0, n: 0 }));
+    for (const p of clientPostsPeriod) {
+      if (!p.posted_at) continue;
+      const dow = new Date(p.posted_at).getDay();
+      dayAgg[dow].total += p.interactions ?? 0;
+      dayAgg[dow].n += 1;
+    }
+    const bestDay = dayAgg
+      .map((d, i) => ({ day: dayNames[i], avg: d.n ? d.total / d.n : 0, n: d.n }))
+      .filter((d) => d.n > 0)
+      .sort((a, b) => b.avg - a.avg)[0] ?? null;
+
+    // Top keywords from top sector posts (very light heuristic)
+    const stop = new Set(["de","la","el","en","los","las","que","por","con","para","del","a","y","o","u","es","un","una","al","se","su","sus","lo","le","les","no","si","sí","este","esta","estos","estas","con","tu","tus","mi","mis","como","más","ya","ese","esa","esos","esas","the","and","for","of","to","in","on","is","it","this","that","are","with","from","at","by","or","be","an","as","we","you","your"]);
+    const freq = new Map<string, number>();
+    for (const p of sectorPostsPeriod.slice(0, 30)) {
+      if (!p.message) continue;
+      const words = p.message.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        .split(/[^a-záéíóúñü0-9#@]+/i)
+        .map((w) => w.trim())
+        .filter((w) => w.length >= 4 && !stop.has(w) && !/^\d+$/.test(w));
+      const seen = new Set<string>();
+      for (const w of words) { if (!seen.has(w)) { freq.set(w, (freq.get(w) ?? 0) + 1); seen.add(w); } }
+    }
+    const topKeywords = Array.from(freq.entries()).sort((a, b) => b[1] - a[1]).slice(0, 8);
+
+    // Sector leader (competitor with most total interactions in the range)
+    const leaderMap = new Map<string, number>();
+    for (const p of sectorPostsPeriod) {
+      if (!p.competitor_id) continue;
+      leaderMap.set(p.competitor_id, (leaderMap.get(p.competitor_id) ?? 0) + (p.interactions ?? 0));
+    }
+    const leaderEntry = Array.from(leaderMap.entries()).sort((a, b) => b[1] - a[1])[0];
+    const leader = leaderEntry ? { name: compMap.get(leaderEntry[0])?.name ?? "?", total: leaderEntry[1] } : null;
+
+    return {
+      clientAvg: avg(cInter),
+      clientMedian: median(cInter),
+      sectorAvg: avg(sInter),
+      sectorMedian: median(sInter),
+      bestDay,
+      topKeywords,
+      leader,
+      clientPostCount: cInter.length,
+      sectorPostCount: sInter.length,
+    };
+  })();
+
+  // Client evolution card fallback helper
+  const latestValueFor = (key: string): { value: number; label: string; isLatest: boolean } | null => {
+    for (let i = clientEvolution.length - 1; i >= 0; i--) {
+      const v = clientEvolution[i][key] as number | null | undefined;
+      if (v != null && Number.isFinite(v)) {
+        return { value: v, label: clientEvolution[i].period as string, isLatest: i === clientEvolution.length - 1 };
+      }
+    }
+    return null;
+  };
 
   return (
     <div className="space-y-5">
       {/* HEADER */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-2">
-          <span className="text-xs uppercase tracking-widest text-muted-foreground">Periodo</span>
-          <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
-            <SelectTrigger className="w-[200px] h-9"><SelectValue /></SelectTrigger>
-            <SelectContent>{periods.slice().reverse().map((p) => <SelectItem key={p.id} value={p.id}>{p.period_label}</SelectItem>)}</SelectContent>
+          <span className="text-xs uppercase tracking-widest text-muted-foreground">Modo</span>
+          <Select value={rangeMode} onValueChange={(v) => setRangeMode(v as any)}>
+            <SelectTrigger className="w-[160px] h-9"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="period">Mes cargado</SelectItem>
+              <SelectItem value="custom">Rango personalizado</SelectItem>
+            </SelectContent>
           </Select>
         </div>
+        {rangeMode === "period" ? (
+          <div className="flex items-center gap-2">
+            <span className="text-xs uppercase tracking-widest text-muted-foreground">Periodo</span>
+            <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+              <SelectTrigger className="w-[200px] h-9"><SelectValue /></SelectTrigger>
+              <SelectContent>{periods.slice().reverse().map((p) => <SelectItem key={p.id} value={p.id}>{p.period_label}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+        ) : (
+          <>
+            <div className="flex items-center gap-1">
+              <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => applyPreset(7)}>7d</Button>
+              <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => applyPreset(15)}>15d</Button>
+              <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => applyPreset(30)}>30d</Button>
+            </div>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className={cn("h-9 justify-start text-left font-normal", !rangeFrom && "text-muted-foreground")}>
+                  <CalendarIcon className="w-4 h-4 mr-1" />
+                  {rangeFrom ? rangeFrom.toLocaleDateString("es-MX") : "Desde"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar mode="single" selected={rangeFrom} onSelect={setRangeFrom} initialFocus className={cn("p-3 pointer-events-auto")} />
+              </PopoverContent>
+            </Popover>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className={cn("h-9 justify-start text-left font-normal", !rangeTo && "text-muted-foreground")}>
+                  <CalendarIcon className="w-4 h-4 mr-1" />
+                  {rangeTo ? rangeTo.toLocaleDateString("es-MX") : "Hasta"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar mode="single" selected={rangeTo} onSelect={setRangeTo} initialFocus className={cn("p-3 pointer-events-auto")} />
+              </PopoverContent>
+            </Popover>
+          </>
+        )}
         <div className="flex items-center gap-2">
           <span className="text-xs uppercase tracking-widest text-muted-foreground">Red</span>
           <Select value={networkFilter} onValueChange={setNetworkFilter}>
@@ -398,6 +627,12 @@ export default function PortalBenchmark({ clientId, clientName }: { clientId: st
           </Button>
         </div>
       </div>
+      {rangeMode === "custom" && effectiveRange && (
+        <p className="text-[11px] text-muted-foreground -mt-2">
+          Rango activo: <span className="font-medium text-foreground">{effectiveRange.label}</span>
+          {activePeriodIds.length > 0 && ` · ${activePeriodIds.length} mes(es) de snapshot cubiertos`}
+        </p>
+      )}
 
       {/* EXECUTIVE SUMMARY */}
       <Card className="p-5 bg-gradient-to-br from-primary/5 via-background to-background border-primary/20">
@@ -443,7 +678,10 @@ export default function PortalBenchmark({ clientId, clientName }: { clientId: st
             <div className="mt-1 font-display font-bold text-2xl tabular-nums">
               {insights.bestPost ? (insights.bestPost.interactions?.toLocaleString("es-MX") ?? "—") : "—"}
             </div>
-            <p className="text-[10px] text-muted-foreground truncate">interacciones{insights.bestPost?.network ? ` · ${insights.bestPost.network}` : ""}</p>
+            <p className="text-[10px] text-muted-foreground truncate">
+              interacciones{insights.bestPost?.network ? ` · ${insights.bestPost.network}` : ""}
+              {insights.bestPostFromSector && insights.bestPost ? ` · sector (${insights.bestPost.profile_name})` : ""}
+            </p>
           </div>
         </div>
         {insights.alerts.length > 0 && (
@@ -545,9 +783,11 @@ export default function PortalBenchmark({ clientId, clientName }: { clientId: st
         <TabsContent value="cliente" className="space-y-4 mt-4">
           <div className="grid gap-3 md:grid-cols-3">
             {METRICS.slice(0, 6).map((M) => {
-              const curr = clientEvolution.length ? clientEvolution[clientEvolution.length - 1][M.key as string] as number | null : null;
+              const currRaw = clientEvolution.length ? clientEvolution[clientEvolution.length - 1][M.key as string] as number | null : null;
               const prev = clientEvolution.length > 1 ? clientEvolution[clientEvolution.length - 2][M.key as string] as number | null : null;
-              const delta = curr != null && prev != null && prev !== 0 ? (curr - prev) / Math.abs(prev) : null;
+              const fallback = currRaw == null ? latestValueFor(M.key as string) : null;
+              const curr = currRaw ?? fallback?.value ?? null;
+              const delta = currRaw != null && prev != null && prev !== 0 ? (currRaw - prev) / Math.abs(prev) : null;
               return (
                 <Card key={M.key as string} className="p-4">
                   <p className="text-[10px] uppercase tracking-widest text-muted-foreground">{M.label}</p>
@@ -557,6 +797,12 @@ export default function PortalBenchmark({ clientId, clientName }: { clientId: st
                       <DeltaIcon v={delta} />{fmtPct(delta)}
                     </span>
                   </div>
+                  {fallback && !fallback.isLatest && (
+                    <p className="text-[10px] text-muted-foreground mt-1 italic">Último dato disponible: {fallback.label}</p>
+                  )}
+                  {curr == null && (
+                    <p className="text-[10px] text-muted-foreground mt-1 italic">Sin datos reportados en ningún periodo.</p>
+                  )}
                 </Card>
               );
             })}
@@ -694,6 +940,54 @@ export default function PortalBenchmark({ clientId, clientName }: { clientId: st
 
         {/* TAB: CONTENIDO */}
         <TabsContent value="contenido" className="space-y-4 mt-4">
+          {/* Deeper insights row */}
+          <div className="grid gap-3 md:grid-cols-4">
+            <Card className="p-4">
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Interacciones prom. / post</p>
+              <p className="text-2xl font-display font-bold tabular-nums mt-1">{Math.round(contentInsights.clientAvg).toLocaleString("es-MX")}</p>
+              <p className="text-[10px] text-muted-foreground mt-1">
+                Sector: <span className="font-medium text-foreground">{Math.round(contentInsights.sectorAvg).toLocaleString("es-MX")}</span>
+                {contentInsights.sectorAvg > 0 && (
+                  <span className={cn("ml-1", contentInsights.clientAvg >= contentInsights.sectorAvg ? "text-emerald-500" : "text-rose-500")}>
+                    ({fmtPct((contentInsights.clientAvg - contentInsights.sectorAvg) / contentInsights.sectorAvg)})
+                  </span>
+                )}
+              </p>
+            </Card>
+            <Card className="p-4">
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Mediana / post</p>
+              <p className="text-2xl font-display font-bold tabular-nums mt-1">{Math.round(contentInsights.clientMedian).toLocaleString("es-MX")}</p>
+              <p className="text-[10px] text-muted-foreground mt-1">Sector: <span className="font-medium text-foreground">{Math.round(contentInsights.sectorMedian).toLocaleString("es-MX")}</span></p>
+            </Card>
+            <Card className="p-4">
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Mejor día {clientName}</p>
+              <p className="text-2xl font-display font-bold mt-1">{contentInsights.bestDay ? contentInsights.bestDay.day : "—"}</p>
+              <p className="text-[10px] text-muted-foreground mt-1">{contentInsights.bestDay ? `${Math.round(contentInsights.bestDay.avg).toLocaleString("es-MX")} interacc. prom.` : "Sin posts en el rango"}</p>
+            </Card>
+            <Card className="p-4">
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Líder del sector</p>
+              <p className="text-lg font-display font-bold mt-1 truncate">{contentInsights.leader?.name ?? "—"}</p>
+              <p className="text-[10px] text-muted-foreground mt-1">{contentInsights.leader ? `${contentInsights.leader.total.toLocaleString("es-MX")} interacc. totales` : "Sin datos"}</p>
+            </Card>
+          </div>
+
+          {contentInsights.topKeywords.length > 0 && (
+            <Card className="p-5">
+              <div className="flex items-center gap-2 mb-2">
+                <Lightbulb className="w-4 h-4 text-primary" />
+                <h4 className="font-semibold text-sm">Palabras clave que usa el sector</h4>
+              </div>
+              <p className="text-xs text-muted-foreground mb-3">Términos más frecuentes en los posts top de los competidores. Úsalo para inspirar temas propios.</p>
+              <div className="flex flex-wrap gap-2">
+                {contentInsights.topKeywords.map(([w, n]) => (
+                  <Badge key={w} variant="secondary" className="text-xs">
+                    {w} <span className="ml-1 text-muted-foreground">×{n}</span>
+                  </Badge>
+                ))}
+              </div>
+            </Card>
+          )}
+
           <div className="grid gap-4 lg:grid-cols-2">
             <Card className="p-5">
               <div className="flex items-center gap-2 mb-3">
@@ -702,7 +996,10 @@ export default function PortalBenchmark({ clientId, clientName }: { clientId: st
                 <Badge variant="secondary" className="ml-auto">{clientPostsPeriod.length}</Badge>
               </div>
               {clientPostsPeriod.length === 0 ? (
-                <p className="text-sm text-muted-foreground italic">Sin publicaciones cargadas.</p>
+                <p className="text-sm text-muted-foreground italic">
+                  Sin publicaciones de {clientName} en este {rangeMode === "custom" ? "rango" : "periodo"}
+                  {networkFilter !== "all" ? ` para ${networkFilter}` : ""}.
+                </p>
               ) : (
                 <ul className="space-y-3 max-h-[500px] overflow-auto pr-1">
                   {clientPostsPeriod.slice(0, 10).map((p) => (
