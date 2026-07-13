@@ -11,7 +11,7 @@ type Item = { lead: string; body: string; index: number };
  */
 function parseItems(md: string): Item[] {
   const lines = md.split(/\r?\n/);
-  const items: Item[] = [];
+  const rawItems: { lead: string; body: string }[] = [];
   let current: string | null = null;
   const push = () => {
     if (!current) return;
@@ -29,7 +29,7 @@ function parseItems(md: string): Item[] {
       if (sentence) { lead = sentence[1].trim().replace(/\.$/, ""); body = sentence[2].trim(); }
       else { lead = clean; body = ""; }
     }
-    items.push({ lead, body, index: items.length + 1 });
+    rawItems.push({ lead, body });
     current = null;
   };
   for (const raw of lines) {
@@ -45,7 +45,23 @@ function parseItems(md: string): Item[] {
     }
   }
   push();
-  return items;
+
+  // Post-process: merge "QUÉ HACER" / "POR QUÉ" (o "QUE HACER" / "POR QUE")
+  // bullets sueltos hacia el bullet-título previo. Evita numeración inflada
+  // cuando el modelo separa la acción y su rationale en bullets independientes.
+  const isSubLabel = (s: string) => /^(qu[eé]\s*hacer|por\s*qu[eé]|acci[oó]n|raz[oó]n)$/i.test(s.trim());
+  const merged: { lead: string; body: string }[] = [];
+  for (const it of rawItems) {
+    if (merged.length && isSubLabel(it.lead)) {
+      const prev = merged[merged.length - 1];
+      const label = /por\s*qu[eé]|raz[oó]n/i.test(it.lead) ? "Por qué" : "Qué hacer";
+      const chunk = it.body ? `${label}: ${it.body}` : label;
+      prev.body = prev.body ? `${prev.body} · ${chunk}` : chunk;
+    } else {
+      merged.push({ ...it });
+    }
+  }
+  return merged.map((it, i) => ({ ...it, index: i + 1 }));
 }
 
 export function RecommendationsBlock({ markdown, weekLabel }: { markdown: string; weekLabel: string }) {

@@ -15,7 +15,9 @@ Devuelve SIEMPRE JSON estricto:
   "key_findings": [{ "title": string, "detail": string, "impact": "alto"|"medio"|"bajo" }] (4-6, cada uno anclado a un dato específico),
   "alerts": [{ "level": "critica"|"alta"|"media", "detail": string }] (solo si hay crisis o riesgo real; si no hay, deja el array vacío),
   "recommendations_team": string (markdown, 4-6 bullets accionables para KiMedia: monitoreo, respuesta, contenido, aliados),
-  "recommendations_client": string (markdown, 4-6 bullets claros para el cliente, cada uno con QUÉ HACER + POR QUÉ, aterrizados en temas/canales/actores concretos del período),
+  "recommendations_client": string (markdown, 4-6 bullets claros para el cliente. FORMATO ESTRICTO POR BULLET — una sola línea por recomendación:
+    "- **Título breve de la acción** — Qué hacer: <acción concreta en 1 oración>. Por qué: <razón basada en el dato del período>."
+    NO uses sub-bullets, NO separes "Qué hacer" y "Por qué" en bullets distintos, NO uses saltos de línea dentro del bullet.),
   "top_topics": [{ "topic": string, "count": number }] (máx 8),
   "top_mentions": [{ "name": string, "type": string, "count": number }] (máx 8),
   "sentiment_breakdown": { "positivo": number, "neutral": number, "negativo": number, "crisis": number }
