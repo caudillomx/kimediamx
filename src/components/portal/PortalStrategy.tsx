@@ -7,7 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Compass, Sparkles, RefreshCcw, Loader2, AlertTriangle, CheckCircle2, CalendarIcon, MessageSquare, Users, Target, Lightbulb } from "lucide-react";
 import { cn } from "@/lib/utils";
-import RecommendationsBlock from "./RecommendationsBlock";
+import { Lightbulb as LightbulbIcon } from "lucide-react";
 
 type Payload = {
   coherence?: { level: "alta" | "media" | "baja"; reason: string };
@@ -90,9 +90,7 @@ export default function PortalStrategy({ clientId, clientName }: { clientId: str
     p.coherence?.level === "media" ? "text-amber-500 border-amber-500/40 bg-amber-500/10" :
     p.coherence?.level === "baja" ? "text-rose-500 border-rose-500/40 bg-rose-500/10" : "";
 
-  const recsMarkdown = (p.recommendations ?? []).map((r, i) =>
-    `- **${r.title}** — ${r.action}\n  - Escucha: ${r.evidence_listening}\n  - Benchmark: ${r.evidence_benchmark}\n  - Prioridad: ${r.priority}`
-  ).join("\n");
+  const recs = p.recommendations ?? [];
 
   return (
     <div className="space-y-4">
@@ -192,11 +190,17 @@ export default function PortalStrategy({ clientId, clientName }: { clientId: str
                 <h4 className="font-semibold text-sm">Qué HACE {clientName}</h4>
               </div>
               <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">Narrativas propias</p>
-              <ul className="text-xs space-y-1 mb-3 list-disc pl-4">
-                {(p.what_client_does?.narratives ?? []).map((n, i) => <li key={i}>{n}</li>)}
-              </ul>
+              {(p.what_client_does?.narratives ?? []).length > 0 ? (
+                <ul className="text-xs space-y-1 mb-3 list-disc pl-4">
+                  {(p.what_client_does?.narratives ?? []).map((n, i) => <li key={i}>{n}</li>)}
+                </ul>
+              ) : (
+                <p className="text-xs text-muted-foreground italic mb-3">
+                  Aún no hay análisis narrativo de {clientName}. Genera el análisis desde <span className="font-medium">Benchmark → Contenido → Narrativas del periodo</span> para poblar esta columna.
+                </p>
+              )}
               <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">Tono</p>
-              <p className="text-xs text-muted-foreground">{p.what_client_does?.tone}</p>
+              <p className="text-xs text-muted-foreground">{p.what_client_does?.tone || "no disponible"}</p>
             </Card>
 
             <Card className="p-4">
@@ -205,13 +209,23 @@ export default function PortalStrategy({ clientId, clientName }: { clientId: str
                 <h4 className="font-semibold text-sm">Qué HACEN los pares</h4>
               </div>
               <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">Narrativas dominantes</p>
-              <ul className="text-xs space-y-1 mb-3 list-disc pl-4">
-                {(p.what_peers_do?.dominant_narratives ?? []).map((n, i) => <li key={i}>{n}</li>)}
-              </ul>
+              {(p.what_peers_do?.dominant_narratives ?? []).length > 0 ? (
+                <ul className="text-xs space-y-1 mb-3 list-disc pl-4">
+                  {(p.what_peers_do?.dominant_narratives ?? []).map((n, i) => <li key={i}>{n}</li>)}
+                </ul>
+              ) : (
+                <p className="text-xs text-muted-foreground italic mb-3">
+                  Sin narrativas de competidores analizadas. Genera el análisis en Benchmark → Contenido.
+                </p>
+              )}
               <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">Territorios que el cliente no cubre</p>
-              <ul className="text-xs space-y-1 list-disc pl-4">
-                {(p.what_peers_do?.gaps_client_misses ?? []).map((n, i) => <li key={i} className="text-rose-500">{n}</li>)}
-              </ul>
+              {(p.what_peers_do?.gaps_client_misses ?? []).length > 0 ? (
+                <ul className="text-xs space-y-1 list-disc pl-4">
+                  {(p.what_peers_do?.gaps_client_misses ?? []).map((n, i) => <li key={i} className="text-rose-500">{n}</li>)}
+                </ul>
+              ) : (
+                <p className="text-xs text-muted-foreground italic">Sin brechas identificadas.</p>
+              )}
             </Card>
           </div>
 
@@ -235,11 +249,77 @@ export default function PortalStrategy({ clientId, clientName }: { clientId: str
             </Card>
           )}
 
-          {recsMarkdown && (
-            <RecommendationsBlock
-              markdown={recsMarkdown}
-              weekLabel={`Recomendaciones ${fmtHuman(new Date(report.range_start))} — ${fmtHuman(new Date(report.range_end))}`}
-            />
+          {recs.length > 0 && (
+            <Card className="p-5">
+              <div className="flex items-center justify-between gap-2 mb-4 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
+                    <LightbulbIcon className="w-4 h-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Recomendaciones estratégicas</p>
+                    <h4 className="font-semibold text-sm">
+                      {fmtHuman(new Date(report.range_start))} — {fmtHuman(new Date(report.range_end))}
+                    </h4>
+                  </div>
+                </div>
+                <Badge variant="secondary" className="text-[10px]">
+                  <Sparkles className="w-3 h-3 mr-1" /> {recs.length} acción{recs.length === 1 ? "" : "es"}
+                </Badge>
+              </div>
+              <div className="space-y-3">
+                {recs.map((r, i) => (
+                  <div
+                    key={i}
+                    className={cn(
+                      "rounded-xl border p-4 space-y-3",
+                      r.priority === "alta" ? "border-rose-500/40 bg-rose-500/5" : "border-border/40 bg-background/40",
+                    )}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className={cn(
+                        "shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold tabular-nums",
+                        r.priority === "alta" ? "bg-rose-500 text-white" : "bg-primary/10 text-primary",
+                      )}>
+                        {String(i + 1).padStart(2, "0")}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                          <p className="font-semibold text-sm">{r.title}</p>
+                          <Badge
+                            variant={r.priority === "alta" ? "destructive" : "secondary"}
+                            className="text-[10px] uppercase"
+                          >
+                            Prioridad {r.priority}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground">{r.action}</p>
+                      </div>
+                    </div>
+                    <div className="grid gap-2 md:grid-cols-2 pl-11">
+                      {r.evidence_listening && (
+                        <div className="rounded-lg border border-border/40 bg-background/60 p-2.5">
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <MessageSquare className="w-3 h-3 text-primary" />
+                            <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">Evidencia · Escucha</p>
+                          </div>
+                          <p className="text-[11px] leading-relaxed">{r.evidence_listening}</p>
+                        </div>
+                      )}
+                      {r.evidence_benchmark && (
+                        <div className="rounded-lg border border-border/40 bg-background/60 p-2.5">
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <Users className="w-3 h-3 text-primary" />
+                            <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">Evidencia · Benchmark</p>
+                          </div>
+                          <p className="text-[11px] leading-relaxed">{r.evidence_benchmark}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
           )}
 
           <p className="text-[10px] text-muted-foreground text-right">
