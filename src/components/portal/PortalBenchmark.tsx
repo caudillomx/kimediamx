@@ -243,16 +243,20 @@ export default function PortalBenchmark({ clientId, clientName }: { clientId: st
     return a.includes(b) || b.includes(a);
   };
 
-  // Previous period (chronological)
+  // Previous period (chronological). In custom range mode, "previous" = first period before range.from.
   const prevPeriod = useMemo(() => {
+    if (rangeMode === "custom" && effectiveRange) {
+      const before = periods.filter((p) => new Date(p.period_end) < effectiveRange.from);
+      return before.length ? before[before.length - 1] : null;
+    }
     const idx = periods.findIndex((p) => p.id === selectedPeriod);
     return idx > 0 ? periods[idx - 1] : null;
-  }, [periods, selectedPeriod]);
+  }, [periods, selectedPeriod, rangeMode, effectiveRange]);
 
   // Insights layer — deterministic templates, no LLM
   const insights = useMemo(() => {
     const netFilter = (m: { network: string }) => networkFilter === "all" || m.network === networkFilter;
-    const currentAll = metrics.filter((m) => m.period_id === selectedPeriod && netFilter(m));
+    const currentAll = metrics.filter((m) => activePeriodIds.includes(m.period_id) && netFilter(m));
     const prevAll = prevPeriod ? metrics.filter((m) => m.period_id === prevPeriod.id && netFilter(m)) : [];
 
     // Aggregate helper: value by competitor for a metric key (sum across networks when "all")
@@ -338,8 +342,25 @@ export default function PortalBenchmark({ clientId, clientName }: { clientId: st
     const followersVsSector = pct(followersClient, followersSector);
 
     // Best post of the period (client) by interactions
-    const clientPosts = posts.filter((p) => p.period_id === selectedPeriod && p.competitor_id && clientCompetitorIds.has(p.competitor_id) && (networkFilter === "all" || p.network === networkFilter));
-    const bestPost = clientPosts.slice().sort((a, b) => (b.interactions ?? 0) - (a.interactions ?? 0))[0] ?? null;
+    const clientPostsForBest = posts.filter((p) =>
+      activePeriodIds.includes(p.period_id)
+      && (networkFilter === "all" || p.network === networkFilter)
+      && (rangeMode === "period" || inRange(p.posted_at))
+      && isClientPost(p),
+    );
+    let bestPost = clientPostsForBest.slice().sort((a, b) => (b.interactions ?? 0) - (a.interactions ?? 0))[0] ?? null;
+    let bestPostFromSector = false;
+    if (!bestPost) {
+      // Fallback: show the sector's best so the KPI never reads empty when filters exclude the client
+      const sectorPostsForBest = posts.filter((p) =>
+        activePeriodIds.includes(p.period_id)
+        && (networkFilter === "all" || p.network === networkFilter)
+        && (rangeMode === "period" || inRange(p.posted_at))
+        && !isClientPost(p),
+      );
+      bestPost = sectorPostsForBest.slice().sort((a, b) => (b.interactions ?? 0) - (a.interactions ?? 0))[0] ?? null;
+      bestPostFromSector = !!bestPost;
+    }
 
     // Streak on followers growth (consecutive positive months)
     let streak = 0;
@@ -398,13 +419,13 @@ export default function PortalBenchmark({ clientId, clientName }: { clientId: st
       engagementRank,
       followersClient, followersDelta, followersVsSector,
       engClient, engDelta, engVsSector, engSector,
-      bestPost,
+      bestPost, bestPostFromSector,
       streak,
       bestMetric, worstMetric,
       headline,
       alerts,
     };
-  }, [metrics, posts, selectedPeriod, prevPeriod, networkFilter, clientCompetitorIds, clientName, periods, currentPeriod]);
+  }, [metrics, posts, activePeriodIds, prevPeriod, networkFilter, clientCompetitorIds, clientName, periods, currentPeriod, rangeMode, effectiveRange]);
 
   // Client's own evolution across all periods (for Actinver tab)
   const clientEvolution = useMemo(() => {
