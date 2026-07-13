@@ -678,7 +678,10 @@ export default function PortalBenchmark({ clientId, clientName }: { clientId: st
             <div className="mt-1 font-display font-bold text-2xl tabular-nums">
               {insights.bestPost ? (insights.bestPost.interactions?.toLocaleString("es-MX") ?? "—") : "—"}
             </div>
-            <p className="text-[10px] text-muted-foreground truncate">interacciones{insights.bestPost?.network ? ` · ${insights.bestPost.network}` : ""}</p>
+            <p className="text-[10px] text-muted-foreground truncate">
+              interacciones{insights.bestPost?.network ? ` · ${insights.bestPost.network}` : ""}
+              {insights.bestPostFromSector && insights.bestPost ? ` · sector (${insights.bestPost.profile_name})` : ""}
+            </p>
           </div>
         </div>
         {insights.alerts.length > 0 && (
