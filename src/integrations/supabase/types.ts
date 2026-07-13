@@ -3474,6 +3474,7 @@ export type Database = {
       }
     }
     Functions: {
+      fpk_to_num: { Args: { v: string }; Returns: number }
       get_brand_kit_by_token: {
         Args: { _id: string; _token: string }
         Returns: {
