@@ -566,12 +566,54 @@ export default function PortalBenchmark({ clientId, clientName }: { clientId: st
       {/* HEADER */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-2">
-          <span className="text-xs uppercase tracking-widest text-muted-foreground">Periodo</span>
-          <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
-            <SelectTrigger className="w-[200px] h-9"><SelectValue /></SelectTrigger>
-            <SelectContent>{periods.slice().reverse().map((p) => <SelectItem key={p.id} value={p.id}>{p.period_label}</SelectItem>)}</SelectContent>
+          <span className="text-xs uppercase tracking-widest text-muted-foreground">Modo</span>
+          <Select value={rangeMode} onValueChange={(v) => setRangeMode(v as any)}>
+            <SelectTrigger className="w-[160px] h-9"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="period">Mes cargado</SelectItem>
+              <SelectItem value="custom">Rango personalizado</SelectItem>
+            </SelectContent>
           </Select>
         </div>
+        {rangeMode === "period" ? (
+          <div className="flex items-center gap-2">
+            <span className="text-xs uppercase tracking-widest text-muted-foreground">Periodo</span>
+            <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+              <SelectTrigger className="w-[200px] h-9"><SelectValue /></SelectTrigger>
+              <SelectContent>{periods.slice().reverse().map((p) => <SelectItem key={p.id} value={p.id}>{p.period_label}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+        ) : (
+          <>
+            <div className="flex items-center gap-1">
+              <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => applyPreset(7)}>7d</Button>
+              <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => applyPreset(15)}>15d</Button>
+              <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => applyPreset(30)}>30d</Button>
+            </div>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className={cn("h-9 justify-start text-left font-normal", !rangeFrom && "text-muted-foreground")}>
+                  <CalendarIcon className="w-4 h-4 mr-1" />
+                  {rangeFrom ? rangeFrom.toLocaleDateString("es-MX") : "Desde"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar mode="single" selected={rangeFrom} onSelect={setRangeFrom} initialFocus className={cn("p-3 pointer-events-auto")} />
+              </PopoverContent>
+            </Popover>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className={cn("h-9 justify-start text-left font-normal", !rangeTo && "text-muted-foreground")}>
+                  <CalendarIcon className="w-4 h-4 mr-1" />
+                  {rangeTo ? rangeTo.toLocaleDateString("es-MX") : "Hasta"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar mode="single" selected={rangeTo} onSelect={setRangeTo} initialFocus className={cn("p-3 pointer-events-auto")} />
+              </PopoverContent>
+            </Popover>
+          </>
+        )}
         <div className="flex items-center gap-2">
           <span className="text-xs uppercase tracking-widest text-muted-foreground">Red</span>
           <Select value={networkFilter} onValueChange={setNetworkFilter}>
@@ -585,6 +627,12 @@ export default function PortalBenchmark({ clientId, clientName }: { clientId: st
           </Button>
         </div>
       </div>
+      {rangeMode === "custom" && effectiveRange && (
+        <p className="text-[11px] text-muted-foreground -mt-2">
+          Rango activo: <span className="font-medium text-foreground">{effectiveRange.label}</span>
+          {activePeriodIds.length > 0 && ` · ${activePeriodIds.length} mes(es) de snapshot cubiertos`}
+        </p>
+      )}
 
       {/* EXECUTIVE SUMMARY */}
       <Card className="p-5 bg-gradient-to-br from-primary/5 via-background to-background border-primary/20">
