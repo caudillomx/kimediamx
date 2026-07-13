@@ -22,6 +22,8 @@ import PortalAnalysis from "./PortalAnalysis";
 import PortalPdfTemplate from "./PortalPdfTemplate";
 import RecommendationsBlock from "@/components/portal/RecommendationsBlock";
 import PortalBenchmark from "@/components/portal/PortalBenchmark";
+import PortalStrategy from "@/components/portal/PortalStrategy";
+import { Compass } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 
 type Analysis = {
@@ -698,7 +700,7 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
 
       <main className="relative max-w-7xl mx-auto px-6 py-6 space-y-6">
         {/* Week bar (listening scope: only for Panorama/Histórico) */}
-        {activeTab !== "benchmark" && (
+        {activeTab !== "benchmark" && activeTab !== "estrategia" && (
         <div className="glass rounded-2xl p-4 flex flex-col lg:flex-row lg:items-center gap-4">
           <div className="flex items-center gap-2">
             <Button variant="outline" size="icon" onClick={goPrev} disabled={currentIdx >= analyses.length - 1} className="h-9 w-9">
@@ -787,7 +789,7 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
               className="space-y-6"
             >
               {/* KPI cards (listening scope) */}
-              {activeTab !== "benchmark" && (
+              {activeTab !== "benchmark" && activeTab !== "estrategia" && (
               <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
                 <KpiCard
                   label="Menciones analizadas"
@@ -817,6 +819,7 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
                 <TabsList className="bg-background/50 backdrop-blur border border-border/60 rounded-xl p-1 h-auto">
                   <TabsTrigger value="panorama" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><BarChart3 className="w-4 h-4 mr-2" />Panorama</TabsTrigger>
                   <TabsTrigger value="benchmark" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><TrendingUp className="w-4 h-4 mr-2" />Benchmark</TabsTrigger>
+                  <TabsTrigger value="estrategia" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><Compass className="w-4 h-4 mr-2" />Estrategia</TabsTrigger>
                   <TabsTrigger value="historico" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><History className="w-4 h-4 mr-2" />Histórico</TabsTrigger>
                 </TabsList>
 
@@ -932,6 +935,11 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
                 {/* Benchmark */}
                 <TabsContent value="benchmark" className="mt-5 space-y-4">
                   <PortalBenchmark clientId={portal.clientId} clientName={portal.displayName} />
+                </TabsContent>
+
+                {/* Estrategia (Listening x Benchmark) */}
+                <TabsContent value="estrategia" className="mt-5 space-y-4">
+                  <PortalStrategy clientId={portal.clientId} clientName={portal.displayName} />
                 </TabsContent>
 
                 {/* Histórico */}

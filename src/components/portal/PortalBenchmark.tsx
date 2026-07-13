@@ -13,6 +13,7 @@ import {
   LineChart, Line, PieChart, Pie, Cell, Legend, CartesianGrid,
 } from "recharts";
 import { BarChart3, Download, TrendingUp, TrendingDown, PieChart as PieIcon, Table as TableIcon, Newspaper, Trophy, Target, AlertTriangle, Sparkles, Minus, ArrowUp, ArrowDown, CalendarIcon, Lightbulb } from "lucide-react";
+import BenchmarkNarratives from "./BenchmarkNarratives";
 
 type Competitor = { id: string; name: string; network: string; brand_color: string; active: boolean; is_client: boolean; image_url: string | null; external_url: string | null };
 type Period = { id: string; period_label: string; period_start: string; period_end: string };
@@ -940,6 +941,12 @@ export default function PortalBenchmark({ clientId, clientName }: { clientId: st
 
         {/* TAB: CONTENIDO */}
         <TabsContent value="contenido" className="space-y-4 mt-4">
+          <BenchmarkNarratives
+            clientId={clientId}
+            clientName={clientName}
+            range={effectiveRange}
+            networkFilter={networkFilter}
+          />
           {/* Deeper insights row */}
           <div className="grid gap-3 md:grid-cols-4">
             <Card className="p-4">

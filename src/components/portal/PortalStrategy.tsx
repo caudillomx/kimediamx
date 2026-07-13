@@ -1,0 +1,252 @@
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Compass, Sparkles, RefreshCcw, Loader2, AlertTriangle, CheckCircle2, CalendarIcon, MessageSquare, Users, Target, Lightbulb } from "lucide-react";
+import { cn } from "@/lib/utils";
+import RecommendationsBlock from "./RecommendationsBlock";
+
+type Payload = {
+  coherence?: { level: "alta" | "media" | "baja"; reason: string };
+  what_audience_says?: { topics: string[]; sentiment_summary: string };
+  what_client_does?: { narratives: string[]; tone: string };
+  what_peers_do?: { dominant_narratives: string[]; gaps_client_misses: string[] };
+  gaps?: { type: string; description: string; evidence: string }[];
+  recommendations?: { title: string; action: string; evidence_listening: string; evidence_benchmark: string; priority: "alta" | "media" }[];
+};
+
+type Report = { id: string; range_start: string; range_end: string; payload: Payload; generated_at: string; model: string | null };
+
+function fmt(d: Date) { return d.toISOString().slice(0, 10); }
+function fmtHuman(d: Date) { return d.toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" }); }
+
+const PRESETS: { key: string; label: string; days: number }[] = [
+  { key: "7", label: "7 días", days: 7 },
+  { key: "14", label: "14 días", days: 14 },
+  { key: "30", label: "30 días", days: 30 },
+];
+
+export default function PortalStrategy({ clientId, clientName }: { clientId: string; clientName: string }) {
+  const [preset, setPreset] = useState<string>("30");
+  const [from, setFrom] = useState<Date | undefined>();
+  const [to, setTo] = useState<Date | undefined>();
+  const [report, setReport] = useState<Report | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const range = useMemo(() => {
+    if (preset === "custom") {
+      if (!from || !to) return null;
+      const [a, b] = from < to ? [from, to] : [to, from];
+      return { from: a, to: b };
+    }
+    const p = PRESETS.find((x) => x.key === preset)!;
+    const end = new Date(); end.setHours(0, 0, 0, 0);
+    const start = new Date(end); start.setDate(end.getDate() - (p.days - 1));
+    return { from: start, to: end };
+  }, [preset, from, to]);
+
+  const fetchCached = useCallback(async () => {
+    if (!range) return;
+    setLoading(true); setError(null);
+    const { data, error } = await supabase
+      .from("client_portal_strategy_reports")
+      .select("*")
+      .eq("client_id", clientId)
+      .eq("range_start", fmt(range.from))
+      .eq("range_end", fmt(range.to))
+      .maybeSingle();
+    if (error) setError(error.message);
+    setReport((data as any) ?? null);
+    setLoading(false);
+  }, [clientId, range?.from?.getTime(), range?.to?.getTime()]);
+
+  useEffect(() => { fetchCached(); }, [fetchCached]);
+
+  const generate = async (force = false) => {
+    if (!range) return;
+    setGenerating(true); setError(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-strategy-recommendations", {
+        body: { client_id: clientId, range_start: fmt(range.from), range_end: fmt(range.to), force },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      setReport((data as any).report as Report);
+    } catch (e: any) {
+      setError(e?.message ?? String(e));
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const p = report?.payload ?? {};
+  const coherenceColor =
+    p.coherence?.level === "alta" ? "text-emerald-500 border-emerald-500/40 bg-emerald-500/10" :
+    p.coherence?.level === "media" ? "text-amber-500 border-amber-500/40 bg-amber-500/10" :
+    p.coherence?.level === "baja" ? "text-rose-500 border-rose-500/40 bg-rose-500/10" : "";
+
+  const recsMarkdown = (p.recommendations ?? []).map((r, i) =>
+    `- **${r.title}** — ${r.action}\n  - Escucha: ${r.evidence_listening}\n  - Benchmark: ${r.evidence_benchmark}\n  - Prioridad: ${r.priority}`
+  ).join("\n");
+
+  return (
+    <div className="space-y-4">
+      {/* Header controls */}
+      <Card className="p-4">
+        <div className="flex items-center gap-2 flex-wrap">
+          <Compass className="w-4 h-4 text-primary" />
+          <h3 className="font-semibold text-sm">Estrategia — cruce Escucha × Benchmark</h3>
+          <div className="ml-auto flex items-center gap-2 flex-wrap">
+            <div className="flex gap-1">
+              {PRESETS.map((pp) => (
+                <Button key={pp.key} size="sm" variant={preset === pp.key ? "default" : "outline"} onClick={() => setPreset(pp.key)}>
+                  {pp.label}
+                </Button>
+              ))}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button size="sm" variant={preset === "custom" ? "default" : "outline"}><CalendarIcon className="w-3.5 h-3.5 mr-1.5" />Rango</Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-auto p-0">
+                  <div className="p-3 space-y-2">
+                    <p className="text-xs text-muted-foreground">Selecciona 2 fechas</p>
+                    <Calendar
+                      mode="range"
+                      selected={{ from, to }}
+                      onSelect={(r: any) => { setFrom(r?.from); setTo(r?.to); setPreset("custom"); }}
+                    />
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
+            {report ? (
+              <Button size="sm" variant="outline" onClick={() => generate(true)} disabled={generating}>
+                {generating ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <RefreshCcw className="w-3.5 h-3.5 mr-1.5" />}
+                Regenerar
+              </Button>
+            ) : (
+              <Button size="sm" onClick={() => generate(false)} disabled={generating || !range}>
+                {generating ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5 mr-1.5" />}
+                Generar
+              </Button>
+            )}
+          </div>
+        </div>
+        {range && (
+          <p className="text-[11px] text-muted-foreground mt-2">
+            Rango: {fmtHuman(range.from)} — {fmtHuman(range.to)}
+          </p>
+        )}
+        {error && <p className="text-xs text-rose-500 mt-2">{error}</p>}
+      </Card>
+
+      {loading && <p className="text-sm text-muted-foreground italic">Cargando…</p>}
+
+      {!loading && !report && (
+        <Card className="p-8 text-center">
+          <Sparkles className="w-8 h-8 text-primary mx-auto mb-2" />
+          <p className="text-sm text-muted-foreground max-w-md mx-auto">
+            No hay reporte para este rango. Genera uno para cruzar lo que dicen las audiencias con lo que hacen {clientName} y sus pares, y obtener un diagnóstico de coherencia + recomendaciones accionables.
+          </p>
+        </Card>
+      )}
+
+      {report && (
+        <>
+          {p.coherence && (
+            <Card className={cn("p-5 border-2", coherenceColor)}>
+              <div className="flex items-center gap-3">
+                {p.coherence.level === "alta" ? <CheckCircle2 className="w-6 h-6" /> :
+                 p.coherence.level === "baja" ? <AlertTriangle className="w-6 h-6" /> :
+                 <Target className="w-6 h-6" />}
+                <div>
+                  <p className="text-[10px] uppercase tracking-widest opacity-70">Coherencia estratégica</p>
+                  <p className="text-lg font-display font-bold capitalize">{p.coherence.level}</p>
+                </div>
+              </div>
+              <p className="text-sm mt-3">{p.coherence.reason}</p>
+            </Card>
+          )}
+
+          <div className="grid gap-3 md:grid-cols-3">
+            <Card className="p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <MessageSquare className="w-4 h-4 text-primary" />
+                <h4 className="font-semibold text-sm">Qué DICEN de {clientName}</h4>
+              </div>
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">Temas top</p>
+              <div className="flex flex-wrap gap-1 mb-3">
+                {(p.what_audience_says?.topics ?? []).map((t, i) => <Badge key={i} variant="secondary" className="text-[10px]">{t}</Badge>)}
+              </div>
+              <p className="text-xs text-muted-foreground">{p.what_audience_says?.sentiment_summary}</p>
+            </Card>
+
+            <Card className="p-4 border-primary/40">
+              <div className="flex items-center gap-2 mb-2">
+                <Target className="w-4 h-4 text-primary" />
+                <h4 className="font-semibold text-sm">Qué HACE {clientName}</h4>
+              </div>
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">Narrativas propias</p>
+              <ul className="text-xs space-y-1 mb-3 list-disc pl-4">
+                {(p.what_client_does?.narratives ?? []).map((n, i) => <li key={i}>{n}</li>)}
+              </ul>
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">Tono</p>
+              <p className="text-xs text-muted-foreground">{p.what_client_does?.tone}</p>
+            </Card>
+
+            <Card className="p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Users className="w-4 h-4 text-primary" />
+                <h4 className="font-semibold text-sm">Qué HACEN los pares</h4>
+              </div>
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">Narrativas dominantes</p>
+              <ul className="text-xs space-y-1 mb-3 list-disc pl-4">
+                {(p.what_peers_do?.dominant_narratives ?? []).map((n, i) => <li key={i}>{n}</li>)}
+              </ul>
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">Territorios que el cliente no cubre</p>
+              <ul className="text-xs space-y-1 list-disc pl-4">
+                {(p.what_peers_do?.gaps_client_misses ?? []).map((n, i) => <li key={i} className="text-rose-500">{n}</li>)}
+              </ul>
+            </Card>
+          </div>
+
+          {(p.gaps ?? []).length > 0 && (
+            <Card className="p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <AlertTriangle className="w-4 h-4 text-amber-500" />
+                <h4 className="font-semibold text-sm">Brechas detectadas</h4>
+              </div>
+              <div className="grid gap-2 md:grid-cols-2">
+                {(p.gaps ?? []).map((g, i) => (
+                  <div key={i} className="p-3 rounded-lg border border-border/40 bg-background/40">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Badge variant="outline" className="text-[10px] uppercase">{g.type}</Badge>
+                    </div>
+                    <p className="text-xs font-medium">{g.description}</p>
+                    <p className="text-[11px] text-muted-foreground mt-1">{g.evidence}</p>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {recsMarkdown && (
+            <RecommendationsBlock
+              markdown={recsMarkdown}
+              weekLabel={`Recomendaciones ${fmtHuman(new Date(report.range_start))} — ${fmtHuman(new Date(report.range_end))}`}
+            />
+          )}
+
+          <p className="text-[10px] text-muted-foreground text-right">
+            Generado {new Date(report.generated_at).toLocaleString("es-MX")}{report.model ? ` · ${report.model}` : ""}
+          </p>
+        </>
+      )}
+    </div>
+  );
+}
