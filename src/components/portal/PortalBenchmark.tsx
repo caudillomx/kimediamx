@@ -783,9 +783,11 @@ export default function PortalBenchmark({ clientId, clientName }: { clientId: st
         <TabsContent value="cliente" className="space-y-4 mt-4">
           <div className="grid gap-3 md:grid-cols-3">
             {METRICS.slice(0, 6).map((M) => {
-              const curr = clientEvolution.length ? clientEvolution[clientEvolution.length - 1][M.key as string] as number | null : null;
+              const currRaw = clientEvolution.length ? clientEvolution[clientEvolution.length - 1][M.key as string] as number | null : null;
               const prev = clientEvolution.length > 1 ? clientEvolution[clientEvolution.length - 2][M.key as string] as number | null : null;
-              const delta = curr != null && prev != null && prev !== 0 ? (curr - prev) / Math.abs(prev) : null;
+              const fallback = currRaw == null ? latestValueFor(M.key as string) : null;
+              const curr = currRaw ?? fallback?.value ?? null;
+              const delta = currRaw != null && prev != null && prev !== 0 ? (currRaw - prev) / Math.abs(prev) : null;
               return (
                 <Card key={M.key as string} className="p-4">
                   <p className="text-[10px] uppercase tracking-widest text-muted-foreground">{M.label}</p>
@@ -795,6 +797,12 @@ export default function PortalBenchmark({ clientId, clientName }: { clientId: st
                       <DeltaIcon v={delta} />{fmtPct(delta)}
                     </span>
                   </div>
+                  {fallback && !fallback.isLatest && (
+                    <p className="text-[10px] text-muted-foreground mt-1 italic">Último dato disponible: {fallback.label}</p>
+                  )}
+                  {curr == null && (
+                    <p className="text-[10px] text-muted-foreground mt-1 italic">Sin datos reportados en ningún periodo.</p>
+                  )}
                 </Card>
               );
             })}
