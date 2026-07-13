@@ -129,8 +129,31 @@ export default function PortalBenchmark({ clientId, clientName }: { clientId: st
   }, [metrics]);
 
   const periodMetrics = useMemo(() => {
-    return metrics.filter((m) => m.period_id === selectedPeriod && (networkFilter === "all" || m.network === networkFilter));
-  }, [metrics, selectedPeriod, networkFilter]);
+    // In custom range with multiple overlapping periods, we average scale metrics
+    // and rate metrics per (competitor, network) across those periods.
+    const base = metrics.filter((m) => activePeriodIds.includes(m.period_id) && (networkFilter === "all" || m.network === networkFilter));
+    if (activePeriodIds.length <= 1) return base;
+    const isRateKey = (k: string) => k === "engagement_rate" || k === "follower_growth_rate" || k === "interaction_per_impression" || k === "performance_index";
+    const bucket = new Map<string, { rows: Metric[] }>();
+    for (const r of base) {
+      const k = `${r.competitor_id}::${r.network}`;
+      if (!bucket.has(k)) bucket.set(k, { rows: [] });
+      bucket.get(k)!.rows.push(r);
+    }
+    const out: Metric[] = [];
+    bucket.forEach(({ rows }, k) => {
+      const first = rows[0];
+      const merged: any = { ...first, id: `agg-${k}` };
+      for (const M of METRICS) {
+        const vals = rows.map((r) => Number(r[M.key])).filter((v) => Number.isFinite(v));
+        if (!vals.length) { merged[M.key] = null; continue; }
+        const s = vals.reduce((a, b) => a + b, 0);
+        merged[M.key] = isRateKey(M.key as string) ? s / vals.length : s / vals.length; // avg for both in range mode
+      }
+      out.push(merged as Metric);
+    });
+    return out;
+  }, [metrics, activePeriodIds, networkFilter]);
 
   // Ranking
   const rankingData = useMemo(() => {
@@ -179,11 +202,12 @@ export default function PortalBenchmark({ clientId, clientName }: { clientId: st
 
   // Daily followers evolution (line chart) — para el periodo seleccionado
   const dailyEvolution = useMemo(() => {
-    if (!selectedPeriod) return [];
+    if (!effectiveRange) return [];
     const days = new Set<string>();
     const byDay = new Map<string, Record<string, any>>();
     for (const d of daily) {
-      if (d.period_id !== selectedPeriod) continue;
+      if (!activePeriodIds.includes(d.period_id)) continue;
+      if (!inRange(d.day)) continue;
       if (networkFilter !== "all" && d.network !== networkFilter) continue;
       days.add(d.day);
       if (!byDay.has(d.day)) byDay.set(d.day, { day: d.day });
@@ -193,21 +217,31 @@ export default function PortalBenchmark({ clientId, clientName }: { clientId: st
       byDay.get(d.day)![key] = (byDay.get(d.day)![key] ?? 0) + d.delta;
     }
     return Array.from(byDay.values()).sort((a, b) => a.day.localeCompare(b.day));
-  }, [daily, selectedPeriod, networkFilter, compMap]);
+  }, [daily, activePeriodIds, effectiveRange, networkFilter, compMap]);
 
   // Top posts
   const topPosts = useMemo(() => {
     return posts
-      .filter((p) => p.period_id === selectedPeriod && (networkFilter === "all" || p.network === networkFilter))
+      .filter((p) => activePeriodIds.includes(p.period_id) && (networkFilter === "all" || p.network === networkFilter))
+      .filter((p) => rangeMode === "period" ? true : inRange(p.posted_at))
       .sort((a, b) => (b.interactions ?? 0) - (a.interactions ?? 0))
       .slice(0, 20);
-  }, [posts, selectedPeriod, networkFilter]);
+  }, [posts, activePeriodIds, networkFilter, rangeMode, effectiveRange]);
 
   // Identify client competitor(s)
   const clientCompetitorIds = useMemo(
     () => new Set(competitors.filter((c) => c.is_client).map((c) => c.id)),
     [competitors],
   );
+
+  // Robust client-post detector (falls back to profile_name match when competitor_id is missing)
+  const isClientPost = (p: Post): boolean => {
+    if (p.competitor_id && clientCompetitorIds.has(p.competitor_id)) return true;
+    if (!p.profile_name) return false;
+    const a = p.profile_name.toLowerCase();
+    const b = clientName.toLowerCase();
+    return a.includes(b) || b.includes(a);
+  };
 
   // Previous period (chronological)
   const prevPeriod = useMemo(() => {
