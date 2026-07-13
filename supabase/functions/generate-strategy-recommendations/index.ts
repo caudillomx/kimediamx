@@ -25,7 +25,15 @@ REGLAS DURAS:
 - La "coherencia" mide qué tanto lo que el cliente PUBLICA responde/coincide con lo que las audiencias DICEN y con lo que el sector cubre.
 - 3 a 5 recomendaciones, cada una con evidencia explícita de ambos lados (listening + benchmark).
 - Los "gaps" son ausencias: temas presentes en listening pero no en el contenido propio, territorios que dominan competidores, crisis sin respuesta, formatos que funcionan en el sector y que el cliente no usa.
-- Español, tono ejecutivo, directo, aterrizado.`;
+- Español, tono ejecutivo, directo, aterrizado.
+
+CRITERIO DE CRISIS Y REPUTACIÓN (crítico — no alarmar sin evidencia):
+- Usa EXCLUSIVAMENTE el objeto "reputacion" que recibes en el prompt (nivel, score y umbrales). NO recalcules crisis a partir de menciones negativas sueltas.
+- Nivel "estable" o "vigilancia": está PROHIBIDO usar palabras como "crisis", "urgente", "alarma", "riesgo reputacional", "daño", "escándalo". Habla de "oportunidad de refuerzo", "tema a monitorear" u "observación".
+- Solo puedes incluir un gap con type="crisis" o una recomendación priority="alta" por motivo reputacional cuando reputacion.nivel sea "alerta" o "crisis" Y exista un evento concreto en la lista de eventos. Si no, esos hallazgos van como priority="media" y como gap de "tema" o "territorio".
+- Menciones negativas normales o quejas dispersas NO son crisis: son señal de conversación a atender, no de emergencia.
+- "coherence.level" no debe bajar a "baja" solo porque haya sentimiento negativo; bájalo únicamente cuando el contenido del cliente ignore temas dominantes de la audiencia o del sector.
+- El "sentiment_summary" debe ser descriptivo y proporcional: reporta cifras y proporción, evita adjetivos catastrofistas.`;
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
