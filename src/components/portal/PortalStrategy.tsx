@@ -23,11 +23,23 @@ type Report = { id: string; range_start: string; range_end: string; payload: Pay
 function fmt(d: Date) { return d.toISOString().slice(0, 10); }
 function fmtHuman(d: Date) { return d.toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" }); }
 
-const PRESETS: { key: string; label: string; days: number }[] = [
-  { key: "7", label: "7 días", days: 7 },
-  { key: "14", label: "14 días", days: 14 },
-  { key: "30", label: "30 días", days: 30 },
+const PRESETS: { key: string; label: string; weeks: number }[] = [
+  { key: "7", label: "Semana (L–D)", weeks: 1 },
+  { key: "14", label: "Quincena (L–D)", weeks: 2 },
+  { key: "30", label: "Mes (~4 sem)", weeks: 4 },
 ];
+
+// Última semana COMPLETA lunes→domingo relativa a hoy.
+// Si hoy es domingo, incluye la semana actual; si no, toma la anterior.
+function lastCompleteWeek(): { start: Date; end: Date } {
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const dow = today.getDay(); // 0=dom, 1=lun...
+  // Domingo de la semana ya cerrada
+  const daysSinceSunday = dow === 0 ? 0 : dow;
+  const sunday = new Date(today); sunday.setDate(today.getDate() - daysSinceSunday);
+  const monday = new Date(sunday); monday.setDate(sunday.getDate() - 6);
+  return { start: monday, end: sunday };
+}
 
 export default function PortalStrategy({ clientId, clientName }: { clientId: string; clientName: string }) {
   const [preset, setPreset] = useState<string>("30");
@@ -45,8 +57,9 @@ export default function PortalStrategy({ clientId, clientName }: { clientId: str
       return { from: a, to: b };
     }
     const p = PRESETS.find((x) => x.key === preset)!;
-    const end = new Date(); end.setHours(0, 0, 0, 0);
-    const start = new Date(end); start.setDate(end.getDate() - (p.days - 1));
+    const lastWeek = lastCompleteWeek();
+    const end = lastWeek.end; // domingo
+    const start = new Date(end); start.setDate(end.getDate() - (7 * p.weeks - 1)); // lunes N semanas atrás
     return { from: start, to: end };
   }, [preset, from, to]);
 
