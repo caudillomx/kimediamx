@@ -479,10 +479,87 @@ export default function PortalBenchmark({ clientId, clientName }: { clientId: st
   const deltaColor = (v: number | null) => v == null ? "text-muted-foreground" : v > 0 ? "text-emerald-500" : v < 0 ? "text-rose-500" : "text-muted-foreground";
   const DeltaIcon = ({ v }: { v: number | null }) => v == null ? <Minus className="w-3.5 h-3.5" /> : v > 0 ? <ArrowUp className="w-3.5 h-3.5" /> : v < 0 ? <ArrowDown className="w-3.5 h-3.5" /> : <Minus className="w-3.5 h-3.5" />;
 
-  const clientPostsPeriod = posts.filter((p) => p.period_id === selectedPeriod && p.competitor_id && clientCompetitorIds.has(p.competitor_id) && (networkFilter === "all" || p.network === networkFilter))
+  const postsInScope = posts.filter((p) =>
+    activePeriodIds.includes(p.period_id)
+    && (networkFilter === "all" || p.network === networkFilter)
+    && (rangeMode === "period" || inRange(p.posted_at)),
+  );
+  const clientPostsPeriod = postsInScope.filter(isClientPost)
     .sort((a, b) => (b.interactions ?? 0) - (a.interactions ?? 0));
-  const sectorPostsPeriod = posts.filter((p) => p.period_id === selectedPeriod && p.competitor_id && !clientCompetitorIds.has(p.competitor_id) && (networkFilter === "all" || p.network === networkFilter))
+  const sectorPostsPeriod = postsInScope.filter((p) => !isClientPost(p))
     .sort((a, b) => (b.interactions ?? 0) - (a.interactions ?? 0));
+
+  // ---------- Deeper content insights ----------
+  const contentInsights = useMemo(() => {
+    const avg = (arr: number[]) => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
+    const median = (arr: number[]) => {
+      if (!arr.length) return 0;
+      const s = arr.slice().sort((a, b) => a - b);
+      const mid = Math.floor(s.length / 2);
+      return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
+    };
+    const cInter = clientPostsPeriod.map((p) => p.interactions ?? 0);
+    const sInter = sectorPostsPeriod.map((p) => p.interactions ?? 0);
+    // Best day of week for client
+    const dayNames = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+    const dayAgg = new Array(7).fill(0).map(() => ({ total: 0, n: 0 }));
+    for (const p of clientPostsPeriod) {
+      if (!p.posted_at) continue;
+      const dow = new Date(p.posted_at).getDay();
+      dayAgg[dow].total += p.interactions ?? 0;
+      dayAgg[dow].n += 1;
+    }
+    const bestDay = dayAgg
+      .map((d, i) => ({ day: dayNames[i], avg: d.n ? d.total / d.n : 0, n: d.n }))
+      .filter((d) => d.n > 0)
+      .sort((a, b) => b.avg - a.avg)[0] ?? null;
+
+    // Top keywords from top sector posts (very light heuristic)
+    const stop = new Set(["de","la","el","en","los","las","que","por","con","para","del","a","y","o","u","es","un","una","al","se","su","sus","lo","le","les","no","si","sí","este","esta","estos","estas","con","tu","tus","mi","mis","como","más","ya","ese","esa","esos","esas","the","and","for","of","to","in","on","is","it","this","that","are","with","from","at","by","or","be","an","as","we","you","your"]);
+    const freq = new Map<string, number>();
+    for (const p of sectorPostsPeriod.slice(0, 30)) {
+      if (!p.message) continue;
+      const words = p.message.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        .split(/[^a-záéíóúñü0-9#@]+/i)
+        .map((w) => w.trim())
+        .filter((w) => w.length >= 4 && !stop.has(w) && !/^\d+$/.test(w));
+      const seen = new Set<string>();
+      for (const w of words) { if (!seen.has(w)) { freq.set(w, (freq.get(w) ?? 0) + 1); seen.add(w); } }
+    }
+    const topKeywords = Array.from(freq.entries()).sort((a, b) => b[1] - a[1]).slice(0, 8);
+
+    // Sector leader (competitor with most total interactions in the range)
+    const leaderMap = new Map<string, number>();
+    for (const p of sectorPostsPeriod) {
+      if (!p.competitor_id) continue;
+      leaderMap.set(p.competitor_id, (leaderMap.get(p.competitor_id) ?? 0) + (p.interactions ?? 0));
+    }
+    const leaderEntry = Array.from(leaderMap.entries()).sort((a, b) => b[1] - a[1])[0];
+    const leader = leaderEntry ? { name: compMap.get(leaderEntry[0])?.name ?? "?", total: leaderEntry[1] } : null;
+
+    return {
+      clientAvg: avg(cInter),
+      clientMedian: median(cInter),
+      sectorAvg: avg(sInter),
+      sectorMedian: median(sInter),
+      bestDay,
+      topKeywords,
+      leader,
+      clientPostCount: cInter.length,
+      sectorPostCount: sInter.length,
+    };
+  }, [clientPostsPeriod, sectorPostsPeriod, compMap]);
+
+  // Client evolution card fallback helper
+  const latestValueFor = (key: string): { value: number; label: string; isLatest: boolean } | null => {
+    for (let i = clientEvolution.length - 1; i >= 0; i--) {
+      const v = clientEvolution[i][key] as number | null | undefined;
+      if (v != null && Number.isFinite(v)) {
+        return { value: v, label: clientEvolution[i].period as string, isLatest: i === clientEvolution.length - 1 };
+      }
+    }
+    return null;
+  };
 
   return (
     <div className="space-y-5">
