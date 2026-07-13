@@ -39,6 +39,59 @@ function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 }
 
+// Reputation scoring — conservative, avoids alarmist reads.
+// score: 0..100 (100 = excelente). Umbrales calibrados para NO gritar "crisis"
+// salvo evidencia clara (proporción alta de crisis o eventos etiquetados).
+function computeReputation(
+  sent: Record<string, number>,
+  totalMentions: number,
+  events: any[],
+) {
+  const pos = sent.positivo || 0;
+  const neu = sent.neutral || 0;
+  const neg = sent.negativo || 0;
+  const cri = sent.crisis || 0;
+  const total = Math.max(1, pos + neu + neg + cri);
+  const pctNeg = neg / total;
+  const pctCri = cri / total;
+  const pctPos = pos / total;
+  // score base: positivos suman, neutrales cero, negativos restan, crisis pesa 3x
+  const raw = 50 + (pctPos * 50) - (pctNeg * 40) - (pctCri * 90);
+  const score = Math.max(0, Math.min(100, Math.round(raw)));
+
+  const crisisEvents = (events ?? []).filter((e) =>
+    String(e?.tipo ?? e?.type ?? '').toLowerCase().includes('crisis') ||
+    e?.severidad === 'alta' || e?.severity === 'high',
+  );
+
+  // Reglas conservadoras — se requiere evidencia concreta para escalar.
+  let nivel: 'estable' | 'vigilancia' | 'alerta' | 'crisis' = 'estable';
+  if (score < 35 && (pctCri >= 0.15 || crisisEvents.length >= 2)) nivel = 'crisis';
+  else if (score < 50 && (pctCri >= 0.08 || crisisEvents.length >= 1)) nivel = 'alerta';
+  else if (score < 65 || pctNeg >= 0.25) nivel = 'vigilancia';
+  else nivel = 'estable';
+
+  // Volumen insuficiente => nunca escalar más allá de "vigilancia"
+  if (totalMentions < 20 && (nivel === 'alerta' || nivel === 'crisis')) {
+    nivel = 'vigilancia';
+  }
+
+  return {
+    score,
+    nivel,
+    total_menciones: totalMentions,
+    proporcion: { positivo: +pctPos.toFixed(2), negativo: +pctNeg.toFixed(2), crisis: +pctCri.toFixed(2) },
+    eventos_crisis_documentados: crisisEvents.length,
+    umbrales: {
+      estable: 'score >= 65 y sin eventos de crisis',
+      vigilancia: 'score 50–64 o >=25% negativo; NO es crisis',
+      alerta: 'score 35–49 y (>=8% crisis o 1 evento documentado)',
+      crisis: 'score < 35 y (>=15% crisis o >=2 eventos documentados)',
+    },
+    nota: 'Muestras <20 menciones nunca escalan a alerta/crisis por baja significancia estadística.',
+  };
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   try {
