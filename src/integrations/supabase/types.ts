@@ -985,6 +985,63 @@ export type Database = {
           },
         ]
       }
+      client_portal_benchmark_narratives: {
+        Row: {
+          client_id: string
+          competitor_id: string | null
+          generated_at: string
+          id: string
+          model: string | null
+          narratives: Json
+          network: string
+          posts_sampled: number
+          profile_name: string
+          range_end: string
+          range_start: string
+        }
+        Insert: {
+          client_id: string
+          competitor_id?: string | null
+          generated_at?: string
+          id?: string
+          model?: string | null
+          narratives?: Json
+          network: string
+          posts_sampled?: number
+          profile_name: string
+          range_end: string
+          range_start: string
+        }
+        Update: {
+          client_id?: string
+          competitor_id?: string | null
+          generated_at?: string
+          id?: string
+          model?: string | null
+          narratives?: Json
+          network?: string
+          posts_sampled?: number
+          profile_name?: string
+          range_end?: string
+          range_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_portal_benchmark_narratives_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_portal_benchmark_narratives_competitor_id_fkey"
+            columns: ["competitor_id"]
+            isOneToOne: false
+            referencedRelation: "client_portal_benchmark_competitors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_portal_benchmark_periods: {
         Row: {
           client_id: string
@@ -1509,6 +1566,44 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "client_portal_reports_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_portal_strategy_reports: {
+        Row: {
+          client_id: string
+          generated_at: string
+          id: string
+          model: string | null
+          payload: Json
+          range_end: string
+          range_start: string
+        }
+        Insert: {
+          client_id: string
+          generated_at?: string
+          id?: string
+          model?: string | null
+          payload?: Json
+          range_end: string
+          range_start: string
+        }
+        Update: {
+          client_id?: string
+          generated_at?: string
+          id?: string
+          model?: string | null
+          payload?: Json
+          range_end?: string
+          range_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_portal_strategy_reports_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
