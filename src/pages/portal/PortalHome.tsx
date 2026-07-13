@@ -268,7 +268,16 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
           .limit(50),
       ]);
       if (c.data?.logo_url) setLogoUrl(c.data.logo_url);
-      const list = ((a.data ?? []) as unknown) as Analysis[];
+      // Solo aceptar análisis anclados a semanas completas lunes→domingo.
+      // Los análisis heredados con anclajes arbitrarios (martes, miércoles, etc.)
+      // se ocultan para no dar la falsa impresión de semanas superpuestas.
+      const raw = ((a.data ?? []) as unknown) as Analysis[];
+      const list = raw.filter((x) => {
+        const s = new Date(x.week_start + "T00:00:00");
+        const e = new Date(x.week_end + "T00:00:00");
+        const days = Math.round((e.getTime() - s.getTime()) / 86400000) + 1;
+        return s.getDay() === 1 && days === 7; // lunes + 7 días
+      });
       setAnalyses(list);
       setReports((r.data ?? []) as Report[]);
       if (list.length > 0) setSelectedWeek(list[0].week_start);
