@@ -1,79 +1,78 @@
-# Fase 3 — Benchmark de performance (FanpageKarma)
 
-Módulo comparativo dentro del portal del cliente para responder: *"¿cómo va Actinver vs sus competidores en redes, semana a semana?"*.
+# Rediseño del panel de Benchmark (portal cliente)
 
-## Alcance funcional
+## Orden acordado
 
-1. **Universo de competidores editable por cliente** — lista base (ej. GBM, Kuspit, Bursanet, Vector, CI Banco), con marcar/desmarcar por semana desde el admin.
-2. **Carga de datos vía XLSX/CSV desde admin** — parser del export de FanpageKarma. Se sube un archivo por semana; el sistema deduplica por (cliente, semana, competidor).
-3. **Cuatro vistas en la pestaña Análisis → sub-tab "Benchmark":**
-   - **Ranking por métrica** (barras horizontales): fans, engagement rate, posts, interacciones. Cliente resaltado.
-   - **Evolución semanal** (líneas): N semanas de tendencia por marca en la métrica seleccionada.
-   - **Share of voice / engagement** (donut): % del total del sector.
-   - **Tabla detallada exportable** (CSV): todas las métricas por competidor y semana.
+1. **Primero** cargas los meses faltantes (feb, mar, abr, may, jun, jul) con el uploader actual de `BenchmarkAdmin`. Sin tocar código.
+2. **Después**, ya con histórico real, implemento este rediseño. Los insights (evolución, tendencias, deltas) solo tienen sentido con varios periodos cargados.
 
-## Diseño técnico
+Este plan describe el paso 2. La única acción tuya ahora es cargar los meses.
 
-### Base de datos (una sola migración)
+## Qué cambia en `PortalBenchmark.tsx`
+
+Reemplazo el layout actual (todo en una sola columna, 6 tarjetas apiladas) por una estructura de **sub-tabs** con un **resumen ejecutivo** siempre visible arriba.
+
+### Estructura nueva
 
 ```text
-client_portal_benchmark_competitors      -- catálogo por cliente
-  client_id, name, handle, platform, brand_color, is_default, active
-
-client_portal_benchmark_weeks            -- una fila por semana cargada
-  client_id, week_start, week_end, uploaded_file_name
-
-client_portal_benchmark_metrics          -- datos crudos por marca y semana
-  week_id, competitor_id (nullable → NULL = el propio cliente),
-  fans, followers, posts, interactions,
-  engagement_rate, reach, video_views,
-  raw jsonb  -- todo lo demás del export intacto
+┌─────────────────────────────────────────────────────────────┐
+│  HEADER: Periodo · Red · [Exportar CSV]                     │
+├─────────────────────────────────────────────────────────────┤
+│  RESUMEN EJECUTIVO (siempre visible)                        │
+│  ┌──────────┬──────────┬──────────┬──────────┐             │
+│  │ Posición │ Δ vs mes │ vs prom. │ Mejor    │             │
+│  │ #2 de 8  │ +12%     │ +34%     │ post     │             │
+│  │ engag.   │ seguid.  │ engag.   │ del mes  │             │
+│  └──────────┴──────────┴──────────┴──────────┘             │
+│  Headline insight: "Actinver creció 12% en seguidores      │
+│  mientras el sector promedió 4%."                           │
+├─────────────────────────────────────────────────────────────┤
+│  [Resumen] [Actinver] [Competidores] [Contenido] [Datos]   │
+├─────────────────────────────────────────────────────────────┤
+│  Contenido del tab seleccionado                             │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-RLS: solo `admin` puede insertar/editar; el portal (con `portal_token`) puede leer los datos del cliente al que pertenece la sesión.
+### Sub-tabs
 
-### Edge function `benchmark-import`
+- **Resumen** — 3-5 insights en tarjetas narrativas (una frase + una gráfica pequeña que la prueba). Foco: qué le pasó a Actinver este mes vs sí misma, vs promedio del sector, y vs el líder.
+- **Actinver** — Vista dedicada al cliente: evolución mes a mes de sus métricas clave (seguidores, engagement, posts/día, crecimiento), con deltas % y racha (mejorando/empeorando). Sin ruido de competidores aquí.
+- **Competidores** — Ranking + share del sector + tabla comparativa. Es lo que hoy ocupa las primeras 2 tarjetas, pero con Actinver siempre resaltado y con la columna "vs Actinver" (±%).
+- **Contenido** — Top posts del periodo, separando "top propios" y "top del sector", con lectura del patrón (formato, hora, tema si se puede inferir del texto).
+- **Datos** — Tabla detallada actual + evolución diaria de seguidores. Es el "modo raw" para quien quiera bucear.
 
-- Recibe XLSX/CSV + `client_id` + `week_start`.
-- Parsea con `xlsx` (npm). Detecta columnas de FanpageKarma (Fans, Fan Change, Post Interactions, Engagement Rate, Number of Posts, Reach…).
-- Mapea filas a competidores del catálogo (fuzzy por nombre/handle); las que no matchean se devuelven al admin para que las asigne o cree.
-- Inserta en `benchmark_weeks` + `benchmark_metrics` con `raw` completo por trazabilidad.
+## Capa de insights (la parte inteligente)
 
-### Admin (`/admin/cliente/:id/portal` → nueva pestaña "Benchmark")
+Todos los insights se calculan **en el cliente** a partir de los datos que ya tiene el componente (`metrics`, `daily`, `posts`, `periods`, `competitors`). No requiere edge function ni cambios de esquema.
 
-- Gestor de competidores (tabla editable: nombre, handle, color, activo).
-- Uploader semanal (drag-drop XLSX). Preview de matches antes de confirmar.
-- Historial de semanas cargadas (borrar / re-subir).
+Cálculos que se agregan en un helper `computeInsights()`:
 
-### Portal (`PortalHome` → tab Análisis)
+- **Posición competitiva** por métrica: rank de Actinver dentro del periodo actual (`#N de M`).
+- **Evolución propia**: delta % de cada métrica de Actinver vs periodo anterior + racha de N meses consecutivos.
+- **vs promedio sector**: `(actinver_metric − avg(competidores_metric)) / avg(competidores_metric)`.
+- **Mejor/peor métrica del mes**: en qué métrica Actinver ganó más terreno y en cuál perdió más.
+- **Contenido ganador**: top 3 posts propios del periodo por interacciones + comparativa con la mediana del sector.
+- **Alerta**: si alguna métrica cae >15% MoM o Actinver sale del top 3 en engagement.
 
-- Nuevo componente `PortalBenchmark.tsx` con las 4 vistas + selector de métrica y de rango (1, 4, 12 semanas).
-- El cliente ya está resaltado con acento visual; competidores usan el `brand_color` del catálogo.
-- Botón "Exportar CSV" reutiliza el patrón del buscador de menciones.
+Los headlines se generan con plantillas deterministas (no LLM), en español, tono directo. Ejemplo:
 
-## Entregable de Fase 3
+> "Actinver subió al #2 en engagement (venía del #4). El promedio del sector cayó 3%, ustedes subieron 11%."
 
-- Migración con las 3 tablas + RLS + grants.
-- Edge function `benchmark-import` desplegada.
-- Admin: pestaña Benchmark con gestor + uploader.
-- Portal: sub-tab Benchmark con las 4 vistas.
-- Pre-carga del catálogo de competidores para Actinver (GBM, Kuspit, Bursanet, Vector, CI Banco — ajustable).
+## Detalles técnicos
 
-**Pendiente antes de empezar:** necesito un XLSX real de FanpageKarma (idealmente de Actinver + al menos 2 competidores) para modelar el parser con nombres de columna exactos. Sin él arranco con un mapeo estándar y afinamos al probar.
+- Un solo archivo tocado: `src/components/portal/PortalBenchmark.tsx`.
+- Sub-tabs con `@/components/ui/tabs` (shadcn, ya en el proyecto).
+- Se preserva toda la lógica de fetch actual — solo se reorganiza la presentación y se agrega un `useMemo` con el objeto `insights`.
+- Se preserva el filtro por Red y el export CSV en el header global.
+- Semantic tokens del design system (respetando dark theme del portal).
+- Sin cambios en `BenchmarkAdmin.tsx`, edge functions, migraciones ni esquema.
 
----
+## Fuera de alcance
 
-# Roadmap después de Fase 3
+- No se cambia el uploader ni el parser de FanpageKarma.
+- No se agregan métricas nuevas al esquema — solo se reinterpreta lo existente.
+- No hay generación con IA en esta iteración (los insights son plantillas deterministas). Si más adelante quieres narrativa generada por Claude, se agrega como paso posterior.
 
-## Fase 4 — UI/UX polish
-- Tema light dedicado tipo dashboard financiero para el portal externo (hoy hereda dark del admin).
-- Gradientes de datos, micro-interacciones, tipografía display en KPIs.
-- Onboarding visual del portal la primera vez que entra el cliente.
+## Siguiente acción
 
-## Fase 5 — Automatización e inteligencia
-- **Auto-síntesis semanal**: edge function que corre cada lunes, cruza listening + benchmark de la semana anterior y genera el `weekly_recommendations` sin intervención manual.
-- **Alertas proactivas por email/WhatsApp** cuando: (a) sentimiento cae >X%, (b) competidor supera al cliente en engagement, (c) crisis detectada en la bitácora.
-- **Comparador multi-cliente** interno (solo admin KiMedia): ver desempeño agregado de toda la cartera.
-- **Auto-ingest de FanpageKarma** vía su API (si Actinver tiene contrato con acceso), reemplaza la subida manual.
-
-¿Arranco con Fase 3 tal cual, o quieres ajustar competidores base / métricas antes?
+Sube los meses faltantes en `/admin/cliente/actinver/portal` → **Admin Benchmark** → uploader. Cuando termines, dime "listo" y arranco la implementación.
