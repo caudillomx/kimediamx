@@ -941,6 +941,12 @@ export default function PortalBenchmark({ clientId, clientName }: { clientId: st
 
         {/* TAB: CONTENIDO */}
         <TabsContent value="contenido" className="space-y-4 mt-4">
+          <BenchmarkNarratives
+            clientId={clientId}
+            clientName={clientName}
+            range={effectiveRange}
+            networkFilter={networkFilter}
+          />
           {/* Deeper insights row */}
           <div className="grid gap-3 md:grid-cols-4">
             <Card className="p-4">
