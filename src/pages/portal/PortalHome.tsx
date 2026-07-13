@@ -22,6 +22,8 @@ import PortalAnalysis from "./PortalAnalysis";
 import PortalPdfTemplate from "./PortalPdfTemplate";
 import RecommendationsBlock from "@/components/portal/RecommendationsBlock";
 import PortalBenchmark from "@/components/portal/PortalBenchmark";
+import PortalStrategy from "@/components/portal/PortalStrategy";
+import { Compass } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 
 type Analysis = {
