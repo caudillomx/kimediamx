@@ -7,7 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Compass, Sparkles, RefreshCcw, Loader2, AlertTriangle, CheckCircle2, CalendarIcon, MessageSquare, Users, Target, Lightbulb } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Lightbulb as LightbulbIcon } from "lucide-react";
+const LightbulbIcon = Lightbulb;
 
 type Payload = {
   coherence?: { level: "alta" | "media" | "baja"; reason: string };
