@@ -73,6 +73,55 @@ export default function PortalBenchmark({ clientId, clientName }: { clientId: st
   const currentPeriod = periods.find((p) => p.id === selectedPeriod) ?? null;
   const currentMetric = METRICS.find((m) => m.key === selectedMetric) ?? METRICS[0];
 
+  // ---------- DATE RANGE MODE ----------
+  // effective date range for filtering posts/daily.
+  // In "period" mode we derive it from selectedPeriod. In "custom" we use rangeFrom/rangeTo.
+  const effectiveRange = useMemo<{ from: Date; to: Date; label: string } | null>(() => {
+    if (rangeMode === "custom" && rangeFrom && rangeTo) {
+      const from = rangeFrom < rangeTo ? rangeFrom : rangeTo;
+      const to = rangeFrom < rangeTo ? rangeTo : rangeFrom;
+      const fmt = (d: Date) => d.toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" });
+      return { from, to, label: `${fmt(from)} — ${fmt(to)}` };
+    }
+    if (currentPeriod) {
+      return {
+        from: new Date(currentPeriod.period_start),
+        to: new Date(currentPeriod.period_end),
+        label: currentPeriod.period_label,
+      };
+    }
+    return null;
+  }, [rangeMode, rangeFrom, rangeTo, currentPeriod]);
+
+  // Periods that overlap effective range (used when custom range spans multiple months)
+  const activePeriodIds = useMemo<string[]>(() => {
+    if (rangeMode === "period") return selectedPeriod ? [selectedPeriod] : [];
+    if (!effectiveRange) return [];
+    return periods
+      .filter((p) => {
+        const s = new Date(p.period_start);
+        const e = new Date(p.period_end);
+        return s <= effectiveRange.to && e >= effectiveRange.from;
+      })
+      .map((p) => p.id);
+  }, [rangeMode, selectedPeriod, periods, effectiveRange]);
+
+  const inRange = (isoOrDate: string | Date | null): boolean => {
+    if (!effectiveRange || !isoOrDate) return false;
+    const d = typeof isoOrDate === "string" ? new Date(isoOrDate) : isoOrDate;
+    if (isNaN(d.getTime())) return false;
+    return d >= effectiveRange.from && d <= new Date(effectiveRange.to.getTime() + 86_400_000 - 1);
+  };
+
+  // Preset helper
+  const applyPreset = (days: number) => {
+    const to = new Date();
+    const from = new Date(to.getTime() - (days - 1) * 86_400_000);
+    setRangeMode("custom");
+    setRangeFrom(from);
+    setRangeTo(to);
+  };
+
   const networks = useMemo(() => {
     const set = new Set<string>();
     metrics.forEach((m) => set.add(m.network));
