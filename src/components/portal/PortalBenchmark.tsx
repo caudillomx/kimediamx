@@ -148,6 +148,194 @@ export default function PortalBenchmark({ clientId, clientName }: { clientId: st
       .slice(0, 20);
   }, [posts, selectedPeriod, networkFilter]);
 
+  // Identify client competitor(s)
+  const clientCompetitorIds = useMemo(
+    () => new Set(competitors.filter((c) => c.is_client).map((c) => c.id)),
+    [competitors],
+  );
+
+  // Previous period (chronological)
+  const prevPeriod = useMemo(() => {
+    const idx = periods.findIndex((p) => p.id === selectedPeriod);
+    return idx > 0 ? periods[idx - 1] : null;
+  }, [periods, selectedPeriod]);
+
+  // Insights layer — deterministic templates, no LLM
+  const insights = useMemo(() => {
+    const netFilter = (m: { network: string }) => networkFilter === "all" || m.network === networkFilter;
+    const currentAll = metrics.filter((m) => m.period_id === selectedPeriod && netFilter(m));
+    const prevAll = prevPeriod ? metrics.filter((m) => m.period_id === prevPeriod.id && netFilter(m)) : [];
+
+    // Aggregate helper: value by competitor for a metric key (sum across networks when "all")
+    const aggByCompetitor = (rows: Metric[], key: keyof Metric) => {
+      const map = new Map<string, number>();
+      for (const r of rows) {
+        const v = Number(r[key] ?? 0);
+        if (!Number.isFinite(v)) continue;
+        map.set(r.competitor_id, (map.get(r.competitor_id) ?? 0) + v);
+      }
+      return map;
+    };
+
+    // For rate-type metrics, averaging is more meaningful than summing; but since we filter by network or select "all",
+    // and each competitor typically has one row per network, sum ≈ total presence. We keep sum for scale metrics
+    // (followers, posts_per_day, reach_per_day) and average across networks for rates.
+    const isRate = (k: string) => k === "engagement_rate" || k === "follower_growth_rate" || k === "interaction_per_impression" || k === "performance_index";
+    const aggBy = (rows: Metric[], key: keyof Metric) => {
+      if (!isRate(key as string)) return aggByCompetitor(rows, key);
+      const sums = new Map<string, { s: number; n: number }>();
+      for (const r of rows) {
+        const v = Number(r[key] ?? NaN);
+        if (!Number.isFinite(v)) continue;
+        const e = sums.get(r.competitor_id) ?? { s: 0, n: 0 };
+        e.s += v; e.n += 1;
+        sums.set(r.competitor_id, e);
+      }
+      const out = new Map<string, number>();
+      sums.forEach((v, k) => out.set(k, v.n ? v.s / v.n : 0));
+      return out;
+    };
+
+    // Position of client for a metric (rank #N of M)
+    const rankFor = (rows: Metric[], key: keyof Metric) => {
+      const m = aggBy(rows, key);
+      const arr = Array.from(m.entries()).filter(([, v]) => Number.isFinite(v) && v !== 0).sort((a, b) => b[1] - a[1]);
+      const total = arr.length;
+      let clientRank: number | null = null;
+      let clientVal: number | null = null;
+      for (let i = 0; i < arr.length; i++) {
+        if (clientCompetitorIds.has(arr[i][0])) { clientRank = i + 1; clientVal = arr[i][1]; break; }
+      }
+      return { rank: clientRank, total, value: clientVal };
+    };
+
+    // Client value + previous value for a metric
+    const clientValue = (rows: Metric[], key: keyof Metric) => {
+      const m = aggBy(rows, key);
+      let v = 0; let found = false;
+      for (const id of clientCompetitorIds) {
+        if (m.has(id)) { v += m.get(id)!; found = true; }
+      }
+      return found ? v : null;
+    };
+
+    // Sector average (excluding client)
+    const sectorAvg = (rows: Metric[], key: keyof Metric) => {
+      const m = aggBy(rows, key);
+      const vals: number[] = [];
+      m.forEach((v, id) => { if (!clientCompetitorIds.has(id) && Number.isFinite(v) && v !== 0) vals.push(v); });
+      if (!vals.length) return null;
+      return vals.reduce((a, b) => a + b, 0) / vals.length;
+    };
+
+    const pct = (a: number | null, b: number | null) => {
+      if (a == null || b == null || b === 0) return null;
+      return (a - b) / Math.abs(b);
+    };
+
+    const engagementRank = rankFor(currentAll, "engagement_rate");
+    const followersClient = clientValue(currentAll, "followers");
+    const followersPrev = clientValue(prevAll, "followers");
+    const followersDelta = pct(followersClient, followersPrev);
+
+    const engClient = clientValue(currentAll, "engagement_rate");
+    const engPrev = clientValue(prevAll, "engagement_rate");
+    const engDelta = pct(engClient, engPrev);
+
+    const engSector = sectorAvg(currentAll, "engagement_rate");
+    const engVsSector = pct(engClient, engSector);
+
+    const followersSector = sectorAvg(currentAll, "followers");
+    const followersVsSector = pct(followersClient, followersSector);
+
+    // Best post of the period (client) by interactions
+    const clientPosts = posts.filter((p) => p.period_id === selectedPeriod && p.competitor_id && clientCompetitorIds.has(p.competitor_id) && (networkFilter === "all" || p.network === networkFilter));
+    const bestPost = clientPosts.slice().sort((a, b) => (b.interactions ?? 0) - (a.interactions ?? 0))[0] ?? null;
+
+    // Streak on followers growth (consecutive positive months)
+    let streak = 0;
+    if (periods.length > 1) {
+      for (let i = periods.length - 1; i > 0; i--) {
+        const curr = clientValue(metrics.filter((m) => m.period_id === periods[i].id && netFilter(m)), "followers");
+        const prev = clientValue(metrics.filter((m) => m.period_id === periods[i - 1].id && netFilter(m)), "followers");
+        const d = pct(curr, prev);
+        if (d != null && d > 0) streak++;
+        else break;
+      }
+    }
+
+    // Metric where client gained/lost most vs previous period
+    let bestMetric: { key: string; label: string; delta: number } | null = null;
+    let worstMetric: { key: string; label: string; delta: number } | null = null;
+    for (const m of METRICS) {
+      const c = clientValue(currentAll, m.key);
+      const p = clientValue(prevAll, m.key);
+      const d = pct(c, p);
+      if (d == null) continue;
+      if (!bestMetric || d > bestMetric.delta) bestMetric = { key: m.key as string, label: m.label, delta: d };
+      if (!worstMetric || d < worstMetric.delta) worstMetric = { key: m.key as string, label: m.label, delta: d };
+    }
+
+    // Headline
+    let headline = `${clientName} tiene datos cargados para ${currentPeriod?.period_label ?? "este periodo"}.`;
+    if (engDelta != null && engSector != null && engVsSector != null) {
+      const sectorDelta = (() => {
+        const sc = sectorAvg(currentAll, "engagement_rate");
+        const sp = sectorAvg(prevAll, "engagement_rate");
+        return pct(sc, sp);
+      })();
+      if (sectorDelta != null) {
+        headline = `${clientName} ${engDelta >= 0 ? "subió" : "cayó"} ${Math.abs(engDelta * 100).toFixed(1)}% en engagement mientras el sector ${sectorDelta >= 0 ? "subió" : "cayó"} ${Math.abs(sectorDelta * 100).toFixed(1)}%.`;
+      } else {
+        headline = `${clientName} ${engDelta >= 0 ? "subió" : "cayó"} ${Math.abs(engDelta * 100).toFixed(1)}% en engagement vs el mes anterior.`;
+      }
+    } else if (followersDelta != null) {
+      headline = `${clientName} ${followersDelta >= 0 ? "creció" : "perdió"} ${Math.abs(followersDelta * 100).toFixed(1)}% en seguidores vs el mes anterior.`;
+    }
+
+    // Alerts
+    const alerts: string[] = [];
+    for (const m of METRICS) {
+      const c = clientValue(currentAll, m.key);
+      const p = clientValue(prevAll, m.key);
+      const d = pct(c, p);
+      if (d != null && d < -0.15) alerts.push(`${m.label} cayó ${(d * 100).toFixed(1)}% vs mes anterior.`);
+    }
+    if (engagementRank.rank && engagementRank.rank > 3) {
+      alerts.push(`Están fuera del top 3 en engagement (#${engagementRank.rank} de ${engagementRank.total}).`);
+    }
+
+    return {
+      engagementRank,
+      followersClient, followersDelta, followersVsSector,
+      engClient, engDelta, engVsSector, engSector,
+      bestPost,
+      streak,
+      bestMetric, worstMetric,
+      headline,
+      alerts,
+    };
+  }, [metrics, posts, selectedPeriod, prevPeriod, networkFilter, clientCompetitorIds, clientName, periods, currentPeriod]);
+
+  // Client's own evolution across all periods (for Actinver tab)
+  const clientEvolution = useMemo(() => {
+    const netFilter = (m: { network: string }) => networkFilter === "all" || m.network === networkFilter;
+    return periods.map((p) => {
+      const rows = metrics.filter((m) => m.period_id === p.id && netFilter(m) && clientCompetitorIds.has(m.competitor_id));
+      const row: Record<string, any> = { period: p.period_label };
+      for (const M of METRICS) {
+        let sum = 0, count = 0;
+        for (const r of rows) {
+          const v = Number(r[M.key] ?? NaN);
+          if (Number.isFinite(v)) { sum += v; count++; }
+        }
+        const isRateKey = M.key === "engagement_rate" || M.key === "follower_growth_rate" || M.key === "interaction_per_impression" || M.key === "performance_index";
+        row[M.key as string] = count ? (isRateKey ? sum / count : sum) : null;
+      }
+      return row;
+    });
+  }, [periods, metrics, networkFilter, clientCompetitorIds]);
+
   function exportCsv() {
     const header = ["periodo", "perfil", "red", "seguidores", "crecimiento_rate", "engagement_rate", "posts_dia", "alcance_dia", "indice_rendimiento", "interaccion_por_impresion"];
     const periodMap = new Map(periods.map((p) => [p.id, p]));
