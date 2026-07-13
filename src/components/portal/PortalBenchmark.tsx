@@ -365,21 +365,24 @@ export default function PortalBenchmark({ clientId, clientName }: { clientId: st
     );
   }
 
+  const fmtPct = (v: number | null, digits = 1) => v == null ? "—" : `${v >= 0 ? "+" : ""}${(v * 100).toFixed(digits)}%`;
+  const deltaColor = (v: number | null) => v == null ? "text-muted-foreground" : v > 0 ? "text-emerald-500" : v < 0 ? "text-rose-500" : "text-muted-foreground";
+  const DeltaIcon = ({ v }: { v: number | null }) => v == null ? <Minus className="w-3.5 h-3.5" /> : v > 0 ? <ArrowUp className="w-3.5 h-3.5" /> : v < 0 ? <ArrowDown className="w-3.5 h-3.5" /> : <Minus className="w-3.5 h-3.5" />;
+
+  const clientPostsPeriod = posts.filter((p) => p.period_id === selectedPeriod && p.competitor_id && clientCompetitorIds.has(p.competitor_id) && (networkFilter === "all" || p.network === networkFilter))
+    .sort((a, b) => (b.interactions ?? 0) - (a.interactions ?? 0));
+  const sectorPostsPeriod = posts.filter((p) => p.period_id === selectedPeriod && p.competitor_id && !clientCompetitorIds.has(p.competitor_id) && (networkFilter === "all" || p.network === networkFilter))
+    .sort((a, b) => (b.interactions ?? 0) - (a.interactions ?? 0));
+
   return (
     <div className="space-y-5">
+      {/* HEADER */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-2">
           <span className="text-xs uppercase tracking-widest text-muted-foreground">Periodo</span>
           <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
             <SelectTrigger className="w-[200px] h-9"><SelectValue /></SelectTrigger>
             <SelectContent>{periods.slice().reverse().map((p) => <SelectItem key={p.id} value={p.id}>{p.period_label}</SelectItem>)}</SelectContent>
-          </Select>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs uppercase tracking-widest text-muted-foreground">Métrica</span>
-          <Select value={selectedMetric} onValueChange={setSelectedMetric}>
-            <SelectTrigger className="w-[240px] h-9"><SelectValue /></SelectTrigger>
-            <SelectContent>{METRICS.map((m) => <SelectItem key={m.key as string} value={m.key as string}>{m.label}</SelectItem>)}</SelectContent>
           </Select>
         </div>
         <div className="flex items-center gap-2">
@@ -396,197 +399,456 @@ export default function PortalBenchmark({ clientId, clientName }: { clientId: st
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="p-5">
-          <div className="flex items-center gap-2 mb-3">
-            <BarChart3 className="w-4 h-4 text-muted-foreground" />
-            <h4 className="font-semibold text-sm">Ranking — {currentMetric.label}</h4>
+      {/* EXECUTIVE SUMMARY */}
+      <Card className="p-5 bg-gradient-to-br from-primary/5 via-background to-background border-primary/20">
+        <div className="flex items-start gap-3 mb-4">
+          <div className="p-2 rounded-lg bg-primary/10">
+            <Sparkles className="w-5 h-5 text-primary" />
           </div>
-          {rankingData.length === 0 ? (
-            <p className="text-sm text-muted-foreground italic">Sin datos para esta selección.</p>
-          ) : (
-            <ResponsiveContainer width="100%" height={Math.max(220, rankingData.length * 28)}>
-              <BarChart data={rankingData} layout="vertical" margin={{ left: 8, right: 24 }}>
-                <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                <XAxis type="number" fontSize={10} tickFormatter={(v) => v > 999 ? `${(v / 1000).toFixed(1)}k` : String(v)} />
-                <YAxis type="category" dataKey="brand" fontSize={11} width={170} />
-                <Tooltip formatter={(v: number) => currentMetric.fmt(v)} />
-                <Bar dataKey="value" radius={[0, 6, 6, 0]}>
-                  {rankingData.map((r, i) => <Cell key={i} fill={r.color} />)}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-          {currentPeriod && <p className="text-[11px] text-muted-foreground mt-2 italic">Periodo: {currentPeriod.period_label}</p>}
-        </Card>
-
-        <Card className="p-5">
-          <div className="flex items-center gap-2 mb-3">
-            <PieIcon className="w-4 h-4 text-muted-foreground" />
-            <h4 className="font-semibold text-sm">Share del sector — {currentMetric.label}</h4>
+          <div className="flex-1">
+            <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Insight del periodo</p>
+            <p className="text-base font-medium leading-snug mt-1">{insights.headline}</p>
           </div>
-          {rankingData.length === 0 ? (
-            <p className="text-sm text-muted-foreground italic">Sin datos.</p>
-          ) : (
-            <ResponsiveContainer width="100%" height={280}>
-              <PieChart>
-                <Pie data={rankingData} dataKey="value" nameKey="brand" cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={2}>
-                  {rankingData.map((r, i) => <Cell key={i} fill={r.color} />)}
-                </Pie>
-                <Tooltip formatter={(v: number, _n, p: any) => [`${currentMetric.fmt(v)} (${((v / shareTotal) * 100).toFixed(1)}%)`, String(p.payload.brand)]} />
-                <Legend wrapperStyle={{ fontSize: 10 }} />
-              </PieChart>
-            </ResponsiveContainer>
-          )}
-        </Card>
-      </div>
-
-      <Card className="p-5">
-        <div className="flex items-center gap-2 mb-3">
-          <TrendingUp className="w-4 h-4 text-muted-foreground" />
-          <h4 className="font-semibold text-sm">Evolución por periodo — {currentMetric.label}</h4>
         </div>
-        {evolutionData.length === 0 ? (
-          <p className="text-sm text-muted-foreground italic">Necesitas al menos 2 periodos cargados para ver evolución.</p>
-        ) : (
-          <ResponsiveContainer width="100%" height={320}>
-            <LineChart data={evolutionData}>
-              <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-              <XAxis dataKey="period" fontSize={10} />
-              <YAxis fontSize={10} tickFormatter={(v) => v > 999 ? `${(v / 1000).toFixed(1)}k` : String(v)} />
-              <Tooltip formatter={(v: number) => currentMetric.fmt(v)} />
-              <Legend wrapperStyle={{ fontSize: 10 }} />
-              {brandsList.map((b) => (
-                <Line key={b.key} type="monotone" dataKey={b.key} stroke={b.color}
-                  strokeWidth={b.isClient ? 3 : 1.5} dot={{ r: b.isClient ? 4 : 2 }} activeDot={{ r: b.isClient ? 6 : 4 }} />
-              ))}
-            </LineChart>
-          </ResponsiveContainer>
-        )}
-      </Card>
-
-      <Card className="p-5">
-        <div className="flex items-center gap-2 mb-3">
-          <TrendingUp className="w-4 h-4 text-muted-foreground" />
-          <h4 className="font-semibold text-sm">Crecimiento diario de seguidores — {currentPeriod?.period_label}</h4>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="p-3 rounded-lg bg-background/60 border border-border/40">
+            <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-muted-foreground">
+              <Trophy className="w-3 h-3" />Posición engagement
+            </div>
+            <div className="mt-1 font-display font-bold text-2xl">
+              {insights.engagementRank.rank ? `#${insights.engagementRank.rank}` : "—"}
+              {insights.engagementRank.total > 0 && <span className="text-sm text-muted-foreground font-normal"> de {insights.engagementRank.total}</span>}
+            </div>
+          </div>
+          <div className="p-3 rounded-lg bg-background/60 border border-border/40">
+            <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-muted-foreground">
+              <TrendingUp className="w-3 h-3" />Seguidores vs mes ant.
+            </div>
+            <div className={`mt-1 font-display font-bold text-2xl flex items-center gap-1 ${deltaColor(insights.followersDelta)}`}>
+              <DeltaIcon v={insights.followersDelta} />{fmtPct(insights.followersDelta)}
+            </div>
+          </div>
+          <div className="p-3 rounded-lg bg-background/60 border border-border/40">
+            <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-muted-foreground">
+              <Target className="w-3 h-3" />Engagement vs sector
+            </div>
+            <div className={`mt-1 font-display font-bold text-2xl flex items-center gap-1 ${deltaColor(insights.engVsSector)}`}>
+              <DeltaIcon v={insights.engVsSector} />{fmtPct(insights.engVsSector)}
+            </div>
+          </div>
+          <div className="p-3 rounded-lg bg-background/60 border border-border/40">
+            <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-muted-foreground">
+              <Newspaper className="w-3 h-3" />Mejor post
+            </div>
+            <div className="mt-1 font-display font-bold text-2xl tabular-nums">
+              {insights.bestPost ? (insights.bestPost.interactions?.toLocaleString("es-MX") ?? "—") : "—"}
+            </div>
+            <p className="text-[10px] text-muted-foreground truncate">interacciones{insights.bestPost?.network ? ` · ${insights.bestPost.network}` : ""}</p>
+          </div>
         </div>
-        {dailyEvolution.length === 0 ? (
-          <p className="text-sm text-muted-foreground italic">No hay datos diarios de seguidores para este periodo (sube el archivo "Seguidores").</p>
-        ) : (
-          <ResponsiveContainer width="100%" height={320}>
-            <LineChart data={dailyEvolution}>
-              <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-              <XAxis dataKey="day" fontSize={10} />
-              <YAxis fontSize={10} tickFormatter={(v) => v > 999 ? `${(v / 1000).toFixed(1)}k` : String(v)} />
-              <Tooltip />
-              <Legend wrapperStyle={{ fontSize: 10 }} />
-              {brandsList.map((b) => (
-                <Line key={b.key} type="monotone" dataKey={b.key} stroke={b.color}
-                  strokeWidth={b.isClient ? 3 : 1.5} dot={false} activeDot={{ r: b.isClient ? 5 : 3 }} />
-              ))}
-            </LineChart>
-          </ResponsiveContainer>
-        )}
-      </Card>
-
-      <Card className="p-5">
-        <div className="flex items-center gap-2 mb-3">
-          <Newspaper className="w-4 h-4 text-muted-foreground" />
-          <h4 className="font-semibold text-sm">Top 20 publicaciones — {currentPeriod?.period_label}</h4>
-        </div>
-        {topPosts.length === 0 ? (
-          <p className="text-sm text-muted-foreground italic">Sin publicaciones cargadas para este periodo.</p>
-        ) : (
-          <div className="overflow-auto max-h-[500px] border border-border/40 rounded-lg">
-            <table className="w-full text-xs">
-              <thead className="bg-background/60 sticky top-0">
-                <tr>
-                  <th className="text-left p-2">Perfil</th>
-                  <th className="text-left p-2">Red</th>
-                  <th className="text-left p-2">Fecha</th>
-                  <th className="text-left p-2">Mensaje</th>
-                  <th className="text-right p-2">Likes</th>
-                  <th className="text-right p-2">Coment.</th>
-                  <th className="text-right p-2">Interacc.</th>
-                  <th className="text-right p-2">Eng.%</th>
-                  <th className="p-2">Link</th>
-                </tr>
-              </thead>
-              <tbody>
-                {topPosts.map((p) => {
-                  const c = p.competitor_id ? compMap.get(p.competitor_id) : null;
-                  return (
-                    <tr key={p.id} className={`border-t border-border/30 ${c?.is_client ? "bg-primary/5 font-medium" : ""}`}>
-                      <td className="p-2">
-                        <span className="inline-flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full" style={{ background: c?.brand_color ?? "#94a3b8" }} />
-                          {p.profile_name}
-                        </span>
-                      </td>
-                      <td className="p-2">{p.network}</td>
-                      <td className="p-2 text-muted-foreground">{p.posted_at ? new Date(p.posted_at).toLocaleDateString("es-MX") : "—"}</td>
-                      <td className="p-2 max-w-xs truncate" title={p.message ?? ""}>{p.message ?? "—"}</td>
-                      <td className="p-2 text-right tabular-nums">{p.likes?.toLocaleString("es-MX") ?? "—"}</td>
-                      <td className="p-2 text-right tabular-nums">{p.comments?.toLocaleString("es-MX") ?? "—"}</td>
-                      <td className="p-2 text-right tabular-nums">{p.interactions?.toLocaleString("es-MX") ?? "—"}</td>
-                      <td className="p-2 text-right tabular-nums">{p.engagement_rate != null ? (p.engagement_rate * 100).toFixed(2) + "%" : "—"}</td>
-                      <td className="p-2">{p.link ? <a href={p.link} target="_blank" rel="noreferrer" className="text-primary hover:underline">↗</a> : "—"}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+        {insights.alerts.length > 0 && (
+          <div className="mt-4 p-3 rounded-lg border border-amber-500/30 bg-amber-500/5">
+            <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-amber-500 mb-1">
+              <AlertTriangle className="w-3 h-3" />Alertas
+            </div>
+            <ul className="text-xs space-y-1">
+              {insights.alerts.map((a, i) => <li key={i}>• {a}</li>)}
+            </ul>
           </div>
         )}
       </Card>
 
-      <Card className="p-5">
-        <div className="flex items-center gap-2 mb-3">
-          <TableIcon className="w-4 h-4 text-muted-foreground" />
-          <h4 className="font-semibold text-sm">Tabla detallada — {currentPeriod?.period_label}</h4>
-        </div>
-        <div className="overflow-auto max-h-[500px] border border-border/40 rounded-lg">
-          <table className="w-full text-xs">
-            <thead className="bg-background/60 sticky top-0">
-              <tr>
-                <th className="text-left p-2">Perfil</th>
-                <th className="text-left p-2">Red</th>
-                <th className="text-right p-2">Seguidores</th>
-                <th className="text-right p-2">Crec.%/día</th>
-                <th className="text-right p-2">Engagement</th>
-                <th className="text-right p-2">Posts/día</th>
-                <th className="text-right p-2">Alcance/día</th>
-                <th className="text-right p-2">Índice</th>
-              </tr>
-            </thead>
-            <tbody>
-              {periodMetrics
-                .slice()
-                .sort((a, b) => (b.followers ?? 0) - (a.followers ?? 0))
+      {/* SUB-TABS */}
+      <Tabs defaultValue="resumen" className="w-full">
+        <TabsList className="grid grid-cols-5 w-full max-w-2xl">
+          <TabsTrigger value="resumen">Resumen</TabsTrigger>
+          <TabsTrigger value="cliente">{clientName}</TabsTrigger>
+          <TabsTrigger value="competidores">Competidores</TabsTrigger>
+          <TabsTrigger value="contenido">Contenido</TabsTrigger>
+          <TabsTrigger value="datos">Datos</TabsTrigger>
+        </TabsList>
+
+        {/* TAB: RESUMEN */}
+        <TabsContent value="resumen" className="space-y-4 mt-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            <Card className="p-5">
+              <div className="flex items-center gap-2 mb-1">
+                <TrendingUp className="w-4 h-4 text-emerald-500" />
+                <h4 className="font-semibold text-sm">Dónde estamos ganando</h4>
+              </div>
+              <p className="text-xs text-muted-foreground mb-3">Métrica con mayor crecimiento vs mes anterior.</p>
+              {insights.bestMetric ? (
+                <div>
+                  <p className="text-lg font-display font-bold">{insights.bestMetric.label}</p>
+                  <p className={`text-3xl font-display font-bold ${deltaColor(insights.bestMetric.delta)}`}>{fmtPct(insights.bestMetric.delta)}</p>
+                </div>
+              ) : <p className="text-sm text-muted-foreground italic">Necesitas 2+ periodos.</p>}
+            </Card>
+            <Card className="p-5">
+              <div className="flex items-center gap-2 mb-1">
+                <TrendingDown className="w-4 h-4 text-rose-500" />
+                <h4 className="font-semibold text-sm">Dónde estamos perdiendo</h4>
+              </div>
+              <p className="text-xs text-muted-foreground mb-3">Métrica con mayor caída vs mes anterior.</p>
+              {insights.worstMetric ? (
+                <div>
+                  <p className="text-lg font-display font-bold">{insights.worstMetric.label}</p>
+                  <p className={`text-3xl font-display font-bold ${deltaColor(insights.worstMetric.delta)}`}>{fmtPct(insights.worstMetric.delta)}</p>
+                </div>
+              ) : <p className="text-sm text-muted-foreground italic">Necesitas 2+ periodos.</p>}
+            </Card>
+          </div>
+
+          <Card className="p-5">
+            <div className="flex items-center gap-2 mb-1">
+              <Sparkles className="w-4 h-4 text-primary" />
+              <h4 className="font-semibold text-sm">Racha positiva de seguidores</h4>
+            </div>
+            <p className="text-xs text-muted-foreground mb-2">Meses consecutivos con crecimiento neto.</p>
+            <p className="text-4xl font-display font-bold">{insights.streak} <span className="text-base font-normal text-muted-foreground">meses</span></p>
+          </Card>
+
+          <Card className="p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <BarChart3 className="w-4 h-4 text-muted-foreground" />
+              <h4 className="font-semibold text-sm">Snapshot competitivo — Engagement rate</h4>
+            </div>
+            {(() => {
+              const key: keyof Metric = "engagement_rate";
+              const data = periodMetrics
                 .map((m) => {
                   const c = compMap.get(m.competitor_id);
-                  return (
-                    <tr key={m.id} className={`border-t border-border/30 ${c?.is_client ? "bg-primary/5 font-medium" : ""}`}>
-                      <td className="p-2">
-                        <span className="inline-flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full" style={{ background: c?.brand_color ?? "#94a3b8" }} />
-                          {c?.name ?? "?"}
-                        </span>
-                      </td>
-                      <td className="p-2">{m.network}</td>
-                      <td className="p-2 text-right tabular-nums">{m.followers?.toLocaleString("es-MX") ?? "—"}</td>
-                      <td className="p-2 text-right tabular-nums">{m.follower_growth_rate != null ? (m.follower_growth_rate * 100).toFixed(3) + "%" : "—"}</td>
-                      <td className="p-2 text-right tabular-nums">{m.engagement_rate != null ? (m.engagement_rate * 100).toFixed(2) + "%" : "—"}</td>
-                      <td className="p-2 text-right tabular-nums">{m.posts_per_day != null ? m.posts_per_day.toFixed(2) : "—"}</td>
-                      <td className="p-2 text-right tabular-nums">{m.reach_per_day != null ? m.reach_per_day.toFixed(0) : "—"}</td>
-                      <td className="p-2 text-right tabular-nums">{m.performance_index != null ? m.performance_index.toFixed(2) : "—"}</td>
+                  const v = Number(m[key] ?? 0);
+                  return { brand: c ? `${c.name}${networkFilter === "all" ? ` · ${m.network}` : ""}` : m.competitor_id, value: v, color: c?.brand_color ?? "#94a3b8", isClient: !!c?.is_client };
+                })
+                .filter((r) => Number.isFinite(r.value) && r.value !== 0)
+                .sort((a, b) => b.value - a.value);
+              if (!data.length) return <p className="text-sm text-muted-foreground italic">Sin datos.</p>;
+              return (
+                <ResponsiveContainer width="100%" height={Math.max(220, data.length * 26)}>
+                  <BarChart data={data} layout="vertical" margin={{ left: 8, right: 24 }}>
+                    <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                    <XAxis type="number" fontSize={10} tickFormatter={(v) => (v * 100).toFixed(1) + "%"} />
+                    <YAxis type="category" dataKey="brand" fontSize={11} width={170} />
+                    <Tooltip formatter={(v: number) => (v * 100).toFixed(2) + "%"} />
+                    <Bar dataKey="value" radius={[0, 6, 6, 0]}>
+                      {data.map((r, i) => <Cell key={i} fill={r.color} fillOpacity={r.isClient ? 1 : 0.5} />)}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              );
+            })()}
+          </Card>
+        </TabsContent>
+
+        {/* TAB: CLIENT */}
+        <TabsContent value="cliente" className="space-y-4 mt-4">
+          <div className="grid gap-3 md:grid-cols-3">
+            {METRICS.slice(0, 6).map((M) => {
+              const curr = clientEvolution.length ? clientEvolution[clientEvolution.length - 1][M.key as string] as number | null : null;
+              const prev = clientEvolution.length > 1 ? clientEvolution[clientEvolution.length - 2][M.key as string] as number | null : null;
+              const delta = curr != null && prev != null && prev !== 0 ? (curr - prev) / Math.abs(prev) : null;
+              return (
+                <Card key={M.key as string} className="p-4">
+                  <p className="text-[10px] uppercase tracking-widest text-muted-foreground">{M.label}</p>
+                  <div className="flex items-baseline justify-between mt-1">
+                    <p className="text-xl font-display font-bold tabular-nums">{curr != null ? M.fmt(curr) : "—"}</p>
+                    <span className={`text-xs font-medium flex items-center gap-0.5 ${deltaColor(delta)}`}>
+                      <DeltaIcon v={delta} />{fmtPct(delta)}
+                    </span>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+
+          <Card className="p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <TrendingUp className="w-4 h-4 text-muted-foreground" />
+              <h4 className="font-semibold text-sm">Evolución de {clientName} — {currentMetric.label}</h4>
+              <div className="ml-auto">
+                <Select value={selectedMetric} onValueChange={setSelectedMetric}>
+                  <SelectTrigger className="w-[220px] h-8"><SelectValue /></SelectTrigger>
+                  <SelectContent>{METRICS.map((m) => <SelectItem key={m.key as string} value={m.key as string}>{m.label}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+            </div>
+            {clientEvolution.length < 2 ? (
+              <p className="text-sm text-muted-foreground italic">Necesitas 2+ periodos cargados.</p>
+            ) : (
+              <ResponsiveContainer width="100%" height={320}>
+                <LineChart data={clientEvolution}>
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                  <XAxis dataKey="period" fontSize={10} />
+                  <YAxis fontSize={10} tickFormatter={(v) => v > 999 ? `${(v / 1000).toFixed(1)}k` : String(v)} />
+                  <Tooltip formatter={(v: number) => currentMetric.fmt(v)} />
+                  <Line type="monotone" dataKey={selectedMetric} stroke="hsl(var(--primary))" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
+          </Card>
+
+          <Card className="p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <TrendingUp className="w-4 h-4 text-muted-foreground" />
+              <h4 className="font-semibold text-sm">Crecimiento diario de seguidores — {currentPeriod?.period_label}</h4>
+            </div>
+            {dailyEvolution.length === 0 ? (
+              <p className="text-sm text-muted-foreground italic">No hay datos diarios para este periodo.</p>
+            ) : (
+              <ResponsiveContainer width="100%" height={280}>
+                <LineChart data={dailyEvolution}>
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                  <XAxis dataKey="day" fontSize={10} />
+                  <YAxis fontSize={10} />
+                  <Tooltip />
+                  <Legend wrapperStyle={{ fontSize: 10 }} />
+                  {brandsList.filter((b) => b.isClient).map((b) => (
+                    <Line key={b.key} type="monotone" dataKey={b.key} stroke={b.color} strokeWidth={3} dot={false} />
+                  ))}
+                </LineChart>
+              </ResponsiveContainer>
+            )}
+          </Card>
+        </TabsContent>
+
+        {/* TAB: COMPETIDORES */}
+        <TabsContent value="competidores" className="space-y-4 mt-4">
+          <div className="flex items-center gap-2">
+            <span className="text-xs uppercase tracking-widest text-muted-foreground">Métrica</span>
+            <Select value={selectedMetric} onValueChange={setSelectedMetric}>
+              <SelectTrigger className="w-[240px] h-9"><SelectValue /></SelectTrigger>
+              <SelectContent>{METRICS.map((m) => <SelectItem key={m.key as string} value={m.key as string}>{m.label}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            <Card className="p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <BarChart3 className="w-4 h-4 text-muted-foreground" />
+                <h4 className="font-semibold text-sm">Ranking — {currentMetric.label}</h4>
+              </div>
+              {rankingData.length === 0 ? (
+                <p className="text-sm text-muted-foreground italic">Sin datos.</p>
+              ) : (
+                <ResponsiveContainer width="100%" height={Math.max(220, rankingData.length * 28)}>
+                  <BarChart data={rankingData} layout="vertical" margin={{ left: 8, right: 24 }}>
+                    <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                    <XAxis type="number" fontSize={10} tickFormatter={(v) => v > 999 ? `${(v / 1000).toFixed(1)}k` : String(v)} />
+                    <YAxis type="category" dataKey="brand" fontSize={11} width={170} />
+                    <Tooltip formatter={(v: number) => currentMetric.fmt(v)} />
+                    <Bar dataKey="value" radius={[0, 6, 6, 0]}>
+                      {rankingData.map((r, i) => <Cell key={i} fill={r.color} fillOpacity={r.isClient ? 1 : 0.55} />)}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </Card>
+
+            <Card className="p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <PieIcon className="w-4 h-4 text-muted-foreground" />
+                <h4 className="font-semibold text-sm">Share del sector</h4>
+              </div>
+              {rankingData.length === 0 ? (
+                <p className="text-sm text-muted-foreground italic">Sin datos.</p>
+              ) : (
+                <ResponsiveContainer width="100%" height={280}>
+                  <PieChart>
+                    <Pie data={rankingData} dataKey="value" nameKey="brand" cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={2}>
+                      {rankingData.map((r, i) => <Cell key={i} fill={r.color} fillOpacity={r.isClient ? 1 : 0.55} />)}
+                    </Pie>
+                    <Tooltip formatter={(v: number, _n, p: any) => [`${currentMetric.fmt(v)} (${((v / shareTotal) * 100).toFixed(1)}%)`, String(p.payload.brand)]} />
+                    <Legend wrapperStyle={{ fontSize: 10 }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
+            </Card>
+          </div>
+
+          <Card className="p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <TrendingUp className="w-4 h-4 text-muted-foreground" />
+              <h4 className="font-semibold text-sm">Evolución por periodo — {currentMetric.label}</h4>
+            </div>
+            {evolutionData.length < 2 ? (
+              <p className="text-sm text-muted-foreground italic">Necesitas 2+ periodos cargados.</p>
+            ) : (
+              <ResponsiveContainer width="100%" height={320}>
+                <LineChart data={evolutionData}>
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                  <XAxis dataKey="period" fontSize={10} />
+                  <YAxis fontSize={10} tickFormatter={(v) => v > 999 ? `${(v / 1000).toFixed(1)}k` : String(v)} />
+                  <Tooltip formatter={(v: number) => currentMetric.fmt(v)} />
+                  <Legend wrapperStyle={{ fontSize: 10 }} />
+                  {brandsList.map((b) => (
+                    <Line key={b.key} type="monotone" dataKey={b.key} stroke={b.color}
+                      strokeWidth={b.isClient ? 3 : 1.5} strokeOpacity={b.isClient ? 1 : 0.65}
+                      dot={{ r: b.isClient ? 4 : 2 }} activeDot={{ r: b.isClient ? 6 : 4 }} />
+                  ))}
+                </LineChart>
+              </ResponsiveContainer>
+            )}
+          </Card>
+        </TabsContent>
+
+        {/* TAB: CONTENIDO */}
+        <TabsContent value="contenido" className="space-y-4 mt-4">
+          <div className="grid gap-4 lg:grid-cols-2">
+            <Card className="p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <Trophy className="w-4 h-4 text-primary" />
+                <h4 className="font-semibold text-sm">Top propios — {clientName}</h4>
+                <Badge variant="secondary" className="ml-auto">{clientPostsPeriod.length}</Badge>
+              </div>
+              {clientPostsPeriod.length === 0 ? (
+                <p className="text-sm text-muted-foreground italic">Sin publicaciones cargadas.</p>
+              ) : (
+                <ul className="space-y-3 max-h-[500px] overflow-auto pr-1">
+                  {clientPostsPeriod.slice(0, 10).map((p) => (
+                    <li key={p.id} className="p-3 rounded-lg border border-border/40 bg-background/40">
+                      <div className="flex items-center justify-between text-[10px] text-muted-foreground mb-1">
+                        <span>{p.network} · {p.posted_at ? new Date(p.posted_at).toLocaleDateString("es-MX") : "—"}</span>
+                        <span className="tabular-nums font-medium text-foreground">{p.interactions?.toLocaleString("es-MX") ?? 0} interacc.</span>
+                      </div>
+                      <p className="text-xs line-clamp-3">{p.message ?? "—"}</p>
+                      {p.link && <a href={p.link} target="_blank" rel="noreferrer" className="text-[11px] text-primary hover:underline mt-1 inline-block">Ver publicación ↗</a>}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Card>
+
+            <Card className="p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <Newspaper className="w-4 h-4 text-muted-foreground" />
+                <h4 className="font-semibold text-sm">Top del sector</h4>
+                <Badge variant="secondary" className="ml-auto">{sectorPostsPeriod.length}</Badge>
+              </div>
+              {sectorPostsPeriod.length === 0 ? (
+                <p className="text-sm text-muted-foreground italic">Sin publicaciones cargadas.</p>
+              ) : (
+                <ul className="space-y-3 max-h-[500px] overflow-auto pr-1">
+                  {sectorPostsPeriod.slice(0, 10).map((p) => {
+                    const c = p.competitor_id ? compMap.get(p.competitor_id) : null;
+                    return (
+                      <li key={p.id} className="p-3 rounded-lg border border-border/40 bg-background/40">
+                        <div className="flex items-center justify-between text-[10px] text-muted-foreground mb-1">
+                          <span className="inline-flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full" style={{ background: c?.brand_color ?? "#94a3b8" }} />
+                            {p.profile_name} · {p.network}
+                          </span>
+                          <span className="tabular-nums font-medium text-foreground">{p.interactions?.toLocaleString("es-MX") ?? 0}</span>
+                        </div>
+                        <p className="text-xs line-clamp-3">{p.message ?? "—"}</p>
+                        {p.link && <a href={p.link} target="_blank" rel="noreferrer" className="text-[11px] text-primary hover:underline mt-1 inline-block">Ver ↗</a>}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* TAB: DATOS */}
+        <TabsContent value="datos" className="space-y-4 mt-4">
+          <Card className="p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <TableIcon className="w-4 h-4 text-muted-foreground" />
+              <h4 className="font-semibold text-sm">Tabla detallada — {currentPeriod?.period_label}</h4>
+            </div>
+            <div className="overflow-auto max-h-[500px] border border-border/40 rounded-lg">
+              <table className="w-full text-xs">
+                <thead className="bg-background/60 sticky top-0">
+                  <tr>
+                    <th className="text-left p-2">Perfil</th>
+                    <th className="text-left p-2">Red</th>
+                    <th className="text-right p-2">Seguidores</th>
+                    <th className="text-right p-2">Crec.%/día</th>
+                    <th className="text-right p-2">Engagement</th>
+                    <th className="text-right p-2">Posts/día</th>
+                    <th className="text-right p-2">Alcance/día</th>
+                    <th className="text-right p-2">Índice</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {periodMetrics
+                    .slice()
+                    .sort((a, b) => (b.followers ?? 0) - (a.followers ?? 0))
+                    .map((m) => {
+                      const c = compMap.get(m.competitor_id);
+                      return (
+                        <tr key={m.id} className={`border-t border-border/30 ${c?.is_client ? "bg-primary/5 font-medium" : ""}`}>
+                          <td className="p-2">
+                            <span className="inline-flex items-center gap-2">
+                              <span className="w-2 h-2 rounded-full" style={{ background: c?.brand_color ?? "#94a3b8" }} />
+                              {c?.name ?? "?"}
+                            </span>
+                          </td>
+                          <td className="p-2">{m.network}</td>
+                          <td className="p-2 text-right tabular-nums">{m.followers?.toLocaleString("es-MX") ?? "—"}</td>
+                          <td className="p-2 text-right tabular-nums">{m.follower_growth_rate != null ? (m.follower_growth_rate * 100).toFixed(3) + "%" : "—"}</td>
+                          <td className="p-2 text-right tabular-nums">{m.engagement_rate != null ? (m.engagement_rate * 100).toFixed(2) + "%" : "—"}</td>
+                          <td className="p-2 text-right tabular-nums">{m.posts_per_day != null ? m.posts_per_day.toFixed(2) : "—"}</td>
+                          <td className="p-2 text-right tabular-nums">{m.reach_per_day != null ? m.reach_per_day.toFixed(0) : "—"}</td>
+                          <td className="p-2 text-right tabular-nums">{m.performance_index != null ? m.performance_index.toFixed(2) : "—"}</td>
+                        </tr>
+                      );
+                    })}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+
+          <Card className="p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <Newspaper className="w-4 h-4 text-muted-foreground" />
+              <h4 className="font-semibold text-sm">Top 20 publicaciones (todo el sector)</h4>
+            </div>
+            {topPosts.length === 0 ? (
+              <p className="text-sm text-muted-foreground italic">Sin publicaciones cargadas.</p>
+            ) : (
+              <div className="overflow-auto max-h-[500px] border border-border/40 rounded-lg">
+                <table className="w-full text-xs">
+                  <thead className="bg-background/60 sticky top-0">
+                    <tr>
+                      <th className="text-left p-2">Perfil</th>
+                      <th className="text-left p-2">Red</th>
+                      <th className="text-left p-2">Fecha</th>
+                      <th className="text-left p-2">Mensaje</th>
+                      <th className="text-right p-2">Interacc.</th>
+                      <th className="text-right p-2">Eng.%</th>
+                      <th className="p-2">Link</th>
                     </tr>
-                  );
-                })}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+                  </thead>
+                  <tbody>
+                    {topPosts.map((p) => {
+                      const c = p.competitor_id ? compMap.get(p.competitor_id) : null;
+                      return (
+                        <tr key={p.id} className={`border-t border-border/30 ${c?.is_client ? "bg-primary/5 font-medium" : ""}`}>
+                          <td className="p-2">
+                            <span className="inline-flex items-center gap-2">
+                              <span className="w-2 h-2 rounded-full" style={{ background: c?.brand_color ?? "#94a3b8" }} />
+                              {p.profile_name}
+                            </span>
+                          </td>
+                          <td className="p-2">{p.network}</td>
+                          <td className="p-2 text-muted-foreground">{p.posted_at ? new Date(p.posted_at).toLocaleDateString("es-MX") : "—"}</td>
+                          <td className="p-2 max-w-xs truncate" title={p.message ?? ""}>{p.message ?? "—"}</td>
+                          <td className="p-2 text-right tabular-nums">{p.interactions?.toLocaleString("es-MX") ?? "—"}</td>
+                          <td className="p-2 text-right tabular-nums">{p.engagement_rate != null ? (p.engagement_rate * 100).toFixed(2) + "%" : "—"}</td>
+                          <td className="p-2">{p.link ? <a href={p.link} target="_blank" rel="noreferrer" className="text-primary hover:underline">↗</a> : "—"}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
