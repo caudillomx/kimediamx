@@ -490,7 +490,7 @@ export default function PortalBenchmark({ clientId, clientName }: { clientId: st
     .sort((a, b) => (b.interactions ?? 0) - (a.interactions ?? 0));
 
   // ---------- Deeper content insights ----------
-  const contentInsights = useMemo(() => {
+  const contentInsights = (() => {
     const avg = (arr: number[]) => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
     const median = (arr: number[]) => {
       if (!arr.length) return 0;
@@ -548,7 +548,7 @@ export default function PortalBenchmark({ clientId, clientName }: { clientId: st
       clientPostCount: cInter.length,
       sectorPostCount: sInter.length,
     };
-  }, [clientPostsPeriod, sectorPostsPeriod, compMap]);
+  })();
 
   // Client evolution card fallback helper
   const latestValueFor = (key: string): { value: number; label: string; isLatest: boolean } | null => {
