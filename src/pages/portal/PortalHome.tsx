@@ -236,6 +236,7 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
     if (typeof window === "undefined") return "dark";
     return (localStorage.getItem("portal-theme") as "dark" | "light") || "dark";
   });
+  const [activeTab, setActiveTab] = useState<string>("panorama");
   const pdfRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -696,7 +697,8 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
       </header>
 
       <main className="relative max-w-7xl mx-auto px-6 py-6 space-y-6">
-        {/* Week bar */}
+        {/* Week bar (listening scope: only for Panorama/Histórico) */}
+        {activeTab !== "benchmark" && (
         <div className="glass rounded-2xl p-4 flex flex-col lg:flex-row lg:items-center gap-4">
           <div className="flex items-center gap-2">
             <Button variant="outline" size="icon" onClick={goPrev} disabled={currentIdx >= analyses.length - 1} className="h-9 w-9">
@@ -762,6 +764,7 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
             </Popover>
           </div>
         </div>
+        )}
 
         {loading ? (
           <div className="grid gap-4 md:grid-cols-4">
@@ -783,7 +786,8 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
               transition={{ duration: 0.2 }}
               className="space-y-6"
             >
-              {/* KPI cards */}
+              {/* KPI cards (listening scope) */}
+              {activeTab !== "benchmark" && (
               <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
                 <KpiCard
                   label="Menciones analizadas"
@@ -807,8 +811,9 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
                   accent="rose"
                 />
               </div>
+              )}
 
-              <Tabs defaultValue="panorama">
+              <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <TabsList className="bg-background/50 backdrop-blur border border-border/60 rounded-xl p-1 h-auto">
                   <TabsTrigger value="panorama" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><BarChart3 className="w-4 h-4 mr-2" />Panorama</TabsTrigger>
                   <TabsTrigger value="benchmark" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><TrendingUp className="w-4 h-4 mr-2" />Benchmark</TabsTrigger>
