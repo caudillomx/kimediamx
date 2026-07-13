@@ -1,78 +1,116 @@
+# Insights inteligentes + panel Estrategia
 
-# Rediseño del panel de Benchmark (portal cliente)
+Piloto solo con Actinver. Todo el gasto de IA usa modelos baratos de Lovable AI Gateway (`google/gemini-3.1-flash-lite` como default; `google/gemini-3.5-flash` cuando se necesite más matiz). Nada de Claude Sonnet aquí — queda reservado para operaciones internas.
 
-## Orden acordado
+## Parte 1 — Análisis de narrativas por marca / red
 
-1. **Primero** cargas los meses faltantes (feb, mar, abr, may, jun, jul) con el uploader actual de `BenchmarkAdmin`. Sin tocar código.
-2. **Después**, ya con histórico real, implemento este rediseño. Los insights (evolución, tendencias, deltas) solo tienen sentido con varios periodos cargados.
+Nuevo bloque dentro de la pestaña **Contenido** de Benchmark: "Narrativas del periodo".
 
-Este plan describe el paso 2. La única acción tuya ahora es cargar los meses.
+### Cómo funciona
+1. Agrupa los posts del periodo/rango seleccionado por `profile_name` + `network`.
+2. Para cada marca-red con ≥ 5 posts, arma un payload compacto (top 15 posts por interacciones: mensaje truncado a 400 chars, likes, comments, fecha).
+3. Llama a una nueva edge function `analyze-benchmark-narratives` que corre `google/gemini-3.1-flash-lite` con `Output.object` (Zod) y devuelve, por marca-red:
+   - 2–4 **ejes narrativos** (nombre + descripción de 1 línea + % aprox del contenido).
+   - **Tono dominante** (etiqueta + evidencia).
+   - **Formatos ganadores** (reel/carrusel/foto/texto/live, inferidos del texto).
+   - **Ángulos diferenciales vs Actinver** (qué hace esa marca que Actinver no).
+4. Resultado cacheado en tabla nueva `client_portal_benchmark_narratives` (client_id, period_id o rango hash, network, profile_name, narratives jsonb, model, generated_at). No se re-genera si ya existe para ese corte.
+5. Botón "Regenerar análisis" fuerza nueva corrida (con confirmación por el costo).
 
-## Qué cambia en `PortalBenchmark.tsx`
+### UI
+- Grid de tarjetas: una por marca-red, con Actinver siempre primero y resaltado.
+- Cada tarjeta: ejes narrativos como chips con %, tono, formatos, y una línea "Vs. Actinver".
+- Vista comparativa opcional: matriz marca × eje narrativo para ver quién cubre qué territorio.
 
-Reemplazo el layout actual (todo en una sola columna, 6 tarjetas apiladas) por una estructura de **sub-tabs** con un **resumen ejecutivo** siempre visible arriba.
+### Heurísticas complementarias (siempre visibles, sin IA)
+- Nube de keywords (bigramas) por marca — ya existe parcialmente, se extiende por marca.
+- Hashtags y menciones más usadas por marca.
+- Reparto de horarios y días de publicación.
 
-### Estructura nueva
+## Parte 2 — Panel "Estrategia" (cruce Listening ↔ Benchmark)
+
+Nueva pestaña de portal al mismo nivel que Panorama / Histórico / Benchmark: **Estrategia**.
+
+### Objetivo
+Responder en un solo lugar: ¿la estrategia digital de Actinver es coherente con lo que dice y con lo que hace el ecosistema?
+
+### Estructura
 
 ```text
-┌─────────────────────────────────────────────────────────────┐
-│  HEADER: Periodo · Red · [Exportar CSV]                     │
-├─────────────────────────────────────────────────────────────┤
-│  RESUMEN EJECUTIVO (siempre visible)                        │
-│  ┌──────────┬──────────┬──────────┬──────────┐             │
-│  │ Posición │ Δ vs mes │ vs prom. │ Mejor    │             │
-│  │ #2 de 8  │ +12%     │ +34%     │ post     │             │
-│  │ engag.   │ seguid.  │ engag.   │ del mes  │             │
-│  └──────────┴──────────┴──────────┴──────────┘             │
-│  Headline insight: "Actinver creció 12% en seguidores      │
-│  mientras el sector promedió 4%."                           │
-├─────────────────────────────────────────────────────────────┤
-│  [Resumen] [Actinver] [Competidores] [Contenido] [Datos]   │
-├─────────────────────────────────────────────────────────────┤
-│  Contenido del tab seleccionado                             │
-└─────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────┐
+│ HEADER: Rango [7d/14d/30d/custom] · [Regenerar]          │
+├──────────────────────────────────────────────────────────┤
+│ VEREDICTO DE COHERENCIA                                  │
+│ Semáforo (Alta/Media/Baja) + 1 frase de por qué          │
+├──────────────────────────────────────────────────────────┤
+│ 3 columnas comparativas                                  │
+│  ┌────────────┬────────────┬────────────┐               │
+│  │ Qué DICEN  │ Qué HACE   │ Qué HACEN  │               │
+│  │ de Actinver│ Actinver   │ los pares  │               │
+│  │ (listening)│ (benchmark)│ (benchmark)│               │
+│  │ temas top  │ ejes narr. │ ejes narr. │               │
+│  │ sentimiento│ tono       │ tonos      │               │
+│  └────────────┴────────────┴────────────┘               │
+├──────────────────────────────────────────────────────────┤
+│ BRECHAS DETECTADAS                                       │
+│ - Temas que aparecen en listening pero no en el          │
+│   contenido propio                                       │
+│ - Territorios donde competidores dominan y Actinver no   │
+│   participa                                              │
+│ - Crisis/alertas de listening sin respuesta en contenido │
+├──────────────────────────────────────────────────────────┤
+│ RECOMENDACIONES ACCIONABLES (3–5)                        │
+│ Cards estilo RecommendationsBlock, cada una con:         │
+│ - Acción concreta                                        │
+│ - Evidencia (qué señal de listening + qué señal de       │
+│   benchmark la sustenta)                                 │
+│ - Prioridad (Alta/Media)                                 │
+└──────────────────────────────────────────────────────────┘
 ```
 
-### Sub-tabs
+### Cómo funciona
+1. Nueva edge function `generate-strategy-recommendations`:
+   - Input: `client_id`, rango de fechas.
+   - Agrega en el server: menciones y temas top de `client_portal_listening_entries` + sentimiento agregado + narrativas ya cacheadas de Actinver y competidores + métricas comparativas (posición, deltas MoM).
+   - Prompt estructurado a `google/gemini-3.5-flash` (un poco más capaz que flash-lite porque este cruce sí necesita razonar) con `Output.object`:
+     ```
+     {
+       coherence: { level: "alta"|"media"|"baja", reason: string },
+       what_audience_says: { topics: [...], sentiment_summary: string },
+       what_actinver_does: { narratives: [...], tone: string },
+       what_peers_do: { dominant_narratives: [...], gaps_actinver_misses: [...] },
+       gaps: [{ type, description, evidence }],
+       recommendations: [{ title, action, evidence_listening, evidence_benchmark, priority }]
+     }
+     ```
+   - Guarda resultado en tabla nueva `client_portal_strategy_reports` (client_id, range_start, range_end, payload jsonb, model, generated_at). Cache por rango.
+2. UI consume el JSON y arma las secciones. Se reutiliza `RecommendationsBlock` para las cards de recomendaciones.
 
-- **Resumen** — 3-5 insights en tarjetas narrativas (una frase + una gráfica pequeña que la prueba). Foco: qué le pasó a Actinver este mes vs sí misma, vs promedio del sector, y vs el líder.
-- **Actinver** — Vista dedicada al cliente: evolución mes a mes de sus métricas clave (seguidores, engagement, posts/día, crecimiento), con deltas % y racha (mejorando/empeorando). Sin ruido de competidores aquí.
-- **Competidores** — Ranking + share del sector + tabla comparativa. Es lo que hoy ocupa las primeras 2 tarjetas, pero con Actinver siempre resaltado y con la columna "vs Actinver" (±%).
-- **Contenido** — Top posts del periodo, separando "top propios" y "top del sector", con lectura del patrón (formato, hora, tema si se puede inferir del texto).
-- **Datos** — Tabla detallada actual + evolución diaria de seguidores. Es el "modo raw" para quien quiera bucear.
-
-## Capa de insights (la parte inteligente)
-
-Todos los insights se calculan **en el cliente** a partir de los datos que ya tiene el componente (`metrics`, `daily`, `posts`, `periods`, `competitors`). No requiere edge function ni cambios de esquema.
-
-Cálculos que se agregan en un helper `computeInsights()`:
-
-- **Posición competitiva** por métrica: rank de Actinver dentro del periodo actual (`#N de M`).
-- **Evolución propia**: delta % de cada métrica de Actinver vs periodo anterior + racha de N meses consecutivos.
-- **vs promedio sector**: `(actinver_metric − avg(competidores_metric)) / avg(competidores_metric)`.
-- **Mejor/peor métrica del mes**: en qué métrica Actinver ganó más terreno y en cuál perdió más.
-- **Contenido ganador**: top 3 posts propios del periodo por interacciones + comparativa con la mediana del sector.
-- **Alerta**: si alguna métrica cae >15% MoM o Actinver sale del top 3 en engagement.
-
-Los headlines se generan con plantillas deterministas (no LLM), en español, tono directo. Ejemplo:
-
-> "Actinver subió al #2 en engagement (venía del #4). El promedio del sector cayó 3%, ustedes subieron 11%."
+### Coherencia con lo ya construido
+- Reutiliza los datos que ya viven en `client_portal_listening_entries`, `client_portal_benchmark_*` y las narrativas cacheadas de la Parte 1.
+- El botón de "Regenerar" es el único gasto discrecional de IA.
 
 ## Detalles técnicos
 
-- Un solo archivo tocado: `src/components/portal/PortalBenchmark.tsx`.
-- Sub-tabs con `@/components/ui/tabs` (shadcn, ya en el proyecto).
-- Se preserva toda la lógica de fetch actual — solo se reorganiza la presentación y se agrega un `useMemo` con el objeto `insights`.
-- Se preserva el filtro por Red y el export CSV en el header global.
-- Semantic tokens del design system (respetando dark theme del portal).
-- Sin cambios en `BenchmarkAdmin.tsx`, edge functions, migraciones ni esquema.
+- **Modelos**: `google/gemini-3.1-flash-lite` para narrativas (volumen alto), `google/gemini-3.5-flash` para el reporte de estrategia (razonamiento cruzado). Todo vía `createLovableAiGatewayProvider` + AI SDK con `Output.object` y guard `NoObjectGeneratedError`.
+- **Nuevas tablas** (migración con GRANTs y RLS por `has_client_access`):
+  - `client_portal_benchmark_narratives`
+  - `client_portal_strategy_reports`
+- **Nuevas edge functions**:
+  - `analyze-benchmark-narratives`
+  - `generate-strategy-recommendations`
+- **Frontend**:
+  - `src/components/portal/PortalBenchmark.tsx`: agregar sección "Narrativas" en tab Contenido con botón regenerar.
+  - `src/components/portal/PortalStrategy.tsx` (nuevo): renderiza el reporte de estrategia.
+  - `src/pages/portal/PortalHome.tsx`: nueva tab "Estrategia" al lado de Benchmark, oculta las barras de listening cuando está activa (como ya hicimos con Benchmark).
+- **Sin cambios** en parser, uploader, ni en el resto del portal.
 
 ## Fuera de alcance
 
-- No se cambia el uploader ni el parser de FanpageKarma.
-- No se agregan métricas nuevas al esquema — solo se reinterpreta lo existente.
-- No hay generación con IA en esta iteración (los insights son plantillas deterministas). Si más adelante quieres narrativa generada por Claude, se agrega como paso posterior.
+- Generalizar a otros clientes (se hace después del piloto).
+- Reemplazar Sonnet en otras partes del sistema.
+- Automatización semanal (por ahora regeneración manual; luego se puede meter cron).
 
 ## Siguiente acción
 
-Sube los meses faltantes en `/admin/cliente/actinver/portal` → **Admin Benchmark** → uploader. Cuando termines, dime "listo" y arranco la implementación.
+Confirma y paso a build para implementar en este orden: migración → edge function de narrativas → UI en Benchmark → edge function de estrategia → pestaña Estrategia.
