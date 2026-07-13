@@ -940,6 +940,54 @@ export default function PortalBenchmark({ clientId, clientName }: { clientId: st
 
         {/* TAB: CONTENIDO */}
         <TabsContent value="contenido" className="space-y-4 mt-4">
+          {/* Deeper insights row */}
+          <div className="grid gap-3 md:grid-cols-4">
+            <Card className="p-4">
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Interacciones prom. / post</p>
+              <p className="text-2xl font-display font-bold tabular-nums mt-1">{Math.round(contentInsights.clientAvg).toLocaleString("es-MX")}</p>
+              <p className="text-[10px] text-muted-foreground mt-1">
+                Sector: <span className="font-medium text-foreground">{Math.round(contentInsights.sectorAvg).toLocaleString("es-MX")}</span>
+                {contentInsights.sectorAvg > 0 && (
+                  <span className={cn("ml-1", contentInsights.clientAvg >= contentInsights.sectorAvg ? "text-emerald-500" : "text-rose-500")}>
+                    ({fmtPct((contentInsights.clientAvg - contentInsights.sectorAvg) / contentInsights.sectorAvg)})
+                  </span>
+                )}
+              </p>
+            </Card>
+            <Card className="p-4">
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Mediana / post</p>
+              <p className="text-2xl font-display font-bold tabular-nums mt-1">{Math.round(contentInsights.clientMedian).toLocaleString("es-MX")}</p>
+              <p className="text-[10px] text-muted-foreground mt-1">Sector: <span className="font-medium text-foreground">{Math.round(contentInsights.sectorMedian).toLocaleString("es-MX")}</span></p>
+            </Card>
+            <Card className="p-4">
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Mejor día {clientName}</p>
+              <p className="text-2xl font-display font-bold mt-1">{contentInsights.bestDay ? contentInsights.bestDay.day : "—"}</p>
+              <p className="text-[10px] text-muted-foreground mt-1">{contentInsights.bestDay ? `${Math.round(contentInsights.bestDay.avg).toLocaleString("es-MX")} interacc. prom.` : "Sin posts en el rango"}</p>
+            </Card>
+            <Card className="p-4">
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Líder del sector</p>
+              <p className="text-lg font-display font-bold mt-1 truncate">{contentInsights.leader?.name ?? "—"}</p>
+              <p className="text-[10px] text-muted-foreground mt-1">{contentInsights.leader ? `${contentInsights.leader.total.toLocaleString("es-MX")} interacc. totales` : "Sin datos"}</p>
+            </Card>
+          </div>
+
+          {contentInsights.topKeywords.length > 0 && (
+            <Card className="p-5">
+              <div className="flex items-center gap-2 mb-2">
+                <Lightbulb className="w-4 h-4 text-primary" />
+                <h4 className="font-semibold text-sm">Palabras clave que usa el sector</h4>
+              </div>
+              <p className="text-xs text-muted-foreground mb-3">Términos más frecuentes en los posts top de los competidores. Úsalo para inspirar temas propios.</p>
+              <div className="flex flex-wrap gap-2">
+                {contentInsights.topKeywords.map(([w, n]) => (
+                  <Badge key={w} variant="secondary" className="text-xs">
+                    {w} <span className="ml-1 text-muted-foreground">×{n}</span>
+                  </Badge>
+                ))}
+              </div>
+            </Card>
+          )}
+
           <div className="grid gap-4 lg:grid-cols-2">
             <Card className="p-5">
               <div className="flex items-center gap-2 mb-3">
@@ -948,7 +996,10 @@ export default function PortalBenchmark({ clientId, clientName }: { clientId: st
                 <Badge variant="secondary" className="ml-auto">{clientPostsPeriod.length}</Badge>
               </div>
               {clientPostsPeriod.length === 0 ? (
-                <p className="text-sm text-muted-foreground italic">Sin publicaciones cargadas.</p>
+                <p className="text-sm text-muted-foreground italic">
+                  Sin publicaciones de {clientName} en este {rangeMode === "custom" ? "rango" : "periodo"}
+                  {networkFilter !== "all" ? ` para ${networkFilter}` : ""}.
+                </p>
               ) : (
                 <ul className="space-y-3 max-h-[500px] overflow-auto pr-1">
                   {clientPostsPeriod.slice(0, 10).map((p) => (
