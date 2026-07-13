@@ -39,6 +39,9 @@ export default function PortalBenchmark({ clientId, clientName }: { clientId: st
   const [selectedPeriod, setSelectedPeriod] = useState<string>("");
   const [selectedMetric, setSelectedMetric] = useState<string>("followers");
   const [networkFilter, setNetworkFilter] = useState<string>("all");
+  const [rangeMode, setRangeMode] = useState<"period" | "custom">("period");
+  const [rangeFrom, setRangeFrom] = useState<Date | undefined>(undefined);
+  const [rangeTo, setRangeTo] = useState<Date | undefined>(undefined);
 
   useEffect(() => {
     (async () => {
