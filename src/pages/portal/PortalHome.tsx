@@ -15,7 +15,6 @@ import {
   LogOut, FileText, ShieldAlert, Download, Sparkles,
   BarChart3, Lightbulb, History, ChevronLeft, ChevronRight,
   AlertTriangle, TrendingUp, MessageCircle, Sun, Moon, CalendarRange, X, RefreshCw,
-  Newspaper,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ClientPortalConfig } from "@/lib/clientPortal";
@@ -24,7 +23,6 @@ import PortalPdfTemplate from "./PortalPdfTemplate";
 import RecommendationsBlock from "@/components/portal/RecommendationsBlock";
 import PortalBenchmark from "@/components/portal/PortalBenchmark";
 import PortalStrategy from "@/components/portal/PortalStrategy";
-import PortalPressDaily from "@/components/portal/PortalPressDaily";
 import { Compass, Users as UsersIcon, Building2 } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 
@@ -285,10 +283,6 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
       setAnalyses(list);
       setReports((r.data ?? []) as Report[]);
       if (list.length > 0) setSelectedWeek(list[0].week_start);
-      // Si el cliente solo tiene módulo de prensa (sin listening), abrir en Prensa por defecto
-      if (((c.data as any)?.portal_modules?.press_daily) && list.length === 0) {
-        setActiveTab("prensa");
-      }
 
       if (list.length === 0 && (r.data ?? []).length === 0) {
         const { data: access } = await supabase
@@ -835,19 +829,8 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
               <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <TabsList className="bg-background/50 backdrop-blur border border-border/60 rounded-xl p-1 h-auto">
                   <TabsTrigger value="panorama" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><BarChart3 className="w-4 h-4 mr-2" />Panorama</TabsTrigger>
-                  {!portalModules.benchmark_funcionarios && !portalModules.benchmark_instituciones && (
-                    <TabsTrigger value="benchmark" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><TrendingUp className="w-4 h-4 mr-2" />Benchmark</TabsTrigger>
-                  )}
-                  {portalModules.benchmark_funcionarios && (
-                    <TabsTrigger value="benchmark_funcionarios" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><UsersIcon className="w-4 h-4 mr-2" />Funcionarios</TabsTrigger>
-                  )}
-                  {portalModules.benchmark_instituciones && (
-                    <TabsTrigger value="benchmark_instituciones" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><Building2 className="w-4 h-4 mr-2" />Instituciones</TabsTrigger>
-                  )}
+                  <TabsTrigger value="benchmark" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><TrendingUp className="w-4 h-4 mr-2" />Benchmark</TabsTrigger>
                   <TabsTrigger value="estrategia" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><Compass className="w-4 h-4 mr-2" />Estrategia</TabsTrigger>
-                  {portalModules.press_daily && (
-                    <TabsTrigger value="prensa" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><Newspaper className="w-4 h-4 mr-2" />Prensa diaria</TabsTrigger>
-                  )}
                   <TabsTrigger value="historico" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><History className="w-4 h-4 mr-2" />Histórico</TabsTrigger>
                 </TabsList>
 
@@ -960,32 +943,38 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
                   )}
                 </TabsContent>
 
-                {/* Benchmark */}
+                {/* Benchmark: con sub-tabs si el cliente tiene funcionarios/instituciones */}
                 <TabsContent value="benchmark" className="mt-5 space-y-4">
-                  <PortalBenchmark clientId={portal.clientId} clientName={portal.displayName} />
+                  {portalModules.benchmark_funcionarios || portalModules.benchmark_instituciones ? (
+                    <Tabs defaultValue={portalModules.benchmark_funcionarios ? "funcionarios" : "instituciones"}>
+                      <TabsList className="bg-background/50 border border-border/60 rounded-lg p-1 h-auto">
+                        {portalModules.benchmark_funcionarios && (
+                          <TabsTrigger value="funcionarios" className="rounded-md data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><UsersIcon className="w-4 h-4 mr-2" />Funcionarios</TabsTrigger>
+                        )}
+                        {portalModules.benchmark_instituciones && (
+                          <TabsTrigger value="instituciones" className="rounded-md data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><Building2 className="w-4 h-4 mr-2" />Instituciones</TabsTrigger>
+                        )}
+                      </TabsList>
+                      {portalModules.benchmark_funcionarios && (
+                        <TabsContent value="funcionarios" className="mt-4">
+                          <PortalBenchmark clientId={portal.clientId} clientName={portal.displayName} scope="funcionarios" />
+                        </TabsContent>
+                      )}
+                      {portalModules.benchmark_instituciones && (
+                        <TabsContent value="instituciones" className="mt-4">
+                          <PortalBenchmark clientId={portal.clientId} clientName={portal.displayName} scope="instituciones" />
+                        </TabsContent>
+                      )}
+                    </Tabs>
+                  ) : (
+                    <PortalBenchmark clientId={portal.clientId} clientName={portal.displayName} />
+                  )}
                 </TabsContent>
-
-                {portalModules.benchmark_funcionarios && (
-                  <TabsContent value="benchmark_funcionarios" className="mt-5 space-y-4">
-                    <PortalBenchmark clientId={portal.clientId} clientName={portal.displayName} scope="funcionarios" />
-                  </TabsContent>
-                )}
-                {portalModules.benchmark_instituciones && (
-                  <TabsContent value="benchmark_instituciones" className="mt-5 space-y-4">
-                    <PortalBenchmark clientId={portal.clientId} clientName={portal.displayName} scope="instituciones" />
-                  </TabsContent>
-                )}
 
                 {/* Estrategia (Listening x Benchmark) */}
                 <TabsContent value="estrategia" className="mt-5 space-y-4">
                   <PortalStrategy clientId={portal.clientId} clientName={portal.displayName} />
                 </TabsContent>
-
-                {portalModules.press_daily && (
-                  <TabsContent value="prensa" className="mt-5 space-y-4">
-                    <PortalPressDaily clientId={portal.clientId} />
-                  </TabsContent>
-                )}
 
                 {/* Histórico */}
                 <TabsContent value="historico" className="mt-5 space-y-4">
