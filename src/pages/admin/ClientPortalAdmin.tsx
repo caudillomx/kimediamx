@@ -10,12 +10,11 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ArrowLeft, Plus, Trash2, Paperclip, Upload, X, Users, FileText, Lightbulb, KeyRound, Save, MessageSquare, Sparkles, BarChart3, Target, Newspaper } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Paperclip, Upload, X, Users, FileText, Lightbulb, KeyRound, Save, MessageSquare, Sparkles, BarChart3, Target } from "lucide-react";
 import { toast } from "sonner";
 import { parseWhatsappTxt } from "@/lib/whatsappParser";
 import { CLIENT_PORTALS } from "@/lib/clientPortal";
 import BenchmarkAdmin from "@/components/portal/BenchmarkAdmin";
-import PressDailyAdmin from "@/components/portal/PressDailyAdmin";
 
 type Report = {
   id: string;
@@ -576,7 +575,6 @@ export default function ClientPortalAdmin() {
             <TabsTrigger value="recs"><Lightbulb className="w-4 h-4 mr-2" /> Recomendaciones</TabsTrigger>
             <TabsTrigger value="listening"><MessageSquare className="w-4 h-4 mr-2" /> Listening</TabsTrigger>
             <TabsTrigger value="benchmark"><Target className="w-4 h-4 mr-2" /> Benchmark</TabsTrigger>
-            <TabsTrigger value="prensa"><Newspaper className="w-4 h-4 mr-2" /> Prensa diaria</TabsTrigger>
             <TabsTrigger value="creds"><KeyRound className="w-4 h-4 mr-2" /> Credenciales</TabsTrigger>
             <TabsTrigger value="accesos"><Users className="w-4 h-4 mr-2" /> Accesos</TabsTrigger>
           </TabsList>
@@ -998,10 +996,6 @@ export default function ClientPortalAdmin() {
                 <BenchmarkAdmin clientId={clientId} clientName={clientName} />
               )
             )}
-          </TabsContent>
-
-          <TabsContent value="prensa" className="space-y-4">
-            {clientId && <PressDailyAdmin clientId={clientId} />}
           </TabsContent>
 
           <TabsContent value="accesos" className="space-y-4">
