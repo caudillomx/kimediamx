@@ -77,7 +77,8 @@ const HEAT_COLOR: Record<string, [number, number, number]> = {
   crisis:   [153, 27, 27],
 };
 
-export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientId: string; fromDate: string; toDate: string; }) {
+export default function PortalAnalysis({ clientId, fromDate, toDate, mode = "social" }: { clientId: string; fromDate: string; toDate: string; mode?: "press" | "social"; }) {
+  const isPress = mode === "press";
   const [entries, setEntries] = useState<Entry[]>([]);
   const [loading, setLoading] = useState(true);
   const [trendPeriods, setTrendPeriods] = useState<{ label: string; total: number; delta: number | null }[]>([]);
@@ -930,14 +931,19 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
   return (
     <div className="space-y-6">
       {/* Alertas: hitos críticos del período */}
-      {milestones.some(m => m.impact === "alto" || m.kind === "crisis") && (
+      {milestones.some(m => isPress ? (m.impact === "alto" && m.kind === "crisis") : (m.impact === "alto" || m.kind === "crisis")) && (
         <Card className="p-5 border-rose-500/30 bg-rose-500/5">
           <div className="flex items-center gap-2 mb-3">
             <AlertOctagon className="w-4 h-4 text-rose-500" />
             <h4 className="text-sm font-semibold">Hitos críticos del período</h4>
           </div>
+          {isPress && (
+            <p className="text-[11px] text-muted-foreground mb-2">
+              Solo se marcan como crisis los hechos con implicación directa para el Gobierno del Estado; los temas municipales aparecen en narrativas y no elevan el nivel de alerta.
+            </p>
+          )}
           <div className="space-y-2">
-            {milestones.filter(m => m.impact === "alto" || m.kind === "crisis").slice(0, 5).map((m, i) => (
+            {milestones.filter(m => isPress ? (m.impact === "alto" && m.kind === "crisis") : (m.impact === "alto" || m.kind === "crisis")).slice(0, 5).map((m, i) => (
               <div key={i} className="text-sm flex items-start gap-3 p-2 rounded bg-background/50">
                 <Badge variant="destructive" className="text-[10px] shrink-0">H{i + 1}</Badge>
                 <div className="min-w-0 flex-1">
@@ -952,6 +958,7 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
       )}
 
       {/* ============ SLIDE 1 · Conversación general ============ */}
+      {!isPress && (
       <Card className="p-5 md:p-6">
         <div className="flex flex-col lg:flex-row gap-6">
           <div className="flex-1 min-w-0 space-y-4">
@@ -1009,9 +1016,10 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
           </div>
         </div>
       </Card>
+      )}
 
       {/* ============ SLIDE 2 · Plataformas y menciones ============ */}
-      {platforms.length > 0 && (
+      {!isPress && platforms.length > 0 && (
         <Card className="p-5 md:p-6">
           <div className="mb-4">
             <div className="text-[10px] uppercase tracking-widest text-muted-foreground">01 · Listening</div>
