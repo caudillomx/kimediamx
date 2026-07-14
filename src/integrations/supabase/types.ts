@@ -1052,6 +1052,7 @@ export type Database = {
           period_label: string
           period_start: string
           period_type: string
+          scope: string
           updated_at: string
         }
         Insert: {
@@ -1063,6 +1064,7 @@ export type Database = {
           period_label: string
           period_start: string
           period_type?: string
+          scope?: string
           updated_at?: string
         }
         Update: {
@@ -1074,6 +1076,7 @@ export type Database = {
           period_label?: string
           period_start?: string
           period_type?: string
+          scope?: string
           updated_at?: string
         }
         Relationships: [
@@ -1897,6 +1900,7 @@ export type Database = {
           logo_url: string | null
           name: string
           notes: string | null
+          portal_modules: Json
           updated_at: string
           website_url: string | null
         }
@@ -1911,6 +1915,7 @@ export type Database = {
           logo_url?: string | null
           name: string
           notes?: string | null
+          portal_modules?: Json
           updated_at?: string
           website_url?: string | null
         }
@@ -1925,6 +1930,7 @@ export type Database = {
           logo_url?: string | null
           name?: string
           notes?: string | null
+          portal_modules?: Json
           updated_at?: string
           website_url?: string | null
         }
@@ -3286,6 +3292,170 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      press_daily_batches: {
+        Row: {
+          batch_date: string
+          client_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          status: string
+          updated_at: string
+          whatsapp_sent_at: string | null
+        }
+        Insert: {
+          batch_date: string
+          client_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          status?: string
+          updated_at?: string
+          whatsapp_sent_at?: string | null
+        }
+        Update: {
+          batch_date?: string
+          client_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          status?: string
+          updated_at?: string
+          whatsapp_sent_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "press_daily_batches_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      press_daily_digests: {
+        Row: {
+          alerts: Json
+          batch_id: string
+          client_id: string
+          entries_count: number
+          generated_at: string
+          id: string
+          model: string | null
+          summary_md: string
+          tone_breakdown: Json
+          updated_at: string
+          whatsapp_text: string
+        }
+        Insert: {
+          alerts?: Json
+          batch_id: string
+          client_id: string
+          entries_count?: number
+          generated_at?: string
+          id?: string
+          model?: string | null
+          summary_md: string
+          tone_breakdown?: Json
+          updated_at?: string
+          whatsapp_text: string
+        }
+        Update: {
+          alerts?: Json
+          batch_id?: string
+          client_id?: string
+          entries_count?: number
+          generated_at?: string
+          id?: string
+          model?: string | null
+          summary_md?: string
+          tone_breakdown?: Json
+          updated_at?: string
+          whatsapp_text?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "press_daily_digests_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: true
+            referencedRelation: "press_daily_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "press_daily_digests_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      press_daily_entries: {
+        Row: {
+          author: string | null
+          batch_id: string
+          client_id: string
+          created_at: string
+          id: string
+          medium: string | null
+          position: number
+          raw_text: string
+          title: string | null
+          tone: string | null
+          topic: string | null
+          updated_at: string
+          url: string | null
+        }
+        Insert: {
+          author?: string | null
+          batch_id: string
+          client_id: string
+          created_at?: string
+          id?: string
+          medium?: string | null
+          position?: number
+          raw_text: string
+          title?: string | null
+          tone?: string | null
+          topic?: string | null
+          updated_at?: string
+          url?: string | null
+        }
+        Update: {
+          author?: string | null
+          batch_id?: string
+          client_id?: string
+          created_at?: string
+          id?: string
+          medium?: string | null
+          position?: number
+          raw_text?: string
+          title?: string | null
+          tone?: string | null
+          topic?: string | null
+          updated_at?: string
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "press_daily_entries_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "press_daily_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "press_daily_entries_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
