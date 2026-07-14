@@ -82,6 +82,7 @@ export default function ClientPortalAdmin() {
   const navigate = useNavigate();
   const [checking, setChecking] = useState(true);
   const [clientName, setClientName] = useState("");
+  const [portalModules, setPortalModules] = useState<Record<string, boolean>>({});
   const [reports, setReports] = useState<Report[]>([]);
   const [access, setAccess] = useState<AccessRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -211,7 +212,7 @@ export default function ClientPortalAdmin() {
   const load = async () => {
     setLoading(true);
     const [c, r, a, w, cr, ls] = await Promise.all([
-      supabase.from("clients").select("name").eq("id", clientId).maybeSingle(),
+      supabase.from("clients").select("name, portal_modules").eq("id", clientId).maybeSingle(),
       supabase
         .from("client_portal_reports")
         .select("id, report_date, title, type, summary_md, created_at")
@@ -240,6 +241,7 @@ export default function ClientPortalAdmin() {
         .limit(500),
     ]);
     setClientName(c.data?.name ?? "");
+    setPortalModules((((c.data as any)?.portal_modules) ?? {}) as Record<string, boolean>);
     setReports((r.data ?? []) as Report[]);
     setAccess((a.data ?? []) as AccessRow[]);
     setRecs((w.data ?? []) as WeeklyRec[]);
@@ -974,7 +976,28 @@ export default function ClientPortalAdmin() {
           </TabsContent>
 
           <TabsContent value="benchmark" className="space-y-4">
-            {clientId && <BenchmarkAdmin clientId={clientId} clientName={clientName} />}
+            {clientId && (
+              (portalModules.benchmark_funcionarios || portalModules.benchmark_instituciones) ? (
+                <Tabs defaultValue={portalModules.benchmark_funcionarios ? "funcionarios" : "instituciones"}>
+                  <TabsList>
+                    {portalModules.benchmark_funcionarios && <TabsTrigger value="funcionarios">Funcionarios</TabsTrigger>}
+                    {portalModules.benchmark_instituciones && <TabsTrigger value="instituciones">Instituciones</TabsTrigger>}
+                  </TabsList>
+                  {portalModules.benchmark_funcionarios && (
+                    <TabsContent value="funcionarios" className="mt-4">
+                      <BenchmarkAdmin clientId={clientId} clientName={clientName} scope="funcionarios" />
+                    </TabsContent>
+                  )}
+                  {portalModules.benchmark_instituciones && (
+                    <TabsContent value="instituciones" className="mt-4">
+                      <BenchmarkAdmin clientId={clientId} clientName={clientName} scope="instituciones" />
+                    </TabsContent>
+                  )}
+                </Tabs>
+              ) : (
+                <BenchmarkAdmin clientId={clientId} clientName={clientName} />
+              )
+            )}
           </TabsContent>
 
           <TabsContent value="prensa" className="space-y-4">
