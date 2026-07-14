@@ -785,7 +785,7 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
           <div className="grid gap-4 md:grid-cols-4">
             {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-2xl" />)}
           </div>
-        ) : analyses.length === 0 ? (
+        ) : analyses.length === 0 && !portalModules.press_daily ? (
           <div className="glass rounded-2xl p-14 text-center space-y-2">
             <Sparkles className="w-8 h-8 text-coral mx-auto" />
             <h3 className="font-semibold">Aún no hay análisis publicado</h3>
@@ -802,7 +802,7 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
               className="space-y-6"
             >
               {/* KPI cards (listening scope) */}
-              {activeTab !== "benchmark" && activeTab !== "estrategia" && (
+              {analyses.length > 0 && activeTab !== "benchmark" && activeTab !== "estrategia" && activeTab !== "prensa" && (
               <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
                 <KpiCard
                   label="Menciones analizadas"
