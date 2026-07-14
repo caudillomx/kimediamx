@@ -833,6 +833,9 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
                   <TabsTrigger value="panorama" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><BarChart3 className="w-4 h-4 mr-2" />Panorama</TabsTrigger>
                   <TabsTrigger value="benchmark" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><TrendingUp className="w-4 h-4 mr-2" />Benchmark</TabsTrigger>
                   <TabsTrigger value="estrategia" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><Compass className="w-4 h-4 mr-2" />Estrategia</TabsTrigger>
+                  {portalModules.press_daily && (
+                    <TabsTrigger value="prensa" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><Newspaper className="w-4 h-4 mr-2" />Prensa diaria</TabsTrigger>
+                  )}
                   <TabsTrigger value="historico" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><History className="w-4 h-4 mr-2" />Histórico</TabsTrigger>
                 </TabsList>
 
