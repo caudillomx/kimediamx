@@ -958,6 +958,12 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
                   <PortalStrategy clientId={portal.clientId} clientName={portal.displayName} />
                 </TabsContent>
 
+                {portalModules.press_daily && (
+                  <TabsContent value="prensa" className="mt-5 space-y-4">
+                    <PortalPressDaily clientId={portal.clientId} />
+                  </TabsContent>
+                )}
+
                 {/* Histórico */}
                 <TabsContent value="historico" className="mt-5 space-y-4">
                   <div>
