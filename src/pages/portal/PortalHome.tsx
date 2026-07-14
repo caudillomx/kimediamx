@@ -210,6 +210,7 @@ function buildMilestonesFromRows(rows: any[]): PeriodMilestone[] {
 export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
   const navigate = useNavigate();
   const [logoUrl, setLogoUrl] = useState<string | null>(portal.logoUrl ?? null);
+  const [portalModules, setPortalModules] = useState<Record<string, boolean>>({});
   const [analyses, setAnalyses] = useState<Analysis[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
@@ -255,7 +256,7 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
     (async () => {
       setLoading(true);
       const [c, a, r] = await Promise.all([
-        supabase.from("clients").select("logo_url").eq("id", portal.clientId).maybeSingle(),
+        supabase.from("clients").select("logo_url, portal_modules").eq("id", portal.clientId).maybeSingle(),
         supabase
           .from("client_portal_listening_analyses")
           .select("id, week_start, week_end, entries_count, executive_summary, key_findings, alerts, recommendations_client, sentiment_breakdown, top_topics, top_mentions")
@@ -270,6 +271,7 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
           .limit(50),
       ]);
       if (c.data?.logo_url) setLogoUrl(c.data.logo_url);
+      setPortalModules((((c.data as any)?.portal_modules) ?? {}) as Record<string, boolean>);
       // Solo aceptar análisis anclados a semanas completas lunes→domingo.
       // Los análisis heredados con anclajes arbitrarios (martes, miércoles, etc.)
       // se ocultan para no dar la falsa impresión de semanas superpuestas.
