@@ -242,17 +242,6 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
   const [activeTab, setActiveTab] = useState<string>("panorama");
   const pdfRef = useRef<HTMLDivElement>(null);
 
-  // In press-only portals (Guanajuato-like) we may not have weekly analyses.
-  // Seed a default rolling range so charts and period filters remain usable.
-  useEffect(() => {
-    if (loading) return;
-    if (analyses.length > 0) return;
-    if (!portalModules.press_daily) return;
-    if (customRange?.from && customRange?.to) return;
-    const to = new Date();
-    const from = new Date(); from.setDate(from.getDate() - 6);
-    setCustomRange({ from, to });
-  }, [loading, analyses.length, portalModules.press_daily, customRange]);
 
   useEffect(() => {
     localStorage.setItem("portal-theme", theme);
@@ -295,6 +284,48 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
       setAnalyses(list);
       setReports((r.data ?? []) as Report[]);
       if (list.length > 0) setSelectedWeek(list[0].week_start);
+
+      // Portales sin análisis semanales (p.ej. Guanajuato / press-only):
+      // sintetiza "semanas" a partir de las fechas con entradas para que los
+      // filtros de período sean homogéneos con el resto (Actinver, etc.).
+      if (list.length === 0 && (((c.data as any)?.portal_modules)?.press_daily)) {
+        const { data: dates } = await supabase
+          .from("client_portal_listening_entries")
+          .select("entry_date")
+          .eq("client_id", portal.clientId)
+          .not("analyzed_at", "is", null)
+          .order("entry_date", { ascending: false })
+          .limit(500);
+        const seen = new Set<string>();
+        const synthetic: Analysis[] = [];
+        for (const row of (dates ?? []) as { entry_date: string }[]) {
+          const dt = new Date(row.entry_date + "T00:00:00");
+          const monday = new Date(dt);
+          monday.setDate(dt.getDate() - ((dt.getDay() + 6) % 7));
+          const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6);
+          const ws = monday.toISOString().slice(0, 10);
+          const we = sunday.toISOString().slice(0, 10);
+          if (seen.has(ws)) continue;
+          seen.add(ws);
+          synthetic.push({
+            id: `synthetic-${ws}`,
+            week_start: ws,
+            week_end: we,
+            entries_count: 0,
+            executive_summary: null,
+            key_findings: [],
+            alerts: [],
+            recommendations_client: null,
+            sentiment_breakdown: null,
+            top_topics: null,
+            top_mentions: null,
+          });
+        }
+        if (synthetic.length > 0) {
+          setAnalyses(synthetic);
+          setSelectedWeek(synthetic[0].week_start);
+        }
+      }
 
       if (list.length === 0 && (r.data ?? []).length === 0) {
         const { data: access } = await supabase
@@ -723,9 +754,8 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
 
       <main className="relative max-w-7xl mx-auto px-6 py-6 space-y-6">
         {/* Week bar (listening scope: only for Panorama/Histórico) */}
-        {(analyses.length > 0 || portalModules.press_daily) && activeTab !== "benchmark" && activeTab !== "benchmark_funcionarios" && activeTab !== "benchmark_instituciones" && activeTab !== "estrategia" && activeTab !== "prensa" && (
+        {analyses.length > 0 && activeTab !== "benchmark" && activeTab !== "benchmark_funcionarios" && activeTab !== "benchmark_instituciones" && activeTab !== "estrategia" && activeTab !== "prensa" && (
         <div className="glass rounded-2xl p-4 flex flex-col lg:flex-row lg:items-center gap-4">
-          {analyses.length > 0 ? (
           <div className="flex items-center gap-2">
             <Button variant="outline" size="icon" onClick={goPrev} disabled={currentIdx >= analyses.length - 1} className="h-9 w-9">
               <ChevronLeft className="w-4 h-4" />
@@ -738,15 +768,8 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
               <ChevronRight className="w-4 h-4" />
             </Button>
           </div>
-          ) : (
-          <div className="min-w-[220px]">
-            <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Período analizado</div>
-            <div className="text-base font-semibold font-display leading-tight">{periodLabel || "—"}</div>
-          </div>
-          )}
 
           <div className="flex flex-wrap items-center gap-2 lg:ml-auto">
-            {analyses.length > 0 && (
             <Select value={selectedWeek ?? ""} onValueChange={(v) => setSelectedWeek(v)} disabled={analyses.length === 0}>
               <SelectTrigger className="w-[240px] h-9"><SelectValue placeholder="Elige semana" /></SelectTrigger>
               <SelectContent>
@@ -757,8 +780,6 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
                 ))}
               </SelectContent>
             </Select>
-            )}
-            {analyses.length > 0 && (
             <Select value={compareKey} onValueChange={(v) => { setCompareKey(v); setCustomRange(undefined); }} disabled={!!customRange?.from && !!customRange?.to}>
               <SelectTrigger className="w-[190px] h-9"><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -767,7 +788,6 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
                 ))}
               </SelectContent>
             </Select>
-            )}
             <Popover>
               <PopoverTrigger asChild>
                 <Button
@@ -823,7 +843,7 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
               className="space-y-6"
             >
               {/* KPI cards (listening scope) */}
-              {(analyses.length > 0 || portalModules.press_daily) && activeTab !== "benchmark" && activeTab !== "benchmark_funcionarios" && activeTab !== "benchmark_instituciones" && activeTab !== "estrategia" && activeTab !== "prensa" && (
+              {analyses.length > 0 && activeTab !== "benchmark" && activeTab !== "benchmark_funcionarios" && activeTab !== "benchmark_instituciones" && activeTab !== "estrategia" && activeTab !== "prensa" && (
               <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
                 <KpiCard
                   label="Menciones analizadas"
