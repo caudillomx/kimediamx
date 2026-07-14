@@ -285,10 +285,6 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
       setAnalyses(list);
       setReports((r.data ?? []) as Report[]);
       if (list.length > 0) setSelectedWeek(list[0].week_start);
-      // Si el cliente solo tiene módulo de prensa (sin listening), abrir en Prensa por defecto
-      if (((c.data as any)?.portal_modules?.press_daily) && list.length === 0) {
-        setActiveTab("prensa");
-      }
 
       if (list.length === 0 && (r.data ?? []).length === 0) {
         const { data: access } = await supabase
@@ -835,19 +831,8 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
               <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <TabsList className="bg-background/50 backdrop-blur border border-border/60 rounded-xl p-1 h-auto">
                   <TabsTrigger value="panorama" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><BarChart3 className="w-4 h-4 mr-2" />Panorama</TabsTrigger>
-                  {!portalModules.benchmark_funcionarios && !portalModules.benchmark_instituciones && (
-                    <TabsTrigger value="benchmark" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><TrendingUp className="w-4 h-4 mr-2" />Benchmark</TabsTrigger>
-                  )}
-                  {portalModules.benchmark_funcionarios && (
-                    <TabsTrigger value="benchmark_funcionarios" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><UsersIcon className="w-4 h-4 mr-2" />Funcionarios</TabsTrigger>
-                  )}
-                  {portalModules.benchmark_instituciones && (
-                    <TabsTrigger value="benchmark_instituciones" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><Building2 className="w-4 h-4 mr-2" />Instituciones</TabsTrigger>
-                  )}
+                  <TabsTrigger value="benchmark" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><TrendingUp className="w-4 h-4 mr-2" />Benchmark</TabsTrigger>
                   <TabsTrigger value="estrategia" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><Compass className="w-4 h-4 mr-2" />Estrategia</TabsTrigger>
-                  {portalModules.press_daily && (
-                    <TabsTrigger value="prensa" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><Newspaper className="w-4 h-4 mr-2" />Prensa diaria</TabsTrigger>
-                  )}
                   <TabsTrigger value="historico" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><History className="w-4 h-4 mr-2" />Histórico</TabsTrigger>
                 </TabsList>
 
