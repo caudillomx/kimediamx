@@ -15,6 +15,7 @@ import {
   LogOut, FileText, ShieldAlert, Download, Sparkles,
   BarChart3, Lightbulb, History, ChevronLeft, ChevronRight,
   AlertTriangle, TrendingUp, MessageCircle, Sun, Moon, CalendarRange, X, RefreshCw,
+  Newspaper,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ClientPortalConfig } from "@/lib/clientPortal";
@@ -23,6 +24,7 @@ import PortalPdfTemplate from "./PortalPdfTemplate";
 import RecommendationsBlock from "@/components/portal/RecommendationsBlock";
 import PortalBenchmark from "@/components/portal/PortalBenchmark";
 import PortalStrategy from "@/components/portal/PortalStrategy";
+import PortalPressDaily from "@/components/portal/PortalPressDaily";
 import { Compass } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 
@@ -208,6 +210,7 @@ function buildMilestonesFromRows(rows: any[]): PeriodMilestone[] {
 export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
   const navigate = useNavigate();
   const [logoUrl, setLogoUrl] = useState<string | null>(portal.logoUrl ?? null);
+  const [portalModules, setPortalModules] = useState<Record<string, boolean>>({});
   const [analyses, setAnalyses] = useState<Analysis[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
@@ -253,7 +256,7 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
     (async () => {
       setLoading(true);
       const [c, a, r] = await Promise.all([
-        supabase.from("clients").select("logo_url").eq("id", portal.clientId).maybeSingle(),
+        supabase.from("clients").select("logo_url, portal_modules").eq("id", portal.clientId).maybeSingle(),
         supabase
           .from("client_portal_listening_analyses")
           .select("id, week_start, week_end, entries_count, executive_summary, key_findings, alerts, recommendations_client, sentiment_breakdown, top_topics, top_mentions")
@@ -268,6 +271,7 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
           .limit(50),
       ]);
       if (c.data?.logo_url) setLogoUrl(c.data.logo_url);
+      setPortalModules((((c.data as any)?.portal_modules) ?? {}) as Record<string, boolean>);
       // Solo aceptar análisis anclados a semanas completas lunes→domingo.
       // Los análisis heredados con anclajes arbitrarios (martes, miércoles, etc.)
       // se ocultan para no dar la falsa impresión de semanas superpuestas.
@@ -281,6 +285,10 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
       setAnalyses(list);
       setReports((r.data ?? []) as Report[]);
       if (list.length > 0) setSelectedWeek(list[0].week_start);
+      // Si el cliente solo tiene módulo de prensa (sin listening), abrir en Prensa por defecto
+      if (((c.data as any)?.portal_modules?.press_daily) && list.length === 0) {
+        setActiveTab("prensa");
+      }
 
       if (list.length === 0 && (r.data ?? []).length === 0) {
         const { data: access } = await supabase
@@ -709,7 +717,7 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
 
       <main className="relative max-w-7xl mx-auto px-6 py-6 space-y-6">
         {/* Week bar (listening scope: only for Panorama/Histórico) */}
-        {activeTab !== "benchmark" && activeTab !== "estrategia" && (
+        {analyses.length > 0 && activeTab !== "benchmark" && activeTab !== "estrategia" && activeTab !== "prensa" && (
         <div className="glass rounded-2xl p-4 flex flex-col lg:flex-row lg:items-center gap-4">
           <div className="flex items-center gap-2">
             <Button variant="outline" size="icon" onClick={goPrev} disabled={currentIdx >= analyses.length - 1} className="h-9 w-9">
@@ -781,7 +789,7 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
           <div className="grid gap-4 md:grid-cols-4">
             {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-2xl" />)}
           </div>
-        ) : analyses.length === 0 ? (
+        ) : analyses.length === 0 && !portalModules.press_daily ? (
           <div className="glass rounded-2xl p-14 text-center space-y-2">
             <Sparkles className="w-8 h-8 text-coral mx-auto" />
             <h3 className="font-semibold">Aún no hay análisis publicado</h3>
@@ -798,7 +806,7 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
               className="space-y-6"
             >
               {/* KPI cards (listening scope) */}
-              {activeTab !== "benchmark" && activeTab !== "estrategia" && (
+              {analyses.length > 0 && activeTab !== "benchmark" && activeTab !== "estrategia" && activeTab !== "prensa" && (
               <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
                 <KpiCard
                   label="Menciones analizadas"
@@ -829,6 +837,9 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
                   <TabsTrigger value="panorama" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><BarChart3 className="w-4 h-4 mr-2" />Panorama</TabsTrigger>
                   <TabsTrigger value="benchmark" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><TrendingUp className="w-4 h-4 mr-2" />Benchmark</TabsTrigger>
                   <TabsTrigger value="estrategia" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><Compass className="w-4 h-4 mr-2" />Estrategia</TabsTrigger>
+                  {portalModules.press_daily && (
+                    <TabsTrigger value="prensa" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><Newspaper className="w-4 h-4 mr-2" />Prensa diaria</TabsTrigger>
+                  )}
                   <TabsTrigger value="historico" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><History className="w-4 h-4 mr-2" />Histórico</TabsTrigger>
                 </TabsList>
 
@@ -950,6 +961,12 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
                 <TabsContent value="estrategia" className="mt-5 space-y-4">
                   <PortalStrategy clientId={portal.clientId} clientName={portal.displayName} />
                 </TabsContent>
+
+                {portalModules.press_daily && (
+                  <TabsContent value="prensa" className="mt-5 space-y-4">
+                    <PortalPressDaily clientId={portal.clientId} />
+                  </TabsContent>
+                )}
 
                 {/* Histórico */}
                 <TabsContent value="historico" className="mt-5 space-y-4">
