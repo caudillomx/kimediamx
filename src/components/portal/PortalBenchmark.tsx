@@ -30,7 +30,7 @@ const METRICS: { key: keyof Metric; label: string; fmt: (n: number) => string }[
   { key: "interaction_per_impression", label: "Interacción / impresión", fmt: (n) => (n * 100).toFixed(3) + "%" },
 ];
 
-export default function PortalBenchmark({ clientId, clientName }: { clientId: string; clientName: string }) {
+export default function PortalBenchmark({ clientId, clientName, scope }: { clientId: string; clientName: string; scope?: "general" | "funcionarios" | "instituciones" }) {
   const [competitors, setCompetitors] = useState<Competitor[]>([]);
   const [periods, setPeriods] = useState<Period[]>([]);
   const [metrics, setMetrics] = useState<Metric[]>([]);
@@ -47,9 +47,11 @@ export default function PortalBenchmark({ clientId, clientName }: { clientId: st
   useEffect(() => {
     (async () => {
       setLoading(true);
+      let periodsQ = supabase.from("client_portal_benchmark_periods").select("*").eq("client_id", clientId);
+      if (scope) periodsQ = periodsQ.eq("scope", scope);
       const [c, p] = await Promise.all([
         supabase.from("client_portal_benchmark_competitors").select("*").eq("client_id", clientId).eq("active", true).order("is_client", { ascending: false }).order("name"),
-        supabase.from("client_portal_benchmark_periods").select("*").eq("client_id", clientId).order("period_start", { ascending: true }),
+        periodsQ.order("period_start", { ascending: true }),
       ]);
       const ps = (p.data ?? []) as Period[];
       setCompetitors((c.data ?? []) as Competitor[]);
@@ -68,7 +70,7 @@ export default function PortalBenchmark({ clientId, clientName }: { clientId: st
       }
       setLoading(false);
     })();
-  }, [clientId]);
+  }, [clientId, scope]);
 
   const compMap = useMemo(() => new Map(competitors.map((c) => [c.id, c])), [competitors]);
   const currentPeriod = periods.find((p) => p.id === selectedPeriod) ?? null;
