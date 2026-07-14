@@ -7,7 +7,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import { Newspaper, AlertTriangle, Copy, ExternalLink } from "lucide-react";
 
 type Batch = { id: string; batch_date: string; status: string };
@@ -127,7 +126,7 @@ export default function PortalPressDaily({ clientId }: { clientId: string }) {
               <Button size="sm" onClick={copyWhatsapp}><Copy className="w-4 h-4 mr-2" /> Copiar para WhatsApp</Button>
             </div>
             <div className="prose prose-sm max-w-none dark:prose-invert">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{digest.summary_md}</ReactMarkdown>
+              <ReactMarkdown>{digest.summary_md}</ReactMarkdown>
             </div>
           </Card>
 
