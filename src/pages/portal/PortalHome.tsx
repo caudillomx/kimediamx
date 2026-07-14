@@ -823,7 +823,7 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
               className="space-y-6"
             >
               {/* KPI cards (listening scope) */}
-              {analyses.length > 0 && activeTab !== "benchmark" && activeTab !== "benchmark_funcionarios" && activeTab !== "benchmark_instituciones" && activeTab !== "estrategia" && activeTab !== "prensa" && (
+              {(analyses.length > 0 || portalModules.press_daily) && activeTab !== "benchmark" && activeTab !== "benchmark_funcionarios" && activeTab !== "benchmark_instituciones" && activeTab !== "estrategia" && activeTab !== "prensa" && (
               <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
                 <KpiCard
                   label="Menciones analizadas"
