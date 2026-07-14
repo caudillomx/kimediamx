@@ -977,6 +977,10 @@ export default function ClientPortalAdmin() {
             {clientId && <BenchmarkAdmin clientId={clientId} clientName={clientName} />}
           </TabsContent>
 
+          <TabsContent value="prensa" className="space-y-4">
+            {clientId && <PressDailyAdmin clientId={clientId} />}
+          </TabsContent>
+
           <TabsContent value="accesos" className="space-y-4">
             <Card className="p-4 space-y-3">
               <div>
