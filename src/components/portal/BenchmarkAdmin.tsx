@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Trash2, Upload, Save, X, FileSpreadsheet, Users, TrendingUp, Newspaper } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import {
   parseComparativa, parseSeguidores, parsePosts, detectType,
   type ComparativaRow, type FollowerDailyRow, type PostRow, type PeriodInfo,
@@ -36,6 +37,7 @@ type Period = {
   period_end: string;
   notes: string | null;
   created_at: string;
+  scope?: string;
 };
 
 type UploadRow = {
@@ -58,7 +60,15 @@ const TYPE_META: Record<FileType, { label: string; icon: React.ComponentType<{ c
   posts: { label: "Posts (Top publicaciones)", icon: Newspaper, desc: "Publicaciones individuales del periodo" },
 };
 
-export default function BenchmarkAdmin({ clientId, clientName }: { clientId: string; clientName: string }) {
+type BenchmarkScope = "general" | "funcionarios" | "instituciones";
+
+const SCOPE_LABELS: Record<BenchmarkScope, string> = {
+  general: "General",
+  funcionarios: "Funcionarios",
+  instituciones: "Instituciones",
+};
+
+export default function BenchmarkAdmin({ clientId, clientName, scope = "general" }: { clientId: string; clientName: string; scope?: BenchmarkScope }) {
   const [competitors, setCompetitors] = useState<Competitor[]>([]);
   const [periods, setPeriods] = useState<Period[]>([]);
   const [uploads, setUploads] = useState<UploadRow[]>([]);
@@ -82,7 +92,7 @@ export default function BenchmarkAdmin({ clientId, clientName }: { clientId: str
     setLoading(true);
     const [c, p, u] = await Promise.all([
       supabase.from("client_portal_benchmark_competitors").select("*").eq("client_id", clientId).order("sort_order").order("name"),
-      supabase.from("client_portal_benchmark_periods").select("*").eq("client_id", clientId).order("period_start", { ascending: false }),
+      supabase.from("client_portal_benchmark_periods").select("*").eq("client_id", clientId).eq("scope", scope).order("period_start", { ascending: false }),
       supabase.from("client_portal_benchmark_uploads").select("*").eq("client_id", clientId).order("created_at", { ascending: false }),
     ]);
     setCompetitors((c.data ?? []) as Competitor[]);
@@ -91,7 +101,7 @@ export default function BenchmarkAdmin({ clientId, clientName }: { clientId: str
     setLoading(false);
   }
 
-  useEffect(() => { loadAll(); }, [clientId]);
+  useEffect(() => { loadAll(); }, [clientId, scope]);
 
   async function updateCompetitor(id: string, patch: Partial<Competitor>) {
     const { error } = await supabase.from("client_portal_benchmark_competitors").update(patch).eq("id", id);
@@ -180,8 +190,9 @@ export default function BenchmarkAdmin({ clientId, clientName }: { clientId: str
             period_label: parsedPreview.label,
             period_start: parsedPreview.period.start,
             period_end: parsedPreview.period.end,
+            scope,
           },
-          { onConflict: "client_id,period_start,period_end" }
+          { onConflict: "client_id,period_start,period_end,scope" }
         )
         .select()
         .single();
