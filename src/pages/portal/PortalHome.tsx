@@ -903,6 +903,12 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
                     </div>
                   )}
 
+                  {/* Gráficas primero para dar contexto visual */}
+                  <div className="pt-2">
+                    <div className="text-[11px] uppercase tracking-widest text-muted-foreground mb-3">Panorama del período</div>
+                    <PortalAnalysis clientId={portal.clientId} fromDate={fromDate} toDate={toDate} mode={portalModules.press_daily ? "press" : "social"} />
+                  </div>
+
                   {(() => {
                     const computedAlerts = rangeMilestones.slice(0, 6);
                     const items = computedAlerts.length
@@ -918,7 +924,9 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
                         }));
                     if (!items.length) return null;
                     return (
-                    <div className="grid gap-2">
+                    <div className="space-y-2">
+                      <div className="text-[11px] uppercase tracking-widest text-muted-foreground">Hitos del período</div>
+                      <div className="grid gap-2">
                       {items.map((a: any, i: number) => (
                         <div key={i} className="flex items-start gap-3 p-4 rounded-xl bg-red-500/5 border border-red-500/30">
                           <AlertTriangle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
@@ -931,6 +939,7 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
                           </div>
                         </div>
                       ))}
+                      </div>
                     </div>
                     );
                   })()}
@@ -954,11 +963,6 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
                       </div>
                     </div>
                   )}
-
-                  <div className="pt-2">
-                    <div className="text-[11px] uppercase tracking-widest text-muted-foreground mb-3">Análisis detallado del período</div>
-                    <PortalAnalysis clientId={portal.clientId} fromDate={fromDate} toDate={toDate} mode={portalModules.press_daily ? "press" : "social"} />
-                  </div>
 
                   {/* Recomendaciones al cierre del análisis */}
                   {effective?.recommendations_client && (
