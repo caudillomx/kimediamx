@@ -272,6 +272,10 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
       ]);
       if (c.data?.logo_url) setLogoUrl(c.data.logo_url);
       setPortalModules((((c.data as any)?.portal_modules) ?? {}) as Record<string, boolean>);
+      // Si el cliente solo tiene módulo de prensa (sin listening), abrir en Prensa por defecto
+      if (((c.data as any)?.portal_modules?.press_daily) && list.length === 0) {
+        setActiveTab("prensa");
+      }
       // Solo aceptar análisis anclados a semanas completas lunes→domingo.
       // Los análisis heredados con anclajes arbitrarios (martes, miércoles, etc.)
       // se ocultan para no dar la falsa impresión de semanas superpuestas.
