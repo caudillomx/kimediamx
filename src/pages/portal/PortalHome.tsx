@@ -15,6 +15,7 @@ import {
   LogOut, FileText, ShieldAlert, Download, Sparkles,
   BarChart3, Lightbulb, History, ChevronLeft, ChevronRight,
   AlertTriangle, TrendingUp, MessageCircle, Sun, Moon, CalendarRange, X, RefreshCw,
+  Newspaper,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ClientPortalConfig } from "@/lib/clientPortal";
@@ -23,6 +24,7 @@ import PortalPdfTemplate from "./PortalPdfTemplate";
 import RecommendationsBlock from "@/components/portal/RecommendationsBlock";
 import PortalBenchmark from "@/components/portal/PortalBenchmark";
 import PortalStrategy from "@/components/portal/PortalStrategy";
+import PortalPressDaily from "@/components/portal/PortalPressDaily";
 import { Compass } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 
