@@ -33,6 +33,14 @@ import { detectClientPortal } from "./lib/clientPortal";
 const queryClient = new QueryClient();
 
 const App = () => {
+  // Redirect apex kimedia.mx → www.kimedia.mx (Primary desactivado en hosting)
+  if (typeof window !== "undefined" && window.location.hostname === "kimedia.mx") {
+    window.location.replace(
+      `https://www.kimedia.mx${window.location.pathname}${window.location.search}${window.location.hash}`
+    );
+    return null;
+  }
+
   const portal = detectClientPortal();
   return (
   <QueryClientProvider client={queryClient}>
