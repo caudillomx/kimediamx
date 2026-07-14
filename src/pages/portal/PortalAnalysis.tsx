@@ -77,7 +77,8 @@ const HEAT_COLOR: Record<string, [number, number, number]> = {
   crisis:   [153, 27, 27],
 };
 
-export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientId: string; fromDate: string; toDate: string; }) {
+export default function PortalAnalysis({ clientId, fromDate, toDate, mode = "social" }: { clientId: string; fromDate: string; toDate: string; mode?: "press" | "social"; }) {
+  const isPress = mode === "press";
   const [entries, setEntries] = useState<Entry[]>([]);
   const [loading, setLoading] = useState(true);
   const [trendPeriods, setTrendPeriods] = useState<{ label: string; total: number; delta: number | null }[]>([]);
@@ -930,14 +931,19 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
   return (
     <div className="space-y-6">
       {/* Alertas: hitos críticos del período */}
-      {milestones.some(m => m.impact === "alto" || m.kind === "crisis") && (
+      {milestones.some(m => isPress ? (m.impact === "alto" && m.kind === "crisis") : (m.impact === "alto" || m.kind === "crisis")) && (
         <Card className="p-5 border-rose-500/30 bg-rose-500/5">
           <div className="flex items-center gap-2 mb-3">
             <AlertOctagon className="w-4 h-4 text-rose-500" />
             <h4 className="text-sm font-semibold">Hitos críticos del período</h4>
           </div>
+          {isPress && (
+            <p className="text-[11px] text-muted-foreground mb-2">
+              Solo se marcan como crisis los hechos con implicación directa para el Gobierno del Estado; los temas municipales aparecen en narrativas y no elevan el nivel de alerta.
+            </p>
+          )}
           <div className="space-y-2">
-            {milestones.filter(m => m.impact === "alto" || m.kind === "crisis").slice(0, 5).map((m, i) => (
+            {milestones.filter(m => isPress ? (m.impact === "alto" && m.kind === "crisis") : (m.impact === "alto" || m.kind === "crisis")).slice(0, 5).map((m, i) => (
               <div key={i} className="text-sm flex items-start gap-3 p-2 rounded bg-background/50">
                 <Badge variant="destructive" className="text-[10px] shrink-0">H{i + 1}</Badge>
                 <div className="min-w-0 flex-1">
@@ -952,6 +958,7 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
       )}
 
       {/* ============ SLIDE 1 · Conversación general ============ */}
+      {!isPress && (
       <Card className="p-5 md:p-6">
         <div className="flex flex-col lg:flex-row gap-6">
           <div className="flex-1 min-w-0 space-y-4">
@@ -1009,9 +1016,10 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
           </div>
         </div>
       </Card>
+      )}
 
       {/* ============ SLIDE 2 · Plataformas y menciones ============ */}
-      {platforms.length > 0 && (
+      {!isPress && platforms.length > 0 && (
         <Card className="p-5 md:p-6">
           <div className="mb-4">
             <div className="text-[10px] uppercase tracking-widest text-muted-foreground">01 · Listening</div>
@@ -1203,11 +1211,13 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
               <AtSign className="w-5 h-5" />Quién dijo qué
             </h3>
             <p className="text-xs text-muted-foreground mt-1">
-              Reconstrucción por medio y por perfil social a partir de las bitácoras del período.
+              {isPress
+                ? "Reconstrucción por medio (primeras planas, columnas y síntesis) a partir de las bitácoras del período."
+                : "Reconstrucción por medio y por perfil social a partir de las bitácoras del período."}
             </p>
           </div>
 
-          <div className="mt-5 grid gap-4 lg:grid-cols-2">
+          <div className={`mt-5 grid gap-4 ${isPress ? "" : "lg:grid-cols-2"}`}>
             {/* Medios que hablaron */}
             <div className="rounded-xl border border-border/40 bg-background/30 overflow-hidden flex flex-col">
               <div className="flex items-center justify-between px-4 py-2.5 border-b border-border/40 bg-background/40">
@@ -1277,6 +1287,7 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
             </div>
 
             {/* Voces en redes */}
+            {!isPress && (
             <div className="rounded-xl border border-border/40 bg-background/30 overflow-hidden flex flex-col">
               <div className="flex items-center justify-between px-4 py-2.5 border-b border-border/40 bg-background/40">
                 <div className="flex items-center gap-2">
@@ -1336,6 +1347,7 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
                 </div>
               )}
             </div>
+            )}
           </div>
 
           {mediaCoverage.length === 0 && socialVoices.flat.length === 0 && (
@@ -1556,8 +1568,8 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
       </div>
 
       {/* Bloque avanzado: heatmap + salud reputacional */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card className="p-4 md:col-span-2">
+      <div className={`grid gap-4 ${isPress ? "" : "md:grid-cols-3"}`}>
+        <Card className={`p-4 ${isPress ? "" : "md:col-span-2"}`}>
           <h4 className="text-sm font-semibold mb-3 flex items-center gap-2"><Grid3x3 className="w-4 h-4" />Heatmap día-semana × sentimiento</h4>
           <div className="space-y-2">
             {(["positivo", "neutral", "negativo", "crisis"] as const).map(s => (
@@ -1605,6 +1617,7 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
           </div>
         </Card>
 
+        {!isPress && (
         <Card className="p-4 flex flex-col">
           <h4 className="text-sm font-semibold mb-3 flex items-center gap-2"><Gauge className="w-4 h-4" />Salud reputacional</h4>
           <div className="flex-1 flex flex-col items-center justify-center relative">
@@ -1641,6 +1654,7 @@ export default function PortalAnalysis({ clientId, fromDate, toDate }: { clientI
             <div className="text-[10px] text-muted-foreground">Sentimiento promedio: {reputationScore.avg} · Crisis detectadas: {reputationScore.crisisEvents}</div>
           </div>
         </Card>
+        )}
       </div>
 
       {/* Frases destacadas */}

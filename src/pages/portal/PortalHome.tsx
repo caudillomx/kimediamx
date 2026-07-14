@@ -951,7 +951,7 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
 
                   <div className="pt-2">
                     <div className="text-[11px] uppercase tracking-widest text-muted-foreground mb-3">Análisis detallado del período</div>
-                    <PortalAnalysis clientId={portal.clientId} fromDate={fromDate} toDate={toDate} />
+                    <PortalAnalysis clientId={portal.clientId} fromDate={fromDate} toDate={toDate} mode={portalModules.press_daily ? "press" : "social"} />
                   </div>
 
                   {/* Recomendaciones al cierre del análisis */}
