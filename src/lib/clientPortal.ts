@@ -18,6 +18,13 @@ export const CLIENT_PORTALS: Record<string, ClientPortalConfig> = {
     displayName: "Actinver",
     tagline: "Portal privado de análisis diario",
   },
+  guanajuato: {
+    slug: "guanajuato",
+    clientId: "651190b4-7787-4814-af9a-b5aff22d9297",
+    clientName: "Guanajuato",
+    displayName: "Gobierno de Guanajuato",
+    tagline: "Portal privado de análisis y prensa diaria",
+  },
 };
 
 /** Returns the active portal slug based on subdomain or ?portal= override, or null. */
