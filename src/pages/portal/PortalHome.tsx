@@ -242,17 +242,6 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
   const [activeTab, setActiveTab] = useState<string>("panorama");
   const pdfRef = useRef<HTMLDivElement>(null);
 
-  // In press-only portals (Guanajuato-like) we may not have weekly analyses.
-  // Seed a default rolling range so charts and period filters remain usable.
-  useEffect(() => {
-    if (loading) return;
-    if (analyses.length > 0) return;
-    if (!portalModules.press_daily) return;
-    if (customRange?.from && customRange?.to) return;
-    const to = new Date();
-    const from = new Date(); from.setDate(from.getDate() - 6);
-    setCustomRange({ from, to });
-  }, [loading, analyses.length, portalModules.press_daily, customRange]);
 
   useEffect(() => {
     localStorage.setItem("portal-theme", theme);
@@ -854,7 +843,7 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
               className="space-y-6"
             >
               {/* KPI cards (listening scope) */}
-              {(analyses.length > 0 || portalModules.press_daily) && activeTab !== "benchmark" && activeTab !== "benchmark_funcionarios" && activeTab !== "benchmark_instituciones" && activeTab !== "estrategia" && activeTab !== "prensa" && (
+              {analyses.length > 0 && activeTab !== "benchmark" && activeTab !== "benchmark_funcionarios" && activeTab !== "benchmark_instituciones" && activeTab !== "estrategia" && activeTab !== "prensa" && (
               <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
                 <KpiCard
                   label="Menciones analizadas"
