@@ -1,116 +1,59 @@
-# Insights inteligentes + panel Estrategia
+## Portal Guanajuato (cliente institucional)
 
-Piloto solo con Actinver. Todo el gasto de IA usa modelos baratos de Lovable AI Gateway (`google/gemini-3.1-flash-lite` como default; `google/gemini-3.5-flash` cuando se necesite más matiz). Nada de Claude Sonnet aquí — queda reservado para operaciones internas.
+Mismo patrón que Actinver: subdominio propio, login, y módulos de análisis. Los módulos se **añaden como pestañas nuevas al portal existente** para que Guanajuato (y a futuro otros clientes tipo gobierno) los tengan disponibles.
 
-## Parte 1 — Análisis de narrativas por marca / red
+### 1. Alta del cliente y del portal
 
-Nuevo bloque dentro de la pestaña **Contenido** de Benchmark: "Narrativas del periodo".
+- Crear el cliente **Gobierno de Guanajuato** en `clients` desde el admin (o script) y registrarlo en `src/lib/clientPortal.ts` bajo el slug `guanajuato` con su `clientId`, `displayName` y `tagline` ("Portal privado de análisis diario").
+- Crear las credenciales portal (email + password) desde `/admin/cliente/:id/portal` usando el flujo `manage-portal-user` que ya existe.
+- Documentar en el chat los DNS records para `guanajuato.kimedia.mx` (A `185.158.133.1` + TXT `_lovable`) como se hizo con Actinver.
 
-### Cómo funciona
-1. Agrupa los posts del periodo/rango seleccionado por `profile_name` + `network`.
-2. Para cada marca-red con ≥ 5 posts, arma un payload compacto (top 15 posts por interacciones: mensaje truncado a 400 chars, likes, comments, fecha).
-3. Llama a una nueva edge function `analyze-benchmark-narratives` que corre `google/gemini-3.1-flash-lite` con `Output.object` (Zod) y devuelve, por marca-red:
-   - 2–4 **ejes narrativos** (nombre + descripción de 1 línea + % aprox del contenido).
-   - **Tono dominante** (etiqueta + evidencia).
-   - **Formatos ganadores** (reel/carrusel/foto/texto/live, inferidos del texto).
-   - **Ángulos diferenciales vs Actinver** (qué hace esa marca que Actinver no).
-4. Resultado cacheado en tabla nueva `client_portal_benchmark_narratives` (client_id, period_id o rango hash, network, profile_name, narratives jsonb, model, generated_at). No se re-genera si ya existe para ese corte.
-5. Botón "Regenerar análisis" fuerza nueva corrida (con confirmación por el costo).
+### 2. Nuevas pestañas en el portal (`PortalHome`)
 
-### UI
-- Grid de tarjetas: una por marca-red, con Actinver siempre primero y resaltado.
-- Cada tarjeta: ejes narrativos como chips con %, tono, formatos, y una línea "Vs. Actinver".
-- Vista comparativa opcional: matriz marca × eje narrativo para ver quién cubre qué territorio.
+El portal Actinver hoy tiene: Estrategia, Benchmark, Reportes. Añadimos, disponibles solo para clientes que las tengan activas:
 
-### Heurísticas complementarias (siempre visibles, sin IA)
-- Nube de keywords (bigramas) por marca — ya existe parcialmente, se extiende por marca.
-- Hashtags y menciones más usadas por marca.
-- Reparto de horarios y días de publicación.
+1. **Prensa diaria** — ingesta manual (pegar/upload de columnas y notas), condensado IA y bandeja de envío por WhatsApp.
+2. **Benchmark Funcionarios** — vista independiente de perfiles personales del gabinete.
+3. **Benchmark Instituciones** — vista independiente de cuentas oficiales de dependencias.
+4. **Datasets Fanpage Karma** — carga de exports y despliegue como tabla/panel.
 
-## Parte 2 — Panel "Estrategia" (cruce Listening ↔ Benchmark)
+Un flag por cliente (`clients.portal_modules jsonb`) decide qué pestañas se muestran, para no exponer módulos GTO al portal Actinver.
 
-Nueva pestaña de portal al mismo nivel que Panorama / Histórico / Benchmark: **Estrategia**.
+### 3. Base de datos (migración)
 
-### Objetivo
-Responder en un solo lugar: ¿la estrategia digital de Actinver es coherente con lo que dice y con lo que hace el ecosistema?
+Reusamos infraestructura existente donde aplique:
 
-### Estructura
+- **Benchmark funcionarios vs instituciones**: añadir columna `scope text` (`funcionarios` | `instituciones`) a `client_portal_benchmark_periods` y filtrar las vistas por scope. Sin tablas nuevas.
+- **Datasets Fanpage Karma**: ya existe `client_portal_datasets` y bucket `client-datasets`. Añadir parser específico y una vista tabular en el portal.
+- **Prensa diaria** (nuevas tablas):
+  - `press_daily_batches` — un lote por día por cliente (`date`, `client_id`, `status`, `whatsapp_sent_at`).
+  - `press_daily_entries` — cada nota/columna pegada (`batch_id`, `medium`, `author`, `title`, `url`, `raw_text`, `tone`, `topic`).
+  - `press_daily_digests` — condensado generado por IA (`batch_id`, `summary_md`, `whatsapp_text`, `alerts jsonb`, `generated_at`).
+  - Todas con RLS: admin full access + `has_client_access(auth.uid(), client_id)` para SELECT desde el portal. `GRANT` explícitos a `authenticated` y `service_role`.
 
-```text
-┌──────────────────────────────────────────────────────────┐
-│ HEADER: Rango [7d/14d/30d/custom] · [Regenerar]          │
-├──────────────────────────────────────────────────────────┤
-│ VEREDICTO DE COHERENCIA                                  │
-│ Semáforo (Alta/Media/Baja) + 1 frase de por qué          │
-├──────────────────────────────────────────────────────────┤
-│ 3 columnas comparativas                                  │
-│  ┌────────────┬────────────┬────────────┐               │
-│  │ Qué DICEN  │ Qué HACE   │ Qué HACEN  │               │
-│  │ de Actinver│ Actinver   │ los pares  │               │
-│  │ (listening)│ (benchmark)│ (benchmark)│               │
-│  │ temas top  │ ejes narr. │ ejes narr. │               │
-│  │ sentimiento│ tono       │ tonos      │               │
-│  └────────────┴────────────┴────────────┘               │
-├──────────────────────────────────────────────────────────┤
-│ BRECHAS DETECTADAS                                       │
-│ - Temas que aparecen en listening pero no en el          │
-│   contenido propio                                       │
-│ - Territorios donde competidores dominan y Actinver no   │
-│   participa                                              │
-│ - Crisis/alertas de listening sin respuesta en contenido │
-├──────────────────────────────────────────────────────────┤
-│ RECOMENDACIONES ACCIONABLES (3–5)                        │
-│ Cards estilo RecommendationsBlock, cada una con:         │
-│ - Acción concreta                                        │
-│ - Evidencia (qué señal de listening + qué señal de       │
-│   benchmark la sustenta)                                 │
-│ - Prioridad (Alta/Media)                                 │
-└──────────────────────────────────────────────────────────┘
-```
+### 4. Edge functions
 
-### Cómo funciona
-1. Nueva edge function `generate-strategy-recommendations`:
-   - Input: `client_id`, rango de fechas.
-   - Agrega en el server: menciones y temas top de `client_portal_listening_entries` + sentimiento agregado + narrativas ya cacheadas de Actinver y competidores + métricas comparativas (posición, deltas MoM).
-   - Prompt estructurado a `google/gemini-3.5-flash` (un poco más capaz que flash-lite porque este cruce sí necesita razonar) con `Output.object`:
-     ```
-     {
-       coherence: { level: "alta"|"media"|"baja", reason: string },
-       what_audience_says: { topics: [...], sentiment_summary: string },
-       what_actinver_does: { narratives: [...], tone: string },
-       what_peers_do: { dominant_narratives: [...], gaps_actinver_misses: [...] },
-       gaps: [{ type, description, evidence }],
-       recommendations: [{ title, action, evidence_listening, evidence_benchmark, priority }]
-     }
-     ```
-   - Guarda resultado en tabla nueva `client_portal_strategy_reports` (client_id, range_start, range_end, payload jsonb, model, generated_at). Cache por rango.
-2. UI consume el JSON y arma las secciones. Se reutiliza `RecommendationsBlock` para las cards de recomendaciones.
+- `press-daily-generate` — recibe `batch_id`, lee entries, llama a Lovable AI (Gemini 2.5 Flash) con prompt que produce: (a) resumen markdown para el portal, (b) versión WhatsApp ≤ 900 chars, (c) alertas destacadas. Persiste en `press_daily_digests`. **Sin alucinación**: solo puede citar contenido presente en las entries.
+- `press-daily-send-whatsapp` — envía el `whatsapp_text` del digest a un número/grupo. Twilio requiere secret nuevo → lo pedimos con `add_secret` en fase de implementación cuando el usuario confirme número destino. Por ahora dejamos el botón "Copiar para WhatsApp" funcional para no bloquear.
+- `parse-fanpage-dataset` — normaliza el XLSX/CSV subido a `client-datasets` y guarda filas en `client_portal_datasets`.
 
-### Coherencia con lo ya construido
-- Reutiliza los datos que ya viven en `client_portal_listening_entries`, `client_portal_benchmark_*` y las narrativas cacheadas de la Parte 1.
-- El botón de "Regenerar" es el único gasto discrecional de IA.
+### 5. Admin de Guanajuato
 
-## Detalles técnicos
+Añadir a `/admin/cliente/:clientId` una sección "Portal Gobierno" con:
+- Editor de lote diario de prensa (pegar notas, botón "Generar condensado", vista previa, botón "Enviar WhatsApp"/"Copiar").
+- Uploader de datasets Fanpage Karma (para funcionarios y para instituciones, marcando `scope`).
+- Editor de periodos y competidores del benchmark con selector `scope`.
 
-- **Modelos**: `google/gemini-3.1-flash-lite` para narrativas (volumen alto), `google/gemini-3.5-flash` para el reporte de estrategia (razonamiento cruzado). Todo vía `createLovableAiGatewayProvider` + AI SDK con `Output.object` y guard `NoObjectGeneratedError`.
-- **Nuevas tablas** (migración con GRANTs y RLS por `has_client_access`):
-  - `client_portal_benchmark_narratives`
-  - `client_portal_strategy_reports`
-- **Nuevas edge functions**:
-  - `analyze-benchmark-narratives`
-  - `generate-strategy-recommendations`
-- **Frontend**:
-  - `src/components/portal/PortalBenchmark.tsx`: agregar sección "Narrativas" en tab Contenido con botón regenerar.
-  - `src/components/portal/PortalStrategy.tsx` (nuevo): renderiza el reporte de estrategia.
-  - `src/pages/portal/PortalHome.tsx`: nueva tab "Estrategia" al lado de Benchmark, oculta las barras de listening cuando está activa (como ya hicimos con Benchmark).
-- **Sin cambios** en parser, uploader, ni en el resto del portal.
+### 6. Fuera de alcance de esta iteración
 
-## Fuera de alcance
+- Scraping automático de medios (queda como fase 2, ya cubierto por Firecrawl cuando lo aprueben).
+- WhatsApp automático (queda dependiente de que el usuario confirme integrar Twilio y comparta destino).
+- Portal público SEO / metadatos (el portal es privado).
 
-- Generalizar a otros clientes (se hace después del piloto).
-- Reemplazar Sonnet en otras partes del sistema.
-- Automatización semanal (por ahora regeneración manual; luego se puede meter cron).
+### Detalles técnicos
 
-## Siguiente acción
-
-Confirma y paso a build para implementar en este orden: migración → edge function de narrativas → UI en Benchmark → edge function de estrategia → pestaña Estrategia.
+- Frontend: React + Tailwind + Framer Motion, tema oscuro (regla del proyecto), reusando `glass-strong`, `bg-mesh`.
+- Routing: sin cambios en `App.tsx`; `PortalRouter` gana rutas `/prensa`, `/benchmark/funcionarios`, `/benchmark/instituciones`, `/datasets`.
+- IA: Lovable AI Gateway, modelo `google/gemini-2.5-flash` para condensado; sin nuevas API keys.
+- Storage: buckets ya existentes (`client-datasets` privado, `client-corpus-files` privado). No creamos buckets nuevos.
+- Seguridad: RLS estricta por `has_client_access`, GRANTs a `authenticated`/`service_role`, sin exposición a `anon`.
