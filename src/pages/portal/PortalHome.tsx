@@ -765,9 +765,8 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
 
       <main className="relative max-w-7xl mx-auto px-6 py-6 space-y-6">
         {/* Week bar (listening scope: only for Panorama/Histórico) */}
-        {(analyses.length > 0 || portalModules.press_daily) && activeTab !== "benchmark" && activeTab !== "benchmark_funcionarios" && activeTab !== "benchmark_instituciones" && activeTab !== "estrategia" && activeTab !== "prensa" && (
+        {analyses.length > 0 && activeTab !== "benchmark" && activeTab !== "benchmark_funcionarios" && activeTab !== "benchmark_instituciones" && activeTab !== "estrategia" && activeTab !== "prensa" && (
         <div className="glass rounded-2xl p-4 flex flex-col lg:flex-row lg:items-center gap-4">
-          {analyses.length > 0 ? (
           <div className="flex items-center gap-2">
             <Button variant="outline" size="icon" onClick={goPrev} disabled={currentIdx >= analyses.length - 1} className="h-9 w-9">
               <ChevronLeft className="w-4 h-4" />
@@ -780,15 +779,8 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
               <ChevronRight className="w-4 h-4" />
             </Button>
           </div>
-          ) : (
-          <div className="min-w-[220px]">
-            <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Período analizado</div>
-            <div className="text-base font-semibold font-display leading-tight">{periodLabel || "—"}</div>
-          </div>
-          )}
 
           <div className="flex flex-wrap items-center gap-2 lg:ml-auto">
-            {analyses.length > 0 && (
             <Select value={selectedWeek ?? ""} onValueChange={(v) => setSelectedWeek(v)} disabled={analyses.length === 0}>
               <SelectTrigger className="w-[240px] h-9"><SelectValue placeholder="Elige semana" /></SelectTrigger>
               <SelectContent>
@@ -799,8 +791,6 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
                 ))}
               </SelectContent>
             </Select>
-            )}
-            {analyses.length > 0 && (
             <Select value={compareKey} onValueChange={(v) => { setCompareKey(v); setCustomRange(undefined); }} disabled={!!customRange?.from && !!customRange?.to}>
               <SelectTrigger className="w-[190px] h-9"><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -809,7 +799,6 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
                 ))}
               </SelectContent>
             </Select>
-            )}
             <Popover>
               <PopoverTrigger asChild>
                 <Button
