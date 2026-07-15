@@ -808,6 +808,7 @@ export type Database = {
           network: string
           platform: string
           profile_external_id: string | null
+          scope: string
           sort_order: number
           updated_at: string
         }
@@ -826,6 +827,7 @@ export type Database = {
           network?: string
           platform?: string
           profile_external_id?: string | null
+          scope?: string
           sort_order?: number
           updated_at?: string
         }
@@ -844,6 +846,7 @@ export type Database = {
           network?: string
           platform?: string
           profile_external_id?: string | null
+          scope?: string
           sort_order?: number
           updated_at?: string
         }
