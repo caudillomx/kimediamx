@@ -49,8 +49,10 @@ export default function PortalBenchmark({ clientId, clientName, scope }: { clien
       setLoading(true);
       let periodsQ = supabase.from("client_portal_benchmark_periods").select("*").eq("client_id", clientId);
       if (scope) periodsQ = periodsQ.eq("scope", scope);
+      let competitorsQ = supabase.from("client_portal_benchmark_competitors").select("*").eq("client_id", clientId).eq("active", true);
+      if (scope) competitorsQ = competitorsQ.eq("scope", scope);
       const [c, p] = await Promise.all([
-        supabase.from("client_portal_benchmark_competitors").select("*").eq("client_id", clientId).eq("active", true).order("is_client", { ascending: false }).order("name"),
+        competitorsQ.order("is_client", { ascending: false }).order("name"),
         periodsQ.order("period_start", { ascending: true }),
       ]);
       const ps = (p.data ?? []) as Period[];
