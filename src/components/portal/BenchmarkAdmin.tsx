@@ -27,6 +27,7 @@ type Competitor = {
   is_client: boolean;
   is_default: boolean;
   sort_order: number;
+  scope: string;
 };
 
 type Period = {
@@ -91,7 +92,7 @@ export default function BenchmarkAdmin({ clientId, clientName, scope = "general"
   async function loadAll() {
     setLoading(true);
     const [c, p, u] = await Promise.all([
-      supabase.from("client_portal_benchmark_competitors").select("*").eq("client_id", clientId).order("sort_order").order("name"),
+      supabase.from("client_portal_benchmark_competitors").select("*").eq("client_id", clientId).eq("scope", scope).order("sort_order").order("name"),
       supabase.from("client_portal_benchmark_periods").select("*").eq("client_id", clientId).eq("scope", scope).order("period_start", { ascending: false }),
       supabase.from("client_portal_benchmark_uploads").select("*").eq("client_id", clientId).order("created_at", { ascending: false }),
     ]);
@@ -216,6 +217,7 @@ export default function BenchmarkAdmin({ clientId, clientName, scope = "general"
           active: true,
           is_client: k.profile.toLowerCase().includes(clientName.toLowerCase()),
           sort_order: competitors.length + i + 1,
+          scope,
         }));
         const { error: cErr } = await supabase.from("client_portal_benchmark_competitors").insert(rows);
         if (cErr) throw cErr;
@@ -225,7 +227,8 @@ export default function BenchmarkAdmin({ clientId, clientName, scope = "general"
       const { data: refreshed } = await supabase
         .from("client_portal_benchmark_competitors")
         .select("*")
-        .eq("client_id", clientId);
+        .eq("client_id", clientId)
+        .eq("scope", scope);
       const compMap = new Map(
         (refreshed ?? []).map((c: any) => [`${c.name.toLowerCase()}|${c.network.toLowerCase()}`, c.id as string])
       );
