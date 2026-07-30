@@ -108,7 +108,7 @@ const PortalPdfTemplate = forwardRef<HTMLDivElement, Props>(({ portal, logoUrl, 
       ) : (
         <>
           {/* KPIs */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 20 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 22 }}>
             <KpiBox label="Menciones" value={analysis.entries_count?.toString() ?? "0"} />
             <KpiBox label="Positivas" value={`${pct(Number(sent.positivo ?? 0))}%`} accent="#10b981" />
             <KpiBox label="Negativas" value={`${pct(Number(sent.negativo ?? 0))}%`} accent="#f59e0b" />
@@ -118,7 +118,14 @@ const PortalPdfTemplate = forwardRef<HTMLDivElement, Props>(({ portal, logoUrl, 
           {/* Executive Summary */}
           {analysis.executive_summary && (
             <Section title="Resumen ejecutivo">
-              <p style={{ margin: 0, whiteSpace: "pre-wrap" }}>{analysis.executive_summary}</p>
+              <div style={{
+                borderLeft: "3px solid #ef6a4d", background: "#fffaf8",
+                padding: "12px 14px", borderRadius: "0 8px 8px 0",
+              }}>
+                <p style={{ margin: 0, whiteSpace: "pre-wrap", color: "#334155", textAlign: "justify" }}>
+                  {analysis.executive_summary.replace(/\*\*/g, "")}
+                </p>
+              </div>
             </Section>
           )}
 
@@ -136,41 +143,39 @@ const PortalPdfTemplate = forwardRef<HTMLDivElement, Props>(({ portal, logoUrl, 
 
           {/* Findings */}
           {analysis.key_findings?.length > 0 && (
-            <Section title="Hallazgos clave">
+            <SectionFlow title="Hallazgos clave">
               {analysis.key_findings.map((f: any, i: number) => (
-                <div key={i} style={{ padding: 10, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 6, marginBottom: 6, pageBreakInside: "avoid" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: 8, marginBottom: 4 }}>
-                    <div style={{ fontWeight: 600, fontSize: 12 }}>{f.title ?? f.headline}</div>
-                    {f.impact && (
-                      <span style={{ fontSize: 10, background: "#0f172a", color: "#fff", padding: "2px 8px", borderRadius: 999 }}>
-                        impacto {f.impact}
-                      </span>
-                    )}
+                <div key={i} style={{ padding: "10px 12px", background: "#f8fafc", border: "1px solid #e8edf3", borderRadius: 8, marginBottom: 7, pageBreakInside: "avoid" }}>
+                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10, marginBottom: 3 }}>
+                    <div style={{ fontWeight: 600, fontSize: 11.5, flex: 1 }}>{f.title ?? f.headline}</div>
+                    {f.impact && <ImpactPill impact={String(f.impact)} />}
                   </div>
-                  {f.detail && <div style={{ fontSize: 11, color: "#475569" }}>{f.detail}</div>}
+                  {f.detail && <div style={{ fontSize: 10.5, color: "#475569" }}>{f.detail}</div>}
                 </div>
               ))}
-            </Section>
+            </SectionFlow>
           )}
 
           {/* Topics + Mentions two columns */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 18 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 20, pageBreakInside: "avoid" }}>
             {analysis.top_topics && analysis.top_topics.length > 0 && (
               <div style={{ pageBreakInside: "avoid" }}>
-                <h3 style={{ fontSize: 13, margin: "0 0 8px", fontFamily: "'Space Grotesk', system-ui" }}>Temas más frecuentes</h3>
+                <h3 style={{ fontSize: 12.5, margin: "0 0 8px", fontFamily: "'Space Grotesk', system-ui" }}>Temas más frecuentes</h3>
                 {analysis.top_topics.slice(0, 8).map((t, i) => (
-                  <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: "1px dashed #e2e8f0", fontSize: 11 }}>
-                    <span>{t.topic}</span><span style={{ color: "#64748b" }}>×{t.count}</span>
+                  <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 8, padding: "4px 0", borderBottom: "1px solid #eef2f7", fontSize: 10.5 }}>
+                    <span style={{ color: "#334155" }}>{t.topic}</span>
+                    <span style={{ color: "#94a3b8", fontVariantNumeric: "tabular-nums" }}>×{t.count}</span>
                   </div>
                 ))}
               </div>
             )}
             {analysis.top_mentions && analysis.top_mentions.length > 0 && (
               <div style={{ pageBreakInside: "avoid" }}>
-                <h3 style={{ fontSize: 13, margin: "0 0 8px", fontFamily: "'Space Grotesk', system-ui" }}>Menciones destacadas</h3>
+                <h3 style={{ fontSize: 12.5, margin: "0 0 8px", fontFamily: "'Space Grotesk', system-ui" }}>Menciones destacadas</h3>
                 {analysis.top_mentions.slice(0, 8).map((m, i) => (
-                  <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: "1px dashed #e2e8f0", fontSize: 11 }}>
-                    <span>{m.name}</span><span style={{ color: "#64748b" }}>×{m.count}</span>
+                  <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 8, padding: "4px 0", borderBottom: "1px solid #eef2f7", fontSize: 10.5 }}>
+                    <span style={{ color: "#334155" }}>{m.name}</span>
+                    <span style={{ color: "#94a3b8", fontVariantNumeric: "tabular-nums" }}>×{m.count}</span>
                   </div>
                 ))}
               </div>
@@ -178,10 +183,26 @@ const PortalPdfTemplate = forwardRef<HTMLDivElement, Props>(({ portal, logoUrl, 
           </div>
 
           {/* Recommendations */}
-          {analysis.recommendations_client && (
-            <Section title="Recomendaciones">
-              <div style={{ whiteSpace: "pre-wrap", fontSize: 12 }}>{analysis.recommendations_client}</div>
-            </Section>
+          {recs.length > 0 && (
+            <SectionFlow title="Recomendaciones">
+              {recs.map((r, i) => (
+                <div key={i} style={{
+                  display: "flex", gap: 10, alignItems: "flex-start",
+                  padding: "10px 12px", border: "1px solid #e8edf3", borderRadius: 8,
+                  marginBottom: 7, background: "#fff", pageBreakInside: "avoid",
+                }}>
+                  <span style={{
+                    minWidth: 20, height: 20, borderRadius: 999, background: "#ef6a4d", color: "#fff",
+                    fontSize: 10, fontWeight: 700, display: "flex", alignItems: "center",
+                    justifyContent: "center", marginTop: 1,
+                  }}>{i + 1}</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 600, fontSize: 11.5, marginBottom: r.body ? 2 : 0 }}>{r.lead}</div>
+                    {r.body && <div style={{ fontSize: 10.5, color: "#475569" }}>{r.body}</div>}
+                  </div>
+                </div>
+              ))}
+            </SectionFlow>
           )}
 
           {/* ===== Página 2: Gráficos ===== */}
