@@ -177,7 +177,7 @@ const PortalPdfTemplate = forwardRef<HTMLDivElement, Props>(({ portal, logoUrl, 
           {analysis.alerts?.length > 0 && (
             <Section title="Alertas">
               {analysis.alerts.map((a: any, i: number) => (
-                <div key={i} style={{ padding: 10, border: "1px solid #fecaca", background: "#fef2f2", borderRadius: 6, marginBottom: 6, pageBreakInside: "avoid" }}>
+                <div key={i} className="pdf-avoid" style={{ padding: 10, border: "1px solid #fecaca", background: "#fef2f2", borderRadius: 6, marginBottom: 6, pageBreakInside: "avoid" }}>
                   <div style={{ fontSize: 10, fontWeight: 700, color: "#b91c1c", textTransform: "uppercase", marginBottom: 4 }}>{clean(a.level ?? "alerta")}</div>
                   <div style={{ fontSize: 12 }}>{clean(a.detail ?? a.summary ?? a)}</div>
                 </div>
@@ -189,7 +189,7 @@ const PortalPdfTemplate = forwardRef<HTMLDivElement, Props>(({ portal, logoUrl, 
           {analysis.key_findings?.length > 0 && (
             <SectionFlow title="Hallazgos clave">
               {analysis.key_findings.map((f: any, i: number) => (
-                <div key={i} style={{ padding: "10px 12px", background: "#f8fafc", border: "1px solid #e8edf3", borderRadius: 8, marginBottom: 7, pageBreakInside: "avoid" }}>
+                <div key={i} className="pdf-avoid" style={{ padding: "10px 12px", background: "#f8fafc", border: "1px solid #e8edf3", borderRadius: 8, marginBottom: 7, pageBreakInside: "avoid" }}>
                   <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10, marginBottom: 3 }}>
                     <div style={{ fontWeight: 600, fontSize: 11.5, flex: 1 }}>{clean(f.title ?? f.headline)}</div>
                     {f.impact && <ImpactPill impact={String(f.impact)} />}
