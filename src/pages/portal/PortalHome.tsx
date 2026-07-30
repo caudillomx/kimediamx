@@ -657,10 +657,15 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
 
   const pdfAnalysis = useMemo(() => {
     if (!effective) return null;
+    // Conteos deterministas: siempre desde la bitácora procesada, no desde el texto del modelo.
+    const deterministicMentions = (pdfChartData?.topEntities ?? [])
+      .slice(0, 8)
+      .map(e => ({ name: e.name, count: e.size }));
     return {
       ...effective,
       executive_summary: displayExecutiveSummary,
       entries_count: rangeAgg.totalMentions || effective.entries_count,
+      top_mentions: deterministicMentions.length ? deterministicMentions : (effective as any).top_mentions,
       sentiment_breakdown: sentTotals.total ? {
         positivo: sentTotals.positivo,
         neutral: sentTotals.neutral,
@@ -668,7 +673,7 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
         crisis: sentTotals.crisis,
       } : effective.sentiment_breakdown,
     };
-  }, [effective, displayExecutiveSummary, rangeAgg.totalMentions, sentTotals]);
+  }, [effective, displayExecutiveSummary, rangeAgg.totalMentions, sentTotals, pdfChartData]);
 
   const deltaMentions = useMemo(() => {
     if (!prevRangeAgg) return null;
@@ -686,11 +691,11 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
     toast.loading("Generando PDF...", { id: "pdf" });
     try {
       await html2pdf().set({
-        margin: [6, 0, 6, 0],
+        margin: [10, 0, 12, 0],
         filename: `${portal.slug}-${current?.week_start ?? "reporte"}.pdf`,
         html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff", windowWidth: 794, scrollX: 0, scrollY: 0 },
         jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-        pagebreak: { mode: ["css", "legacy"] },
+        pagebreak: { mode: ["css", "legacy"], avoid: [".pdf-avoid", "svg"] },
       } as any).from(pdfRef.current).save();
       toast.success("PDF descargado", { id: "pdf" });
     } catch {

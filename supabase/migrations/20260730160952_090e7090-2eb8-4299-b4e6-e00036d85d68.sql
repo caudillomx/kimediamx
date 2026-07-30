@@ -1,0 +1,1 @@
+ALTER TABLE public.client_portal_listening_analyses ADD COLUMN IF NOT EXISTS total_mentions integer NOT NULL DEFAULT 0;

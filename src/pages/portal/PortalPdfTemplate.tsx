@@ -1,6 +1,23 @@
 import { forwardRef } from "react";
 import type { ClientPortalConfig } from "@/lib/clientPortal";
-import kimediaLogo from "@/assets/kimedia-logo.png";
+
+/** Wordmark tipográfico de KiMedia (evita el PNG con fondo negro que se ve como pegote). */
+function KiMediaMark({ size = 13, muted = false }: { size?: number; muted?: boolean }) {
+  return (
+    <span
+      style={{
+        fontFamily: "'Space Grotesk', system-ui, sans-serif",
+        fontWeight: 700,
+        fontSize: size,
+        letterSpacing: "-0.02em",
+        color: muted ? "#64748b" : "#0f172a",
+        whiteSpace: "nowrap",
+      }}
+    >
+      ki<span style={{ color: "#ef6a4d" }}>media</span>
+    </span>
+  );
+}
 
 type Analysis = {
   week_start: string;
@@ -112,7 +129,7 @@ const PortalPdfTemplate = forwardRef<HTMLDivElement, Props>(({ portal, logoUrl, 
         </div>
         <div style={{ textAlign: "right" }}>
           <div style={{ fontSize: 7.5, color: "#94a3b8", letterSpacing: 1.2, textTransform: "uppercase", fontWeight: 600, marginBottom: 3 }}>Elaborado por</div>
-          <img src={kimediaLogo} alt="KiMedia" crossOrigin="anonymous" style={{ height: 22, width: "auto", maxWidth: 100, objectFit: "contain", display: "block", marginLeft: "auto" }} />
+          <KiMediaMark size={17} />
         </div>
       </div>
 
@@ -160,7 +177,7 @@ const PortalPdfTemplate = forwardRef<HTMLDivElement, Props>(({ portal, logoUrl, 
           {analysis.alerts?.length > 0 && (
             <Section title="Alertas">
               {analysis.alerts.map((a: any, i: number) => (
-                <div key={i} style={{ padding: 10, border: "1px solid #fecaca", background: "#fef2f2", borderRadius: 6, marginBottom: 6, pageBreakInside: "avoid" }}>
+                <div key={i} className="pdf-avoid" style={{ padding: 10, border: "1px solid #fecaca", background: "#fef2f2", borderRadius: 6, marginBottom: 6, pageBreakInside: "avoid" }}>
                   <div style={{ fontSize: 10, fontWeight: 700, color: "#b91c1c", textTransform: "uppercase", marginBottom: 4 }}>{clean(a.level ?? "alerta")}</div>
                   <div style={{ fontSize: 12 }}>{clean(a.detail ?? a.summary ?? a)}</div>
                 </div>
@@ -172,7 +189,7 @@ const PortalPdfTemplate = forwardRef<HTMLDivElement, Props>(({ portal, logoUrl, 
           {analysis.key_findings?.length > 0 && (
             <SectionFlow title="Hallazgos clave">
               {analysis.key_findings.map((f: any, i: number) => (
-                <div key={i} style={{ padding: "10px 12px", background: "#f8fafc", border: "1px solid #e8edf3", borderRadius: 8, marginBottom: 7, pageBreakInside: "avoid" }}>
+                <div key={i} className="pdf-avoid" style={{ padding: "10px 12px", background: "#f8fafc", border: "1px solid #e8edf3", borderRadius: 8, marginBottom: 7, pageBreakInside: "avoid" }}>
                   <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10, marginBottom: 3 }}>
                     <div style={{ fontWeight: 600, fontSize: 11.5, flex: 1 }}>{clean(f.title ?? f.headline)}</div>
                     {f.impact && <ImpactPill impact={String(f.impact)} />}
@@ -236,15 +253,15 @@ const PortalPdfTemplate = forwardRef<HTMLDivElement, Props>(({ portal, logoUrl, 
           {recs.length > 0 && (
             <SectionFlow title="Recomendaciones">
               {recs.map((r, i) => (
-                <div key={i} style={{
+                <div key={i} className="pdf-avoid" style={{
                   display: "flex", gap: 10, alignItems: "flex-start",
                   padding: "10px 12px", border: "1px solid #e8edf3", borderRadius: 8,
                   marginBottom: 7, background: "#fff", pageBreakInside: "avoid",
                 }}>
                   <span style={{
-                    minWidth: 20, height: 20, borderRadius: 999, background: "#ef6a4d", color: "#fff",
-                    fontSize: 10, fontWeight: 700, display: "flex", alignItems: "center",
-                    justifyContent: "center", marginTop: 1,
+                    width: 20, minWidth: 20, height: 20, borderRadius: 999, background: "#ef6a4d", color: "#fff",
+                    fontSize: 10, fontWeight: 700, display: "inline-block",
+                    lineHeight: "20px", textAlign: "center", marginTop: 1,
                   }}>{i + 1}</span>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 600, fontSize: 11.5, marginBottom: r.body ? 2 : 0 }}>{clean(r.lead)}</div>
@@ -263,7 +280,7 @@ const PortalPdfTemplate = forwardRef<HTMLDivElement, Props>(({ portal, logoUrl, 
         fontSize: 9.5, color: "#94a3b8",
       }}>
         <span>{portal.displayName} · Inteligencia digital powered by</span>
-        <img src={kimediaLogo} alt="KiMedia" crossOrigin="anonymous" style={{ height: 14, width: "auto", objectFit: "contain", opacity: 0.8 }} />
+        <KiMediaMark size={11} muted />
       </div>
     </div>
   );
@@ -298,6 +315,8 @@ const sectionTitle: React.CSSProperties = {
   color: "#0f172a",
   fontWeight: 700,
   letterSpacing: "-0.01em",
+  pageBreakAfter: "avoid",
+  breakAfter: "avoid",
 };
 
 function ImpactPill({ impact }: { impact: string }) {
@@ -310,9 +329,11 @@ function ImpactPill({ impact }: { impact: string }) {
   const c = map[k] ?? map.bajo;
   return (
     <span style={{
-      fontSize: 8.5, background: c.bg, color: c.fg, padding: "3px 8px",
+      fontSize: 8.5, background: c.bg, color: c.fg, padding: "0 9px",
       borderRadius: 999, fontWeight: 700, textTransform: "uppercase",
-      letterSpacing: 0.5, whiteSpace: "nowrap", lineHeight: 1.1,
+      letterSpacing: 0.5, whiteSpace: "nowrap",
+      display: "inline-block", height: 16, lineHeight: "16px",
+      textAlign: "center", verticalAlign: "middle",
     }}>
       impacto {k}
     </span>
