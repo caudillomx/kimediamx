@@ -65,7 +65,11 @@ Reglas duras:
   * URLs de linkedin.com / lnkd.in, publicaciones de LinkedIn → "linkedin"
   * Notas de prensa digital, columnas, portales, blogs, sitios de medios (eluniversal.com.mx, reforma.com, milenio.com, expansion.mx, forbes.com.mx, bloomberg, reuters, etc.), boletines, radio online, TV online, podcasts, cualquier otro sitio web informativo → "medios digitales"
   Cuenta con RIGOR cuántas menciones individuales caen en cada categoría. Si el texto dice "5 tuits" cuenta 5 en "x", no 1. Recorre URL por URL y menciona por mención. Si una categoría no aparece, NO la incluyas.
-- "entities": personas/marcas/instituciones citadas junto al cliente. Deduplica normalizando mayúsculas.
+- "entities": personas/marcas/instituciones citadas junto al cliente. Reglas de conteo y nombre:
+  * Usa SIEMPRE el nombre COMPLETO y consistente del actor tal como aparece de forma más específica en la bitácora (ej. "Francisco Lira Mariel", no "Lira" ni "Francisco Lira" un día y otro distinto).
+  * Deduplica variantes del mismo actor en UN solo ítem y SUMA sus conteos.
+  * "count" = número de menciones individuales (tuits, notas, videos, posts, columnas) donde ese actor aparece ese día. Recorre el texto ítem por ítem; no reportes 1 si hay varias.
+  * Nunca dejes count en 0 para un actor que sí aparece.
 - "events": hitos concretos con impacto reputacional (crisis, lanzamientos, comunicados, declaraciones). No listes conversaciones triviales.
 - "key_quotes": frases textuales entrecomilladas o parafraseadas breves (máx 240 caracteres) que valga la pena citar en el reporte. Si no hay citas claras, devuelve [].
 - "competitors": otras marcas/organizaciones del mismo sector citadas de forma comparativa. Solo si el texto lo evidencia.

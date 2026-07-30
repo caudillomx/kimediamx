@@ -44,6 +44,52 @@ type PeriodInput = {
 
 const admin = createClient(SUPABASE_URL, SERVICE_KEY);
 
+// ── Canonicalización de nombres de entidades ────────────────────────────────
+// El analizador diario devuelve variantes del mismo actor ("Francisco Lira",
+// "Francisco Lira Mariel", "Francisco Javier Lira Mariel"). Sin unificar,
+// el agregado semanal parte los conteos y subestima el volumen real.
+const NAME_STOPWORDS = new Set([
+  'de','del','la','las','los','el','y','lic','ing','mtro','dr','dra','sr','sra','don',
+  'diputado','diputada','senador','senadora','presidente','presidenta','director','directora',
+]);
+
+function nameTokens(raw: string): string[] {
+  return (raw || '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter((t) => t.length > 1 && !NAME_STOPWORDS.has(t));
+}
+
+function isSubsetName(a: string[], b: string[]): boolean {
+  // a ⊆ b y comparten al menos 2 tokens (o 1 token si el nombre es de una sola palabra larga)
+  if (a.length === 0 || b.length === 0) return false;
+  const setB = new Set(b);
+  const contained = a.every((t) => setB.has(t));
+  if (!contained) return false;
+  return a.length >= 2 || (a.length === 1 && a[0].length >= 6);
+}
+
+/** Une variantes del mismo nombre. Devuelve un mapa nombreOriginal → nombreCanónico. */
+function buildNameCanonicalMap(names: string[]): Map<string, string> {
+  const uniq = Array.from(new Set(names.filter(Boolean)));
+  const toks = new Map(uniq.map((n) => [n, nameTokens(n)]));
+  // Nombre canónico = variante con más tokens (la más específica); desempate alfabético estable.
+  const sorted = [...uniq].sort((a, b) => (toks.get(b)!.length - toks.get(a)!.length) || a.localeCompare(b));
+  const map = new Map<string, string>();
+  for (const n of sorted) {
+    const tn = toks.get(n)!;
+    let canonical = n;
+    for (const c of map.values()) {
+      const tc = toks.get(c) ?? nameTokens(c);
+      if (isSubsetName(tn, tc) || isSubsetName(tc, tn)) { canonical = c; break; }
+    }
+    map.set(n, canonical);
+  }
+  return map;
+}
+
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -134,17 +180,42 @@ async function buildAnalysis(input: PeriodInput) {
 
   if (totalMentions === 0) totalMentions = sentBreak.positivo + sentBreak.neutral + sentBreak.negativo + sentBreak.crisis;
 
+  // Unifica variantes del mismo actor antes de rankear (evita subestimar conteos).
+  const mergeByName = <T extends { name: string; count: number; sentiment?: Record<string, number> }>(
+    src: Map<string, T>,
+  ) => {
+    const canon = buildNameCanonicalMap(Array.from(src.keys()));
+    const out = new Map<string, T>();
+    for (const [name, row] of src.entries()) {
+      const key = canon.get(name) ?? name;
+      const existing = out.get(key);
+      if (!existing) {
+        out.set(key, { ...row, name: key, sentiment: row.sentiment ? { ...row.sentiment } : undefined } as T);
+      } else {
+        existing.count += row.count;
+        if (row.sentiment && existing.sentiment) {
+          for (const [s, v] of Object.entries(row.sentiment)) {
+            existing.sentiment[s] = (existing.sentiment[s] ?? 0) + (v as number);
+          }
+        }
+      }
+    }
+    return out;
+  };
+  const entityAggMerged = mergeByName(entityAgg);
+  const competitorAggMerged = mergeByName(competitorAgg);
+
   const top = <T,>(arr: T[], n: number) => arr.slice(0, n);
   const aggregates = {
     total_mentions_semana: totalMentions,
     dias_con_bitacora: entries.length,
     sentiment_breakdown: sentBreak,
     top_topics: top(Array.from(topicCount.entries()).map(([topic, count]) => ({ topic, count })).sort((a, b) => b.count - a.count), 10),
-    top_entities: top(Array.from(entityAgg.values()).sort((a, b) => b.count - a.count), 10),
+    top_entities: top(Array.from(entityAggMerged.values()).sort((a, b) => b.count - a.count), 10),
     top_channels: top(Array.from(channelAgg.entries()).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count), 10),
     top_events: top(eventList.sort((a, b) => (b.impact === 'alto' ? 1 : 0) - (a.impact === 'alto' ? 1 : 0)), 10),
     key_quotes: top(quoteList, 10),
-    competitors: top(Array.from(competitorAgg.values()).sort((a, b) => b.count - a.count), 6),
+    competitors: top(Array.from(competitorAggMerged.values()).sort((a, b) => b.count - a.count), 6),
   };
 
   const digest = (entries as any[]).map((e) => ({
