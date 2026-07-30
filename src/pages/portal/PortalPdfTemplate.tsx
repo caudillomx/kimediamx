@@ -110,6 +110,10 @@ const PortalPdfTemplate = forwardRef<HTMLDivElement, Props>(({ portal, logoUrl, 
           <h1 style={{ fontSize: 25, margin: "3px 0 0", fontWeight: 700, letterSpacing: "-0.02em", fontFamily: "'Space Grotesk', system-ui, sans-serif" }}>{portal.displayName}</h1>
           <div style={{ fontSize: 12, color: "#475569", marginTop: 1 }}>{weekLabel}</div>
         </div>
+        <div style={{ textAlign: "right" }}>
+          <div style={{ fontSize: 7.5, color: "#94a3b8", letterSpacing: 1.2, textTransform: "uppercase", fontWeight: 600, marginBottom: 3 }}>Elaborado por</div>
+          <img src={kimediaLogo} alt="KiMedia" crossOrigin="anonymous" style={{ height: 22, width: "auto", maxWidth: 100, objectFit: "contain", display: "block", marginLeft: "auto" }} />
+        </div>
       </div>
 
       {!analysis ? (
