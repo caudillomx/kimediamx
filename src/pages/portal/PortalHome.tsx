@@ -356,6 +356,9 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
 
   const isExtendedPeriod = useMemo(() => {
     if (!current) return false;
+    // Semanas sin reporte guardado (sintetizadas desde bitácoras nuevas)
+    // se tratan como período a generar bajo demanda.
+    if (String(current.id).startsWith("synthetic-")) return true;
     return fromDate !== current.week_start || toDate !== current.week_end;
   }, [current, fromDate, toDate]);
 
