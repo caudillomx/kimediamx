@@ -223,6 +223,15 @@ const PortalPdfTemplate = forwardRef<HTMLDivElement, Props>(({ portal, logoUrl, 
             )}
           </div>
 
+          {/* Gráfica 3 — entidades más citadas */}
+          {charts && charts.topEntities.length > 0 && (
+            <div style={{ marginBottom: 20, pageBreakInside: "avoid" }}>
+              <ChartBox title="Entidades más citadas">
+                <EntitiesBarSvg data={charts.topEntities} />
+              </ChartBox>
+            </div>
+          )}
+
           {/* Recommendations */}
           {recs.length > 0 && (
             <SectionFlow title="Recomendaciones">
@@ -238,53 +247,23 @@ const PortalPdfTemplate = forwardRef<HTMLDivElement, Props>(({ portal, logoUrl, 
                     justifyContent: "center", marginTop: 1,
                   }}>{i + 1}</span>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 600, fontSize: 11.5, marginBottom: r.body ? 2 : 0 }}>{r.lead}</div>
-                    {r.body && <div style={{ fontSize: 10.5, color: "#475569" }}>{r.body}</div>}
+                    <div style={{ fontWeight: 600, fontSize: 11.5, marginBottom: r.body ? 2 : 0 }}>{clean(r.lead)}</div>
+                    {r.body && <div style={{ fontSize: 10.5, color: "#475569" }}>{clean(r.body)}</div>}
                   </div>
                 </div>
               ))}
             </SectionFlow>
           )}
-
-          {/* ===== Página 2: Gráficos ===== */}
-          {charts && (
-            <div style={{ pageBreakBefore: "always", paddingTop: 12 }}>
-              <h2 style={{ fontSize: 16, margin: "0 0 14px", fontFamily: "'Space Grotesk', system-ui", color: "#0f172a", borderBottom: "2px solid #ef6a4d", paddingBottom: 6 }}>
-                Panorama visual
-              </h2>
-
-              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 14, marginBottom: 18 }}>
-                <ChartBox title="Volumen y sentimiento por día">
-                  <VolumeBarsSvg data={charts.volumeByDay} />
-                </ChartBox>
-                <ChartBox title="Salud reputacional">
-                  <GaugeSvg score={charts.reputation.score} color={charts.reputation.color} label={charts.reputation.label} />
-                </ChartBox>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 18 }}>
-                <ChartBox title="Menciones por canal">
-                  <DonutSvg data={charts.topChannels.map((c, i) => ({ name: c.name, value: c.value, color: pdfPlatformColor(c.name, i) }))} />
-                </ChartBox>
-                <ChartBox title="Sentimiento agregado">
-                  <DonutSvg data={(["positivo", "neutral", "negativo", "crisis"] as const)
-                    .map(k => ({ name: k, value: Number(sent[k] ?? 0), color: SENT_COLORS[k] }))
-                    .filter(d => d.value > 0)} />
-                </ChartBox>
-              </div>
-
-              {charts.topEntities.length > 0 && (
-                <ChartBox title="Entidades más citadas">
-                  <EntitiesBarSvg data={charts.topEntities} />
-                </ChartBox>
-              )}
-            </div>
-          )}
         </>
       )}
 
-      <div style={{ marginTop: 28, paddingTop: 12, borderTop: "1px solid #e2e8f0", textAlign: "center", fontSize: 10, color: "#94a3b8" }}>
-        {portal.displayName} · Inteligencia digital powered by KiMedia
+      <div style={{
+        marginTop: 28, paddingTop: 12, borderTop: "1px solid #e2e8f0",
+        display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+        fontSize: 9.5, color: "#94a3b8",
+      }}>
+        <span>{portal.displayName} · Inteligencia digital powered by</span>
+        <img src={kimediaLogo} alt="KiMedia" crossOrigin="anonymous" style={{ height: 14, width: "auto", objectFit: "contain", opacity: 0.8 }} />
       </div>
     </div>
   );
