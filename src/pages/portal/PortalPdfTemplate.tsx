@@ -280,7 +280,7 @@ const PortalPdfTemplate = forwardRef<HTMLDivElement, Props>(({ portal, logoUrl, 
         fontSize: 9.5, color: "#94a3b8",
       }}>
         <span>{portal.displayName} · Inteligencia digital powered by</span>
-        <img src={kimediaLogo} alt="KiMedia" crossOrigin="anonymous" style={{ height: 14, width: "auto", objectFit: "contain", opacity: 0.8 }} />
+        <KiMediaMark size={11} muted />
       </div>
     </div>
   );
