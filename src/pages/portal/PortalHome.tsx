@@ -686,11 +686,11 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
     toast.loading("Generando PDF...", { id: "pdf" });
     try {
       await html2pdf().set({
-        margin: [6, 0, 6, 0],
+        margin: [10, 0, 12, 0],
         filename: `${portal.slug}-${current?.week_start ?? "reporte"}.pdf`,
         html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff", windowWidth: 794, scrollX: 0, scrollY: 0 },
         jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-        pagebreak: { mode: ["css", "legacy"] },
+        pagebreak: { mode: ["css", "legacy", "avoid-all"], avoid: [".pdf-avoid", "svg", "h2", "h3"] },
       } as any).from(pdfRef.current).save();
       toast.success("PDF descargado", { id: "pdf" });
     } catch {
