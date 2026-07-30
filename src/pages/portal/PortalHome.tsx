@@ -686,7 +686,7 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
     toast.loading("Generando PDF...", { id: "pdf" });
     try {
       await html2pdf().set({
-        margin: [8, 8, 8, 8],
+        margin: [6, 0, 6, 0],
         filename: `${portal.slug}-${current?.week_start ?? "reporte"}.pdf`,
         html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
         jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },

@@ -44,33 +44,60 @@ const PIE_FALLBACK = ["#ef6a4d", "#0ea5e9", "#a855f7", "#10b981", "#f59e0b", "#e
 const pdfPlatformColor = (name: string, i: number) =>
   PLATFORM_COLORS_PDF[name.toLowerCase().trim()] ?? PIE_FALLBACK[i % PIE_FALLBACK.length];
 
+/** Convierte el markdown de recomendaciones en tarjetas limpias (sin ** ni guiones). */
+function parseRecommendations(md: string): { lead: string; body: string }[] {
+  const items: { lead: string; body: string }[] = [];
+  let current: string | null = null;
+  const push = () => {
+    if (!current) return;
+    const clean = current.replace(/\*\*/g, "").replace(/\s+/g, " ").trim();
+    current = null;
+    if (!clean) return;
+    const m = clean.match(/^(.{3,90}?)\s*[—–:-]\s+(.*)$/);
+    if (m) items.push({ lead: m[1].trim(), body: m[2].trim() });
+    else items.push({ lead: clean, body: "" });
+  };
+  for (const raw of md.split(/\r?\n/)) {
+    const line = raw.trimEnd();
+    const bullet = line.match(/^\s*(?:[-*+]|\d+[.)])\s+(.*)$/);
+    if (bullet) { push(); current = bullet[1]; }
+    else if (!line.trim()) push();
+    else if (current !== null) current += " " + line.trim();
+    else current = line.trim();
+  }
+  push();
+  return items;
+}
+
 const PortalPdfTemplate = forwardRef<HTMLDivElement, Props>(({ portal, logoUrl, analysis, weekLabel, charts }, ref) => {
   const sent = analysis?.sentiment_breakdown ?? {};
   const totalSent = Object.values(sent).reduce((a, b) => a + (Number(b) || 0), 0);
   const pct = (n: number) => (totalSent ? Math.round((n / totalSent) * 100) : 0);
+  const recs = analysis?.recommendations_client ? parseRecommendations(analysis.recommendations_client) : [];
 
   return (
     <div
       ref={ref}
       style={{
-        width: 780,
-        padding: 40,
+        width: 794,
+        boxSizing: "border-box",
+        padding: "40px 46px 32px",
         background: "#ffffff",
         color: "#0f172a",
         fontFamily: "'Inter', system-ui, sans-serif",
-        fontSize: 12,
-        lineHeight: 1.55,
+        fontSize: 11.5,
+        lineHeight: 1.6,
       }}
     >
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", gap: 16, borderBottom: "3px solid #ef6a4d", paddingBottom: 18, marginBottom: 24 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 16, borderBottom: "3px solid #ef6a4d", paddingBottom: 16, marginBottom: 22 }}>
         {logoUrl && (
           <img src={logoUrl} alt="" crossOrigin="anonymous" style={{ height: 44, width: 44, objectFit: "contain", borderRadius: 8, background: "#f8fafc", padding: 4 }} />
         )}
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 11, color: "#64748b", letterSpacing: 1, textTransform: "uppercase" }}>Reporte semanal · Inteligencia digital</div>
-          <h1 style={{ fontSize: 26, margin: "4px 0 0", fontWeight: 700, fontFamily: "'Space Grotesk', system-ui, sans-serif" }}>{portal.displayName}</h1>
-          <div style={{ fontSize: 13, color: "#475569", marginTop: 2 }}>{weekLabel}</div>
+          <div style={{ fontSize: 9.5, color: "#94a3b8", letterSpacing: 1.4, textTransform: "uppercase", fontWeight: 600 }}>Reporte semanal · Inteligencia digital</div>
+          <h1 style={{ fontSize: 25, margin: "3px 0 0", fontWeight: 700, letterSpacing: "-0.02em", fontFamily: "'Space Grotesk', system-ui, sans-serif" }}>{portal.displayName}</h1>
+          <div style={{ fontSize: 12, color: "#475569", marginTop: 1 }}>{weekLabel}</div>
         </div>
       </div>
 
@@ -81,7 +108,7 @@ const PortalPdfTemplate = forwardRef<HTMLDivElement, Props>(({ portal, logoUrl, 
       ) : (
         <>
           {/* KPIs */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 20 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 22 }}>
             <KpiBox label="Menciones" value={analysis.entries_count?.toString() ?? "0"} />
             <KpiBox label="Positivas" value={`${pct(Number(sent.positivo ?? 0))}%`} accent="#10b981" />
             <KpiBox label="Negativas" value={`${pct(Number(sent.negativo ?? 0))}%`} accent="#f59e0b" />
@@ -91,7 +118,14 @@ const PortalPdfTemplate = forwardRef<HTMLDivElement, Props>(({ portal, logoUrl, 
           {/* Executive Summary */}
           {analysis.executive_summary && (
             <Section title="Resumen ejecutivo">
-              <p style={{ margin: 0, whiteSpace: "pre-wrap" }}>{analysis.executive_summary}</p>
+              <div style={{
+                borderLeft: "3px solid #ef6a4d", background: "#fffaf8",
+                padding: "12px 14px", borderRadius: "0 8px 8px 0",
+              }}>
+                <p style={{ margin: 0, whiteSpace: "pre-wrap", color: "#334155", textAlign: "justify" }}>
+                  {analysis.executive_summary.replace(/\*\*/g, "")}
+                </p>
+              </div>
             </Section>
           )}
 
@@ -109,41 +143,39 @@ const PortalPdfTemplate = forwardRef<HTMLDivElement, Props>(({ portal, logoUrl, 
 
           {/* Findings */}
           {analysis.key_findings?.length > 0 && (
-            <Section title="Hallazgos clave">
+            <SectionFlow title="Hallazgos clave">
               {analysis.key_findings.map((f: any, i: number) => (
-                <div key={i} style={{ padding: 10, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 6, marginBottom: 6, pageBreakInside: "avoid" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: 8, marginBottom: 4 }}>
-                    <div style={{ fontWeight: 600, fontSize: 12 }}>{f.title ?? f.headline}</div>
-                    {f.impact && (
-                      <span style={{ fontSize: 10, background: "#0f172a", color: "#fff", padding: "2px 8px", borderRadius: 999 }}>
-                        impacto {f.impact}
-                      </span>
-                    )}
+                <div key={i} style={{ padding: "10px 12px", background: "#f8fafc", border: "1px solid #e8edf3", borderRadius: 8, marginBottom: 7, pageBreakInside: "avoid" }}>
+                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10, marginBottom: 3 }}>
+                    <div style={{ fontWeight: 600, fontSize: 11.5, flex: 1 }}>{f.title ?? f.headline}</div>
+                    {f.impact && <ImpactPill impact={String(f.impact)} />}
                   </div>
-                  {f.detail && <div style={{ fontSize: 11, color: "#475569" }}>{f.detail}</div>}
+                  {f.detail && <div style={{ fontSize: 10.5, color: "#475569" }}>{f.detail}</div>}
                 </div>
               ))}
-            </Section>
+            </SectionFlow>
           )}
 
           {/* Topics + Mentions two columns */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 18 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 20, pageBreakInside: "avoid" }}>
             {analysis.top_topics && analysis.top_topics.length > 0 && (
               <div style={{ pageBreakInside: "avoid" }}>
-                <h3 style={{ fontSize: 13, margin: "0 0 8px", fontFamily: "'Space Grotesk', system-ui" }}>Temas más frecuentes</h3>
+                <h3 style={{ fontSize: 12.5, margin: "0 0 8px", fontFamily: "'Space Grotesk', system-ui" }}>Temas más frecuentes</h3>
                 {analysis.top_topics.slice(0, 8).map((t, i) => (
-                  <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: "1px dashed #e2e8f0", fontSize: 11 }}>
-                    <span>{t.topic}</span><span style={{ color: "#64748b" }}>×{t.count}</span>
+                  <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 8, padding: "4px 0", borderBottom: "1px solid #eef2f7", fontSize: 10.5 }}>
+                    <span style={{ color: "#334155" }}>{t.topic}</span>
+                    <span style={{ color: "#94a3b8", fontVariantNumeric: "tabular-nums" }}>×{t.count}</span>
                   </div>
                 ))}
               </div>
             )}
             {analysis.top_mentions && analysis.top_mentions.length > 0 && (
               <div style={{ pageBreakInside: "avoid" }}>
-                <h3 style={{ fontSize: 13, margin: "0 0 8px", fontFamily: "'Space Grotesk', system-ui" }}>Menciones destacadas</h3>
+                <h3 style={{ fontSize: 12.5, margin: "0 0 8px", fontFamily: "'Space Grotesk', system-ui" }}>Menciones destacadas</h3>
                 {analysis.top_mentions.slice(0, 8).map((m, i) => (
-                  <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: "1px dashed #e2e8f0", fontSize: 11 }}>
-                    <span>{m.name}</span><span style={{ color: "#64748b" }}>×{m.count}</span>
+                  <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 8, padding: "4px 0", borderBottom: "1px solid #eef2f7", fontSize: 10.5 }}>
+                    <span style={{ color: "#334155" }}>{m.name}</span>
+                    <span style={{ color: "#94a3b8", fontVariantNumeric: "tabular-nums" }}>×{m.count}</span>
                   </div>
                 ))}
               </div>
@@ -151,10 +183,26 @@ const PortalPdfTemplate = forwardRef<HTMLDivElement, Props>(({ portal, logoUrl, 
           </div>
 
           {/* Recommendations */}
-          {analysis.recommendations_client && (
-            <Section title="Recomendaciones">
-              <div style={{ whiteSpace: "pre-wrap", fontSize: 12 }}>{analysis.recommendations_client}</div>
-            </Section>
+          {recs.length > 0 && (
+            <SectionFlow title="Recomendaciones">
+              {recs.map((r, i) => (
+                <div key={i} style={{
+                  display: "flex", gap: 10, alignItems: "flex-start",
+                  padding: "10px 12px", border: "1px solid #e8edf3", borderRadius: 8,
+                  marginBottom: 7, background: "#fff", pageBreakInside: "avoid",
+                }}>
+                  <span style={{
+                    minWidth: 20, height: 20, borderRadius: 999, background: "#ef6a4d", color: "#fff",
+                    fontSize: 10, fontWeight: 700, display: "flex", alignItems: "center",
+                    justifyContent: "center", marginTop: 1,
+                  }}>{i + 1}</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 600, fontSize: 11.5, marginBottom: r.body ? 2 : 0 }}>{r.lead}</div>
+                    {r.body && <div style={{ fontSize: 10.5, color: "#475569" }}>{r.body}</div>}
+                  </div>
+                </div>
+              ))}
+            </SectionFlow>
           )}
 
           {/* ===== Página 2: Gráficos ===== */}
@@ -207,9 +255,47 @@ export default PortalPdfTemplate;
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div style={{ marginBottom: 18, pageBreakInside: "avoid" }}>
-      <h2 style={{ fontSize: 15, margin: "0 0 8px", fontFamily: "'Space Grotesk', system-ui", color: "#0f172a" }}>{title}</h2>
+      <h2 style={sectionTitle}>{title}</h2>
       {children}
     </div>
+  );
+}
+
+/** Igual que Section pero permite que el contenido fluya a la siguiente página. */
+function SectionFlow({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div style={{ marginBottom: 18 }}>
+      <h2 style={sectionTitle}>{title}</h2>
+      {children}
+    </div>
+  );
+}
+
+const sectionTitle: React.CSSProperties = {
+  fontSize: 14,
+  margin: "0 0 10px",
+  fontFamily: "'Space Grotesk', system-ui",
+  color: "#0f172a",
+  fontWeight: 700,
+  letterSpacing: "-0.01em",
+};
+
+function ImpactPill({ impact }: { impact: string }) {
+  const k = impact.toLowerCase();
+  const map: Record<string, { bg: string; fg: string }> = {
+    alto: { bg: "#fee2e2", fg: "#b91c1c" },
+    medio: { bg: "#fef3c7", fg: "#b45309" },
+    bajo: { bg: "#e2e8f0", fg: "#475569" },
+  };
+  const c = map[k] ?? map.bajo;
+  return (
+    <span style={{
+      fontSize: 8.5, background: c.bg, color: c.fg, padding: "3px 8px",
+      borderRadius: 999, fontWeight: 700, textTransform: "uppercase",
+      letterSpacing: 0.5, whiteSpace: "nowrap", lineHeight: 1.1,
+    }}>
+      impacto {k}
+    </span>
   );
 }
 
