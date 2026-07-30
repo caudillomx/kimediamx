@@ -315,6 +315,8 @@ const sectionTitle: React.CSSProperties = {
   color: "#0f172a",
   fontWeight: 700,
   letterSpacing: "-0.01em",
+  pageBreakAfter: "avoid",
+  breakAfter: "avoid",
 };
 
 function ImpactPill({ impact }: { impact: string }) {
@@ -327,9 +329,11 @@ function ImpactPill({ impact }: { impact: string }) {
   const c = map[k] ?? map.bajo;
   return (
     <span style={{
-      fontSize: 8.5, background: c.bg, color: c.fg, padding: "3px 8px",
+      fontSize: 8.5, background: c.bg, color: c.fg, padding: "0 9px",
       borderRadius: 999, fontWeight: 700, textTransform: "uppercase",
-      letterSpacing: 0.5, whiteSpace: "nowrap", lineHeight: 1.1,
+      letterSpacing: 0.5, whiteSpace: "nowrap",
+      display: "inline-block", height: 16, lineHeight: "16px",
+      textAlign: "center", verticalAlign: "middle",
     }}>
       impacto {k}
     </span>
