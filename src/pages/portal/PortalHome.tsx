@@ -688,7 +688,7 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
       await html2pdf().set({
         margin: [6, 0, 6, 0],
         filename: `${portal.slug}-${current?.week_start ?? "reporte"}.pdf`,
-        html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
+        html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff", windowWidth: 794, scrollX: 0, scrollY: 0 },
         jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
         pagebreak: { mode: ["css", "legacy"] },
       } as any).from(pdfRef.current).save();

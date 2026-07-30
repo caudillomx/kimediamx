@@ -1,5 +1,6 @@
 import { forwardRef } from "react";
 import type { ClientPortalConfig } from "@/lib/clientPortal";
+import kimediaLogo from "@/assets/kimedia-logo.png";
 
 type Analysis = {
   week_start: string;
@@ -43,6 +44,16 @@ const PLATFORM_COLORS_PDF: Record<string, string> = {
 const PIE_FALLBACK = ["#ef6a4d", "#0ea5e9", "#a855f7", "#10b981", "#f59e0b", "#ec4899"];
 const pdfPlatformColor = (name: string, i: number) =>
   PLATFORM_COLORS_PDF[name.toLowerCase().trim()] ?? PIE_FALLBACK[i % PIE_FALLBACK.length];
+
+/** Quita markdown residual (**, __, `, #, viñetas sueltas) de cualquier texto. */
+const clean = (s: unknown): string =>
+  String(s ?? "")
+    .replace(/\*\*/g, "")
+    .replace(/__/g, "")
+    .replace(/`/g, "")
+    .replace(/^\s*#{1,6}\s*/gm, "")
+    .replace(/^\s*[-*+]\s+/gm, "")
+    .trim();
 
 /** Convierte el markdown de recomendaciones en tarjetas limpias (sin ** ni guiones). */
 function parseRecommendations(md: string): { lead: string; body: string }[] {
@@ -99,6 +110,10 @@ const PortalPdfTemplate = forwardRef<HTMLDivElement, Props>(({ portal, logoUrl, 
           <h1 style={{ fontSize: 25, margin: "3px 0 0", fontWeight: 700, letterSpacing: "-0.02em", fontFamily: "'Space Grotesk', system-ui, sans-serif" }}>{portal.displayName}</h1>
           <div style={{ fontSize: 12, color: "#475569", marginTop: 1 }}>{weekLabel}</div>
         </div>
+        <div style={{ textAlign: "right" }}>
+          <div style={{ fontSize: 7.5, color: "#94a3b8", letterSpacing: 1.2, textTransform: "uppercase", fontWeight: 600, marginBottom: 3 }}>Elaborado por</div>
+          <img src={kimediaLogo} alt="KiMedia" crossOrigin="anonymous" style={{ height: 22, width: "auto", maxWidth: 100, objectFit: "contain", display: "block", marginLeft: "auto" }} />
+        </div>
       </div>
 
       {!analysis ? (
@@ -123,10 +138,22 @@ const PortalPdfTemplate = forwardRef<HTMLDivElement, Props>(({ portal, logoUrl, 
                 padding: "12px 14px", borderRadius: "0 8px 8px 0",
               }}>
                 <p style={{ margin: 0, whiteSpace: "pre-wrap", color: "#334155", textAlign: "justify" }}>
-                  {analysis.executive_summary.replace(/\*\*/g, "")}
+                  {clean(analysis.executive_summary)}
                 </p>
               </div>
             </Section>
+          )}
+
+          {/* Gráfica 1 — volumen diario + salud reputacional */}
+          {charts && (
+            <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 14, marginBottom: 20, pageBreakInside: "avoid" }}>
+              <ChartBox title="Volumen y sentimiento por día">
+                <VolumeBarsSvg data={charts.volumeByDay} />
+              </ChartBox>
+              <ChartBox title="Salud reputacional">
+                <GaugeSvg score={charts.reputation.score} color={charts.reputation.color} label={charts.reputation.label} />
+              </ChartBox>
+            </div>
           )}
 
           {/* Alerts */}
@@ -134,8 +161,8 @@ const PortalPdfTemplate = forwardRef<HTMLDivElement, Props>(({ portal, logoUrl, 
             <Section title="Alertas">
               {analysis.alerts.map((a: any, i: number) => (
                 <div key={i} style={{ padding: 10, border: "1px solid #fecaca", background: "#fef2f2", borderRadius: 6, marginBottom: 6, pageBreakInside: "avoid" }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: "#b91c1c", textTransform: "uppercase", marginBottom: 4 }}>{a.level ?? "alerta"}</div>
-                  <div style={{ fontSize: 12 }}>{a.detail ?? a.summary ?? String(a)}</div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: "#b91c1c", textTransform: "uppercase", marginBottom: 4 }}>{clean(a.level ?? "alerta")}</div>
+                  <div style={{ fontSize: 12 }}>{clean(a.detail ?? a.summary ?? a)}</div>
                 </div>
               ))}
             </Section>
@@ -147,13 +174,27 @@ const PortalPdfTemplate = forwardRef<HTMLDivElement, Props>(({ portal, logoUrl, 
               {analysis.key_findings.map((f: any, i: number) => (
                 <div key={i} style={{ padding: "10px 12px", background: "#f8fafc", border: "1px solid #e8edf3", borderRadius: 8, marginBottom: 7, pageBreakInside: "avoid" }}>
                   <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10, marginBottom: 3 }}>
-                    <div style={{ fontWeight: 600, fontSize: 11.5, flex: 1 }}>{f.title ?? f.headline}</div>
+                    <div style={{ fontWeight: 600, fontSize: 11.5, flex: 1 }}>{clean(f.title ?? f.headline)}</div>
                     {f.impact && <ImpactPill impact={String(f.impact)} />}
                   </div>
-                  {f.detail && <div style={{ fontSize: 10.5, color: "#475569" }}>{f.detail}</div>}
+                  {f.detail && <div style={{ fontSize: 10.5, color: "#475569" }}>{clean(f.detail)}</div>}
                 </div>
               ))}
             </SectionFlow>
+          )}
+
+          {/* Gráfica 2 — distribución por canal y sentimiento */}
+          {charts && (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 20, pageBreakInside: "avoid" }}>
+              <ChartBox title="Menciones por canal">
+                <DonutSvg data={charts.topChannels.map((c, i) => ({ name: c.name, value: c.value, color: pdfPlatformColor(c.name, i) }))} />
+              </ChartBox>
+              <ChartBox title="Sentimiento agregado">
+                <DonutSvg data={(["positivo", "neutral", "negativo", "crisis"] as const)
+                  .map(k => ({ name: k, value: Number(sent[k] ?? 0), color: SENT_COLORS[k] }))
+                  .filter(d => d.value > 0)} />
+              </ChartBox>
+            </div>
           )}
 
           {/* Topics + Mentions two columns */}
@@ -182,6 +223,15 @@ const PortalPdfTemplate = forwardRef<HTMLDivElement, Props>(({ portal, logoUrl, 
             )}
           </div>
 
+          {/* Gráfica 3 — entidades más citadas */}
+          {charts && charts.topEntities.length > 0 && (
+            <div style={{ marginBottom: 20, pageBreakInside: "avoid" }}>
+              <ChartBox title="Entidades más citadas">
+                <EntitiesBarSvg data={charts.topEntities} />
+              </ChartBox>
+            </div>
+          )}
+
           {/* Recommendations */}
           {recs.length > 0 && (
             <SectionFlow title="Recomendaciones">
@@ -197,53 +247,23 @@ const PortalPdfTemplate = forwardRef<HTMLDivElement, Props>(({ portal, logoUrl, 
                     justifyContent: "center", marginTop: 1,
                   }}>{i + 1}</span>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 600, fontSize: 11.5, marginBottom: r.body ? 2 : 0 }}>{r.lead}</div>
-                    {r.body && <div style={{ fontSize: 10.5, color: "#475569" }}>{r.body}</div>}
+                    <div style={{ fontWeight: 600, fontSize: 11.5, marginBottom: r.body ? 2 : 0 }}>{clean(r.lead)}</div>
+                    {r.body && <div style={{ fontSize: 10.5, color: "#475569" }}>{clean(r.body)}</div>}
                   </div>
                 </div>
               ))}
             </SectionFlow>
           )}
-
-          {/* ===== Página 2: Gráficos ===== */}
-          {charts && (
-            <div style={{ pageBreakBefore: "always", paddingTop: 12 }}>
-              <h2 style={{ fontSize: 16, margin: "0 0 14px", fontFamily: "'Space Grotesk', system-ui", color: "#0f172a", borderBottom: "2px solid #ef6a4d", paddingBottom: 6 }}>
-                Panorama visual
-              </h2>
-
-              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 14, marginBottom: 18 }}>
-                <ChartBox title="Volumen y sentimiento por día">
-                  <VolumeBarsSvg data={charts.volumeByDay} />
-                </ChartBox>
-                <ChartBox title="Salud reputacional">
-                  <GaugeSvg score={charts.reputation.score} color={charts.reputation.color} label={charts.reputation.label} />
-                </ChartBox>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 18 }}>
-                <ChartBox title="Menciones por canal">
-                  <DonutSvg data={charts.topChannels.map((c, i) => ({ name: c.name, value: c.value, color: pdfPlatformColor(c.name, i) }))} />
-                </ChartBox>
-                <ChartBox title="Sentimiento agregado">
-                  <DonutSvg data={(["positivo", "neutral", "negativo", "crisis"] as const)
-                    .map(k => ({ name: k, value: Number(sent[k] ?? 0), color: SENT_COLORS[k] }))
-                    .filter(d => d.value > 0)} />
-                </ChartBox>
-              </div>
-
-              {charts.topEntities.length > 0 && (
-                <ChartBox title="Entidades más citadas">
-                  <EntitiesBarSvg data={charts.topEntities} />
-                </ChartBox>
-              )}
-            </div>
-          )}
         </>
       )}
 
-      <div style={{ marginTop: 28, paddingTop: 12, borderTop: "1px solid #e2e8f0", textAlign: "center", fontSize: 10, color: "#94a3b8" }}>
-        {portal.displayName} · Inteligencia digital powered by KiMedia
+      <div style={{
+        marginTop: 28, paddingTop: 12, borderTop: "1px solid #e2e8f0",
+        display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+        fontSize: 9.5, color: "#94a3b8",
+      }}>
+        <span>{portal.displayName} · Inteligencia digital powered by</span>
+        <img src={kimediaLogo} alt="KiMedia" crossOrigin="anonymous" style={{ height: 14, width: "auto", objectFit: "contain", opacity: 0.8 }} />
       </div>
     </div>
   );
