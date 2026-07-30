@@ -1346,6 +1346,7 @@ export type Database = {
           sentiment_breakdown: Json | null
           top_mentions: Json | null
           top_topics: Json | null
+          total_mentions: number
           updated_at: string
           week_end: string
           week_start: string
@@ -1364,6 +1365,7 @@ export type Database = {
           sentiment_breakdown?: Json | null
           top_mentions?: Json | null
           top_topics?: Json | null
+          total_mentions?: number
           updated_at?: string
           week_end: string
           week_start: string
@@ -1382,6 +1384,7 @@ export type Database = {
           sentiment_breakdown?: Json | null
           top_mentions?: Json | null
           top_topics?: Json | null
+          total_mentions?: number
           updated_at?: string
           week_end?: string
           week_start?: string
