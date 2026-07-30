@@ -1173,8 +1173,8 @@ export default function PortalAnalysis({ clientId, fromDate, toDate, mode = "soc
                       {n.pct}%
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <div className="text-sm font-semibold truncate">{n.topic}</div>
+                      <div className="flex items-start gap-2 flex-wrap">
+                        <div className="text-sm font-semibold break-words">{n.topic}</div>
                         <Badge variant="outline" className="text-[9px]" style={{ borderColor: SENT_COLORS[n.dominant] ?? "#94a3b8", color: SENT_COLORS[n.dominant] ?? "#94a3b8" }}>{n.dominant}</Badge>
                       </div>
                       <div className="text-[10px] text-muted-foreground">
@@ -1186,7 +1186,7 @@ export default function PortalAnalysis({ clientId, fromDate, toDate, mode = "soc
                     </div>
                   </div>
                   {n.snippet && (
-                    <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">{n.snippet}</p>
+                    <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-line break-words">{n.snippet}</p>
                   )}
                   {n.entities.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-1">
