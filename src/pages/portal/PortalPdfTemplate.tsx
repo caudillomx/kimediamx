@@ -44,33 +44,60 @@ const PIE_FALLBACK = ["#ef6a4d", "#0ea5e9", "#a855f7", "#10b981", "#f59e0b", "#e
 const pdfPlatformColor = (name: string, i: number) =>
   PLATFORM_COLORS_PDF[name.toLowerCase().trim()] ?? PIE_FALLBACK[i % PIE_FALLBACK.length];
 
+/** Convierte el markdown de recomendaciones en tarjetas limpias (sin ** ni guiones). */
+function parseRecommendations(md: string): { lead: string; body: string }[] {
+  const items: { lead: string; body: string }[] = [];
+  let current: string | null = null;
+  const push = () => {
+    if (!current) return;
+    const clean = current.replace(/\*\*/g, "").replace(/\s+/g, " ").trim();
+    current = null;
+    if (!clean) return;
+    const m = clean.match(/^(.{3,90}?)\s*[—–:-]\s+(.*)$/);
+    if (m) items.push({ lead: m[1].trim(), body: m[2].trim() });
+    else items.push({ lead: clean, body: "" });
+  };
+  for (const raw of md.split(/\r?\n/)) {
+    const line = raw.trimEnd();
+    const bullet = line.match(/^\s*(?:[-*+]|\d+[.)])\s+(.*)$/);
+    if (bullet) { push(); current = bullet[1]; }
+    else if (!line.trim()) push();
+    else if (current !== null) current += " " + line.trim();
+    else current = line.trim();
+  }
+  push();
+  return items;
+}
+
 const PortalPdfTemplate = forwardRef<HTMLDivElement, Props>(({ portal, logoUrl, analysis, weekLabel, charts }, ref) => {
   const sent = analysis?.sentiment_breakdown ?? {};
   const totalSent = Object.values(sent).reduce((a, b) => a + (Number(b) || 0), 0);
   const pct = (n: number) => (totalSent ? Math.round((n / totalSent) * 100) : 0);
+  const recs = analysis?.recommendations_client ? parseRecommendations(analysis.recommendations_client) : [];
 
   return (
     <div
       ref={ref}
       style={{
-        width: 780,
-        padding: 40,
+        width: 794,
+        boxSizing: "border-box",
+        padding: "40px 46px 32px",
         background: "#ffffff",
         color: "#0f172a",
         fontFamily: "'Inter', system-ui, sans-serif",
-        fontSize: 12,
-        lineHeight: 1.55,
+        fontSize: 11.5,
+        lineHeight: 1.6,
       }}
     >
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", gap: 16, borderBottom: "3px solid #ef6a4d", paddingBottom: 18, marginBottom: 24 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 16, borderBottom: "3px solid #ef6a4d", paddingBottom: 16, marginBottom: 22 }}>
         {logoUrl && (
           <img src={logoUrl} alt="" crossOrigin="anonymous" style={{ height: 44, width: 44, objectFit: "contain", borderRadius: 8, background: "#f8fafc", padding: 4 }} />
         )}
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 11, color: "#64748b", letterSpacing: 1, textTransform: "uppercase" }}>Reporte semanal · Inteligencia digital</div>
-          <h1 style={{ fontSize: 26, margin: "4px 0 0", fontWeight: 700, fontFamily: "'Space Grotesk', system-ui, sans-serif" }}>{portal.displayName}</h1>
-          <div style={{ fontSize: 13, color: "#475569", marginTop: 2 }}>{weekLabel}</div>
+          <div style={{ fontSize: 9.5, color: "#94a3b8", letterSpacing: 1.4, textTransform: "uppercase", fontWeight: 600 }}>Reporte semanal · Inteligencia digital</div>
+          <h1 style={{ fontSize: 25, margin: "3px 0 0", fontWeight: 700, letterSpacing: "-0.02em", fontFamily: "'Space Grotesk', system-ui, sans-serif" }}>{portal.displayName}</h1>
+          <div style={{ fontSize: 12, color: "#475569", marginTop: 1 }}>{weekLabel}</div>
         </div>
       </div>
 
