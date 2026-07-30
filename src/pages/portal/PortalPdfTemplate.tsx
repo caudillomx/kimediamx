@@ -1,5 +1,6 @@
 import { forwardRef } from "react";
 import type { ClientPortalConfig } from "@/lib/clientPortal";
+import kimediaLogo from "@/assets/kimedia-logo.png";
 
 type Analysis = {
   week_start: string;
@@ -43,6 +44,16 @@ const PLATFORM_COLORS_PDF: Record<string, string> = {
 const PIE_FALLBACK = ["#ef6a4d", "#0ea5e9", "#a855f7", "#10b981", "#f59e0b", "#ec4899"];
 const pdfPlatformColor = (name: string, i: number) =>
   PLATFORM_COLORS_PDF[name.toLowerCase().trim()] ?? PIE_FALLBACK[i % PIE_FALLBACK.length];
+
+/** Quita markdown residual (**, __, `, #, viñetas sueltas) de cualquier texto. */
+const clean = (s: unknown): string =>
+  String(s ?? "")
+    .replace(/\*\*/g, "")
+    .replace(/__/g, "")
+    .replace(/`/g, "")
+    .replace(/^\s*#{1,6}\s*/gm, "")
+    .replace(/^\s*[-*+]\s+/gm, "")
+    .trim();
 
 /** Convierte el markdown de recomendaciones en tarjetas limpias (sin ** ni guiones). */
 function parseRecommendations(md: string): { lead: string; body: string }[] {
