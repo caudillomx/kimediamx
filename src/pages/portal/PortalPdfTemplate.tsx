@@ -1,6 +1,23 @@
 import { forwardRef } from "react";
 import type { ClientPortalConfig } from "@/lib/clientPortal";
-import kimediaLogo from "@/assets/kimedia-logo.png";
+
+/** Wordmark tipográfico de KiMedia (evita el PNG con fondo negro que se ve como pegote). */
+function KiMediaMark({ size = 13, muted = false }: { size?: number; muted?: boolean }) {
+  return (
+    <span
+      style={{
+        fontFamily: "'Space Grotesk', system-ui, sans-serif",
+        fontWeight: 700,
+        fontSize: size,
+        letterSpacing: "-0.02em",
+        color: muted ? "#64748b" : "#0f172a",
+        whiteSpace: "nowrap",
+      }}
+    >
+      ki<span style={{ color: "#ef6a4d" }}>media</span>
+    </span>
+  );
+}
 
 type Analysis = {
   week_start: string;
@@ -112,7 +129,7 @@ const PortalPdfTemplate = forwardRef<HTMLDivElement, Props>(({ portal, logoUrl, 
         </div>
         <div style={{ textAlign: "right" }}>
           <div style={{ fontSize: 7.5, color: "#94a3b8", letterSpacing: 1.2, textTransform: "uppercase", fontWeight: 600, marginBottom: 3 }}>Elaborado por</div>
-          <img src={kimediaLogo} alt="KiMedia" crossOrigin="anonymous" style={{ height: 22, width: "auto", maxWidth: 100, objectFit: "contain", display: "block", marginLeft: "auto" }} />
+          <KiMediaMark size={17} />
         </div>
       </div>
 
