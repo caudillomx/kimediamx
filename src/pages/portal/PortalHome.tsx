@@ -17,6 +17,7 @@ import {
   AlertTriangle, TrendingUp, MessageCircle, Sun, Moon, CalendarRange, X, RefreshCw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { mergeNameCounts } from "@/lib/entityNames";
 import type { ClientPortalConfig } from "@/lib/clientPortal";
 import PortalAnalysis from "./PortalAnalysis";
 import PortalPdfTemplate from "./PortalPdfTemplate";
@@ -606,7 +607,10 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
       setPdfChartData({
         volumeByDay: Array.from(volMap.values()).sort((a, b) => a.date.localeCompare(b.date)),
         topChannels: Array.from(chanMap.entries()).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 6),
-        topEntities: Array.from(entMap.entries()).map(([name, size]) => ({ name, size })).sort((a, b) => b.size - a.size).slice(0, 12),
+        topEntities: Array.from(mergeNameCounts(entMap).entries())
+          .map(([name, size]) => ({ name, size }))
+          .sort((a, b) => b.size - a.size)
+          .slice(0, 12),
         reputation: { score, label, color },
       });
 
