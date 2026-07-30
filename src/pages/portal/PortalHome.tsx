@@ -690,7 +690,7 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
         filename: `${portal.slug}-${current?.week_start ?? "reporte"}.pdf`,
         html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff", windowWidth: 794, scrollX: 0, scrollY: 0 },
         jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-        pagebreak: { mode: ["css", "legacy", "avoid-all"], avoid: [".pdf-avoid", "svg", "h2", "h3"] },
+        pagebreak: { mode: ["css", "legacy"], avoid: [".pdf-avoid", "svg"] },
       } as any).from(pdfRef.current).save();
       toast.success("PDF descargado", { id: "pdf" });
     } catch {
