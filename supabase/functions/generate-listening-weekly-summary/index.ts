@@ -18,14 +18,16 @@ Devuelve SIEMPRE JSON estricto:
   "recommendations_client": string (markdown, 4-6 bullets claros para el cliente. FORMATO ESTRICTO POR BULLET — una sola línea por recomendación:
     "- **Título breve de la acción** — Qué hacer: <acción concreta en 1 oración>. Por qué: <razón basada en el dato del período>."
     NO uses sub-bullets, NO separes "Qué hacer" y "Por qué" en bullets distintos, NO uses saltos de línea dentro del bullet.),
-  "top_topics": [{ "topic": string, "count": number }] (máx 8),
-  "top_mentions": [{ "name": string, "type": string, "count": number }] (máx 8),
-  "sentiment_breakdown": { "positivo": number, "neutral": number, "negativo": number, "crisis": number }
+  "top_topics": [{ "topic": string, "count": number }] (copia EXACTA de aggregates.top_topics, sin recalcular),
+  "top_mentions": [{ "name": string, "type": string, "count": number }] (copia EXACTA de aggregates.top_entities, sin recalcular),
+  "sentiment_breakdown": { "positivo": number, "neutral": number, "negativo": number, "crisis": number } (copia EXACTA de aggregates.sentiment_breakdown)
 }
 
 REGLAS DURAS:
 - Basa TODO en AGREGADOS y ENTRADAS provistas. No inventes hechos, cifras ni actores.
 - Los AGREGADOS son la fuente de verdad cuantitativa — úsalos literal.
+- NUNCA recalcules, redondees ni "estimes" conteos: los números de menciones, entidades y sentimiento vienen ya sumados desde la base de datos.
+- Cuando cites cuántas veces se habló de un actor o tema, usa exactamente el count del agregado correspondiente.
 - PROHIBIDO decir "no hubo conversación significativa" o "semana de calma" si total_mentions_semana > 20.
 - Si hay volumen, describe QUÉ se dijo, DÓNDE, QUIÉN lo dijo y qué hacer.
 - Las recomendaciones NUNCA son genéricas; cada bullet debe citar un tema, canal, actor o evento concreto.
