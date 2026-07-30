@@ -255,9 +255,47 @@ export default PortalPdfTemplate;
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div style={{ marginBottom: 18, pageBreakInside: "avoid" }}>
-      <h2 style={{ fontSize: 15, margin: "0 0 8px", fontFamily: "'Space Grotesk', system-ui", color: "#0f172a" }}>{title}</h2>
+      <h2 style={sectionTitle}>{title}</h2>
       {children}
     </div>
+  );
+}
+
+/** Igual que Section pero permite que el contenido fluya a la siguiente página. */
+function SectionFlow({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div style={{ marginBottom: 18 }}>
+      <h2 style={sectionTitle}>{title}</h2>
+      {children}
+    </div>
+  );
+}
+
+const sectionTitle: React.CSSProperties = {
+  fontSize: 14,
+  margin: "0 0 10px",
+  fontFamily: "'Space Grotesk', system-ui",
+  color: "#0f172a",
+  fontWeight: 700,
+  letterSpacing: "-0.01em",
+};
+
+function ImpactPill({ impact }: { impact: string }) {
+  const k = impact.toLowerCase();
+  const map: Record<string, { bg: string; fg: string }> = {
+    alto: { bg: "#fee2e2", fg: "#b91c1c" },
+    medio: { bg: "#fef3c7", fg: "#b45309" },
+    bajo: { bg: "#e2e8f0", fg: "#475569" },
+  };
+  const c = map[k] ?? map.bajo;
+  return (
+    <span style={{
+      fontSize: 8.5, background: c.bg, color: c.fg, padding: "3px 8px",
+      borderRadius: 999, fontWeight: 700, textTransform: "uppercase",
+      letterSpacing: 0.5, whiteSpace: "nowrap", lineHeight: 1.1,
+    }}>
+      impacto {k}
+    </span>
   );
 }
 
