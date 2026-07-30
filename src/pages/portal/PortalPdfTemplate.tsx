@@ -253,15 +253,15 @@ const PortalPdfTemplate = forwardRef<HTMLDivElement, Props>(({ portal, logoUrl, 
           {recs.length > 0 && (
             <SectionFlow title="Recomendaciones">
               {recs.map((r, i) => (
-                <div key={i} style={{
+                <div key={i} className="pdf-avoid" style={{
                   display: "flex", gap: 10, alignItems: "flex-start",
                   padding: "10px 12px", border: "1px solid #e8edf3", borderRadius: 8,
                   marginBottom: 7, background: "#fff", pageBreakInside: "avoid",
                 }}>
                   <span style={{
-                    minWidth: 20, height: 20, borderRadius: 999, background: "#ef6a4d", color: "#fff",
-                    fontSize: 10, fontWeight: 700, display: "flex", alignItems: "center",
-                    justifyContent: "center", marginTop: 1,
+                    width: 20, minWidth: 20, height: 20, borderRadius: 999, background: "#ef6a4d", color: "#fff",
+                    fontSize: 10, fontWeight: 700, display: "inline-block",
+                    lineHeight: "20px", textAlign: "center", marginTop: 1,
                   }}>{i + 1}</span>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 600, fontSize: 11.5, marginBottom: r.body ? 2 : 0 }}>{clean(r.lead)}</div>
