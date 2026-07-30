@@ -657,10 +657,15 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
 
   const pdfAnalysis = useMemo(() => {
     if (!effective) return null;
+    // Conteos deterministas: siempre desde la bitácora procesada, no desde el texto del modelo.
+    const deterministicMentions = (pdfChartData?.topEntities ?? [])
+      .slice(0, 8)
+      .map(e => ({ name: e.name, count: e.size }));
     return {
       ...effective,
       executive_summary: displayExecutiveSummary,
       entries_count: rangeAgg.totalMentions || effective.entries_count,
+      top_mentions: deterministicMentions.length ? deterministicMentions : (effective as any).top_mentions,
       sentiment_breakdown: sentTotals.total ? {
         positivo: sentTotals.positivo,
         neutral: sentTotals.neutral,
@@ -668,7 +673,7 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
         crisis: sentTotals.crisis,
       } : effective.sentiment_breakdown,
     };
-  }, [effective, displayExecutiveSummary, rangeAgg.totalMentions, sentTotals]);
+  }, [effective, displayExecutiveSummary, rangeAgg.totalMentions, sentTotals, pdfChartData]);
 
   const deltaMentions = useMemo(() => {
     if (!prevRangeAgg) return null;
