@@ -281,53 +281,47 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
         const days = Math.round((e.getTime() - s.getTime()) / 86400000) + 1;
         return s.getDay() === 1 && days === 7; // lunes + 7 días
       });
-      setAnalyses(list);
       setReports((r.data ?? []) as Report[]);
-      if (list.length > 0) setSelectedWeek(list[0].week_start);
 
-      // Portales sin análisis semanales (p.ej. Guanajuato / press-only):
-      // sintetiza "semanas" a partir de las fechas con entradas para que los
-      // filtros de período sean homogéneos con el resto (Actinver, etc.).
-      if (list.length === 0 && (((c.data as any)?.portal_modules)?.press_daily)) {
-        const { data: dates } = await supabase
-          .from("client_portal_listening_entries")
-          .select("entry_date")
-          .eq("client_id", portal.clientId)
-          .not("analyzed_at", "is", null)
-          .order("entry_date", { ascending: false })
-          .limit(500);
-        const seen = new Set<string>();
-        const synthetic: Analysis[] = [];
-        for (const row of (dates ?? []) as { entry_date: string }[]) {
-          const dt = new Date(row.entry_date + "T00:00:00");
-          const monday = new Date(dt);
-          monday.setDate(dt.getDate() - ((dt.getDay() + 6) % 7));
-          const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6);
-          const ws = monday.toISOString().slice(0, 10);
-          const we = sunday.toISOString().slice(0, 10);
-          if (seen.has(ws)) continue;
-          seen.add(ws);
-          synthetic.push({
-            id: `synthetic-${ws}`,
-            week_start: ws,
-            week_end: we,
-            entries_count: 0,
-            executive_summary: null,
-            key_findings: [],
-            alerts: [],
-            recommendations_client: null,
-            sentiment_breakdown: null,
-            top_topics: null,
-            top_mentions: null,
-          });
-        }
-        if (synthetic.length > 0) {
-          setAnalyses(synthetic);
-          setSelectedWeek(synthetic[0].week_start);
-        }
+      // Semanas disponibles = análisis guardados + semanas sintetizadas a partir
+      // de las bitácoras cargadas (para que datos nuevos aparezcan aunque aún no
+      // se haya generado su reporte semanal).
+      const byWeek = new Map<string, Analysis>();
+      for (const item of list) byWeek.set(item.week_start, item);
+
+      const { data: dates } = await supabase
+        .from("client_portal_listening_entries")
+        .select("entry_date")
+        .eq("client_id", portal.clientId)
+        .order("entry_date", { ascending: false })
+        .limit(1000);
+      for (const row of (dates ?? []) as { entry_date: string }[]) {
+        const dt = new Date(row.entry_date + "T00:00:00");
+        const monday = new Date(dt);
+        monday.setDate(dt.getDate() - ((dt.getDay() + 6) % 7));
+        const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6);
+        const ws = monday.toISOString().slice(0, 10);
+        const we = sunday.toISOString().slice(0, 10);
+        if (byWeek.has(ws)) continue;
+        byWeek.set(ws, {
+          id: `synthetic-${ws}`,
+          week_start: ws,
+          week_end: we,
+          entries_count: 0,
+          executive_summary: null,
+          key_findings: [],
+          alerts: [],
+          recommendations_client: null,
+          sentiment_breakdown: null,
+          top_topics: null,
+          top_mentions: null,
+        } as Analysis);
       }
+      const merged = Array.from(byWeek.values()).sort((x, y) => y.week_start.localeCompare(x.week_start));
+      setAnalyses(merged);
+      if (merged.length > 0) setSelectedWeek(merged[0].week_start);
 
-      if (list.length === 0 && (r.data ?? []).length === 0) {
+      if (merged.length === 0 && (r.data ?? []).length === 0) {
         const { data: access } = await supabase
           .from("client_access").select("id").eq("client_id", portal.clientId).limit(1);
         if (!access || access.length === 0) setDenied(true);
