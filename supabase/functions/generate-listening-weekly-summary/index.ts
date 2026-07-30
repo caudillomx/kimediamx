@@ -191,9 +191,13 @@ async function buildAnalysis(input: PeriodInput) {
     alerts: parsed.alerts ?? [],
     recommendations_team: parsed.recommendations_team ?? null,
     recommendations_client: parsed.recommendations_client ?? null,
-    sentiment_breakdown: parsed.sentiment_breakdown ?? sentBreak,
-    top_topics: parsed.top_topics ?? [],
-    top_mentions: parsed.top_mentions ?? [],
+    // Conteos SIEMPRE deterministas (agregados desde la bitácora), nunca los del modelo.
+    sentiment_breakdown: sentBreak,
+    total_mentions: totalMentions,
+    top_topics: aggregates.top_topics.slice(0, 10),
+    top_mentions: aggregates.top_entities
+      .slice(0, 10)
+      .map((e) => ({ name: e.name, type: e.type, count: e.count })),
   };
 
   let saved: any = { ...payload, id: `transient-${period.periodStart}-${period.periodEnd}` };
