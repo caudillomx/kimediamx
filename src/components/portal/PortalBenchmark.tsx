@@ -723,6 +723,19 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
             <SelectContent>{networks.map((n) => <SelectItem key={n} value={n}>{n === "all" ? "Todas" : n}</SelectItem>)}</SelectContent>
           </Select>
         </div>
+        {byDependencia && (
+          <div className="flex items-center gap-2">
+            <span className="text-xs uppercase tracking-widest text-muted-foreground">Cuentas</span>
+            <Select value={accountFilter} onValueChange={(v) => setAccountFilter(v as typeof accountFilter)}>
+              <SelectTrigger className="w-[190px] h-9"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ambos">Dependencia + titular</SelectItem>
+                <SelectItem value="institucional">Solo cuenta institucional</SelectItem>
+                <SelectItem value="titular">Solo titular</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
         <div className="ml-auto">
           <Button variant="outline" size="sm" onClick={exportCsv}>
             <Download className="w-4 h-4 mr-1" />Exportar CSV
