@@ -794,10 +794,12 @@ export type Database = {
       }
       client_portal_benchmark_competitors: {
         Row: {
+          account_type: string | null
           active: boolean
           brand_color: string
           client_id: string
           created_at: string
+          dependencia_id: string | null
           external_url: string | null
           handle: string | null
           id: string
@@ -813,10 +815,12 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          account_type?: string | null
           active?: boolean
           brand_color?: string
           client_id: string
           created_at?: string
+          dependencia_id?: string | null
           external_url?: string | null
           handle?: string | null
           id?: string
@@ -832,10 +836,12 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          account_type?: string | null
           active?: boolean
           brand_color?: string
           client_id?: string
           created_at?: string
+          dependencia_id?: string | null
           external_url?: string | null
           handle?: string | null
           id?: string
@@ -856,6 +862,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_portal_benchmark_competitors_dependencia_id_fkey"
+            columns: ["dependencia_id"]
+            isOneToOne: false
+            referencedRelation: "client_portal_dependencias"
             referencedColumns: ["id"]
           },
         ]
@@ -1324,6 +1337,56 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "client_portal_datasets_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_portal_dependencias: {
+        Row: {
+          active: boolean
+          client_id: string
+          created_at: string
+          id: string
+          nombre: string
+          nombre_corto: string | null
+          sort_order: number
+          tipo: string
+          titular: string | null
+          titular_cargo: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          client_id: string
+          created_at?: string
+          id?: string
+          nombre: string
+          nombre_corto?: string | null
+          sort_order?: number
+          tipo?: string
+          titular?: string | null
+          titular_cargo?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          client_id?: string
+          created_at?: string
+          id?: string
+          nombre?: string
+          nombre_corto?: string | null
+          sort_order?: number
+          tipo?: string
+          titular?: string | null
+          titular_cargo?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_portal_dependencias_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
