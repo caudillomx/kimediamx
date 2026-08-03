@@ -28,7 +28,11 @@ type Competitor = {
   is_default: boolean;
   sort_order: number;
   scope: string;
+  dependencia_id: string | null;
+  account_type: string | null;
 };
+
+type Dependencia = { id: string; nombre: string; sort_order: number | null };
 
 type Period = {
   id: string;
@@ -71,6 +75,7 @@ const SCOPE_LABELS: Record<BenchmarkScope, string> = {
 
 export default function BenchmarkAdmin({ clientId, clientName, scope = "general" }: { clientId: string; clientName: string; scope?: BenchmarkScope }) {
   const [competitors, setCompetitors] = useState<Competitor[]>([]);
+  const [dependencias, setDependencias] = useState<Dependencia[]>([]);
   const [periods, setPeriods] = useState<Period[]>([]);
   const [uploads, setUploads] = useState<UploadRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -91,14 +96,16 @@ export default function BenchmarkAdmin({ clientId, clientName, scope = "general"
 
   async function loadAll() {
     setLoading(true);
-    const [c, p, u] = await Promise.all([
+    const [c, p, u, d] = await Promise.all([
       supabase.from("client_portal_benchmark_competitors").select("*").eq("client_id", clientId).eq("scope", scope).order("sort_order").order("name"),
       supabase.from("client_portal_benchmark_periods").select("*").eq("client_id", clientId).eq("scope", scope).order("period_start", { ascending: false }),
       supabase.from("client_portal_benchmark_uploads").select("*").eq("client_id", clientId).order("created_at", { ascending: false }),
+      supabase.from("client_portal_dependencias").select("id, nombre, sort_order").eq("client_id", clientId).order("sort_order"),
     ]);
     setCompetitors((c.data ?? []) as Competitor[]);
     setPeriods((p.data ?? []) as Period[]);
     setUploads((u.data ?? []) as UploadRow[]);
+    setDependencias((d.data ?? []) as Dependencia[]);
     setLoading(false);
   }
 
@@ -507,6 +514,7 @@ export default function BenchmarkAdmin({ clientId, clientName, scope = "general"
             <h3 className="font-display font-bold text-lg">Catálogo de perfiles</h3>
             <p className="text-xs text-muted-foreground">
               Marca "Cliente" para identificar los perfiles propios de {clientName}. Se auto-registran al procesar cada XLSX.
+              {dependencias.length > 0 && " Asigna cada perfil a su dependencia e indica si es la cuenta institucional o la del titular."}
             </p>
           </div>
         </div>
@@ -522,6 +530,8 @@ export default function BenchmarkAdmin({ clientId, clientName, scope = "general"
                   <th className="p-2">Color</th>
                   <th className="p-2">Perfil</th>
                   <th className="p-2">Red</th>
+                  {dependencias.length > 0 && <th className="p-2">Dependencia</th>}
+                  {dependencias.length > 0 && <th className="p-2">Cuenta</th>}
                   <th className="p-2 text-center">Cliente</th>
                   <th className="p-2 text-center">Activo</th>
                   <th className="p-2"></th>
@@ -547,6 +557,34 @@ export default function BenchmarkAdmin({ clientId, clientName, scope = "general"
                         <SelectContent>{NETWORKS.map((n) => <SelectItem key={n} value={n}>{n}</SelectItem>)}</SelectContent>
                       </Select>
                     </td>
+                    {dependencias.length > 0 && (
+                      <td className="p-2">
+                        <Select
+                          value={c.dependencia_id ?? "none"}
+                          onValueChange={(v) => updateCompetitor(c.id, { dependencia_id: v === "none" ? null : v })}
+                        >
+                          <SelectTrigger className="h-7 text-xs w-[230px]"><SelectValue placeholder="Sin asignar" /></SelectTrigger>
+                          <SelectContent className="max-h-[300px]">
+                            <SelectItem value="none">Sin asignar</SelectItem>
+                            {dependencias.map((d) => <SelectItem key={d.id} value={d.id}>{d.nombre}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </td>
+                    )}
+                    {dependencias.length > 0 && (
+                      <td className="p-2">
+                        <Select
+                          value={c.account_type ?? "institucional"}
+                          onValueChange={(v) => updateCompetitor(c.id, { account_type: v })}
+                        >
+                          <SelectTrigger className="h-7 text-xs w-[130px]"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="institucional">Institucional</SelectItem>
+                            <SelectItem value="titular">Titular</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </td>
+                    )}
                     <td className="p-2 text-center">
                       <input type="checkbox" checked={c.is_client} onChange={(e) => updateCompetitor(c.id, { is_client: e.target.checked })} />
                     </td>
