@@ -1,59 +1,45 @@
-## Portal Guanajuato (cliente institucional)
+# Portal Guanajuato: lógica dependencia–titular
 
-Mismo patrón que Actinver: subdominio propio, login, y módulos de análisis. Los módulos se **añaden como pestañas nuevas al portal existente** para que Guanajuato (y a futuro otros clientes tipo gobierno) los tengan disponibles.
+## Recomendación de navegación
 
-### 1. Alta del cliente y del portal
+Vista única por **dependencia** con filtro de tipo de cuenta (Institucional / Titular / Ambas sumadas). Es lo que mejor encaja con la lógica secretaría–funcionario: cada tarjeta es una Secretaría con su cuenta oficial y la de su titular juntas, y el filtro permite responder tanto "¿qué dependencia comunica mejor?" como "¿el titular carga o no la comunicación de su área?". Las sub-pestañas Funcionarios / Instituciones dejan de ser eje de navegación y pasan a ser ese filtro.
 
-- Crear el cliente **Gobierno de Guanajuato** en `clients` desde el admin (o script) y registrarlo en `src/lib/clientPortal.ts` bajo el slug `guanajuato` con su `clientId`, `displayName` y `tagline` ("Portal privado de análisis diario").
-- Crear las credenciales portal (email + password) desde `/admin/cliente/:id/portal` usando el flujo `manage-portal-user` que ya existe.
-- Documentar en el chat los DNS records para `guanajuato.kimedia.mx` (A `185.158.133.1` + TXT `_lovable`) como se hizo con Actinver.
+Comparación entre pares: no hay marca "propia". Todo se compara contra el promedio del gabinete y contra el propio historial de cada dependencia.
 
-### 2. Nuevas pestañas en el portal (`PortalHome`)
+## Qué se construye
 
-El portal Actinver hoy tiene: Estrategia, Benchmark, Reportes. Añadimos, disponibles solo para clientes que las tengan activas:
+### 1. Catálogo de dependencias (normalización)
 
-1. **Prensa diaria** — ingesta manual (pegar/upload de columnas y notas), condensado IA y bandeja de envío por WhatsApp.
-2. **Benchmark Funcionarios** — vista independiente de perfiles personales del gabinete.
-3. **Benchmark Instituciones** — vista independiente de cuentas oficiales de dependencias.
-4. **Datasets Fanpage Karma** — carga de exports y despliegue como tabla/panel.
+Nueva tabla de gabinete con: nombre oficial, nombre corto, tipo (Secretaría / Subsecretaría / Instituto / Organismo), titular, cargo y orden. Se siembra con el directorio que enviaste, de Secretaría de Gobierno (Jorge Daniel Jiménez Lona) hasta Procuraduría Ambiental y de Ordenamiento Territorial (Karina Padilla Ávila).
 
-Un flag por cliente (`clients.portal_modules jsonb`) decide qué pestañas se muestran, para no exponer módulos GTO al portal Actinver.
+### 2. Vinculación de los perfiles existentes
 
-### 3. Base de datos (migración)
+Hoy hay 216 perfiles de benchmark de Guanajuato (101 funcionarios, 115 instituciones), repetidos por red y con nombres inconsistentes ("Agua Gto", "Agua y Medio Ambiente", "aguagente"). Se agrega a cada perfil un vínculo a su dependencia y un tipo de cuenta (institucional / titular), con mapeo automático por nombre y alias; lo que no haga match se resuelve a mano.
 
-Reusamos infraestructura existente donde aplique:
+Pantalla nueva en el admin: **Directorio**, con las dependencias, sus titulares y los perfiles de redes asignados. Permite reasignar perfiles sin match y actualizar titulares cuando cambie el gabinete.
 
-- **Benchmark funcionarios vs instituciones**: añadir columna `scope text` (`funcionarios` | `instituciones`) a `client_portal_benchmark_periods` y filtrar las vistas por scope. Sin tablas nuevas.
-- **Datasets Fanpage Karma**: ya existe `client_portal_datasets` y bucket `client-datasets`. Añadir parser específico y una vista tabular en el portal.
-- **Prensa diaria** (nuevas tablas):
-  - `press_daily_batches` — un lote por día por cliente (`date`, `client_id`, `status`, `whatsapp_sent_at`).
-  - `press_daily_entries` — cada nota/columna pegada (`batch_id`, `medium`, `author`, `title`, `url`, `raw_text`, `tone`, `topic`).
-  - `press_daily_digests` — condensado generado por IA (`batch_id`, `summary_md`, `whatsapp_text`, `alerts jsonb`, `generated_at`).
-  - Todas con RLS: admin full access + `has_client_access(auth.uid(), client_id)` para SELECT desde el portal. `GRANT` explícitos a `authenticated` y `service_role`.
+### 3. Benchmark rediseñado
 
-### 4. Edge functions
+- **Ranking por dependencia**: una fila por dependencia con métricas sumadas de todos sus perfiles (todas las redes o la red seleccionada), no una fila por perfil suelto.
+- Filtro de tipo de cuenta: Institucional / Titular / Ambas.
+- **Ficha de dependencia**: titular, cuentas por red, evolución mes a mes, posición frente al promedio del gabinete, mejores publicaciones y narrativas detectadas.
+- **Insights de gabinete**: quién sube y quién baja, dependencias sin presencia en alguna red, y brecha institucional vs. titular (dónde el titular concentra la conversación y dónde la cuenta oficial va sola).
 
-- `press-daily-generate` — recibe `batch_id`, lee entries, llama a Lovable AI (Gemini 2.5 Flash) con prompt que produce: (a) resumen markdown para el portal, (b) versión WhatsApp ≤ 900 chars, (c) alertas destacadas. Persiste en `press_daily_digests`. **Sin alucinación**: solo puede citar contenido presente en las entries.
-- `press-daily-send-whatsapp` — envía el `whatsapp_text` del digest a un número/grupo. Twilio requiere secret nuevo → lo pedimos con `add_secret` en fase de implementación cuando el usuario confirme número destino. Por ahora dejamos el botón "Copiar para WhatsApp" funcional para no bloquear.
-- `parse-fanpage-dataset` — normaliza el XLSX/CSV subido a `client-datasets` y guarda filas en `client_portal_datasets`.
+### 4. Prensa por dependencia
 
-### 5. Admin de Guanajuato
+Las menciones de prensa se agrupan con el mismo catálogo: una mención al titular suma a su dependencia. En la ficha se ven prensa y redes juntas, y en Panorama se agrega un ranking de dependencias por menciones con tono.
 
-Añadir a `/admin/cliente/:clientId` una sección "Portal Gobierno" con:
-- Editor de lote diario de prensa (pegar notas, botón "Generar condensado", vista previa, botón "Enviar WhatsApp"/"Copiar").
-- Uploader de datasets Fanpage Karma (para funcionarios y para instituciones, marcando `scope`).
-- Editor de periodos y competidores del benchmark con selector `scope`.
+## Detalles técnicos
 
-### 6. Fuera de alcance de esta iteración
+- Migración: tabla de catálogo de gabinete (con GRANTs y RLS: admin gestiona, usuarios con acceso al cliente leen) + columnas `dependencia_id` y `account_type` en `client_portal_benchmark_competitors`.
+- Mapeo automático por normalización de texto reutilizando el enfoque de `src/lib/entityNames.ts` (sin acentos, tokens, alias por handle).
+- `PortalBenchmark.tsx` deja de usar `scope` como eje y agrupa por dependencia; el `scope` actual se conserva en datos.
+- `PortalHome.tsx`: sub-pestañas de Benchmark reemplazadas por la vista única con filtros.
+- Prensa: resolución entidad → dependencia en la agregación de `PortalAnalysis` usando el catálogo.
 
-- Scraping automático de medios (queda como fase 2, ya cubierto por Firecrawl cuando lo aprueben).
-- WhatsApp automático (queda dependiente de que el usuario confirme integrar Twilio y comparta destino).
-- Portal público SEO / metadatos (el portal es privado).
+## Orden de trabajo
 
-### Detalles técnicos
-
-- Frontend: React + Tailwind + Framer Motion, tema oscuro (regla del proyecto), reusando `glass-strong`, `bg-mesh`.
-- Routing: sin cambios en `App.tsx`; `PortalRouter` gana rutas `/prensa`, `/benchmark/funcionarios`, `/benchmark/instituciones`, `/datasets`.
-- IA: Lovable AI Gateway, modelo `google/gemini-2.5-flash` para condensado; sin nuevas API keys.
-- Storage: buckets ya existentes (`client-datasets` privado, `client-corpus-files` privado). No creamos buckets nuevos.
-- Seguridad: RLS estricta por `has_client_access`, GRANTs a `authenticated`/`service_role`, sin exposición a `anon`.
+1. Catálogo + migración + siembra del directorio.
+2. Mapeo automático de los 216 perfiles y pantalla de Directorio en el admin.
+3. Rediseño de Benchmark por dependencia.
+4. Cruce con prensa.
