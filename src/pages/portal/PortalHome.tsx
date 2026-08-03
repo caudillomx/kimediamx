@@ -996,29 +996,10 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
                   )}
                 </TabsContent>
 
-                {/* Benchmark: con sub-tabs si el cliente tiene funcionarios/instituciones */}
+                {/* Benchmark: vista unificada por dependencia (secretaría + titular) */}
                 <TabsContent value="benchmark" className="mt-5 space-y-4">
                   {portalModules.benchmark_funcionarios || portalModules.benchmark_instituciones ? (
-                    <Tabs defaultValue={portalModules.benchmark_funcionarios ? "funcionarios" : "instituciones"}>
-                      <TabsList className="bg-background/50 border border-border/60 rounded-lg p-1 h-auto">
-                        {portalModules.benchmark_funcionarios && (
-                          <TabsTrigger value="funcionarios" className="rounded-md data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><UsersIcon className="w-4 h-4 mr-2" />Funcionarios</TabsTrigger>
-                        )}
-                        {portalModules.benchmark_instituciones && (
-                          <TabsTrigger value="instituciones" className="rounded-md data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><Building2 className="w-4 h-4 mr-2" />Instituciones</TabsTrigger>
-                        )}
-                      </TabsList>
-                      {portalModules.benchmark_funcionarios && (
-                        <TabsContent value="funcionarios" className="mt-4">
-                          <PortalBenchmark clientId={portal.clientId} clientName={portal.displayName} scope="funcionarios" />
-                        </TabsContent>
-                      )}
-                      {portalModules.benchmark_instituciones && (
-                        <TabsContent value="instituciones" className="mt-4">
-                          <PortalBenchmark clientId={portal.clientId} clientName={portal.displayName} scope="instituciones" />
-                        </TabsContent>
-                      )}
-                    </Tabs>
+                    <PortalBenchmark clientId={portal.clientId} clientName={portal.displayName} groupBy="dependencia" />
                   ) : (
                     <PortalBenchmark clientId={portal.clientId} clientName={portal.displayName} />
                   )}

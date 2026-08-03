@@ -15,7 +15,8 @@ import {
 import { BarChart3, Download, TrendingUp, TrendingDown, PieChart as PieIcon, Table as TableIcon, Newspaper, Trophy, Target, AlertTriangle, Sparkles, Minus, ArrowUp, ArrowDown, CalendarIcon, Lightbulb } from "lucide-react";
 import BenchmarkNarratives from "./BenchmarkNarratives";
 
-type Competitor = { id: string; name: string; network: string; brand_color: string; active: boolean; is_client: boolean; image_url: string | null; external_url: string | null };
+type Competitor = { id: string; name: string; network: string; brand_color: string; active: boolean; is_client: boolean; image_url: string | null; external_url: string | null; dependencia_id?: string | null; account_type?: string | null };
+type Dependencia = { id: string; nombre: string; tipo: string | null; titular: string | null; titular_cargo: string | null; sort_order: number | null };
 type Period = { id: string; period_label: string; period_start: string; period_end: string };
 type Metric = { id: string; period_id: string; competitor_id: string; network: string; performance_index: number | null; followers: number | null; follower_growth_rate: number | null; engagement_rate: number | null; posts_per_day: number | null; reach_per_day: number | null; interaction_per_impression: number | null };
 type Daily = { period_id: string; competitor_id: string; network: string; day: string; delta: number };
@@ -30,12 +31,15 @@ const METRICS: { key: keyof Metric; label: string; fmt: (n: number) => string }[
   { key: "interaction_per_impression", label: "Interacción / impresión", fmt: (n) => (n * 100).toFixed(3) + "%" },
 ];
 
-export default function PortalBenchmark({ clientId, clientName, scope }: { clientId: string; clientName: string; scope?: "general" | "funcionarios" | "instituciones" }) {
-  const [competitors, setCompetitors] = useState<Competitor[]>([]);
+export default function PortalBenchmark({ clientId, clientName, scope, groupBy }: { clientId: string; clientName: string; scope?: "general" | "funcionarios" | "instituciones"; groupBy?: "dependencia" }) {
+  const byDependencia = groupBy === "dependencia";
+  const [rawCompetitors, setRawCompetitors] = useState<Competitor[]>([]);
+  const [dependencias, setDependencias] = useState<Dependencia[]>([]);
+  const [accountFilter, setAccountFilter] = useState<"ambos" | "institucional" | "titular">("ambos");
   const [periods, setPeriods] = useState<Period[]>([]);
-  const [metrics, setMetrics] = useState<Metric[]>([]);
-  const [daily, setDaily] = useState<Daily[]>([]);
-  const [posts, setPosts] = useState<Post[]>([]);
+  const [rawMetrics, setRawMetrics] = useState<Metric[]>([]);
+  const [rawDaily, setRawDaily] = useState<Daily[]>([]);
+  const [rawPosts, setRawPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState<string>("");
   const [selectedMetric, setSelectedMetric] = useState<string>("followers");
@@ -48,15 +52,19 @@ export default function PortalBenchmark({ clientId, clientName, scope }: { clien
     (async () => {
       setLoading(true);
       let periodsQ = supabase.from("client_portal_benchmark_periods").select("*").eq("client_id", clientId);
-      if (scope) periodsQ = periodsQ.eq("scope", scope);
+      if (scope && !byDependencia) periodsQ = periodsQ.eq("scope", scope);
       let competitorsQ = supabase.from("client_portal_benchmark_competitors").select("*").eq("client_id", clientId).eq("active", true);
-      if (scope) competitorsQ = competitorsQ.eq("scope", scope);
-      const [c, p] = await Promise.all([
+      if (scope && !byDependencia) competitorsQ = competitorsQ.eq("scope", scope);
+      const [c, p, dep] = await Promise.all([
         competitorsQ.order("is_client", { ascending: false }).order("name"),
         periodsQ.order("period_start", { ascending: true }),
+        byDependencia
+          ? supabase.from("client_portal_dependencias").select("*").eq("client_id", clientId).order("sort_order")
+          : Promise.resolve({ data: [] as any[] }),
       ]);
       const ps = (p.data ?? []) as Period[];
-      setCompetitors((c.data ?? []) as Competitor[]);
+      setRawCompetitors((c.data ?? []) as Competitor[]);
+      setDependencias((dep.data ?? []) as Dependencia[]);
       setPeriods(ps);
       if (ps.length) {
         setSelectedPeriod(ps[ps.length - 1].id);
@@ -66,13 +74,102 @@ export default function PortalBenchmark({ clientId, clientName, scope }: { clien
           supabase.from("client_portal_benchmark_follower_daily").select("*").in("period_id", periodIds),
           supabase.from("client_portal_benchmark_posts").select("*").in("period_id", periodIds).order("interactions", { ascending: false }).limit(200),
         ]);
-        setMetrics((m.data ?? []) as Metric[]);
-        setDaily((d.data ?? []) as Daily[]);
-        setPosts((po.data ?? []) as Post[]);
+        setRawMetrics((m.data ?? []) as Metric[]);
+        setRawDaily((d.data ?? []) as Daily[]);
+        setRawPosts((po.data ?? []) as Post[]);
       }
       setLoading(false);
     })();
-  }, [clientId, scope]);
+  }, [clientId, scope, byDependencia]);
+
+  // ---------- AGRUPACIÓN POR DEPENDENCIA (lógica secretaría–titular) ----------
+  const depPalette = ["#2563eb", "#0891b2", "#7c3aed", "#db2777", "#ea580c", "#16a34a", "#ca8a04", "#4f46e5"];
+
+  /** Perfiles visibles según el filtro de tipo de cuenta (institucional / titular / ambos). */
+  const allowedIds = useMemo(() => {
+    if (!byDependencia) return null;
+    const ok = rawCompetitors.filter(
+      (c) => c.dependencia_id && (accountFilter === "ambos" || (c.account_type ?? "institucional") === accountFilter),
+    );
+    return new Set(ok.map((c) => c.id));
+  }, [byDependencia, rawCompetitors, accountFilter]);
+
+  const depOfCompetitor = useMemo(() => {
+    const m = new Map<string, string>();
+    rawCompetitors.forEach((c) => { if (c.dependencia_id) m.set(c.id, c.dependencia_id); });
+    return m;
+  }, [rawCompetitors]);
+
+  /** Entidades a comparar: cada dependencia se comporta como un "competidor". */
+  const competitors = useMemo<Competitor[]>(() => {
+    if (!byDependencia) return rawCompetitors;
+    const used = new Set<string>();
+    allowedIds?.forEach((id) => { const d = depOfCompetitor.get(id); if (d) used.add(d); });
+    return dependencias
+      .filter((d) => used.has(d.id))
+      .map((d, i) => ({
+        id: d.id,
+        name: d.nombre,
+        network: "",
+        brand_color: depPalette[i % depPalette.length],
+        active: true,
+        is_client: false,
+        image_url: null,
+        external_url: null,
+      }));
+  }, [byDependencia, rawCompetitors, dependencias, allowedIds, depOfCompetitor]);
+
+  const RATE_KEYS = new Set(["engagement_rate", "follower_growth_rate", "interaction_per_impression", "performance_index"]);
+
+  /** Métricas sumadas (escala) o promediadas (tasas) por dependencia + red + periodo. */
+  const metrics = useMemo<Metric[]>(() => {
+    if (!byDependencia) return rawMetrics;
+    const bucket = new Map<string, Metric[]>();
+    for (const m of rawMetrics) {
+      if (!allowedIds?.has(m.competitor_id)) continue;
+      const dep = depOfCompetitor.get(m.competitor_id);
+      if (!dep) continue;
+      const k = `${m.period_id}::${dep}::${m.network}`;
+      if (!bucket.has(k)) bucket.set(k, []);
+      bucket.get(k)!.push(m);
+    }
+    const out: Metric[] = [];
+    bucket.forEach((rows, k) => {
+      const [period_id, dep, network] = k.split("::");
+      const merged: any = { id: `dep-${k}`, period_id, competitor_id: dep, network };
+      for (const M of METRICS) {
+        const vals = rows.map((r) => Number(r[M.key])).filter((v) => Number.isFinite(v));
+        merged[M.key] = vals.length
+          ? (RATE_KEYS.has(M.key as string) ? vals.reduce((a, b) => a + b, 0) / vals.length : vals.reduce((a, b) => a + b, 0))
+          : null;
+      }
+      merged.reach_per_day = rows.reduce((a, r) => a + (Number(r.reach_per_day) || 0), 0) || null;
+      out.push(merged as Metric);
+    });
+    return out;
+  }, [byDependencia, rawMetrics, allowedIds, depOfCompetitor]);
+
+  const daily = useMemo<Daily[]>(() => {
+    if (!byDependencia) return rawDaily;
+    const bucket = new Map<string, Daily>();
+    for (const d of rawDaily) {
+      if (!allowedIds?.has(d.competitor_id)) continue;
+      const dep = depOfCompetitor.get(d.competitor_id);
+      if (!dep) continue;
+      const k = `${d.period_id}::${dep}::${d.network}::${d.day}`;
+      const prev = bucket.get(k);
+      if (prev) prev.delta += Number(d.delta) || 0;
+      else bucket.set(k, { ...d, competitor_id: dep, delta: Number(d.delta) || 0 });
+    }
+    return Array.from(bucket.values());
+  }, [byDependencia, rawDaily, allowedIds, depOfCompetitor]);
+
+  const posts = useMemo<Post[]>(() => {
+    if (!byDependencia) return rawPosts;
+    return rawPosts
+      .filter((p) => !p.competitor_id || allowedIds?.has(p.competitor_id))
+      .map((p) => (p.competitor_id ? { ...p, competitor_id: depOfCompetitor.get(p.competitor_id) ?? p.competitor_id } : p));
+  }, [byDependencia, rawPosts, allowedIds, depOfCompetitor]);
 
   const compMap = useMemo(() => new Map(competitors.map((c) => [c.id, c])), [competitors]);
   const currentPeriod = periods.find((p) => p.id === selectedPeriod) ?? null;
@@ -626,6 +723,19 @@ export default function PortalBenchmark({ clientId, clientName, scope }: { clien
             <SelectContent>{networks.map((n) => <SelectItem key={n} value={n}>{n === "all" ? "Todas" : n}</SelectItem>)}</SelectContent>
           </Select>
         </div>
+        {byDependencia && (
+          <div className="flex items-center gap-2">
+            <span className="text-xs uppercase tracking-widest text-muted-foreground">Cuentas</span>
+            <Select value={accountFilter} onValueChange={(v) => setAccountFilter(v as typeof accountFilter)}>
+              <SelectTrigger className="w-[190px] h-9"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ambos">Dependencia + titular</SelectItem>
+                <SelectItem value="institucional">Solo cuenta institucional</SelectItem>
+                <SelectItem value="titular">Solo titular</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
         <div className="ml-auto">
           <Button variant="outline" size="sm" onClick={exportCsv}>
             <Download className="w-4 h-4 mr-1" />Exportar CSV
