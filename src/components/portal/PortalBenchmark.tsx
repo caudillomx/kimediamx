@@ -37,6 +37,7 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
   const [dependencias, setDependencias] = useState<Dependencia[]>([]);
   const [accountFilter, setAccountFilter] = useState<"ambos" | "institucional" | "titular">("ambos");
   const [periods, setPeriods] = useState<Period[]>([]);
+  const [periodAlias, setPeriodAlias] = useState<Map<string, string>>(new Map());
   const [rawMetrics, setRawMetrics] = useState<Metric[]>([]);
   const [rawDaily, setRawDaily] = useState<Daily[]>([]);
   const [rawPosts, setRawPosts] = useState<Post[]>([]);
@@ -62,17 +63,42 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
           ? supabase.from("client_portal_dependencias").select("*").eq("client_id", clientId).order("sort_order")
           : Promise.resolve({ data: [] as any[] }),
       ]);
-      const ps = (p.data ?? []) as Period[];
+      const rawPeriods = (p.data ?? []) as Period[];
+      // En modo dependencia los periodos vienen duplicados por scope (funcionarios /
+      // instituciones). Se fusionan por etiqueta para no partir el dataset.
+      let ps = rawPeriods;
+      const alias = new Map<string, string>();
+      if (byDependencia) {
+        const byLabel = new Map<string, Period[]>();
+        rawPeriods.forEach((pp) => {
+          if (!byLabel.has(pp.period_label)) byLabel.set(pp.period_label, []);
+          byLabel.get(pp.period_label)!.push(pp);
+        });
+        ps = Array.from(byLabel.entries())
+          .map(([label, group]) => {
+            // Sin "::" en el id: ese separador se usa para las claves compuestas.
+            const id = `lbl@${label}`;
+            group.forEach((g) => alias.set(g.id, id));
+            return {
+              id,
+              period_label: label,
+              period_start: group.map((g) => g.period_start).sort()[0],
+              period_end: group.map((g) => g.period_end).sort().slice(-1)[0],
+            } as Period;
+          })
+          .sort((a, b) => a.period_start.localeCompare(b.period_start));
+      }
+      setPeriodAlias(alias);
       setRawCompetitors((c.data ?? []) as Competitor[]);
       setDependencias((dep.data ?? []) as Dependencia[]);
       setPeriods(ps);
       if (ps.length) {
         setSelectedPeriod(ps[ps.length - 1].id);
-        const periodIds = ps.map((x) => x.id);
+        const periodIds = rawPeriods.map((x) => x.id);
         const [m, d, po] = await Promise.all([
-          supabase.from("client_portal_benchmark_metrics").select("*").in("period_id", periodIds),
-          supabase.from("client_portal_benchmark_follower_daily").select("*").in("period_id", periodIds),
-          supabase.from("client_portal_benchmark_posts").select("*").in("period_id", periodIds).order("interactions", { ascending: false }).limit(200),
+          supabase.from("client_portal_benchmark_metrics").select("*").in("period_id", periodIds).limit(20000),
+          supabase.from("client_portal_benchmark_follower_daily").select("*").in("period_id", periodIds).limit(50000),
+          supabase.from("client_portal_benchmark_posts").select("*").in("period_id", periodIds).order("interactions", { ascending: false }).limit(byDependencia ? 1500 : 200),
         ]);
         setRawMetrics((m.data ?? []) as Metric[]);
         setRawDaily((d.data ?? []) as Daily[]);
@@ -129,7 +155,7 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
       if (!allowedIds?.has(m.competitor_id)) continue;
       const dep = depOfCompetitor.get(m.competitor_id);
       if (!dep) continue;
-      const k = `${m.period_id}::${dep}::${m.network}`;
+      const k = `${periodAlias.get(m.period_id) ?? m.period_id}::${dep}::${m.network}`;
       if (!bucket.has(k)) bucket.set(k, []);
       bucket.get(k)!.push(m);
     }
@@ -147,7 +173,7 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
       out.push(merged as Metric);
     });
     return out;
-  }, [byDependencia, rawMetrics, allowedIds, depOfCompetitor]);
+  }, [byDependencia, rawMetrics, allowedIds, depOfCompetitor, periodAlias]);
 
   const daily = useMemo<Daily[]>(() => {
     if (!byDependencia) return rawDaily;
@@ -156,20 +182,25 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
       if (!allowedIds?.has(d.competitor_id)) continue;
       const dep = depOfCompetitor.get(d.competitor_id);
       if (!dep) continue;
-      const k = `${d.period_id}::${dep}::${d.network}::${d.day}`;
+      const pid = periodAlias.get(d.period_id) ?? d.period_id;
+      const k = `${pid}::${dep}::${d.network}::${d.day}`;
       const prev = bucket.get(k);
       if (prev) prev.delta += Number(d.delta) || 0;
-      else bucket.set(k, { ...d, competitor_id: dep, delta: Number(d.delta) || 0 });
+      else bucket.set(k, { ...d, period_id: pid, competitor_id: dep, delta: Number(d.delta) || 0 });
     }
     return Array.from(bucket.values());
-  }, [byDependencia, rawDaily, allowedIds, depOfCompetitor]);
+  }, [byDependencia, rawDaily, allowedIds, depOfCompetitor, periodAlias]);
 
   const posts = useMemo<Post[]>(() => {
     if (!byDependencia) return rawPosts;
     return rawPosts
       .filter((p) => !p.competitor_id || allowedIds?.has(p.competitor_id))
-      .map((p) => (p.competitor_id ? { ...p, competitor_id: depOfCompetitor.get(p.competitor_id) ?? p.competitor_id } : p));
-  }, [byDependencia, rawPosts, allowedIds, depOfCompetitor]);
+      .map((p) => ({
+        ...p,
+        period_id: periodAlias.get(p.period_id) ?? p.period_id,
+        competitor_id: p.competitor_id ? (depOfCompetitor.get(p.competitor_id) ?? p.competitor_id) : p.competitor_id,
+      }));
+  }, [byDependencia, rawPosts, allowedIds, depOfCompetitor, periodAlias]);
 
   const compMap = useMemo(() => new Map(competitors.map((c) => [c.id, c])), [competitors]);
   const currentPeriod = periods.find((p) => p.id === selectedPeriod) ?? null;
@@ -270,6 +301,17 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
   }, [periodMetrics, selectedMetric, compMap, networkFilter]);
 
   const shareTotal = rankingData.reduce((a, b) => a + b.value, 0);
+
+  /** Gráficas legibles: sólo el top N; el resto se agrupa u omite. */
+  const topRanking = useMemo(() => rankingData.slice(0, 15), [rankingData]);
+  const shareData = useMemo(() => {
+    const top = rankingData.slice(0, 8);
+    const rest = rankingData.slice(8);
+    const restTotal = rest.reduce((a, b) => a + b.value, 0);
+    return restTotal > 0
+      ? [...top, { brand: `Otras (${rest.length})`, value: restTotal, color: "#94a3b8", isClient: false }]
+      : top;
+  }, [rankingData]);
 
   // Evolution (usa periodos: métrica agregada por periodo/competidor)
   const evolutionData = useMemo(() => {
@@ -530,6 +572,61 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
   }, [metrics, posts, activePeriodIds, prevPeriod, networkFilter, clientCompetitorIds, clientName, periods, currentPeriod, rangeMode, effectiveRange]);
 
   // Client's own evolution across all periods (for Actinver tab)
+  // ---------- INSIGHTS DE GABINETE (modo dependencia: no hay "cliente") ----------
+  const gabinete = useMemo(() => {
+    if (!byDependencia) return null;
+    const netFilter = (m: { network: string }) => networkFilter === "all" || m.network === networkFilter;
+    const isRate = (k: string) => k === "engagement_rate" || k === "follower_growth_rate" || k === "interaction_per_impression" || k === "performance_index";
+    const aggBy = (rows: Metric[], key: keyof Metric) => {
+      const acc = new Map<string, { s: number; n: number }>();
+      for (const r of rows) {
+        const v = Number(r[key] ?? NaN);
+        if (!Number.isFinite(v)) continue;
+        const e = acc.get(r.competitor_id) ?? { s: 0, n: 0 };
+        e.s += v; e.n += 1;
+        acc.set(r.competitor_id, e);
+      }
+      const out = new Map<string, number>();
+      acc.forEach((v, k) => out.set(k, isRate(key as string) ? (v.n ? v.s / v.n : 0) : v.s));
+      return out;
+    };
+    const curr = metrics.filter((m) => activePeriodIds.includes(m.period_id) && netFilter(m));
+    const prev = prevPeriod ? metrics.filter((m) => m.period_id === prevPeriod.id && netFilter(m)) : [];
+
+    const engNow = aggBy(curr, "engagement_rate");
+    const engRanking = Array.from(engNow.entries())
+      .filter(([, v]) => Number.isFinite(v) && v > 0)
+      .sort((a, b) => b[1] - a[1])
+      .map(([id, v]) => ({ id, name: compMap.get(id)?.name ?? "—", value: v }));
+    const engAvg = engRanking.length ? engRanking.reduce((a, b) => a + b.value, 0) / engRanking.length : null;
+
+    const fNow = aggBy(curr, "followers");
+    const fPrev = aggBy(prev, "followers");
+    const moves = Array.from(fNow.entries())
+      .map(([id, v]) => {
+        const p = fPrev.get(id);
+        const d = p && p !== 0 ? (v - p) / Math.abs(p) : null;
+        return { id, name: compMap.get(id)?.name ?? "—", delta: d, value: v };
+      })
+      .filter((r) => r.delta != null) as { id: string; name: string; delta: number; value: number }[];
+    const risers = moves.slice().sort((a, b) => b.delta - a.delta).slice(0, 5);
+    const fallers = moves.slice().sort((a, b) => a.delta - b.delta).slice(0, 5);
+
+    const postsHere = posts.filter((p) =>
+      activePeriodIds.includes(p.period_id)
+      && (networkFilter === "all" || p.network === networkFilter)
+      && (rangeMode === "period" || inRange(p.posted_at)),
+    );
+    const bestPost = postsHere.slice().sort((a, b) => (b.interactions ?? 0) - (a.interactions ?? 0))[0] ?? null;
+
+    const noData = engRanking.length === 0;
+    const headline = noData
+      ? `Sin métricas cargadas para ${currentPeriod?.period_label ?? "este periodo"} con los filtros activos.`
+      : `${engRanking[0].name} lidera el gabinete en engagement (${(engRanking[0].value * 100).toFixed(2)}%) entre ${engRanking.length} dependencias con datos${risers.length ? `; ${risers[0].name} es quien más crece en seguidores (${(risers[0].delta * 100).toFixed(1)}%)` : ""}.`;
+
+    return { engRanking, engAvg, risers, fallers, bestPost, headline, entities: engRanking.length };
+  }, [byDependencia, metrics, posts, activePeriodIds, prevPeriod, networkFilter, compMap, currentPeriod, rangeMode, effectiveRange]);
+
   const clientEvolution = useMemo(() => {
     const netFilter = (m: { network: string }) => networkFilter === "all" || m.network === networkFilter;
     return periods.map((p) => {
@@ -590,6 +687,20 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
     .sort((a, b) => (b.interactions ?? 0) - (a.interactions ?? 0));
   const sectorPostsPeriod = postsInScope.filter((p) => !isClientPost(p))
     .sort((a, b) => (b.interactions ?? 0) - (a.interactions ?? 0));
+  // En modo dependencia no hay "cliente": todo el gabinete es el universo comparado.
+  const ownPosts = byDependencia ? postsInScope.slice().sort((a, b) => (b.interactions ?? 0) - (a.interactions ?? 0)) : clientPostsPeriod;
+  const peerPosts = byDependencia ? ownPosts : sectorPostsPeriod;
+  /** Mejor publicación de cada dependencia (modo gabinete). */
+  const bestPerDependencia = (() => {
+    if (!byDependencia) return [];
+    const best = new Map<string, Post>();
+    for (const p of ownPosts) {
+      const k = p.competitor_id ?? p.profile_name;
+      const prev = best.get(k);
+      if (!prev || (p.interactions ?? 0) > (prev.interactions ?? 0)) best.set(k, p);
+    }
+    return Array.from(best.values()).sort((a, b) => (b.interactions ?? 0) - (a.interactions ?? 0)).slice(0, 10);
+  })();
 
   // ---------- Deeper content insights ----------
   const contentInsights = (() => {
@@ -600,12 +711,12 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
       const mid = Math.floor(s.length / 2);
       return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
     };
-    const cInter = clientPostsPeriod.map((p) => p.interactions ?? 0);
-    const sInter = sectorPostsPeriod.map((p) => p.interactions ?? 0);
+    const cInter = ownPosts.map((p) => p.interactions ?? 0);
+    const sInter = peerPosts.map((p) => p.interactions ?? 0);
     // Best day of week for client
     const dayNames = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
     const dayAgg = new Array(7).fill(0).map(() => ({ total: 0, n: 0 }));
-    for (const p of clientPostsPeriod) {
+    for (const p of ownPosts) {
       if (!p.posted_at) continue;
       const dow = new Date(p.posted_at).getDay();
       dayAgg[dow].total += p.interactions ?? 0;
@@ -619,7 +730,7 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
     // Top keywords from top sector posts (very light heuristic)
     const stop = new Set(["de","la","el","en","los","las","que","por","con","para","del","a","y","o","u","es","un","una","al","se","su","sus","lo","le","les","no","si","sí","este","esta","estos","estas","con","tu","tus","mi","mis","como","más","ya","ese","esa","esos","esas","the","and","for","of","to","in","on","is","it","this","that","are","with","from","at","by","or","be","an","as","we","you","your"]);
     const freq = new Map<string, number>();
-    for (const p of sectorPostsPeriod.slice(0, 30)) {
+    for (const p of peerPosts.slice(0, 30)) {
       if (!p.message) continue;
       const words = p.message.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
         .split(/[^a-záéíóúñü0-9#@]+/i)
@@ -632,7 +743,7 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
 
     // Sector leader (competitor with most total interactions in the range)
     const leaderMap = new Map<string, number>();
-    for (const p of sectorPostsPeriod) {
+    for (const p of peerPosts) {
       if (!p.competitor_id) continue;
       leaderMap.set(p.competitor_id, (leaderMap.get(p.competitor_id) ?? 0) + (p.interactions ?? 0));
     }
@@ -757,9 +868,45 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
           </div>
           <div className="flex-1">
             <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Insight del periodo</p>
-            <p className="text-base font-medium leading-snug mt-1">{insights.headline}</p>
+            <p className="text-base font-medium leading-snug mt-1">{gabinete ? gabinete.headline : insights.headline}</p>
           </div>
         </div>
+        {gabinete ? (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="p-3 rounded-lg bg-background/60 border border-border/40">
+              <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-muted-foreground">
+                <Trophy className="w-3 h-3" />Líder en engagement
+              </div>
+              <p className="mt-1 font-display font-bold text-base leading-tight">{gabinete.engRanking[0]?.name ?? "—"}</p>
+              <p className="text-[10px] text-muted-foreground">{gabinete.engRanking[0] ? (gabinete.engRanking[0].value * 100).toFixed(2) + "%" : "sin datos"}</p>
+            </div>
+            <div className="p-3 rounded-lg bg-background/60 border border-border/40">
+              <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-muted-foreground">
+                <Target className="w-3 h-3" />Promedio del gabinete
+              </div>
+              <p className="mt-1 font-display font-bold text-2xl tabular-nums">{gabinete.engAvg != null ? (gabinete.engAvg * 100).toFixed(2) + "%" : "—"}</p>
+              <p className="text-[10px] text-muted-foreground">{gabinete.entities} dependencias con datos</p>
+            </div>
+            <div className="p-3 rounded-lg bg-background/60 border border-border/40">
+              <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-muted-foreground">
+                <TrendingUp className="w-3 h-3" />Mayor crecimiento
+              </div>
+              <p className="mt-1 font-display font-bold text-base leading-tight">{gabinete.risers[0]?.name ?? "—"}</p>
+              <p className={cn("text-[10px]", deltaColor(gabinete.risers[0]?.delta ?? null))}>{fmtPct(gabinete.risers[0]?.delta ?? null)} seguidores</p>
+            </div>
+            <div className="p-3 rounded-lg bg-background/60 border border-border/40">
+              <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-muted-foreground">
+                <Newspaper className="w-3 h-3" />Mejor post del gabinete
+              </div>
+              <div className="mt-1 font-display font-bold text-2xl tabular-nums">
+                {gabinete.bestPost?.interactions?.toLocaleString("es-MX") ?? "—"}
+              </div>
+              <p className="text-[10px] text-muted-foreground truncate">
+                {gabinete.bestPost ? `${gabinete.bestPost.profile_name} · ${gabinete.bestPost.network}` : "sin publicaciones"}
+              </p>
+            </div>
+          </div>
+        ) : (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div className="p-3 rounded-lg bg-background/60 border border-border/40">
             <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-muted-foreground">
@@ -799,7 +946,8 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
             </p>
           </div>
         </div>
-        {insights.alerts.length > 0 && (
+        )}
+        {!gabinete && insights.alerts.length > 0 && (
           <div className="mt-4 p-3 rounded-lg border border-amber-500/30 bg-amber-500/5">
             <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-amber-500 mb-1">
               <AlertTriangle className="w-3 h-3" />Alertas
@@ -813,16 +961,86 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
 
       {/* SUB-TABS */}
       <Tabs defaultValue="resumen" className="w-full">
-        <TabsList className="grid grid-cols-5 w-full max-w-2xl">
+        <TabsList className={cn("grid w-full max-w-2xl", byDependencia ? "grid-cols-4" : "grid-cols-5")}>
           <TabsTrigger value="resumen">Resumen</TabsTrigger>
-          <TabsTrigger value="cliente">{clientName}</TabsTrigger>
-          <TabsTrigger value="competidores">Competidores</TabsTrigger>
+          {!byDependencia && <TabsTrigger value="cliente">{clientName}</TabsTrigger>}
+          <TabsTrigger value="competidores">{byDependencia ? "Comparativo" : "Competidores"}</TabsTrigger>
           <TabsTrigger value="contenido">Contenido</TabsTrigger>
           <TabsTrigger value="datos">Datos</TabsTrigger>
         </TabsList>
 
         {/* TAB: RESUMEN */}
         <TabsContent value="resumen" className="space-y-4 mt-4">
+          {gabinete ? (
+            <>
+              <div className="grid gap-4 md:grid-cols-2">
+                <Card className="p-5">
+                  <div className="flex items-center gap-2 mb-1">
+                    <TrendingUp className="w-4 h-4 text-emerald-500" />
+                    <h4 className="font-semibold text-sm">Quién sube</h4>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-3">Mayor crecimiento de seguidores vs periodo anterior.</p>
+                  {gabinete.risers.length === 0 ? (
+                    <p className="text-sm text-muted-foreground italic">Necesitas 2+ periodos.</p>
+                  ) : (
+                    <ul className="space-y-1.5">
+                      {gabinete.risers.map((r) => (
+                        <li key={r.id} className="flex items-center justify-between text-sm gap-2">
+                          <span className="truncate">{r.name}</span>
+                          <span className={cn("tabular-nums font-medium", deltaColor(r.delta))}>{fmtPct(r.delta)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </Card>
+                <Card className="p-5">
+                  <div className="flex items-center gap-2 mb-1">
+                    <TrendingDown className="w-4 h-4 text-rose-500" />
+                    <h4 className="font-semibold text-sm">Quién baja</h4>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-3">Mayor caída de seguidores vs periodo anterior.</p>
+                  {gabinete.fallers.length === 0 ? (
+                    <p className="text-sm text-muted-foreground italic">Necesitas 2+ periodos.</p>
+                  ) : (
+                    <ul className="space-y-1.5">
+                      {gabinete.fallers.map((r) => (
+                        <li key={r.id} className="flex items-center justify-between text-sm gap-2">
+                          <span className="truncate">{r.name}</span>
+                          <span className={cn("tabular-nums font-medium", deltaColor(r.delta))}>{fmtPct(r.delta)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </Card>
+              </div>
+              <Card className="p-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <Trophy className="w-4 h-4 text-primary" />
+                  <h4 className="font-semibold text-sm">Top 10 dependencias — engagement</h4>
+                  <span className="text-[10px] text-muted-foreground ml-auto">Promedio del gabinete: {gabinete.engAvg != null ? (gabinete.engAvg * 100).toFixed(2) + "%" : "—"}</span>
+                </div>
+                {gabinete.engRanking.length === 0 ? (
+                  <p className="text-sm text-muted-foreground italic">Sin datos con los filtros activos.</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {gabinete.engRanking.slice(0, 10).map((r, i) => (
+                      <li key={r.id} className="flex items-center gap-3 text-sm">
+                        <span className="w-5 text-muted-foreground tabular-nums">{i + 1}</span>
+                        <span className="flex-1 truncate">{r.name}</span>
+                        <span className="tabular-nums font-medium">{(r.value * 100).toFixed(2)}%</span>
+                        {gabinete.engAvg != null && (
+                          <span className={cn("text-[10px] tabular-nums w-16 text-right", r.value >= gabinete.engAvg ? "text-emerald-500" : "text-rose-500")}>
+                            {fmtPct((r.value - gabinete.engAvg) / gabinete.engAvg)}
+                          </span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </Card>
+            </>
+          ) : (
+          <>
           <div className="grid gap-4 md:grid-cols-2">
             <Card className="p-5">
               <div className="flex items-center gap-2 mb-1">
@@ -875,7 +1093,8 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
                   return { brand: c ? `${c.name}${networkFilter === "all" ? ` · ${m.network}` : ""}` : m.competitor_id, value: v, color: c?.brand_color ?? "#94a3b8", isClient: !!c?.is_client };
                 })
                 .filter((r) => Number.isFinite(r.value) && r.value !== 0)
-                .sort((a, b) => b.value - a.value);
+                .sort((a, b) => b.value - a.value)
+                .slice(0, 20);
               if (!data.length) return <p className="text-sm text-muted-foreground italic">Sin datos.</p>;
               return (
                 <ResponsiveContainer width="100%" height={Math.max(220, data.length * 26)}>
@@ -892,9 +1111,12 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
               );
             })()}
           </Card>
+          </>
+          )}
         </TabsContent>
 
         {/* TAB: CLIENT */}
+        {!byDependencia && (
         <TabsContent value="cliente" className="space-y-4 mt-4">
           <div className="grid gap-3 md:grid-cols-3">
             {METRICS.slice(0, 6).map((M) => {
@@ -972,6 +1194,7 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
             )}
           </Card>
         </TabsContent>
+        )}
 
         {/* TAB: COMPETIDORES */}
         <TabsContent value="competidores" className="space-y-4 mt-4">
@@ -988,18 +1211,19 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
               <div className="flex items-center gap-2 mb-3">
                 <BarChart3 className="w-4 h-4 text-muted-foreground" />
                 <h4 className="font-semibold text-sm">Ranking — {currentMetric.label}</h4>
+                <span className="text-[10px] text-muted-foreground ml-auto">Top {topRanking.length} de {rankingData.length}</span>
               </div>
               {rankingData.length === 0 ? (
                 <p className="text-sm text-muted-foreground italic">Sin datos.</p>
               ) : (
-                <ResponsiveContainer width="100%" height={Math.max(220, rankingData.length * 28)}>
-                  <BarChart data={rankingData} layout="vertical" margin={{ left: 8, right: 24 }}>
+                <ResponsiveContainer width="100%" height={Math.max(220, topRanking.length * 28)}>
+                  <BarChart data={topRanking} layout="vertical" margin={{ left: 8, right: 24 }}>
                     <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
                     <XAxis type="number" fontSize={10} tickFormatter={(v) => v > 999 ? `${(v / 1000).toFixed(1)}k` : String(v)} />
-                    <YAxis type="category" dataKey="brand" fontSize={11} width={170} />
+                    <YAxis type="category" dataKey="brand" fontSize={10} width={200} />
                     <Tooltip formatter={(v: number) => currentMetric.fmt(v)} />
                     <Bar dataKey="value" radius={[0, 6, 6, 0]}>
-                      {rankingData.map((r, i) => <Cell key={i} fill={r.color} fillOpacity={r.isClient ? 1 : 0.55} />)}
+                      {topRanking.map((r, i) => <Cell key={i} fill={r.color} fillOpacity={r.isClient ? 1 : 0.75} />)}
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
@@ -1014,13 +1238,13 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
               {rankingData.length === 0 ? (
                 <p className="text-sm text-muted-foreground italic">Sin datos.</p>
               ) : (
-                <ResponsiveContainer width="100%" height={280}>
+                <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
-                    <Pie data={rankingData} dataKey="value" nameKey="brand" cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={2}>
-                      {rankingData.map((r, i) => <Cell key={i} fill={r.color} fillOpacity={r.isClient ? 1 : 0.55} />)}
+                    <Pie data={shareData} dataKey="value" nameKey="brand" cx="50%" cy="45%" innerRadius={55} outerRadius={95} paddingAngle={2}>
+                      {shareData.map((r, i) => <Cell key={i} fill={r.color} fillOpacity={r.isClient ? 1 : 0.75} />)}
                     </Pie>
                     <Tooltip formatter={(v: number, _n, p: any) => [`${currentMetric.fmt(v)} (${((v / shareTotal) * 100).toFixed(1)}%)`, String(p.payload.brand)]} />
-                    <Legend wrapperStyle={{ fontSize: 10 }} />
+                    <Legend wrapperStyle={{ fontSize: 10, maxHeight: 90, overflowY: "auto" }} />
                   </PieChart>
                 </ResponsiveContainer>
               )}
@@ -1035,20 +1259,26 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
             {evolutionData.length < 2 ? (
               <p className="text-sm text-muted-foreground italic">Necesitas 2+ periodos cargados.</p>
             ) : (
+              (() => {
+                const topKeys = new Set(topRanking.slice(0, 8).map((r) => r.brand));
+                const lines = brandsList.filter((b) => b.isClient || topKeys.has(b.key));
+                return (
               <ResponsiveContainer width="100%" height={320}>
                 <LineChart data={evolutionData}>
                   <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
                   <XAxis dataKey="period" fontSize={10} />
                   <YAxis fontSize={10} tickFormatter={(v) => v > 999 ? `${(v / 1000).toFixed(1)}k` : String(v)} />
                   <Tooltip formatter={(v: number) => currentMetric.fmt(v)} />
-                  <Legend wrapperStyle={{ fontSize: 10 }} />
-                  {brandsList.map((b) => (
+                  <Legend wrapperStyle={{ fontSize: 10, maxHeight: 60, overflowY: "auto" }} />
+                  {lines.map((b) => (
                     <Line key={b.key} type="monotone" dataKey={b.key} stroke={b.color}
                       strokeWidth={b.isClient ? 3 : 1.5} strokeOpacity={b.isClient ? 1 : 0.65}
                       dot={{ r: b.isClient ? 4 : 2 }} activeDot={{ r: b.isClient ? 6 : 4 }} />
                   ))}
                 </LineChart>
               </ResponsiveContainer>
+                );
+              })()
             )}
           </Card>
         </TabsContent>
@@ -1067,8 +1297,8 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
               <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Interacciones prom. / post</p>
               <p className="text-2xl font-display font-bold tabular-nums mt-1">{Math.round(contentInsights.clientAvg).toLocaleString("es-MX")}</p>
               <p className="text-[10px] text-muted-foreground mt-1">
-                Sector: <span className="font-medium text-foreground">{Math.round(contentInsights.sectorAvg).toLocaleString("es-MX")}</span>
-                {contentInsights.sectorAvg > 0 && (
+                {byDependencia ? `${contentInsights.clientPostCount} publicaciones analizadas` : <>Sector: <span className="font-medium text-foreground">{Math.round(contentInsights.sectorAvg).toLocaleString("es-MX")}</span></>}
+                {!byDependencia && contentInsights.sectorAvg > 0 && (
                   <span className={cn("ml-1", contentInsights.clientAvg >= contentInsights.sectorAvg ? "text-emerald-500" : "text-rose-500")}>
                     ({fmtPct((contentInsights.clientAvg - contentInsights.sectorAvg) / contentInsights.sectorAvg)})
                   </span>
@@ -1078,15 +1308,15 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
             <Card className="p-4">
               <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Mediana / post</p>
               <p className="text-2xl font-display font-bold tabular-nums mt-1">{Math.round(contentInsights.clientMedian).toLocaleString("es-MX")}</p>
-              <p className="text-[10px] text-muted-foreground mt-1">Sector: <span className="font-medium text-foreground">{Math.round(contentInsights.sectorMedian).toLocaleString("es-MX")}</span></p>
+              {!byDependencia && <p className="text-[10px] text-muted-foreground mt-1">Sector: <span className="font-medium text-foreground">{Math.round(contentInsights.sectorMedian).toLocaleString("es-MX")}</span></p>}
             </Card>
             <Card className="p-4">
-              <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Mejor día {clientName}</p>
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Mejor día {byDependencia ? "del gabinete" : clientName}</p>
               <p className="text-2xl font-display font-bold mt-1">{contentInsights.bestDay ? contentInsights.bestDay.day : "—"}</p>
               <p className="text-[10px] text-muted-foreground mt-1">{contentInsights.bestDay ? `${Math.round(contentInsights.bestDay.avg).toLocaleString("es-MX")} interacc. prom.` : "Sin posts en el rango"}</p>
             </Card>
             <Card className="p-4">
-              <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Líder del sector</p>
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground">{byDependencia ? "Dependencia líder" : "Líder del sector"}</p>
               <p className="text-lg font-display font-bold mt-1 truncate">{contentInsights.leader?.name ?? "—"}</p>
               <p className="text-[10px] text-muted-foreground mt-1">{contentInsights.leader ? `${contentInsights.leader.total.toLocaleString("es-MX")} interacc. totales` : "Sin datos"}</p>
             </Card>
@@ -1096,7 +1326,7 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
             <Card className="p-5">
               <div className="flex items-center gap-2 mb-2">
                 <Lightbulb className="w-4 h-4 text-primary" />
-                <h4 className="font-semibold text-sm">Palabras clave que usa el sector</h4>
+              <h4 className="font-semibold text-sm">{byDependencia ? "Palabras clave del gabinete" : "Palabras clave que usa el sector"}</h4>
               </div>
               <p className="text-xs text-muted-foreground mb-3">Términos más frecuentes en los posts top de los competidores. Úsalo para inspirar temas propios.</p>
               <div className="flex flex-wrap gap-2">
@@ -1110,6 +1340,37 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
           )}
 
           <div className="grid gap-4 lg:grid-cols-2">
+            {byDependencia ? (
+            <Card className="p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <Trophy className="w-4 h-4 text-primary" />
+                <h4 className="font-semibold text-sm">Mejor publicación por dependencia</h4>
+                <Badge variant="secondary" className="ml-auto">{bestPerDependencia.length}</Badge>
+              </div>
+              {bestPerDependencia.length === 0 ? (
+                <p className="text-sm text-muted-foreground italic">Sin publicaciones en este {rangeMode === "custom" ? "rango" : "periodo"}{networkFilter !== "all" ? ` para ${networkFilter}` : ""}.</p>
+              ) : (
+                <ul className="space-y-3 max-h-[500px] overflow-auto pr-1">
+                  {bestPerDependencia.map((p) => {
+                    const c = p.competitor_id ? compMap.get(p.competitor_id) : null;
+                    return (
+                      <li key={p.id} className="p-3 rounded-lg border border-border/40 bg-background/40">
+                        <div className="flex items-center justify-between text-[10px] text-muted-foreground mb-1 gap-2">
+                          <span className="inline-flex items-center gap-1 truncate">
+                            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: c?.brand_color ?? "#94a3b8" }} />
+                            {c?.name ?? p.profile_name} · {p.network}
+                          </span>
+                          <span className="tabular-nums font-medium text-foreground shrink-0">{p.interactions?.toLocaleString("es-MX") ?? 0}</span>
+                        </div>
+                        <p className="text-xs line-clamp-3">{p.message ?? "—"}</p>
+                        {p.link && <a href={p.link} target="_blank" rel="noreferrer" className="text-[11px] text-primary hover:underline mt-1 inline-block">Ver publicación ↗</a>}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </Card>
+            ) : (
             <Card className="p-5">
               <div className="flex items-center gap-2 mb-3">
                 <Trophy className="w-4 h-4 text-primary" />
@@ -1136,18 +1397,19 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
                 </ul>
               )}
             </Card>
+            )}
 
             <Card className="p-5">
               <div className="flex items-center gap-2 mb-3">
                 <Newspaper className="w-4 h-4 text-muted-foreground" />
-                <h4 className="font-semibold text-sm">Top del sector</h4>
-                <Badge variant="secondary" className="ml-auto">{sectorPostsPeriod.length}</Badge>
+                <h4 className="font-semibold text-sm">{byDependencia ? "Top del gabinete" : "Top del sector"}</h4>
+                <Badge variant="secondary" className="ml-auto">{peerPosts.length}</Badge>
               </div>
-              {sectorPostsPeriod.length === 0 ? (
+              {peerPosts.length === 0 ? (
                 <p className="text-sm text-muted-foreground italic">Sin publicaciones cargadas.</p>
               ) : (
                 <ul className="space-y-3 max-h-[500px] overflow-auto pr-1">
-                  {sectorPostsPeriod.slice(0, 10).map((p) => {
+                  {peerPosts.slice(0, 10).map((p) => {
                     const c = p.competitor_id ? compMap.get(p.competitor_id) : null;
                     return (
                       <li key={p.id} className="p-3 rounded-lg border border-border/40 bg-background/40">
