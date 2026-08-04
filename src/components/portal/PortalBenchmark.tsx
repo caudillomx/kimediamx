@@ -1036,7 +1036,7 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
                     <TrendingUp className="w-4 h-4 text-emerald-500" />
                     <h4 className="font-semibold text-sm">Quién sube</h4>
                   </div>
-                  <p className="text-xs text-muted-foreground mb-3">Mayor crecimiento de seguidores vs periodo anterior.</p>
+                  <p className="text-xs text-muted-foreground mb-3">Mayor crecimiento de seguidores vs periodo anterior (mismas redes comparables).</p>
                   {gabinete.risers.length === 0 ? (
                     <p className="text-sm text-muted-foreground italic">Necesitas 2+ periodos.</p>
                   ) : (
@@ -1055,7 +1055,7 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
                     <TrendingDown className="w-4 h-4 text-rose-500" />
                     <h4 className="font-semibold text-sm">Quién baja</h4>
                   </div>
-                  <p className="text-xs text-muted-foreground mb-3">Mayor caída de seguidores vs periodo anterior.</p>
+                  <p className="text-xs text-muted-foreground mb-3">Mayor caída de seguidores vs periodo anterior (mismas redes comparables).</p>
                   {gabinete.fallers.length === 0 ? (
                     <p className="text-sm text-muted-foreground italic">Necesitas 2+ periodos.</p>
                   ) : (
