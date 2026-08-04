@@ -319,9 +319,13 @@ const ContentCycleDetail = () => {
     const path = `${selectedCycleId}/${Date.now()}.${ext}`;
     const { error } = await supabase.storage.from("content-inputs").upload(path, file);
     if (error) { toast.error("Error subiendo archivo"); setUploading(false); return null; }
-    const { data: urlData } = supabase.storage.from("content-inputs").getPublicUrl(path);
+    // Bucket privado: se firma la URL (1 año) en vez de exponerla públicamente.
+    const { data: signed } = await supabase.storage
+      .from("content-inputs")
+      .createSignedUrl(path, 60 * 60 * 24 * 365);
     setUploading(false);
-    return { url: urlData.publicUrl, name: file.name };
+    if (!signed?.signedUrl) { toast.error("No se pudo generar el enlace del archivo"); return null; }
+    return { url: signed.signedUrl, name: file.name };
   };
 
 
