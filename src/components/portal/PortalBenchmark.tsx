@@ -923,6 +923,23 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
         </p>
       )}
 
+      {/* Contexto del universo visible: todo el tablero se calcula sobre estos filtros. */}
+      <div className="flex flex-wrap items-center gap-2 -mt-1">
+        <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Viendo</span>
+        <Badge variant="secondary" className="text-[10px]">{effectiveRange?.label ?? "sin periodo"}</Badge>
+        <Badge variant="secondary" className="text-[10px]">{networkFilter === "all" ? "Todas las redes" : networkFilter}</Badge>
+        {byDependencia && (
+          <Badge variant="secondary" className="text-[10px]">
+            {accountFilter === "ambos" ? "Dependencia + titular" : accountFilter === "titular" ? "Solo titulares" : "Solo cuentas institucionales"}
+          </Badge>
+        )}
+        {byDependencia && (
+          <span className="text-[10px] text-muted-foreground">
+            {competitors.length} {gabinete?.unit ?? "dependencias"} en el universo · {postsInScope.length} publicaciones
+          </span>
+        )}
+      </div>
+
       {/* EXECUTIVE SUMMARY */}
       <Card className="p-5 bg-gradient-to-br from-primary/5 via-background to-background border-primary/20">
         <div className="flex items-start gap-3 mb-4">
