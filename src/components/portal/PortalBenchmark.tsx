@@ -1074,7 +1074,7 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
                 <div className="flex items-center gap-2 mb-3">
                   <Trophy className="w-4 h-4 text-primary" />
                   <h4 className="font-semibold text-sm">Top 10 dependencias — engagement</h4>
-                  <span className="text-[10px] text-muted-foreground ml-auto">Promedio del gabinete: {gabinete.engAvg != null ? (gabinete.engAvg * 100).toFixed(2) + "%" : "—"}</span>
+                  <span className="text-[10px] text-muted-foreground ml-auto">Promedio del gabinete: {gabinete.engAvg != null ? (gabinete.engAvg * 100).toFixed(2) + "%" : "—"} · última columna = vs promedio</span>
                 </div>
                 {gabinete.engRanking.length === 0 ? (
                   <p className="text-sm text-muted-foreground italic">Sin datos con los filtros activos.</p>
