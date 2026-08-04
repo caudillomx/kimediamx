@@ -609,7 +609,7 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
       return out;
     };
     const curr = metrics.filter((m) => activePeriodIds.includes(m.period_id) && netFilter(m));
-    const prev = prevPeriod ? metrics.filter((m) => m.period_id === prevPeriod.id && netFilter(m)) : [];
+    const prev = prevPeriodIds.length ? metrics.filter((m) => prevPeriodIds.includes(m.period_id) && netFilter(m)) : [];
 
     const engNow = aggBy(curr, "engagement_rate");
     const engRanking = Array.from(engNow.entries())
@@ -618,15 +618,36 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
       .map(([id, v]) => ({ id, name: compMap.get(id)?.name ?? "—", value: v }));
     const engAvg = engRanking.length ? engRanking.reduce((a, b) => a + b.value, 0) / engRanking.length : null;
 
-    const fNow = aggBy(curr, "followers");
-    const fPrev = aggBy(prev, "followers");
-    const moves = Array.from(fNow.entries())
-      .map(([id, v]) => {
-        const p = fPrev.get(id);
-        const d = p && p !== 0 ? (v - p) / Math.abs(p) : null;
-        return { id, name: compMap.get(id)?.name ?? "—", delta: d, value: v };
-      })
-      .filter((r) => r.delta != null) as { id: string; name: string; delta: number; value: number }[];
+    // Crecimiento de seguidores: se compara SOLO sobre pares (dependencia, red) con dato
+    // en ambos periodos. Comparar sumas totales produce falsos -100% / +900% cuando la
+    // cobertura de redes cambia entre meses o cambia el filtro de Cuentas.
+    const followersByDepNet = (rows: Metric[]) => {
+      const acc = new Map<string, number>();
+      for (const r of rows) {
+        const v = Number(r.followers ?? NaN);
+        if (!Number.isFinite(v)) continue;
+        const k = `${r.competitor_id}::${r.network}`;
+        acc.set(k, (acc.get(k) ?? 0) + v);
+      }
+      return acc;
+    };
+    const fNowNet = followersByDepNet(curr);
+    const fPrevNet = followersByDepNet(prev);
+    const paired = new Map<string, { now: number; prev: number }>();
+    fNowNet.forEach((v, k) => {
+      const p = fPrevNet.get(k);
+      if (p == null || p === 0) return;
+      const dep = k.split("::")[0];
+      const e = paired.get(dep) ?? { now: 0, prev: 0 };
+      e.now += v; e.prev += p;
+      paired.set(dep, e);
+    });
+    const moves = Array.from(paired.entries()).map(([id, v]) => ({
+      id,
+      name: compMap.get(id)?.name ?? "—",
+      delta: (v.now - v.prev) / Math.abs(v.prev),
+      value: v.now,
+    }));
     const risers = moves.slice().sort((a, b) => b.delta - a.delta).slice(0, 5);
     const fallers = moves.slice().sort((a, b) => a.delta - b.delta).slice(0, 5);
 
@@ -643,7 +664,7 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
       : `${engRanking[0].name} lidera el gabinete en engagement (${(engRanking[0].value * 100).toFixed(2)}%) entre ${engRanking.length} dependencias con datos${risers.length ? `; ${risers[0].name} es quien más crece en seguidores (${(risers[0].delta * 100).toFixed(1)}%)` : ""}.`;
 
     return { engRanking, engAvg, risers, fallers, bestPost, headline, entities: engRanking.length };
-  }, [byDependencia, metrics, posts, activePeriodIds, prevPeriod, networkFilter, compMap, currentPeriod, rangeMode, effectiveRange]);
+  }, [byDependencia, metrics, posts, activePeriodIds, prevPeriodIds, networkFilter, compMap, currentPeriod, rangeMode, effectiveRange]);
 
   const clientEvolution = useMemo(() => {
     const netFilter = (m: { network: string }) => networkFilter === "all" || m.network === networkFilter;
