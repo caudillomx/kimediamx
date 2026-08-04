@@ -1039,9 +1039,9 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
                 <Card className="p-5">
                   <div className="flex items-center gap-2 mb-1">
                     <TrendingUp className="w-4 h-4 text-emerald-500" />
-                    <h4 className="font-semibold text-sm">Quién sube</h4>
+                    <h4 className="font-semibold text-sm">Quién sube{scopeSuffix}</h4>
                   </div>
-                  <p className="text-xs text-muted-foreground mb-3">Mayor crecimiento de seguidores vs periodo anterior (mismas redes comparables).</p>
+                  <p className="text-xs text-muted-foreground mb-3">Mayor crecimiento de seguidores vs periodo anterior, sólo sobre {gabinete.unit} y redes con dato en ambos periodos.</p>
                   {gabinete.risers.length === 0 ? (
                     <p className="text-sm text-muted-foreground italic">Necesitas 2+ periodos.</p>
                   ) : (
@@ -1058,9 +1058,9 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
                 <Card className="p-5">
                   <div className="flex items-center gap-2 mb-1">
                     <TrendingDown className="w-4 h-4 text-rose-500" />
-                    <h4 className="font-semibold text-sm">Quién baja</h4>
+                    <h4 className="font-semibold text-sm">Quién baja{scopeSuffix}</h4>
                   </div>
-                  <p className="text-xs text-muted-foreground mb-3">Mayor caída de seguidores vs periodo anterior (mismas redes comparables).</p>
+                  <p className="text-xs text-muted-foreground mb-3">Mayor caída de seguidores vs periodo anterior, sólo sobre {gabinete.unit} y redes con dato en ambos periodos.</p>
                   {gabinete.fallers.length === 0 ? (
                     <p className="text-sm text-muted-foreground italic">Necesitas 2+ periodos.</p>
                   ) : (
@@ -1078,8 +1078,8 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
               <Card className="p-5">
                 <div className="flex items-center gap-2 mb-3">
                   <Trophy className="w-4 h-4 text-primary" />
-                  <h4 className="font-semibold text-sm">Top 10 dependencias — engagement</h4>
-                  <span className="text-[10px] text-muted-foreground ml-auto">Promedio del gabinete: {gabinete.engAvg != null ? (gabinete.engAvg * 100).toFixed(2) + "%" : "—"} · última columna = vs promedio</span>
+                  <h4 className="font-semibold text-sm">Top 10 {gabinete.unit} — engagement</h4>
+                  <span className="text-[10px] text-muted-foreground ml-auto">Promedio de {gabinete.unit} con datos: {gabinete.engAvg != null ? (gabinete.engAvg * 100).toFixed(2) + "%" : "—"} · última columna = vs promedio</span>
                 </div>
                 {gabinete.engRanking.length === 0 ? (
                   <p className="text-sm text-muted-foreground italic">Sin datos con los filtros activos.</p>
