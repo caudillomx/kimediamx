@@ -1340,12 +1340,12 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
               {!byDependencia && <p className="text-[10px] text-muted-foreground mt-1">Sector: <span className="font-medium text-foreground">{Math.round(contentInsights.sectorMedian).toLocaleString("es-MX")}</span></p>}
             </Card>
             <Card className="p-4">
-              <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Mejor día {byDependencia ? "del gabinete" : clientName}</p>
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Mejor día {byDependencia ? `del gabinete${scopeSuffix}` : clientName}</p>
               <p className="text-2xl font-display font-bold mt-1">{contentInsights.bestDay ? contentInsights.bestDay.day : "—"}</p>
               <p className="text-[10px] text-muted-foreground mt-1">{contentInsights.bestDay ? `${Math.round(contentInsights.bestDay.avg).toLocaleString("es-MX")} interacc. prom.` : "Sin posts en el rango"}</p>
             </Card>
             <Card className="p-4">
-              <p className="text-[10px] uppercase tracking-widest text-muted-foreground">{byDependencia ? "Dependencia líder" : "Líder del sector"}</p>
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground">{byDependencia ? `Dependencia líder${scopeSuffix}` : "Líder del sector"}</p>
               <p className="text-lg font-display font-bold mt-1 truncate">{contentInsights.leader?.name ?? "—"}</p>
               <p className="text-[10px] text-muted-foreground mt-1">{contentInsights.leader ? `${contentInsights.leader.total.toLocaleString("es-MX")} interacc. totales` : "Sin datos"}</p>
             </Card>
@@ -1355,9 +1355,13 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
             <Card className="p-5">
               <div className="flex items-center gap-2 mb-2">
                 <Lightbulb className="w-4 h-4 text-primary" />
-              <h4 className="font-semibold text-sm">{byDependencia ? "Palabras clave del gabinete" : "Palabras clave que usa el sector"}</h4>
+              <h4 className="font-semibold text-sm">{byDependencia ? `Palabras clave del gabinete${scopeSuffix}` : "Palabras clave que usa el sector"}</h4>
               </div>
-              <p className="text-xs text-muted-foreground mb-3">Términos más frecuentes en los posts top de los competidores. Úsalo para inspirar temas propios.</p>
+              <p className="text-xs text-muted-foreground mb-3">
+                {byDependencia
+                  ? `Términos más frecuentes en las publicaciones top del universo visible${scopeSuffix ? ` — cuentas ${accountFilter === "titular" ? "de titulares" : "institucionales"}` : " — cuentas institucionales y de titulares"}.`
+                  : "Términos más frecuentes en los posts top de los competidores. Úsalo para inspirar temas propios."}
+              </p>
               <div className="flex flex-wrap gap-2">
                 {contentInsights.topKeywords.map(([w, n]) => (
                   <Badge key={w} variant="secondary" className="text-xs">
