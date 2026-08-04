@@ -76,7 +76,7 @@ export default function PortalDependenciaFicha({
   const ranking = useMemo(
     () => Array.from(curr.entries())
       .filter(([, v]) => (v.engagement ?? 0) > 0)
-      .sort((a, b) => (b.engagement ?? 0) - (a.engagement ?? 0)),
+      .sort((a, b) => (b[1].engagement ?? 0) - (a[1].engagement ?? 0)),
     [curr],
   );
   const rank = dep ? ranking.findIndex(([id]) => id === dep.id) : -1;
