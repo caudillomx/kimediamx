@@ -1435,11 +1435,12 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
             </Card>
             )}
 
+            {(!byDependencia || accountFilter !== "institucional") && (
             <Card className="p-5">
               <div className="flex items-center gap-2 mb-3">
                 <Newspaper className="w-4 h-4 text-muted-foreground" />
               <h4 className="font-semibold text-sm">{byDependencia ? "Top de titulares del gabinete" : "Top del sector"}</h4>
-                <Badge variant="secondary" className="ml-auto">Top {Math.min(10, topPeerPosts.length)} de {topPeerPosts.length}</Badge>
+                <Badge variant="secondary" className="ml-auto">Top {Math.min(10, topPeerPosts.length)} de {topPeerPosts.length}{byDependencia ? " · titular" : ""}</Badge>
               </div>
               {topPeerPosts.length === 0 ? (
                 <p className="text-sm text-muted-foreground italic">Sin publicaciones cargadas.</p>
@@ -1465,6 +1466,7 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
                 </ul>
               )}
             </Card>
+            )}
           </div>
         </TabsContent>
 
