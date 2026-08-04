@@ -663,12 +663,13 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
     const bestPost = postsHere.slice().sort((a, b) => (b.interactions ?? 0) - (a.interactions ?? 0))[0] ?? null;
 
     const noData = engRanking.length === 0;
+    const unit = accountFilter === "titular" ? "titulares" : accountFilter === "institucional" ? "cuentas institucionales" : "dependencias";
     const headline = noData
-      ? `Sin métricas cargadas para ${currentPeriod?.period_label ?? "este periodo"} con los filtros activos.`
-      : `${engRanking[0].name} lidera el gabinete en engagement (${(engRanking[0].value * 100).toFixed(2)}%) entre ${engRanking.length} dependencias con datos${risers.length ? `; ${risers[0].name} es quien más crece en seguidores (${(risers[0].delta * 100).toFixed(1)}%)` : ""}.`;
+      ? `Sin métricas cargadas para ${effectiveRange?.label ?? "este periodo"} con los filtros activos.`
+      : `${engRanking[0].name} lidera en engagement (${(engRanking[0].value * 100).toFixed(2)}%) entre ${engRanking.length} ${unit} con datos${risers.length ? `; ${risers[0].name} es quien más crece en seguidores (${(risers[0].delta * 100).toFixed(1)}%)` : ""}.`;
 
-    return { engRanking, engAvg, risers, fallers, bestPost, headline, entities: engRanking.length };
-  }, [byDependencia, metrics, posts, activePeriodIds, prevPeriodIds, networkFilter, compMap, currentPeriod, rangeMode, effectiveRange]);
+    return { engRanking, engAvg, risers, fallers, bestPost, headline, entities: engRanking.length, unit };
+  }, [byDependencia, metrics, posts, activePeriodIds, prevPeriodIds, networkFilter, compMap, currentPeriod, rangeMode, effectiveRange, accountFilter]);
 
   const clientEvolution = useMemo(() => {
     const netFilter = (m: { network: string }) => networkFilter === "all" || m.network === networkFilter;
