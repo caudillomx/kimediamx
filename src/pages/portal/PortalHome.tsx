@@ -243,7 +243,26 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
     return (localStorage.getItem("portal-theme") as "dark" | "light") || "dark";
   });
   const [activeTab, setActiveTab] = useState<string>("panorama");
+  const [focusDepId, setFocusDepId] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    return localStorage.getItem("portal-focus-dep") || null;
+  });
+  const gabineteTabInit = useRef(false);
   const pdfRef = useRef<HTMLDivElement>(null);
+
+  const isGabinete = !!(portalModules.benchmark_funcionarios || portalModules.benchmark_instituciones);
+
+  useEffect(() => {
+    if (focusDepId) localStorage.setItem("portal-focus-dep", focusDepId);
+    else localStorage.removeItem("portal-focus-dep");
+  }, [focusDepId]);
+
+  useEffect(() => {
+    if (isGabinete && !gabineteTabInit.current) {
+      gabineteTabInit.current = true;
+      setActiveTab("inicio");
+    }
+  }, [isGabinete]);
 
 
   useEffect(() => {
