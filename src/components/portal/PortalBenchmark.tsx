@@ -135,7 +135,7 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
       .filter((d) => used.has(d.id))
       .map((d, i) => ({
         id: d.id,
-        name: d.nombre,
+        name: accountFilter === "ambos" ? d.nombre : `${d.nombre} · ${accountFilter === "titular" ? "titular" : "institucional"}`,
         network: "",
         brand_color: depPalette[i % depPalette.length],
         active: true,
@@ -143,7 +143,7 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
         image_url: null,
         external_url: null,
       }));
-  }, [byDependencia, rawCompetitors, dependencias, allowedIds, depOfCompetitor]);
+  }, [byDependencia, rawCompetitors, dependencias, allowedIds, depOfCompetitor, accountFilter]);
 
   const RATE_KEYS = new Set(["engagement_rate", "follower_growth_rate", "interaction_per_impression", "performance_index"]);
 
