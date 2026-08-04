@@ -408,6 +408,13 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
     return idx > 0 ? periods[idx - 1] : null;
   }, [periods, selectedPeriod, rangeMode, effectiveRange]);
 
+  /** Ids del periodo anterior tal y como aparecen en `metrics` (los periodos se fusionan por alias). */
+  const prevPeriodIds = useMemo<string[]>(() => {
+    if (!prevPeriod) return [];
+    const alias = periodAlias.get(prevPeriod.id) ?? prevPeriod.id;
+    return Array.from(new Set([prevPeriod.id, alias]));
+  }, [prevPeriod, periodAlias]);
+
   // Insights layer — deterministic templates, no LLM
   const insights = useMemo(() => {
     const netFilter = (m: { network: string }) => networkFilter === "all" || m.network === networkFilter;
