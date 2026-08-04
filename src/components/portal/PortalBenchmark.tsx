@@ -1236,7 +1236,7 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
           <Card className="p-5">
             <div className="flex items-center gap-2 mb-3">
               <TrendingUp className="w-4 h-4 text-muted-foreground" />
-              <h4 className="font-semibold text-sm">Crecimiento diario de seguidores — {currentPeriod?.period_label}</h4>
+              <h4 className="font-semibold text-sm">Crecimiento diario de seguidores — {effectiveRange?.label ?? currentPeriod?.period_label}</h4>
             </div>
             {dailyEvolution.length === 0 ? (
               <p className="text-sm text-muted-foreground italic">No hay datos diarios para este periodo.</p>
@@ -1272,7 +1272,7 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
             <Card className="p-5">
               <div className="flex items-center gap-2 mb-3">
                 <BarChart3 className="w-4 h-4 text-muted-foreground" />
-                <h4 className="font-semibold text-sm">Ranking — {currentMetric.label}</h4>
+                <h4 className="font-semibold text-sm">Ranking — {currentMetric.label}{scopeSuffix}</h4>
                 <span className="text-[10px] text-muted-foreground ml-auto">Top {topRanking.length} de {rankingData.length}</span>
               </div>
               {rankingData.length === 0 ? (
@@ -1295,7 +1295,7 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
             <Card className="p-5">
               <div className="flex items-center gap-2 mb-3">
                 <PieIcon className="w-4 h-4 text-muted-foreground" />
-                <h4 className="font-semibold text-sm">Share del sector</h4>
+                <h4 className="font-semibold text-sm">{byDependencia ? `Share del gabinete${scopeSuffix}` : "Share del sector"}</h4>
               </div>
               {rankingData.length === 0 ? (
                 <p className="text-sm text-muted-foreground italic">Sin datos.</p>
@@ -1316,7 +1316,7 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
           <Card className="p-5">
             <div className="flex items-center gap-2 mb-3">
               <TrendingUp className="w-4 h-4 text-muted-foreground" />
-              <h4 className="font-semibold text-sm">Evolución por periodo — {currentMetric.label}</h4>
+              <h4 className="font-semibold text-sm">Evolución por periodo — {currentMetric.label}{scopeSuffix}</h4>
             </div>
             {evolutionData.length < 2 ? (
               <p className="text-sm text-muted-foreground italic">Necesitas 2+ periodos cargados.</p>
@@ -1368,7 +1368,7 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
               </p>
             </Card>
             <Card className="p-4">
-              <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Mediana / post</p>
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Mediana / post{scopeSuffix}</p>
               <p className="text-2xl font-display font-bold tabular-nums mt-1">{Math.round(contentInsights.clientMedian).toLocaleString("es-MX")}</p>
               {!byDependencia && <p className="text-[10px] text-muted-foreground mt-1">Sector: <span className="font-medium text-foreground">{Math.round(contentInsights.sectorMedian).toLocaleString("es-MX")}</span></p>}
             </Card>
@@ -1508,7 +1508,10 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
           <Card className="p-5">
             <div className="flex items-center gap-2 mb-3">
               <TableIcon className="w-4 h-4 text-muted-foreground" />
-              <h4 className="font-semibold text-sm">Tabla detallada — {currentPeriod?.period_label}</h4>
+              <h4 className="font-semibold text-sm">Tabla detallada — {effectiveRange?.label ?? currentPeriod?.period_label}{scopeSuffix}</h4>
+              <span className="text-[10px] text-muted-foreground ml-auto">
+                {networkFilter === "all" ? "todas las redes" : networkFilter} · {periodMetrics.length} filas visibles
+              </span>
             </div>
             <div className="overflow-auto max-h-[500px] border border-border/40 rounded-lg">
               <table className="w-full text-xs">
