@@ -24,6 +24,7 @@ import PortalPdfTemplate from "./PortalPdfTemplate";
 import RecommendationsBlock from "@/components/portal/RecommendationsBlock";
 import PortalBenchmark from "@/components/portal/PortalBenchmark";
 import PortalStrategy from "@/components/portal/PortalStrategy";
+import PortalDescargas from "@/components/portal/PortalDescargas";
 import { Compass, Users as UsersIcon, Building2 } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 
