@@ -24,6 +24,7 @@ import PortalPdfTemplate from "./PortalPdfTemplate";
 import RecommendationsBlock from "@/components/portal/RecommendationsBlock";
 import PortalBenchmark from "@/components/portal/PortalBenchmark";
 import PortalStrategy from "@/components/portal/PortalStrategy";
+import PortalDescargas from "@/components/portal/PortalDescargas";
 import { Compass, Users as UsersIcon, Building2 } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 
@@ -760,7 +761,7 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
 
       <main className="relative max-w-7xl mx-auto px-6 py-6 space-y-6">
         {/* Week bar (listening scope: only for Panorama/Histórico) */}
-        {analyses.length > 0 && activeTab !== "benchmark" && activeTab !== "benchmark_funcionarios" && activeTab !== "benchmark_instituciones" && activeTab !== "estrategia" && activeTab !== "prensa" && (
+        {analyses.length > 0 && activeTab !== "benchmark" && activeTab !== "benchmark_funcionarios" && activeTab !== "benchmark_instituciones" && activeTab !== "estrategia" && activeTab !== "prensa" && activeTab !== "descargas" && (
         <div className="glass rounded-2xl p-4 flex flex-col lg:flex-row lg:items-center gap-4">
           <div className="flex items-center gap-2">
             <Button variant="outline" size="icon" onClick={goPrev} disabled={currentIdx >= analyses.length - 1} className="h-9 w-9">
@@ -849,7 +850,7 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
               className="space-y-6"
             >
               {/* KPI cards (listening scope) */}
-              {analyses.length > 0 && activeTab !== "benchmark" && activeTab !== "benchmark_funcionarios" && activeTab !== "benchmark_instituciones" && activeTab !== "estrategia" && activeTab !== "prensa" && (
+              {analyses.length > 0 && activeTab !== "benchmark" && activeTab !== "benchmark_funcionarios" && activeTab !== "benchmark_instituciones" && activeTab !== "estrategia" && activeTab !== "prensa" && activeTab !== "descargas" && (
               <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
                 <KpiCard
                   label="Menciones analizadas"
@@ -881,6 +882,9 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
                   <TabsTrigger value="benchmark" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><TrendingUp className="w-4 h-4 mr-2" />Benchmark</TabsTrigger>
                   <TabsTrigger value="estrategia" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><Compass className="w-4 h-4 mr-2" />Estrategia</TabsTrigger>
                   <TabsTrigger value="historico" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><History className="w-4 h-4 mr-2" />Histórico</TabsTrigger>
+                  {(portalModules.benchmark_funcionarios || portalModules.benchmark_instituciones) && (
+                    <TabsTrigger value="descargas" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><Download className="w-4 h-4 mr-2" />Descargas</TabsTrigger>
+                  )}
                 </TabsList>
 
                 {/* Panorama: resumen ejecutivo + alertas + hallazgos + análisis en un solo tab */}
@@ -1009,6 +1013,13 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
                 <TabsContent value="estrategia" className="mt-5 space-y-4">
                   <PortalStrategy clientId={portal.clientId} clientName={portal.displayName} />
                 </TabsContent>
+
+                {/* Centro de descargas (portales por dependencia) */}
+                {(portalModules.benchmark_funcionarios || portalModules.benchmark_instituciones) && (
+                  <TabsContent value="descargas" className="mt-5 space-y-4">
+                    <PortalDescargas clientId={portal.clientId} portalName={portal.displayName} />
+                  </TabsContent>
+                )}
 
                 {/* Histórico */}
                 <TabsContent value="historico" className="mt-5 space-y-4">
