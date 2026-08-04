@@ -20,7 +20,7 @@ type Dependencia = { id: string; nombre: string; tipo: string | null; titular: s
 type Period = { id: string; period_label: string; period_start: string; period_end: string };
 type Metric = { id: string; period_id: string; competitor_id: string; network: string; performance_index: number | null; followers: number | null; follower_growth_rate: number | null; engagement_rate: number | null; posts_per_day: number | null; reach_per_day: number | null; interaction_per_impression: number | null };
 type Daily = { period_id: string; competitor_id: string; network: string; day: string; delta: number };
-type Post = { id: string; period_id: string; competitor_id: string | null; network: string; profile_name: string; posted_at: string | null; message: string | null; likes: number | null; comments: number | null; interactions: number | null; engagement_rate: number | null; link: string | null; image_link: string | null };
+type Post = { id: string; period_id: string; competitor_id: string | null; network: string; profile_name: string; posted_at: string | null; message: string | null; likes: number | null; comments: number | null; interactions: number | null; engagement_rate: number | null; link: string | null; image_link: string | null; source_account_type?: "institucional" | "titular" | null };
 
 const METRICS: { key: keyof Metric; label: string; fmt: (n: number) => string }[] = [
   { key: "followers", label: "Seguidores", fmt: (n) => n.toLocaleString("es-MX") },
@@ -126,6 +126,11 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
     return m;
   }, [rawCompetitors]);
 
+  const rawCompetitorMap = useMemo(
+    () => new Map(rawCompetitors.map((c) => [c.id, c])),
+    [rawCompetitors],
+  );
+
   /** Entidades a comparar: cada dependencia se comporta como un "competidor". */
   const competitors = useMemo<Competitor[]>(() => {
     if (!byDependencia) return rawCompetitors;
@@ -198,9 +203,12 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
       .map((p) => ({
         ...p,
         period_id: periodAlias.get(p.period_id) ?? p.period_id,
+        source_account_type: p.competitor_id
+          ? ((rawCompetitorMap.get(p.competitor_id)?.account_type ?? "institucional") as "institucional" | "titular")
+          : null,
         competitor_id: p.competitor_id ? (depOfCompetitor.get(p.competitor_id) ?? p.competitor_id) : p.competitor_id,
       }));
-  }, [byDependencia, rawPosts, allowedIds, depOfCompetitor, periodAlias]);
+  }, [byDependencia, rawPosts, allowedIds, depOfCompetitor, periodAlias, rawCompetitorMap]);
 
   const compMap = useMemo(() => new Map(competitors.map((c) => [c.id, c])), [competitors]);
   const currentPeriod = periods.find((p) => p.id === selectedPeriod) ?? null;
@@ -689,12 +697,18 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
     .sort((a, b) => (b.interactions ?? 0) - (a.interactions ?? 0));
   // En modo dependencia no hay "cliente": todo el gabinete es el universo comparado.
   const ownPosts = byDependencia ? postsInScope.slice().sort((a, b) => (b.interactions ?? 0) - (a.interactions ?? 0)) : clientPostsPeriod;
-  const peerPosts = byDependencia ? ownPosts : sectorPostsPeriod;
-  /** Mejor publicación de cada dependencia (modo gabinete). */
+  const institutionalPosts = byDependencia
+    ? ownPosts.filter((p) => p.source_account_type === "institucional")
+    : [];
+  const titularPosts = byDependencia
+    ? ownPosts.filter((p) => p.source_account_type === "titular")
+    : [];
+  const peerPosts = byDependencia ? titularPosts : sectorPostsPeriod;
+  /** Mejor publicación institucional de cada dependencia (modo gabinete). */
   const bestPerDependencia = (() => {
     if (!byDependencia) return [];
     const best = new Map<string, Post>();
-    for (const p of ownPosts) {
+    for (const p of institutionalPosts) {
       const k = p.competitor_id ?? p.profile_name;
       const prev = best.get(k);
       if (!prev || (p.interactions ?? 0) > (prev.interactions ?? 0)) best.set(k, p);
@@ -1405,7 +1419,7 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
             <Card className="p-5">
               <div className="flex items-center gap-2 mb-3">
                 <Newspaper className="w-4 h-4 text-muted-foreground" />
-              <h4 className="font-semibold text-sm">{byDependencia ? "Top del gabinete — cuentas" : "Top del sector"}</h4>
+              <h4 className="font-semibold text-sm">{byDependencia ? "Top de titulares del gabinete" : "Top del sector"}</h4>
                 <Badge variant="secondary" className="ml-auto">Top {Math.min(10, peerPosts.length)} de {peerPosts.length}</Badge>
               </div>
               {peerPosts.length === 0 ? (
