@@ -85,7 +85,7 @@ const df = (n: number | null | undefined) =>
 const page: React.CSSProperties = {
   width: 794,
   boxSizing: "border-box",
-  padding: "28px 46px 8px",
+  padding: "18px 46px 6px",
   background: "#ffffff",
   color: "#0f172a",
   fontFamily: "'Inter', system-ui, sans-serif",

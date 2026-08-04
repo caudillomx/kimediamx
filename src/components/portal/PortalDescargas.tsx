@@ -200,7 +200,7 @@ export default function PortalDescargas({
     if (!ref.current) return;
     const { default: html2pdf } = await import("html2pdf.js");
     await html2pdf().set({
-      margin: [10, 0, 12, 0],
+      margin: [8, 0, 8, 0],
       filename,
       html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff", windowWidth: 794, scrollX: 0, scrollY: 0 },
       jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
