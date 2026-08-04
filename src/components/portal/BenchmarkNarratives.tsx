@@ -25,11 +25,14 @@ export default function BenchmarkNarratives({
   clientName,
   range,
   networkFilter,
+  scopeNote,
 }: {
   clientId: string;
   clientName: string;
   range: { from: Date; to: Date; label: string } | null;
   networkFilter: string;
+  /** Aclaración del universo real que cubre el análisis (no depende del filtro de Cuentas). */
+  scopeNote?: string;
 }) {
   const [rows, setRows] = useState<NarrativeRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -85,6 +88,7 @@ export default function BenchmarkNarratives({
         <Compass className="w-4 h-4 text-primary" />
         <h4 className="font-semibold text-sm">Narrativas del periodo — análisis con IA</h4>
         <span className="text-[10px] text-muted-foreground ml-2">{range?.label}</span>
+        {scopeNote && <span className="text-[10px] text-muted-foreground">· {scopeNote}</span>}
         <div className="ml-auto flex items-center gap-2">
           {rows.length === 0 ? (
             <Button size="sm" onClick={() => generate(false)} disabled={generating || !range}>
