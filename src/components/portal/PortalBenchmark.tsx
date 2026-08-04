@@ -419,7 +419,7 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
   const insights = useMemo(() => {
     const netFilter = (m: { network: string }) => networkFilter === "all" || m.network === networkFilter;
     const currentAll = metrics.filter((m) => activePeriodIds.includes(m.period_id) && netFilter(m));
-    const prevAll = prevPeriod ? metrics.filter((m) => m.period_id === prevPeriod.id && netFilter(m)) : [];
+    const prevAll = prevPeriodIds.length ? metrics.filter((m) => prevPeriodIds.includes(m.period_id) && netFilter(m)) : [];
 
     // Aggregate helper: value by competitor for a metric key (sum across networks when "all")
     const aggByCompetitor = (rows: Metric[], key: keyof Metric) => {
