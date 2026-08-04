@@ -267,7 +267,7 @@ export default function PortalDescargas({
     const dep = dependencias.find((d) => d.id === depId);
     if (!dep) return null;
     const periodIds = activePeriods.map((p) => p.id);
-    const depComps = competitors.filter((c) => c.dependencia_id === dep.id);
+    const depComps = competitors.filter((c) => c.dependencia_id === dep.id && matchesEnfoque(c.account_type));
     const compById = new Map(depComps.map((c) => [c.id, c]));
 
     const cuentas = metrics
@@ -335,7 +335,7 @@ export default function PortalDescargas({
       tipo: dep.tipo,
       titular: dep.titular,
       titularCargo: dep.titular_cargo,
-      periodoLabel: periodLabel || "Periodo",
+      periodoLabel: `${periodLabel || "Periodo"} · ${ENFOQUE_LABEL[enfoque]}`,
       redes: Array.from(new Set(cuentas.map((c) => c.red))),
       cuentas,
       totales: { seguidores: mine.followers, engagement: mine.engagement, postsDia: mine.postsDia },
@@ -366,7 +366,7 @@ export default function PortalDescargas({
       return { nombre: depName.get(id) ?? "—", delta: d };
     }).filter((r) => r.delta != null) as { nombre: string; delta: number }[];
     return {
-      periodoLabel: periodLabel || "Periodo",
+      periodoLabel: `${periodLabel || "Periodo"} · ${ENFOQUE_LABEL[enfoque]}`,
       ranking,
       suben: moves.slice().sort((a, b) => b.delta - a.delta).slice(0, 5),
       bajan: moves.slice().sort((a, b) => a.delta - b.delta).slice(0, 5),
