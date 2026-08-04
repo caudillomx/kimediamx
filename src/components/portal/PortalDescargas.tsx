@@ -383,7 +383,7 @@ export default function PortalDescargas({
     setDepData(data);
     try {
       await new Promise((r) => setTimeout(r, 350));
-      await renderPdf(depPdfRef, `${data.dependencia.replace(/\s+/g, "-").toLowerCase()}-${periodLabel || "reporte"}.pdf`);
+      await renderPdf(depPdfRef, `${data.dependencia.replace(/\s+/g, "-").toLowerCase()}-${enfoque}-${periodLabel || "reporte"}.pdf`);
       toast.success("Reporte descargado", { id: "dep-pdf" });
     } catch {
       toast.error("No se pudo generar el PDF", { id: "dep-pdf" });
@@ -396,7 +396,7 @@ export default function PortalDescargas({
     toast.loading("Generando panorama…", { id: "gab-pdf" });
     try {
       await new Promise((r) => setTimeout(r, 350));
-      await renderPdf(gabPdfRef, `gabinete-${periodLabel || "reporte"}.pdf`);
+      await renderPdf(gabPdfRef, `gabinete-${enfoque}-${periodLabel || "reporte"}.pdf`);
       toast.success("Panorama descargado", { id: "gab-pdf" });
     } catch {
       toast.error("No se pudo generar el PDF", { id: "gab-pdf" });
@@ -437,6 +437,17 @@ export default function PortalDescargas({
               <SelectTrigger className="w-[200px] h-9"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {periodLabels.slice().reverse().map((l) => <SelectItem key={l} value={l}>{l}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Enfoque</span>
+            <Select value={enfoque} onValueChange={(v) => setEnfoque(v as typeof enfoque)}>
+              <SelectTrigger className="w-[240px] h-9"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="combinado">Combinado (institución + titular)</SelectItem>
+                <SelectItem value="institucional">Solo institucional</SelectItem>
+                <SelectItem value="titular">Solo titular (funcionario)</SelectItem>
               </SelectContent>
             </Select>
           </div>
