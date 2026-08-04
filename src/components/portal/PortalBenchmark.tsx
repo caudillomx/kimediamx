@@ -709,6 +709,8 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
   // Comparativo: en gabinete se contrasta contra titulares; si el filtro de cuentas
   // deja ese conjunto vacío, se usa el universo visible para no dejar insights en blanco.
   const peerPosts = byDependencia ? (titularPosts.length ? titularPosts : ownPosts) : sectorPostsPeriod;
+  /** Tabla "Top de titulares": estrictamente cuentas de funcionarios (sin fallback). */
+  const topPeerPosts = byDependencia ? titularPosts : sectorPostsPeriod;
   /** Mejor publicación institucional de cada dependencia (modo gabinete). */
   const bestPerDependencia = (() => {
     if (!byDependencia) return [];
