@@ -46,6 +46,7 @@ export default function PortalDescargas({
   const [loading, setLoading] = useState(true);
 
   const [depId, setDepId] = useState<string>("");
+  const [enfoque, setEnfoque] = useState<"combinado" | "institucional" | "titular">("combinado");
   const [periodLabel, setPeriodLabel] = useState<string>("");
   const [busy, setBusy] = useState<string | null>(null);
 
@@ -116,6 +117,21 @@ export default function PortalDescargas({
     return m;
   }, [competitors]);
 
+  const typeOfCompetitor = useMemo(() => {
+    const m = new Map<string, string>();
+    competitors.forEach((c) => m.set(c.id, c.account_type ?? "institucional"));
+    return m;
+  }, [competitors]);
+
+  const matchesEnfoque = (accountType: string | null | undefined) =>
+    enfoque === "combinado" ? true : (accountType ?? "institucional") === enfoque;
+
+  const ENFOQUE_LABEL: Record<string, string> = {
+    combinado: "Dependencia + titular",
+    institucional: "Solo cuentas institucionales",
+    titular: "Solo cuentas del titular",
+  };
+
   /** Agregado por dependencia para un conjunto de periodos. */
   const aggregate = (periodIds: string[]) => {
     const acc = new Map<string, { followers: number; eng: number[]; posts: number[] }>();
@@ -123,6 +139,7 @@ export default function PortalDescargas({
       if (!periodIds.includes(m.period_id)) continue;
       const dep = depOfCompetitor.get(m.competitor_id);
       if (!dep) continue;
+      if (!matchesEnfoque(typeOfCompetitor.get(m.competitor_id))) continue;
       const e = acc.get(dep) ?? { followers: 0, eng: [], posts: [] };
       e.followers += Number(m.followers) || 0;
       if (Number.isFinite(Number(m.engagement_rate))) e.eng.push(Number(m.engagement_rate));
