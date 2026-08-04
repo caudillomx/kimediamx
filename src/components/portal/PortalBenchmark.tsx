@@ -706,7 +706,9 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
   const titularPosts = byDependencia
     ? ownPosts.filter((p) => p.source_account_type === "titular")
     : [];
-  const peerPosts = byDependencia ? titularPosts : sectorPostsPeriod;
+  // Comparativo: en gabinete se contrasta contra titulares; si el filtro de cuentas
+  // deja ese conjunto vacío, se usa el universo visible para no dejar insights en blanco.
+  const peerPosts = byDependencia ? (titularPosts.length ? titularPosts : ownPosts) : sectorPostsPeriod;
   /** Mejor publicación institucional de cada dependencia (modo gabinete). */
   const bestPerDependencia = (() => {
     if (!byDependencia) return [];
