@@ -98,7 +98,7 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
         const [m, d, po] = await Promise.all([
           supabase.from("client_portal_benchmark_metrics").select("*").in("period_id", periodIds).limit(20000),
           supabase.from("client_portal_benchmark_follower_daily").select("*").in("period_id", periodIds).limit(50000),
-          supabase.from("client_portal_benchmark_posts").select("*").in("period_id", periodIds).order("interactions", { ascending: false }).limit(byDependencia ? 1500 : 200),
+          supabase.from("client_portal_benchmark_posts").select("*").in("period_id", periodIds).order("interactions", { ascending: false }).limit(byDependencia ? 50000 : 2000),
         ]);
         setRawMetrics((m.data ?? []) as Metric[]);
         setRawDaily((d.data ?? []) as Daily[]);
@@ -135,7 +135,7 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
       .filter((d) => used.has(d.id))
       .map((d, i) => ({
         id: d.id,
-        name: d.nombre,
+        name: accountFilter === "ambos" ? d.nombre : `${d.nombre} · ${accountFilter === "titular" ? "titular" : "institucional"}`,
         network: "",
         brand_color: depPalette[i % depPalette.length],
         active: true,
@@ -143,7 +143,7 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
         image_url: null,
         external_url: null,
       }));
-  }, [byDependencia, rawCompetitors, dependencias, allowedIds, depOfCompetitor]);
+  }, [byDependencia, rawCompetitors, dependencias, allowedIds, depOfCompetitor, accountFilter]);
 
   const RATE_KEYS = new Set(["engagement_rate", "follower_growth_rate", "interaction_per_impression", "performance_index"]);
 
@@ -1345,7 +1345,7 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
               <div className="flex items-center gap-2 mb-3">
                 <Trophy className="w-4 h-4 text-primary" />
                 <h4 className="font-semibold text-sm">Mejor publicación por dependencia</h4>
-                <Badge variant="secondary" className="ml-auto">{bestPerDependencia.length}</Badge>
+                <Badge variant="secondary" className="ml-auto">{bestPerDependencia.length} dependencias</Badge>
               </div>
               {bestPerDependencia.length === 0 ? (
                 <p className="text-sm text-muted-foreground italic">Sin publicaciones en este {rangeMode === "custom" ? "rango" : "periodo"}{networkFilter !== "all" ? ` para ${networkFilter}` : ""}.</p>
@@ -1359,6 +1359,9 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
                           <span className="inline-flex items-center gap-1 truncate">
                             <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: c?.brand_color ?? "#94a3b8" }} />
                             {c?.name ?? p.profile_name} · {p.network}
+                            {p.profile_name && c?.name && p.profile_name !== c.name && (
+                              <span className="opacity-70">· @{p.profile_name}</span>
+                            )}
                           </span>
                           <span className="tabular-nums font-medium text-foreground shrink-0">{p.interactions?.toLocaleString("es-MX") ?? 0}</span>
                         </div>
@@ -1402,8 +1405,8 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
             <Card className="p-5">
               <div className="flex items-center gap-2 mb-3">
                 <Newspaper className="w-4 h-4 text-muted-foreground" />
-                <h4 className="font-semibold text-sm">{byDependencia ? "Top del gabinete" : "Top del sector"}</h4>
-                <Badge variant="secondary" className="ml-auto">{peerPosts.length}</Badge>
+              <h4 className="font-semibold text-sm">{byDependencia ? "Top del gabinete — cuentas" : "Top del sector"}</h4>
+                <Badge variant="secondary" className="ml-auto">Top {Math.min(10, peerPosts.length)} de {peerPosts.length}</Badge>
               </div>
               {peerPosts.length === 0 ? (
                 <p className="text-sm text-muted-foreground italic">Sin publicaciones cargadas.</p>
@@ -1417,6 +1420,7 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
                           <span className="inline-flex items-center gap-1">
                             <span className="w-1.5 h-1.5 rounded-full" style={{ background: c?.brand_color ?? "#94a3b8" }} />
                             {p.profile_name} · {p.network}
+                            {byDependencia && c?.name && <span className="opacity-70">· {c.name}</span>}
                           </span>
                           <span className="tabular-nums font-medium text-foreground">{p.interactions?.toLocaleString("es-MX") ?? 0}</span>
                         </div>
