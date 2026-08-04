@@ -98,7 +98,7 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
         const [m, d, po] = await Promise.all([
           supabase.from("client_portal_benchmark_metrics").select("*").in("period_id", periodIds).limit(20000),
           supabase.from("client_portal_benchmark_follower_daily").select("*").in("period_id", periodIds).limit(50000),
-          supabase.from("client_portal_benchmark_posts").select("*").in("period_id", periodIds).order("interactions", { ascending: false }).limit(byDependencia ? 1500 : 200),
+          supabase.from("client_portal_benchmark_posts").select("*").in("period_id", periodIds).order("interactions", { ascending: false }).limit(byDependencia ? 50000 : 2000),
         ]);
         setRawMetrics((m.data ?? []) as Metric[]);
         setRawDaily((d.data ?? []) as Daily[]);
