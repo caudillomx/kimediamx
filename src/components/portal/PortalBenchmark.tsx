@@ -199,7 +199,11 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
   const posts = useMemo<Post[]>(() => {
     if (!byDependencia) return rawPosts;
     return rawPosts
-      .filter((p) => !p.competitor_id || allowedIds?.has(p.competitor_id))
+      // En modo gabinete sólo entran publicaciones que pertenecen a un perfil
+      // mapeado y permitido por el filtro de Cuentas. Las publicaciones sin
+      // perfil asignado se descartan: contarlas como "institucional" ensuciaba
+      // los promedios y las tablas.
+      .filter((p) => !!p.competitor_id && !!allowedIds?.has(p.competitor_id))
       .map((p) => ({
         ...p,
         period_id: periodAlias.get(p.period_id) ?? p.period_id,
