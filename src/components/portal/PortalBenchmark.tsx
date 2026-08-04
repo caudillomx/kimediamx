@@ -706,9 +706,17 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
   const titularPosts = byDependencia
     ? ownPosts.filter((p) => p.source_account_type === "titular")
     : [];
-  // Comparativo: en gabinete se contrasta contra titulares; si el filtro de cuentas
-  // deja ese conjunto vacío, se usa el universo visible para no dejar insights en blanco.
-  const peerPosts = byDependencia ? (titularPosts.length ? titularPosts : ownPosts) : sectorPostsPeriod;
+  /** Sufijo explícito del universo visible, para que ninguna tarjeta mienta sobre su fuente. */
+  const scopeSuffix = !byDependencia || accountFilter === "ambos"
+    ? ""
+    : accountFilter === "titular" ? " (titulares)" : " (institucionales)";
+  // Comparativo: en gabinete sólo tiene sentido contrastar institucional vs titular
+  // cuando el filtro es "ambos"; con un filtro específico el universo es uno solo.
+  const peerPosts = byDependencia
+    ? (accountFilter === "ambos" ? (titularPosts.length ? titularPosts : ownPosts) : ownPosts)
+    : sectorPostsPeriod;
+  /** Pool para líder y palabras clave: siempre el universo visible en modo gabinete. */
+  const insightPool = byDependencia ? ownPosts : peerPosts;
   /** Tabla "Top de titulares": estrictamente cuentas de funcionarios (sin fallback). */
   const topPeerPosts = byDependencia ? titularPosts : sectorPostsPeriod;
   /** Mejor publicación institucional de cada dependencia (modo gabinete). */
@@ -751,7 +759,7 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
     // Top keywords from top sector posts (very light heuristic)
     const stop = new Set(["de","la","el","en","los","las","que","por","con","para","del","a","y","o","u","es","un","una","al","se","su","sus","lo","le","les","no","si","sí","este","esta","estos","estas","con","tu","tus","mi","mis","como","más","ya","ese","esa","esos","esas","the","and","for","of","to","in","on","is","it","this","that","are","with","from","at","by","or","be","an","as","we","you","your"]);
     const freq = new Map<string, number>();
-    for (const p of peerPosts.slice(0, 30)) {
+    for (const p of insightPool.slice(0, 30)) {
       if (!p.message) continue;
       const words = p.message.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
         .split(/[^a-záéíóúñü0-9#@]+/i)
@@ -764,7 +772,7 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
 
     // Sector leader (competitor with most total interactions in the range)
     const leaderMap = new Map<string, number>();
-    for (const p of peerPosts) {
+    for (const p of insightPool) {
       if (!p.competitor_id) continue;
       leaderMap.set(p.competitor_id, (leaderMap.get(p.competitor_id) ?? 0) + (p.interactions ?? 0));
     }
