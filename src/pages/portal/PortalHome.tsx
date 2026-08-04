@@ -746,9 +746,11 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={downloadPdf} disabled={!current}>
-              <Download className="w-4 h-4 mr-2" /> PDF de la semana
-            </Button>
+            {!(portalModules.benchmark_funcionarios || portalModules.benchmark_instituciones) && (
+              <Button variant="outline" size="sm" onClick={downloadPdf} disabled={!current}>
+                <Download className="w-4 h-4 mr-2" /> PDF de la semana
+              </Button>
+            )}
             <Button variant="ghost" size="icon" onClick={() => setTheme(t => t === "dark" ? "light" : "dark")} title="Cambiar tema" className="h-9 w-9">
               {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </Button>
