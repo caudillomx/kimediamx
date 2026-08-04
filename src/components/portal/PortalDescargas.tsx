@@ -303,14 +303,14 @@ export default function PortalDescargas({
     const from = periodo?.period_start ?? pressFrom;
     const to = periodo?.period_end ?? pressTo;
     const mentions = await fetchMentions(from, to);
-    const prensa = mentions
+    const prensaAll = mentions
       .filter((r) => r.dep === dep.id)
-      .map((r) => ({ fecha: r.fecha, medio: r.medio, titular: r.titular || r.cita.slice(0, 90), tono: r.tono, url: r.url }))
-      .slice(0, 12);
+      .map((r) => ({ fecha: r.fecha, medio: r.medio, titular: r.titular || r.cita.slice(0, 90), tono: r.tono, url: r.url }));
+    const prensa = prensaAll.slice(0, 12);
     const prensaTono = {
-      positivo: prensa.filter((p) => p.tono === "positivo").length,
-      neutral: prensa.filter((p) => p.tono === "neutral").length,
-      negativo: prensa.filter((p) => p.tono === "negativo" || p.tono === "crisis").length,
+      positivo: prensaAll.filter((p) => p.tono === "positivo").length,
+      neutral: prensaAll.filter((p) => p.tono === "neutral").length,
+      negativo: prensaAll.filter((p) => p.tono === "negativo" || p.tono === "crisis").length,
     };
 
     return {
