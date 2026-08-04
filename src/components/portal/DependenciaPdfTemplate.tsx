@@ -85,7 +85,7 @@ const df = (n: number | null | undefined) =>
 const page: React.CSSProperties = {
   width: 794,
   boxSizing: "border-box",
-  padding: "36px 46px 16px",
+  padding: "28px 46px 8px",
   background: "#ffffff",
   color: "#0f172a",
   fontFamily: "'Inter', system-ui, sans-serif",
@@ -145,7 +145,7 @@ function Header({ title, subtitle, periodo }: { title: string; subtitle?: string
 
 function Footer() {
   return (
-    <div className="pdf-avoid" style={{ marginTop: 18, paddingTop: 8, borderTop: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+    <div className="pdf-avoid" style={{ marginTop: 10, paddingTop: 6, borderTop: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
       <span style={{ fontSize: 9, color: "#94a3b8" }}>Documento generado automáticamente desde el portal de análisis.</span>
       <KiMediaMark size={11} muted />
     </div>
