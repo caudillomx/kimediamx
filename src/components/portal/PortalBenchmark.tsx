@@ -1352,6 +1352,7 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
             clientName={clientName}
             range={effectiveRange}
             networkFilter={networkFilter}
+            scopeNote={byDependencia ? "cubre todas las cuentas cargadas (institucionales y titulares); no se ajusta al filtro de Cuentas" : undefined}
           />
           {/* Deeper insights row */}
           <div className="grid gap-3 md:grid-cols-4">
