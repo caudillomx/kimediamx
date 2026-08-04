@@ -692,7 +692,8 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
   function exportCsv() {
     const header = ["periodo", "perfil", "red", "seguidores", "crecimiento_rate", "engagement_rate", "posts_dia", "alcance_dia", "indice_rendimiento", "interaccion_por_impresion"];
     const periodMap = new Map(periods.map((p) => [p.id, p]));
-    const rows = metrics.map((m) => {
+    // El CSV exporta exactamente el universo visible (periodo/rango + red + cuentas).
+    const rows = periodMetrics.map((m) => {
       const p = periodMap.get(m.period_id);
       const c = compMap.get(m.competitor_id);
       return [p?.period_label ?? "", c?.name ?? "", m.network, m.followers ?? "", m.follower_growth_rate ?? "", m.engagement_rate ?? "", m.posts_per_day ?? "", m.reach_per_day ?? "", m.performance_index ?? "", m.interaction_per_impression ?? ""];
