@@ -241,7 +241,45 @@ export default function PortalDescargas({
     } as any).from(ref.current).save();
   };
 
-  const buildDependenciaReport = (): DependenciaReportData | null => {
+  /** Menciones (media + social) de un rango, resueltas a dependencia. */
+  const fetchMentions = async (from: string, to: string) => {
+    const { data } = await supabase
+      .from("client_portal_listening_entries")
+      .select("entry_date, media_mentions, social_mentions")
+      .eq("client_id", clientId)
+      .gte("entry_date", from).lte("entry_date", to)
+      .not("analyzed_at", "is", null)
+      .order("entry_date", { ascending: false })
+      .limit(600);
+    const rows: { fecha: string; medio: string; titular: string; cita: string; url: string; tono: string; canal: string; dep: string | null }[] = [];
+    for (const e of (data ?? []) as any[]) {
+      for (const m of (e.media_mentions ?? [])) {
+        const medio = String(m?.outlet ?? "").trim();
+        if (!medio) continue;
+        const titular = String(m?.headline ?? m?.topic ?? "").trim();
+        const cita = String(m?.quote ?? "").trim();
+        rows.push({
+          fecha: e.entry_date, medio, titular, cita, url: String(m?.url ?? ""),
+          tono: String(m?.sentiment ?? "neutral"), canal: "medios",
+          dep: resolveDep([titular, cita, String(m?.topic ?? "")].join(" ")),
+        });
+      }
+      for (const p of (e.social_mentions ?? [])) {
+        const medio = String(p?.profile ?? p?.handle ?? "").trim();
+        if (!medio) continue;
+        const titular = String(p?.topic ?? "").trim();
+        const cita = String(p?.quote ?? "").trim();
+        rows.push({
+          fecha: e.entry_date, medio, titular, cita, url: String(p?.url ?? ""),
+          tono: String(p?.sentiment ?? "neutral"), canal: String(p?.platform ?? "social"),
+          dep: resolveDep([titular, cita].join(" ")),
+        });
+      }
+    }
+    return rows;
+  };
+
+  const buildDependenciaReport = async (): Promise<DependenciaReportData | null> => {
     const dep = dependencias.find((d) => d.id === depId);
     if (!dep) return null;
     const periodIds = activePeriods.map((p) => p.id);
