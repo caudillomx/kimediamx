@@ -207,7 +207,7 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
           ? ((rawCompetitorMap.get(p.competitor_id)?.account_type ?? "institucional") as "institucional" | "titular")
           : null,
         competitor_id: p.competitor_id ? (depOfCompetitor.get(p.competitor_id) ?? p.competitor_id) : p.competitor_id,
-      }));
+      }))
       // El selector "Cuentas" (institucional / titular / ambos) aplica a TODOS los
       // despliegues de contenido, igual que a las gráficas de métricas.
       .filter((p) => accountFilter === "ambos" || (p.source_account_type ?? "institucional") === accountFilter);
