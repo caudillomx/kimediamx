@@ -207,8 +207,11 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
           ? ((rawCompetitorMap.get(p.competitor_id)?.account_type ?? "institucional") as "institucional" | "titular")
           : null,
         competitor_id: p.competitor_id ? (depOfCompetitor.get(p.competitor_id) ?? p.competitor_id) : p.competitor_id,
-      }));
-  }, [byDependencia, rawPosts, allowedIds, depOfCompetitor, periodAlias, rawCompetitorMap]);
+      }))
+      // El selector "Cuentas" (institucional / titular / ambos) aplica a TODOS los
+      // despliegues de contenido, igual que a las gráficas de métricas.
+      .filter((p) => accountFilter === "ambos" || (p.source_account_type ?? "institucional") === accountFilter);
+  }, [byDependencia, rawPosts, allowedIds, depOfCompetitor, periodAlias, rawCompetitorMap, accountFilter]);
 
   const compMap = useMemo(() => new Map(competitors.map((c) => [c.id, c])), [competitors]);
   const currentPeriod = periods.find((p) => p.id === selectedPeriod) ?? null;
@@ -703,7 +706,11 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
   const titularPosts = byDependencia
     ? ownPosts.filter((p) => p.source_account_type === "titular")
     : [];
-  const peerPosts = byDependencia ? titularPosts : sectorPostsPeriod;
+  // Comparativo: en gabinete se contrasta contra titulares; si el filtro de cuentas
+  // deja ese conjunto vacío, se usa el universo visible para no dejar insights en blanco.
+  const peerPosts = byDependencia ? (titularPosts.length ? titularPosts : ownPosts) : sectorPostsPeriod;
+  /** Tabla "Top de titulares": estrictamente cuentas de funcionarios (sin fallback). */
+  const topPeerPosts = byDependencia ? titularPosts : sectorPostsPeriod;
   /** Mejor publicación institucional de cada dependencia (modo gabinete). */
   const bestPerDependencia = (() => {
     if (!byDependencia) return [];
@@ -1420,13 +1427,13 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
               <div className="flex items-center gap-2 mb-3">
                 <Newspaper className="w-4 h-4 text-muted-foreground" />
               <h4 className="font-semibold text-sm">{byDependencia ? "Top de titulares del gabinete" : "Top del sector"}</h4>
-                <Badge variant="secondary" className="ml-auto">Top {Math.min(10, peerPosts.length)} de {peerPosts.length}</Badge>
+                <Badge variant="secondary" className="ml-auto">Top {Math.min(10, topPeerPosts.length)} de {topPeerPosts.length}</Badge>
               </div>
-              {peerPosts.length === 0 ? (
+              {topPeerPosts.length === 0 ? (
                 <p className="text-sm text-muted-foreground italic">Sin publicaciones cargadas.</p>
               ) : (
                 <ul className="space-y-3 max-h-[500px] overflow-auto pr-1">
-                  {peerPosts.slice(0, 10).map((p) => {
+                  {topPeerPosts.slice(0, 10).map((p) => {
                     const c = p.competitor_id ? compMap.get(p.competitor_id) : null;
                     return (
                       <li key={p.id} className="p-3 rounded-lg border border-border/40 bg-background/40">
