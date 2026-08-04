@@ -879,7 +879,10 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
               )}
 
               <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <TabsList className="bg-background/50 backdrop-blur border border-border/60 rounded-xl p-1 h-auto">
+                <TabsList className="bg-background/50 backdrop-blur border border-border/60 rounded-xl p-1 h-auto flex-wrap">
+                  {isGabinete && (
+                    <TabsTrigger value="inicio" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><Home className="w-4 h-4 mr-2" />Inicio</TabsTrigger>
+                  )}
                   <TabsTrigger value="panorama" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><BarChart3 className="w-4 h-4 mr-2" />Panorama</TabsTrigger>
                   <TabsTrigger value="benchmark" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><TrendingUp className="w-4 h-4 mr-2" />Benchmark</TabsTrigger>
                   <TabsTrigger value="estrategia" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><Compass className="w-4 h-4 mr-2" />Estrategia</TabsTrigger>
@@ -888,6 +891,17 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
                     <TabsTrigger value="descargas" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><Download className="w-4 h-4 mr-2" />Descargas</TabsTrigger>
                   )}
                 </TabsList>
+
+                {isGabinete && (
+                  <TabsContent value="inicio" className="mt-5 space-y-4">
+                    <PortalBriefing
+                      clientId={portal.clientId}
+                      focusDepId={focusDepId}
+                      onFocusChange={setFocusDepId}
+                      onGoTo={setActiveTab}
+                    />
+                  </TabsContent>
+                )}
 
                 {/* Panorama: resumen ejecutivo + alertas + hallazgos + análisis en un solo tab */}
                 <TabsContent value="panorama" className="mt-5 space-y-5">
