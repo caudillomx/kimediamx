@@ -937,28 +937,28 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div className="p-3 rounded-lg bg-background/60 border border-border/40">
               <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-muted-foreground">
-                <Trophy className="w-3 h-3" />Líder en engagement
+                <Trophy className="w-3 h-3" />Líder en engagement{scopeSuffix}
               </div>
               <p className="mt-1 font-display font-bold text-base leading-tight">{gabinete.engRanking[0]?.name ?? "—"}</p>
               <p className="text-[10px] text-muted-foreground">{gabinete.engRanking[0] ? (gabinete.engRanking[0].value * 100).toFixed(2) + "%" : "sin datos"}</p>
             </div>
             <div className="p-3 rounded-lg bg-background/60 border border-border/40">
               <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-muted-foreground">
-                <Target className="w-3 h-3" />Promedio del gabinete
+                <Target className="w-3 h-3" />Promedio{scopeSuffix}
               </div>
               <p className="mt-1 font-display font-bold text-2xl tabular-nums">{gabinete.engAvg != null ? (gabinete.engAvg * 100).toFixed(2) + "%" : "—"}</p>
-              <p className="text-[10px] text-muted-foreground">{gabinete.entities} dependencias con datos</p>
+              <p className="text-[10px] text-muted-foreground">{gabinete.entities} {gabinete.unit} con datos</p>
             </div>
             <div className="p-3 rounded-lg bg-background/60 border border-border/40">
               <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-muted-foreground">
-                <TrendingUp className="w-3 h-3" />Mayor crecimiento
+                <TrendingUp className="w-3 h-3" />Mayor crecimiento{scopeSuffix}
               </div>
               <p className="mt-1 font-display font-bold text-base leading-tight">{gabinete.risers[0]?.name ?? "—"}</p>
               <p className={cn("text-[10px]", deltaColor(gabinete.risers[0]?.delta ?? null))}>{fmtPct(gabinete.risers[0]?.delta ?? null)} seguidores</p>
             </div>
             <div className="p-3 rounded-lg bg-background/60 border border-border/40">
               <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-muted-foreground">
-                <Newspaper className="w-3 h-3" />Mejor post del gabinete
+                <Newspaper className="w-3 h-3" />Mejor post{scopeSuffix}
               </div>
               <div className="mt-1 font-display font-bold text-2xl tabular-nums">
                 {gabinete.bestPost?.interactions?.toLocaleString("es-MX") ?? "—"}
