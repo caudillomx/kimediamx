@@ -882,6 +882,9 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
                   <TabsTrigger value="benchmark" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><TrendingUp className="w-4 h-4 mr-2" />Benchmark</TabsTrigger>
                   <TabsTrigger value="estrategia" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><Compass className="w-4 h-4 mr-2" />Estrategia</TabsTrigger>
                   <TabsTrigger value="historico" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><History className="w-4 h-4 mr-2" />Histórico</TabsTrigger>
+                  {(portalModules.benchmark_funcionarios || portalModules.benchmark_instituciones) && (
+                    <TabsTrigger value="descargas" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><Download className="w-4 h-4 mr-2" />Descargas</TabsTrigger>
+                  )}
                 </TabsList>
 
                 {/* Panorama: resumen ejecutivo + alertas + hallazgos + análisis en un solo tab */}
@@ -1010,6 +1013,13 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
                 <TabsContent value="estrategia" className="mt-5 space-y-4">
                   <PortalStrategy clientId={portal.clientId} clientName={portal.displayName} />
                 </TabsContent>
+
+                {/* Centro de descargas (portales por dependencia) */}
+                {(portalModules.benchmark_funcionarios || portalModules.benchmark_instituciones) && (
+                  <TabsContent value="descargas" className="mt-5 space-y-4">
+                    <PortalDescargas clientId={portal.clientId} portalName={portal.displayName} />
+                  </TabsContent>
+                )}
 
                 {/* Histórico */}
                 <TabsContent value="historico" className="mt-5 space-y-4">
