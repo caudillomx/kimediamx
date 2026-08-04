@@ -208,7 +208,10 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
           : null,
         competitor_id: p.competitor_id ? (depOfCompetitor.get(p.competitor_id) ?? p.competitor_id) : p.competitor_id,
       }));
-  }, [byDependencia, rawPosts, allowedIds, depOfCompetitor, periodAlias, rawCompetitorMap]);
+      // El selector "Cuentas" (institucional / titular / ambos) aplica a TODOS los
+      // despliegues de contenido, igual que a las gráficas de métricas.
+      .filter((p) => accountFilter === "ambos" || (p.source_account_type ?? "institucional") === accountFilter);
+  }, [byDependencia, rawPosts, allowedIds, depOfCompetitor, periodAlias, rawCompetitorMap, accountFilter]);
 
   const compMap = useMemo(() => new Map(competitors.map((c) => [c.id, c])), [competitors]);
   const currentPeriod = periods.find((p) => p.id === selectedPeriod) ?? null;
