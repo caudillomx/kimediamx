@@ -1326,7 +1326,7 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
               <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Interacciones prom. / post</p>
               <p className="text-2xl font-display font-bold tabular-nums mt-1">{Math.round(contentInsights.clientAvg).toLocaleString("es-MX")}</p>
               <p className="text-[10px] text-muted-foreground mt-1">
-                {byDependencia ? `${contentInsights.clientPostCount} publicaciones analizadas` : <>Sector: <span className="font-medium text-foreground">{Math.round(contentInsights.sectorAvg).toLocaleString("es-MX")}</span></>}
+                {byDependencia ? `${contentInsights.clientPostCount} publicaciones analizadas${scopeSuffix}` : <>Sector: <span className="font-medium text-foreground">{Math.round(contentInsights.sectorAvg).toLocaleString("es-MX")}</span></>}
                 {!byDependencia && contentInsights.sectorAvg > 0 && (
                   <span className={cn("ml-1", contentInsights.clientAvg >= contentInsights.sectorAvg ? "text-emerald-500" : "text-rose-500")}>
                     ({fmtPct((contentInsights.clientAvg - contentInsights.sectorAvg) / contentInsights.sectorAvg)})
@@ -1372,13 +1372,13 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
             </Card>
           )}
 
-          <div className="grid gap-4 lg:grid-cols-2">
-            {byDependencia ? (
+          <div className={cn("grid gap-4", (!byDependencia || accountFilter === "ambos") && "lg:grid-cols-2")}>
+            {byDependencia ? (accountFilter !== "titular" && (
             <Card className="p-5">
               <div className="flex items-center gap-2 mb-3">
                 <Trophy className="w-4 h-4 text-primary" />
                 <h4 className="font-semibold text-sm">Mejor publicación por dependencia</h4>
-                <Badge variant="secondary" className="ml-auto">{bestPerDependencia.length} dependencias</Badge>
+                <Badge variant="secondary" className="ml-auto">{bestPerDependencia.length} dependencias · institucional</Badge>
               </div>
               {bestPerDependencia.length === 0 ? (
                 <p className="text-sm text-muted-foreground italic">Sin publicaciones en este {rangeMode === "custom" ? "rango" : "periodo"}{networkFilter !== "all" ? ` para ${networkFilter}` : ""}.</p>
@@ -1406,7 +1406,7 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
                 </ul>
               )}
             </Card>
-            ) : (
+            )) : (
             <Card className="p-5">
               <div className="flex items-center gap-2 mb-3">
                 <Trophy className="w-4 h-4 text-primary" />
