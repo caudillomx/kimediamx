@@ -335,8 +335,9 @@ export default function PortalDescargas({
     const periodo = activePeriods[0];
     const from = periodo?.period_start ?? pressFrom;
     const to = periodo?.period_end ?? pressTo;
-    const prensa = pressAll
-      .filter((r) => r.dep === dep.id && r.fecha >= from && r.fecha <= to)
+    const mentions = await fetchMentions(from, to);
+    const prensa = mentions
+      .filter((r) => r.dep === dep.id)
       .map((r) => ({ fecha: r.fecha, medio: r.medio, titular: r.titular || r.cita.slice(0, 90), tono: r.tono, url: r.url }));
     const prensaTono = {
       positivo: prensa.filter((p) => p.tono === "positivo").length,
@@ -390,11 +391,11 @@ export default function PortalDescargas({
   };
 
   const downloadDepPdf = async () => {
-    const data = buildDependenciaReport();
-    if (!data) { toast.error("Selecciona una dependencia"); return; }
     setBusy("dep");
-    setDepData(data);
     toast.loading("Generando reporte…", { id: "dep-pdf" });
+    const data = await buildDependenciaReport();
+    if (!data) { toast.error("Selecciona una dependencia", { id: "dep-pdf" }); setBusy(null); return; }
+    setDepData(data);
     try {
       await new Promise((r) => setTimeout(r, 350));
       await renderPdf(depPdfRef, `${data.dependencia.replace(/\s+/g, "-").toLowerCase()}-${periodLabel || "reporte"}.pdf`);
