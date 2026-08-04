@@ -199,7 +199,11 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
   const posts = useMemo<Post[]>(() => {
     if (!byDependencia) return rawPosts;
     return rawPosts
-      .filter((p) => !p.competitor_id || allowedIds?.has(p.competitor_id))
+      // En modo gabinete sólo entran publicaciones que pertenecen a un perfil
+      // mapeado y permitido por el filtro de Cuentas. Las publicaciones sin
+      // perfil asignado se descartan: contarlas como "institucional" ensuciaba
+      // los promedios y las tablas.
+      .filter((p) => !!p.competitor_id && !!allowedIds?.has(p.competitor_id))
       .map((p) => ({
         ...p,
         period_id: periodAlias.get(p.period_id) ?? p.period_id,
@@ -659,12 +663,13 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
     const bestPost = postsHere.slice().sort((a, b) => (b.interactions ?? 0) - (a.interactions ?? 0))[0] ?? null;
 
     const noData = engRanking.length === 0;
+    const unit = accountFilter === "titular" ? "titulares" : accountFilter === "institucional" ? "cuentas institucionales" : "dependencias";
     const headline = noData
-      ? `Sin métricas cargadas para ${currentPeriod?.period_label ?? "este periodo"} con los filtros activos.`
-      : `${engRanking[0].name} lidera el gabinete en engagement (${(engRanking[0].value * 100).toFixed(2)}%) entre ${engRanking.length} dependencias con datos${risers.length ? `; ${risers[0].name} es quien más crece en seguidores (${(risers[0].delta * 100).toFixed(1)}%)` : ""}.`;
+      ? `Sin métricas cargadas para ${effectiveRange?.label ?? "este periodo"} con los filtros activos.`
+      : `${engRanking[0].name} lidera en engagement (${(engRanking[0].value * 100).toFixed(2)}%) entre ${engRanking.length} ${unit} con datos${risers.length ? `; ${risers[0].name} es quien más crece en seguidores (${(risers[0].delta * 100).toFixed(1)}%)` : ""}.`;
 
-    return { engRanking, engAvg, risers, fallers, bestPost, headline, entities: engRanking.length };
-  }, [byDependencia, metrics, posts, activePeriodIds, prevPeriodIds, networkFilter, compMap, currentPeriod, rangeMode, effectiveRange]);
+    return { engRanking, engAvg, risers, fallers, bestPost, headline, entities: engRanking.length, unit };
+  }, [byDependencia, metrics, posts, activePeriodIds, prevPeriodIds, networkFilter, compMap, currentPeriod, rangeMode, effectiveRange, accountFilter]);
 
   const clientEvolution = useMemo(() => {
     const netFilter = (m: { network: string }) => networkFilter === "all" || m.network === networkFilter;
@@ -687,7 +692,8 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
   function exportCsv() {
     const header = ["periodo", "perfil", "red", "seguidores", "crecimiento_rate", "engagement_rate", "posts_dia", "alcance_dia", "indice_rendimiento", "interaccion_por_impresion"];
     const periodMap = new Map(periods.map((p) => [p.id, p]));
-    const rows = metrics.map((m) => {
+    // El CSV exporta exactamente el universo visible (periodo/rango + red + cuentas).
+    const rows = periodMetrics.map((m) => {
       const p = periodMap.get(m.period_id);
       const c = compMap.get(m.competitor_id);
       return [p?.period_label ?? "", c?.name ?? "", m.network, m.followers ?? "", m.follower_growth_rate ?? "", m.engagement_rate ?? "", m.posts_per_day ?? "", m.reach_per_day ?? "", m.performance_index ?? "", m.interaction_per_impression ?? ""];
@@ -917,6 +923,23 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
         </p>
       )}
 
+      {/* Contexto del universo visible: todo el tablero se calcula sobre estos filtros. */}
+      <div className="flex flex-wrap items-center gap-2 -mt-1">
+        <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Viendo</span>
+        <Badge variant="secondary" className="text-[10px]">{effectiveRange?.label ?? "sin periodo"}</Badge>
+        <Badge variant="secondary" className="text-[10px]">{networkFilter === "all" ? "Todas las redes" : networkFilter}</Badge>
+        {byDependencia && (
+          <Badge variant="secondary" className="text-[10px]">
+            {accountFilter === "ambos" ? "Dependencia + titular" : accountFilter === "titular" ? "Solo titulares" : "Solo cuentas institucionales"}
+          </Badge>
+        )}
+        {byDependencia && (
+          <span className="text-[10px] text-muted-foreground">
+            {competitors.length} {gabinete?.unit ?? "dependencias"} en el universo · {postsInScope.length} publicaciones
+          </span>
+        )}
+      </div>
+
       {/* EXECUTIVE SUMMARY */}
       <Card className="p-5 bg-gradient-to-br from-primary/5 via-background to-background border-primary/20">
         <div className="flex items-start gap-3 mb-4">
@@ -932,28 +955,28 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div className="p-3 rounded-lg bg-background/60 border border-border/40">
               <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-muted-foreground">
-                <Trophy className="w-3 h-3" />Líder en engagement
+                <Trophy className="w-3 h-3" />Líder en engagement{scopeSuffix}
               </div>
               <p className="mt-1 font-display font-bold text-base leading-tight">{gabinete.engRanking[0]?.name ?? "—"}</p>
               <p className="text-[10px] text-muted-foreground">{gabinete.engRanking[0] ? (gabinete.engRanking[0].value * 100).toFixed(2) + "%" : "sin datos"}</p>
             </div>
             <div className="p-3 rounded-lg bg-background/60 border border-border/40">
               <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-muted-foreground">
-                <Target className="w-3 h-3" />Promedio del gabinete
+                <Target className="w-3 h-3" />Promedio{scopeSuffix}
               </div>
               <p className="mt-1 font-display font-bold text-2xl tabular-nums">{gabinete.engAvg != null ? (gabinete.engAvg * 100).toFixed(2) + "%" : "—"}</p>
-              <p className="text-[10px] text-muted-foreground">{gabinete.entities} dependencias con datos</p>
+              <p className="text-[10px] text-muted-foreground">{gabinete.entities} {gabinete.unit} con datos</p>
             </div>
             <div className="p-3 rounded-lg bg-background/60 border border-border/40">
               <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-muted-foreground">
-                <TrendingUp className="w-3 h-3" />Mayor crecimiento
+                <TrendingUp className="w-3 h-3" />Mayor crecimiento{scopeSuffix}
               </div>
               <p className="mt-1 font-display font-bold text-base leading-tight">{gabinete.risers[0]?.name ?? "—"}</p>
               <p className={cn("text-[10px]", deltaColor(gabinete.risers[0]?.delta ?? null))}>{fmtPct(gabinete.risers[0]?.delta ?? null)} seguidores</p>
             </div>
             <div className="p-3 rounded-lg bg-background/60 border border-border/40">
               <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-muted-foreground">
-                <Newspaper className="w-3 h-3" />Mejor post del gabinete
+                <Newspaper className="w-3 h-3" />Mejor post{scopeSuffix}
               </div>
               <div className="mt-1 font-display font-bold text-2xl tabular-nums">
                 {gabinete.bestPost?.interactions?.toLocaleString("es-MX") ?? "—"}
@@ -1034,9 +1057,9 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
                 <Card className="p-5">
                   <div className="flex items-center gap-2 mb-1">
                     <TrendingUp className="w-4 h-4 text-emerald-500" />
-                    <h4 className="font-semibold text-sm">Quién sube</h4>
+                    <h4 className="font-semibold text-sm">Quién sube{scopeSuffix}</h4>
                   </div>
-                  <p className="text-xs text-muted-foreground mb-3">Mayor crecimiento de seguidores vs periodo anterior (mismas redes comparables).</p>
+                  <p className="text-xs text-muted-foreground mb-3">Mayor crecimiento de seguidores vs periodo anterior, sólo sobre {gabinete.unit} y redes con dato en ambos periodos.</p>
                   {gabinete.risers.length === 0 ? (
                     <p className="text-sm text-muted-foreground italic">Necesitas 2+ periodos.</p>
                   ) : (
@@ -1053,9 +1076,9 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
                 <Card className="p-5">
                   <div className="flex items-center gap-2 mb-1">
                     <TrendingDown className="w-4 h-4 text-rose-500" />
-                    <h4 className="font-semibold text-sm">Quién baja</h4>
+                    <h4 className="font-semibold text-sm">Quién baja{scopeSuffix}</h4>
                   </div>
-                  <p className="text-xs text-muted-foreground mb-3">Mayor caída de seguidores vs periodo anterior (mismas redes comparables).</p>
+                  <p className="text-xs text-muted-foreground mb-3">Mayor caída de seguidores vs periodo anterior, sólo sobre {gabinete.unit} y redes con dato en ambos periodos.</p>
                   {gabinete.fallers.length === 0 ? (
                     <p className="text-sm text-muted-foreground italic">Necesitas 2+ periodos.</p>
                   ) : (
@@ -1073,8 +1096,8 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
               <Card className="p-5">
                 <div className="flex items-center gap-2 mb-3">
                   <Trophy className="w-4 h-4 text-primary" />
-                  <h4 className="font-semibold text-sm">Top 10 dependencias — engagement</h4>
-                  <span className="text-[10px] text-muted-foreground ml-auto">Promedio del gabinete: {gabinete.engAvg != null ? (gabinete.engAvg * 100).toFixed(2) + "%" : "—"} · última columna = vs promedio</span>
+                  <h4 className="font-semibold text-sm">Top 10 {gabinete.unit} — engagement</h4>
+                  <span className="text-[10px] text-muted-foreground ml-auto">Promedio de {gabinete.unit} con datos: {gabinete.engAvg != null ? (gabinete.engAvg * 100).toFixed(2) + "%" : "—"} · última columna = vs promedio</span>
                 </div>
                 {gabinete.engRanking.length === 0 ? (
                   <p className="text-sm text-muted-foreground italic">Sin datos con los filtros activos.</p>
@@ -1231,7 +1254,7 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
           <Card className="p-5">
             <div className="flex items-center gap-2 mb-3">
               <TrendingUp className="w-4 h-4 text-muted-foreground" />
-              <h4 className="font-semibold text-sm">Crecimiento diario de seguidores — {currentPeriod?.period_label}</h4>
+              <h4 className="font-semibold text-sm">Crecimiento diario de seguidores — {effectiveRange?.label ?? currentPeriod?.period_label}</h4>
             </div>
             {dailyEvolution.length === 0 ? (
               <p className="text-sm text-muted-foreground italic">No hay datos diarios para este periodo.</p>
@@ -1267,7 +1290,7 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
             <Card className="p-5">
               <div className="flex items-center gap-2 mb-3">
                 <BarChart3 className="w-4 h-4 text-muted-foreground" />
-                <h4 className="font-semibold text-sm">Ranking — {currentMetric.label}</h4>
+                <h4 className="font-semibold text-sm">Ranking — {currentMetric.label}{scopeSuffix}</h4>
                 <span className="text-[10px] text-muted-foreground ml-auto">Top {topRanking.length} de {rankingData.length}</span>
               </div>
               {rankingData.length === 0 ? (
@@ -1290,7 +1313,7 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
             <Card className="p-5">
               <div className="flex items-center gap-2 mb-3">
                 <PieIcon className="w-4 h-4 text-muted-foreground" />
-                <h4 className="font-semibold text-sm">Share del sector</h4>
+                <h4 className="font-semibold text-sm">{byDependencia ? `Share del gabinete${scopeSuffix}` : "Share del sector"}</h4>
               </div>
               {rankingData.length === 0 ? (
                 <p className="text-sm text-muted-foreground italic">Sin datos.</p>
@@ -1311,7 +1334,7 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
           <Card className="p-5">
             <div className="flex items-center gap-2 mb-3">
               <TrendingUp className="w-4 h-4 text-muted-foreground" />
-              <h4 className="font-semibold text-sm">Evolución por periodo — {currentMetric.label}</h4>
+              <h4 className="font-semibold text-sm">Evolución por periodo — {currentMetric.label}{scopeSuffix}</h4>
             </div>
             {evolutionData.length < 2 ? (
               <p className="text-sm text-muted-foreground italic">Necesitas 2+ periodos cargados.</p>
@@ -1347,6 +1370,7 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
             clientName={clientName}
             range={effectiveRange}
             networkFilter={networkFilter}
+            scopeNote={byDependencia ? "cubre todas las cuentas cargadas (institucionales y titulares); no se ajusta al filtro de Cuentas" : undefined}
           />
           {/* Deeper insights row */}
           <div className="grid gap-3 md:grid-cols-4">
@@ -1363,7 +1387,7 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
               </p>
             </Card>
             <Card className="p-4">
-              <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Mediana / post</p>
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Mediana / post{scopeSuffix}</p>
               <p className="text-2xl font-display font-bold tabular-nums mt-1">{Math.round(contentInsights.clientMedian).toLocaleString("es-MX")}</p>
               {!byDependencia && <p className="text-[10px] text-muted-foreground mt-1">Sector: <span className="font-medium text-foreground">{Math.round(contentInsights.sectorMedian).toLocaleString("es-MX")}</span></p>}
             </Card>
@@ -1503,7 +1527,10 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
           <Card className="p-5">
             <div className="flex items-center gap-2 mb-3">
               <TableIcon className="w-4 h-4 text-muted-foreground" />
-              <h4 className="font-semibold text-sm">Tabla detallada — {currentPeriod?.period_label}</h4>
+              <h4 className="font-semibold text-sm">Tabla detallada — {effectiveRange?.label ?? currentPeriod?.period_label}{scopeSuffix}</h4>
+              <span className="text-[10px] text-muted-foreground ml-auto">
+                {networkFilter === "all" ? "todas las redes" : networkFilter} · {periodMetrics.length} filas visibles
+              </span>
             </div>
             <div className="overflow-auto max-h-[500px] border border-border/40 rounded-lg">
               <table className="w-full text-xs">
