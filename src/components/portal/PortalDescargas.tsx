@@ -46,6 +46,7 @@ export default function PortalDescargas({
   const [loading, setLoading] = useState(true);
 
   const [depId, setDepId] = useState<string>("");
+  const [enfoque, setEnfoque] = useState<"combinado" | "institucional" | "titular">("combinado");
   const [periodLabel, setPeriodLabel] = useState<string>("");
   const [busy, setBusy] = useState<string | null>(null);
 
@@ -116,6 +117,21 @@ export default function PortalDescargas({
     return m;
   }, [competitors]);
 
+  const typeOfCompetitor = useMemo(() => {
+    const m = new Map<string, string>();
+    competitors.forEach((c) => m.set(c.id, c.account_type ?? "institucional"));
+    return m;
+  }, [competitors]);
+
+  const matchesEnfoque = (accountType: string | null | undefined) =>
+    enfoque === "combinado" ? true : (accountType ?? "institucional") === enfoque;
+
+  const ENFOQUE_LABEL: Record<string, string> = {
+    combinado: "Dependencia + titular",
+    institucional: "Solo cuentas institucionales",
+    titular: "Solo cuentas del titular",
+  };
+
   /** Agregado por dependencia para un conjunto de periodos. */
   const aggregate = (periodIds: string[]) => {
     const acc = new Map<string, { followers: number; eng: number[]; posts: number[] }>();
@@ -123,6 +139,7 @@ export default function PortalDescargas({
       if (!periodIds.includes(m.period_id)) continue;
       const dep = depOfCompetitor.get(m.competitor_id);
       if (!dep) continue;
+      if (!matchesEnfoque(typeOfCompetitor.get(m.competitor_id))) continue;
       const e = acc.get(dep) ?? { followers: 0, eng: [], posts: [] };
       e.followers += Number(m.followers) || 0;
       if (Number.isFinite(Number(m.engagement_rate))) e.eng.push(Number(m.engagement_rate));
@@ -250,7 +267,7 @@ export default function PortalDescargas({
     const dep = dependencias.find((d) => d.id === depId);
     if (!dep) return null;
     const periodIds = activePeriods.map((p) => p.id);
-    const depComps = competitors.filter((c) => c.dependencia_id === dep.id);
+    const depComps = competitors.filter((c) => c.dependencia_id === dep.id && matchesEnfoque(c.account_type));
     const compById = new Map(depComps.map((c) => [c.id, c]));
 
     const cuentas = metrics
@@ -318,7 +335,7 @@ export default function PortalDescargas({
       tipo: dep.tipo,
       titular: dep.titular,
       titularCargo: dep.titular_cargo,
-      periodoLabel: periodLabel || "Periodo",
+      periodoLabel: `${periodLabel || "Periodo"} · ${ENFOQUE_LABEL[enfoque]}`,
       redes: Array.from(new Set(cuentas.map((c) => c.red))),
       cuentas,
       totales: { seguidores: mine.followers, engagement: mine.engagement, postsDia: mine.postsDia },
@@ -349,7 +366,7 @@ export default function PortalDescargas({
       return { nombre: depName.get(id) ?? "—", delta: d };
     }).filter((r) => r.delta != null) as { nombre: string; delta: number }[];
     return {
-      periodoLabel: periodLabel || "Periodo",
+      periodoLabel: `${periodLabel || "Periodo"} · ${ENFOQUE_LABEL[enfoque]}`,
       ranking,
       suben: moves.slice().sort((a, b) => b.delta - a.delta).slice(0, 5),
       bajan: moves.slice().sort((a, b) => a.delta - b.delta).slice(0, 5),
@@ -366,7 +383,7 @@ export default function PortalDescargas({
     setDepData(data);
     try {
       await new Promise((r) => setTimeout(r, 350));
-      await renderPdf(depPdfRef, `${data.dependencia.replace(/\s+/g, "-").toLowerCase()}-${periodLabel || "reporte"}.pdf`);
+      await renderPdf(depPdfRef, `${data.dependencia.replace(/\s+/g, "-").toLowerCase()}-${enfoque}-${periodLabel || "reporte"}.pdf`);
       toast.success("Reporte descargado", { id: "dep-pdf" });
     } catch {
       toast.error("No se pudo generar el PDF", { id: "dep-pdf" });
@@ -379,7 +396,7 @@ export default function PortalDescargas({
     toast.loading("Generando panorama…", { id: "gab-pdf" });
     try {
       await new Promise((r) => setTimeout(r, 350));
-      await renderPdf(gabPdfRef, `gabinete-${periodLabel || "reporte"}.pdf`);
+      await renderPdf(gabPdfRef, `gabinete-${enfoque}-${periodLabel || "reporte"}.pdf`);
       toast.success("Panorama descargado", { id: "gab-pdf" });
     } catch {
       toast.error("No se pudo generar el PDF", { id: "gab-pdf" });
@@ -420,6 +437,17 @@ export default function PortalDescargas({
               <SelectTrigger className="w-[200px] h-9"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {periodLabels.slice().reverse().map((l) => <SelectItem key={l} value={l}>{l}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Enfoque</span>
+            <Select value={enfoque} onValueChange={(v) => setEnfoque(v as typeof enfoque)}>
+              <SelectTrigger className="w-[240px] h-9"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="combinado">Combinado (institución + titular)</SelectItem>
+                <SelectItem value="institucional">Solo institucional</SelectItem>
+                <SelectItem value="titular">Solo titular (funcionario)</SelectItem>
               </SelectContent>
             </Select>
           </div>
