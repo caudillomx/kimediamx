@@ -1427,13 +1427,13 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
               <div className="flex items-center gap-2 mb-3">
                 <Newspaper className="w-4 h-4 text-muted-foreground" />
               <h4 className="font-semibold text-sm">{byDependencia ? "Top de titulares del gabinete" : "Top del sector"}</h4>
-                <Badge variant="secondary" className="ml-auto">Top {Math.min(10, peerPosts.length)} de {peerPosts.length}</Badge>
+                <Badge variant="secondary" className="ml-auto">Top {Math.min(10, topPeerPosts.length)} de {topPeerPosts.length}</Badge>
               </div>
-              {peerPosts.length === 0 ? (
+              {topPeerPosts.length === 0 ? (
                 <p className="text-sm text-muted-foreground italic">Sin publicaciones cargadas.</p>
               ) : (
                 <ul className="space-y-3 max-h-[500px] overflow-auto pr-1">
-                  {peerPosts.slice(0, 10).map((p) => {
+                  {topPeerPosts.slice(0, 10).map((p) => {
                     const c = p.competitor_id ? compMap.get(p.competitor_id) : null;
                     return (
                       <li key={p.id} className="p-3 rounded-lg border border-border/40 bg-background/40">
