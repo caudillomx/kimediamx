@@ -706,9 +706,17 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
   const titularPosts = byDependencia
     ? ownPosts.filter((p) => p.source_account_type === "titular")
     : [];
-  // Comparativo: en gabinete se contrasta contra titulares; si el filtro de cuentas
-  // deja ese conjunto vacío, se usa el universo visible para no dejar insights en blanco.
-  const peerPosts = byDependencia ? (titularPosts.length ? titularPosts : ownPosts) : sectorPostsPeriod;
+  /** Sufijo explícito del universo visible, para que ninguna tarjeta mienta sobre su fuente. */
+  const scopeSuffix = !byDependencia || accountFilter === "ambos"
+    ? ""
+    : accountFilter === "titular" ? " (titulares)" : " (institucionales)";
+  // Comparativo: en gabinete sólo tiene sentido contrastar institucional vs titular
+  // cuando el filtro es "ambos"; con un filtro específico el universo es uno solo.
+  const peerPosts = byDependencia
+    ? (accountFilter === "ambos" ? (titularPosts.length ? titularPosts : ownPosts) : ownPosts)
+    : sectorPostsPeriod;
+  /** Pool para líder y palabras clave: siempre el universo visible en modo gabinete. */
+  const insightPool = byDependencia ? ownPosts : peerPosts;
   /** Tabla "Top de titulares": estrictamente cuentas de funcionarios (sin fallback). */
   const topPeerPosts = byDependencia ? titularPosts : sectorPostsPeriod;
   /** Mejor publicación institucional de cada dependencia (modo gabinete). */
@@ -751,7 +759,7 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
     // Top keywords from top sector posts (very light heuristic)
     const stop = new Set(["de","la","el","en","los","las","que","por","con","para","del","a","y","o","u","es","un","una","al","se","su","sus","lo","le","les","no","si","sí","este","esta","estos","estas","con","tu","tus","mi","mis","como","más","ya","ese","esa","esos","esas","the","and","for","of","to","in","on","is","it","this","that","are","with","from","at","by","or","be","an","as","we","you","your"]);
     const freq = new Map<string, number>();
-    for (const p of peerPosts.slice(0, 30)) {
+    for (const p of insightPool.slice(0, 30)) {
       if (!p.message) continue;
       const words = p.message.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
         .split(/[^a-záéíóúñü0-9#@]+/i)
@@ -764,7 +772,7 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
 
     // Sector leader (competitor with most total interactions in the range)
     const leaderMap = new Map<string, number>();
-    for (const p of peerPosts) {
+    for (const p of insightPool) {
       if (!p.competitor_id) continue;
       leaderMap.set(p.competitor_id, (leaderMap.get(p.competitor_id) ?? 0) + (p.interactions ?? 0));
     }
@@ -1318,7 +1326,7 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
               <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Interacciones prom. / post</p>
               <p className="text-2xl font-display font-bold tabular-nums mt-1">{Math.round(contentInsights.clientAvg).toLocaleString("es-MX")}</p>
               <p className="text-[10px] text-muted-foreground mt-1">
-                {byDependencia ? `${contentInsights.clientPostCount} publicaciones analizadas` : <>Sector: <span className="font-medium text-foreground">{Math.round(contentInsights.sectorAvg).toLocaleString("es-MX")}</span></>}
+                {byDependencia ? `${contentInsights.clientPostCount} publicaciones analizadas${scopeSuffix}` : <>Sector: <span className="font-medium text-foreground">{Math.round(contentInsights.sectorAvg).toLocaleString("es-MX")}</span></>}
                 {!byDependencia && contentInsights.sectorAvg > 0 && (
                   <span className={cn("ml-1", contentInsights.clientAvg >= contentInsights.sectorAvg ? "text-emerald-500" : "text-rose-500")}>
                     ({fmtPct((contentInsights.clientAvg - contentInsights.sectorAvg) / contentInsights.sectorAvg)})
@@ -1332,12 +1340,12 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
               {!byDependencia && <p className="text-[10px] text-muted-foreground mt-1">Sector: <span className="font-medium text-foreground">{Math.round(contentInsights.sectorMedian).toLocaleString("es-MX")}</span></p>}
             </Card>
             <Card className="p-4">
-              <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Mejor día {byDependencia ? "del gabinete" : clientName}</p>
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Mejor día {byDependencia ? `del gabinete${scopeSuffix}` : clientName}</p>
               <p className="text-2xl font-display font-bold mt-1">{contentInsights.bestDay ? contentInsights.bestDay.day : "—"}</p>
               <p className="text-[10px] text-muted-foreground mt-1">{contentInsights.bestDay ? `${Math.round(contentInsights.bestDay.avg).toLocaleString("es-MX")} interacc. prom.` : "Sin posts en el rango"}</p>
             </Card>
             <Card className="p-4">
-              <p className="text-[10px] uppercase tracking-widest text-muted-foreground">{byDependencia ? "Dependencia líder" : "Líder del sector"}</p>
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground">{byDependencia ? `Dependencia líder${scopeSuffix}` : "Líder del sector"}</p>
               <p className="text-lg font-display font-bold mt-1 truncate">{contentInsights.leader?.name ?? "—"}</p>
               <p className="text-[10px] text-muted-foreground mt-1">{contentInsights.leader ? `${contentInsights.leader.total.toLocaleString("es-MX")} interacc. totales` : "Sin datos"}</p>
             </Card>
@@ -1347,9 +1355,13 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
             <Card className="p-5">
               <div className="flex items-center gap-2 mb-2">
                 <Lightbulb className="w-4 h-4 text-primary" />
-              <h4 className="font-semibold text-sm">{byDependencia ? "Palabras clave del gabinete" : "Palabras clave que usa el sector"}</h4>
+              <h4 className="font-semibold text-sm">{byDependencia ? `Palabras clave del gabinete${scopeSuffix}` : "Palabras clave que usa el sector"}</h4>
               </div>
-              <p className="text-xs text-muted-foreground mb-3">Términos más frecuentes en los posts top de los competidores. Úsalo para inspirar temas propios.</p>
+              <p className="text-xs text-muted-foreground mb-3">
+                {byDependencia
+                  ? `Términos más frecuentes en las publicaciones top del universo visible${scopeSuffix ? ` — cuentas ${accountFilter === "titular" ? "de titulares" : "institucionales"}` : " — cuentas institucionales y de titulares"}.`
+                  : "Términos más frecuentes en los posts top de los competidores. Úsalo para inspirar temas propios."}
+              </p>
               <div className="flex flex-wrap gap-2">
                 {contentInsights.topKeywords.map(([w, n]) => (
                   <Badge key={w} variant="secondary" className="text-xs">
@@ -1360,13 +1372,13 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
             </Card>
           )}
 
-          <div className="grid gap-4 lg:grid-cols-2">
-            {byDependencia ? (
+          <div className={cn("grid gap-4", (!byDependencia || accountFilter === "ambos") && "lg:grid-cols-2")}>
+            {byDependencia ? (accountFilter !== "titular" && (
             <Card className="p-5">
               <div className="flex items-center gap-2 mb-3">
                 <Trophy className="w-4 h-4 text-primary" />
                 <h4 className="font-semibold text-sm">Mejor publicación por dependencia</h4>
-                <Badge variant="secondary" className="ml-auto">{bestPerDependencia.length} dependencias</Badge>
+                <Badge variant="secondary" className="ml-auto">{bestPerDependencia.length} dependencias · institucional</Badge>
               </div>
               {bestPerDependencia.length === 0 ? (
                 <p className="text-sm text-muted-foreground italic">Sin publicaciones en este {rangeMode === "custom" ? "rango" : "periodo"}{networkFilter !== "all" ? ` para ${networkFilter}` : ""}.</p>
@@ -1394,7 +1406,7 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
                 </ul>
               )}
             </Card>
-            ) : (
+            )) : (
             <Card className="p-5">
               <div className="flex items-center gap-2 mb-3">
                 <Trophy className="w-4 h-4 text-primary" />
@@ -1423,11 +1435,12 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
             </Card>
             )}
 
+            {(!byDependencia || accountFilter !== "institucional") && (
             <Card className="p-5">
               <div className="flex items-center gap-2 mb-3">
                 <Newspaper className="w-4 h-4 text-muted-foreground" />
               <h4 className="font-semibold text-sm">{byDependencia ? "Top de titulares del gabinete" : "Top del sector"}</h4>
-                <Badge variant="secondary" className="ml-auto">Top {Math.min(10, topPeerPosts.length)} de {topPeerPosts.length}</Badge>
+                <Badge variant="secondary" className="ml-auto">Top {Math.min(10, topPeerPosts.length)} de {topPeerPosts.length}{byDependencia ? " · titular" : ""}</Badge>
               </div>
               {topPeerPosts.length === 0 ? (
                 <p className="text-sm text-muted-foreground italic">Sin publicaciones cargadas.</p>
@@ -1453,6 +1466,7 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
                 </ul>
               )}
             </Card>
+            )}
           </div>
         </TabsContent>
 
