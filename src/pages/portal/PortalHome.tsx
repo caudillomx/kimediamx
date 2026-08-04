@@ -25,7 +25,8 @@ import RecommendationsBlock from "@/components/portal/RecommendationsBlock";
 import PortalBenchmark from "@/components/portal/PortalBenchmark";
 import PortalStrategy from "@/components/portal/PortalStrategy";
 import PortalDescargas from "@/components/portal/PortalDescargas";
-import { Compass, Users as UsersIcon, Building2 } from "lucide-react";
+import PortalBriefing from "@/components/portal/PortalBriefing";
+import { Compass, Users as UsersIcon, Building2, Home } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 
 type Analysis = {
@@ -242,7 +243,26 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
     return (localStorage.getItem("portal-theme") as "dark" | "light") || "dark";
   });
   const [activeTab, setActiveTab] = useState<string>("panorama");
+  const [focusDepId, setFocusDepId] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    return localStorage.getItem("portal-focus-dep") || null;
+  });
+  const gabineteTabInit = useRef(false);
   const pdfRef = useRef<HTMLDivElement>(null);
+
+  const isGabinete = !!(portalModules.benchmark_funcionarios || portalModules.benchmark_instituciones);
+
+  useEffect(() => {
+    if (focusDepId) localStorage.setItem("portal-focus-dep", focusDepId);
+    else localStorage.removeItem("portal-focus-dep");
+  }, [focusDepId]);
+
+  useEffect(() => {
+    if (isGabinete && !gabineteTabInit.current) {
+      gabineteTabInit.current = true;
+      setActiveTab("inicio");
+    }
+  }, [isGabinete]);
 
 
   useEffect(() => {
@@ -763,7 +783,7 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
 
       <main className="relative max-w-7xl mx-auto px-6 py-6 space-y-6">
         {/* Week bar (listening scope: only for Panorama/Histórico) */}
-        {analyses.length > 0 && activeTab !== "benchmark" && activeTab !== "benchmark_funcionarios" && activeTab !== "benchmark_instituciones" && activeTab !== "estrategia" && activeTab !== "prensa" && activeTab !== "descargas" && (
+        {analyses.length > 0 && activeTab !== "inicio" && activeTab !== "benchmark" && activeTab !== "benchmark_funcionarios" && activeTab !== "benchmark_instituciones" && activeTab !== "estrategia" && activeTab !== "prensa" && activeTab !== "descargas" && (
         <div className="glass rounded-2xl p-4 flex flex-col lg:flex-row lg:items-center gap-4">
           <div className="flex items-center gap-2">
             <Button variant="outline" size="icon" onClick={goPrev} disabled={currentIdx >= analyses.length - 1} className="h-9 w-9">
@@ -852,7 +872,7 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
               className="space-y-6"
             >
               {/* KPI cards (listening scope) */}
-              {analyses.length > 0 && activeTab !== "benchmark" && activeTab !== "benchmark_funcionarios" && activeTab !== "benchmark_instituciones" && activeTab !== "estrategia" && activeTab !== "prensa" && activeTab !== "descargas" && (
+              {analyses.length > 0 && activeTab !== "inicio" && activeTab !== "benchmark" && activeTab !== "benchmark_funcionarios" && activeTab !== "benchmark_instituciones" && activeTab !== "estrategia" && activeTab !== "prensa" && activeTab !== "descargas" && (
               <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
                 <KpiCard
                   label="Menciones analizadas"
@@ -879,7 +899,10 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
               )}
 
               <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <TabsList className="bg-background/50 backdrop-blur border border-border/60 rounded-xl p-1 h-auto">
+                <TabsList className="bg-background/50 backdrop-blur border border-border/60 rounded-xl p-1 h-auto flex-wrap">
+                  {isGabinete && (
+                    <TabsTrigger value="inicio" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><Home className="w-4 h-4 mr-2" />Inicio</TabsTrigger>
+                  )}
                   <TabsTrigger value="panorama" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><BarChart3 className="w-4 h-4 mr-2" />Panorama</TabsTrigger>
                   <TabsTrigger value="benchmark" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><TrendingUp className="w-4 h-4 mr-2" />Benchmark</TabsTrigger>
                   <TabsTrigger value="estrategia" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><Compass className="w-4 h-4 mr-2" />Estrategia</TabsTrigger>
@@ -888,6 +911,17 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
                     <TabsTrigger value="descargas" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><Download className="w-4 h-4 mr-2" />Descargas</TabsTrigger>
                   )}
                 </TabsList>
+
+                {isGabinete && (
+                  <TabsContent value="inicio" className="mt-5 space-y-4">
+                    <PortalBriefing
+                      clientId={portal.clientId}
+                      focusDepId={focusDepId}
+                      onFocusChange={setFocusDepId}
+                      onGoTo={setActiveTab}
+                    />
+                  </TabsContent>
+                )}
 
                 {/* Panorama: resumen ejecutivo + alertas + hallazgos + análisis en un solo tab */}
                 <TabsContent value="panorama" className="mt-5 space-y-5">
