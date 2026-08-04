@@ -408,11 +408,18 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
     return idx > 0 ? periods[idx - 1] : null;
   }, [periods, selectedPeriod, rangeMode, effectiveRange]);
 
+  /** Ids del periodo anterior tal y como aparecen en `metrics` (los periodos se fusionan por alias). */
+  const prevPeriodIds = useMemo<string[]>(() => {
+    if (!prevPeriod) return [];
+    const alias = periodAlias.get(prevPeriod.id) ?? prevPeriod.id;
+    return Array.from(new Set([prevPeriod.id, alias]));
+  }, [prevPeriod, periodAlias]);
+
   // Insights layer — deterministic templates, no LLM
   const insights = useMemo(() => {
     const netFilter = (m: { network: string }) => networkFilter === "all" || m.network === networkFilter;
     const currentAll = metrics.filter((m) => activePeriodIds.includes(m.period_id) && netFilter(m));
-    const prevAll = prevPeriod ? metrics.filter((m) => m.period_id === prevPeriod.id && netFilter(m)) : [];
+    const prevAll = prevPeriodIds.length ? metrics.filter((m) => prevPeriodIds.includes(m.period_id) && netFilter(m)) : [];
 
     // Aggregate helper: value by competitor for a metric key (sum across networks when "all")
     const aggByCompetitor = (rows: Metric[], key: keyof Metric) => {
@@ -602,7 +609,7 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
       return out;
     };
     const curr = metrics.filter((m) => activePeriodIds.includes(m.period_id) && netFilter(m));
-    const prev = prevPeriod ? metrics.filter((m) => m.period_id === prevPeriod.id && netFilter(m)) : [];
+    const prev = prevPeriodIds.length ? metrics.filter((m) => prevPeriodIds.includes(m.period_id) && netFilter(m)) : [];
 
     const engNow = aggBy(curr, "engagement_rate");
     const engRanking = Array.from(engNow.entries())
@@ -611,15 +618,36 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
       .map(([id, v]) => ({ id, name: compMap.get(id)?.name ?? "—", value: v }));
     const engAvg = engRanking.length ? engRanking.reduce((a, b) => a + b.value, 0) / engRanking.length : null;
 
-    const fNow = aggBy(curr, "followers");
-    const fPrev = aggBy(prev, "followers");
-    const moves = Array.from(fNow.entries())
-      .map(([id, v]) => {
-        const p = fPrev.get(id);
-        const d = p && p !== 0 ? (v - p) / Math.abs(p) : null;
-        return { id, name: compMap.get(id)?.name ?? "—", delta: d, value: v };
-      })
-      .filter((r) => r.delta != null) as { id: string; name: string; delta: number; value: number }[];
+    // Crecimiento de seguidores: se compara SOLO sobre pares (dependencia, red) con dato
+    // en ambos periodos. Comparar sumas totales produce falsos -100% / +900% cuando la
+    // cobertura de redes cambia entre meses o cambia el filtro de Cuentas.
+    const followersByDepNet = (rows: Metric[]) => {
+      const acc = new Map<string, number>();
+      for (const r of rows) {
+        const v = Number(r.followers ?? NaN);
+        if (!Number.isFinite(v)) continue;
+        const k = `${r.competitor_id}::${r.network}`;
+        acc.set(k, (acc.get(k) ?? 0) + v);
+      }
+      return acc;
+    };
+    const fNowNet = followersByDepNet(curr);
+    const fPrevNet = followersByDepNet(prev);
+    const paired = new Map<string, { now: number; prev: number }>();
+    fNowNet.forEach((v, k) => {
+      const p = fPrevNet.get(k);
+      if (p == null || p === 0) return;
+      const dep = k.split("::")[0];
+      const e = paired.get(dep) ?? { now: 0, prev: 0 };
+      e.now += v; e.prev += p;
+      paired.set(dep, e);
+    });
+    const moves = Array.from(paired.entries()).map(([id, v]) => ({
+      id,
+      name: compMap.get(id)?.name ?? "—",
+      delta: (v.now - v.prev) / Math.abs(v.prev),
+      value: v.now,
+    }));
     const risers = moves.slice().sort((a, b) => b.delta - a.delta).slice(0, 5);
     const fallers = moves.slice().sort((a, b) => a.delta - b.delta).slice(0, 5);
 
@@ -636,7 +664,7 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
       : `${engRanking[0].name} lidera el gabinete en engagement (${(engRanking[0].value * 100).toFixed(2)}%) entre ${engRanking.length} dependencias con datos${risers.length ? `; ${risers[0].name} es quien más crece en seguidores (${(risers[0].delta * 100).toFixed(1)}%)` : ""}.`;
 
     return { engRanking, engAvg, risers, fallers, bestPost, headline, entities: engRanking.length };
-  }, [byDependencia, metrics, posts, activePeriodIds, prevPeriod, networkFilter, compMap, currentPeriod, rangeMode, effectiveRange]);
+  }, [byDependencia, metrics, posts, activePeriodIds, prevPeriodIds, networkFilter, compMap, currentPeriod, rangeMode, effectiveRange]);
 
   const clientEvolution = useMemo(() => {
     const netFilter = (m: { network: string }) => networkFilter === "all" || m.network === networkFilter;
@@ -1008,7 +1036,7 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
                     <TrendingUp className="w-4 h-4 text-emerald-500" />
                     <h4 className="font-semibold text-sm">Quién sube</h4>
                   </div>
-                  <p className="text-xs text-muted-foreground mb-3">Mayor crecimiento de seguidores vs periodo anterior.</p>
+                  <p className="text-xs text-muted-foreground mb-3">Mayor crecimiento de seguidores vs periodo anterior (mismas redes comparables).</p>
                   {gabinete.risers.length === 0 ? (
                     <p className="text-sm text-muted-foreground italic">Necesitas 2+ periodos.</p>
                   ) : (
@@ -1027,7 +1055,7 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
                     <TrendingDown className="w-4 h-4 text-rose-500" />
                     <h4 className="font-semibold text-sm">Quién baja</h4>
                   </div>
-                  <p className="text-xs text-muted-foreground mb-3">Mayor caída de seguidores vs periodo anterior.</p>
+                  <p className="text-xs text-muted-foreground mb-3">Mayor caída de seguidores vs periodo anterior (mismas redes comparables).</p>
                   {gabinete.fallers.length === 0 ? (
                     <p className="text-sm text-muted-foreground italic">Necesitas 2+ periodos.</p>
                   ) : (
@@ -1046,7 +1074,7 @@ export default function PortalBenchmark({ clientId, clientName, scope, groupBy }
                 <div className="flex items-center gap-2 mb-3">
                   <Trophy className="w-4 h-4 text-primary" />
                   <h4 className="font-semibold text-sm">Top 10 dependencias — engagement</h4>
-                  <span className="text-[10px] text-muted-foreground ml-auto">Promedio del gabinete: {gabinete.engAvg != null ? (gabinete.engAvg * 100).toFixed(2) + "%" : "—"}</span>
+                  <span className="text-[10px] text-muted-foreground ml-auto">Promedio del gabinete: {gabinete.engAvg != null ? (gabinete.engAvg * 100).toFixed(2) + "%" : "—"} · última columna = vs promedio</span>
                 </div>
                 {gabinete.engRanking.length === 0 ? (
                   <p className="text-sm text-muted-foreground italic">Sin datos con los filtros activos.</p>
