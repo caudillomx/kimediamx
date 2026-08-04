@@ -1683,6 +1683,51 @@ export type Database = {
           },
         ]
       }
+      client_portal_user_prefs: {
+        Row: {
+          client_id: string
+          created_at: string
+          focus_dependencia_id: string | null
+          id: string
+          theme: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          focus_dependencia_id?: string | null
+          id?: string
+          theme?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          focus_dependencia_id?: string | null
+          id?: string
+          theme?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_portal_user_prefs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_portal_user_prefs_focus_dependencia_id_fkey"
+            columns: ["focus_dependencia_id"]
+            isOneToOne: false
+            referencedRelation: "client_portal_dependencias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_portal_weekly_recommendations: {
         Row: {
           client_id: string
