@@ -306,7 +306,7 @@ export default function PortalDescargas({
     const prensaAll = mentions
       .filter((r) => r.dep === dep.id)
       .map((r) => ({ fecha: r.fecha, medio: r.medio, titular: r.titular || r.cita.slice(0, 90), tono: r.tono, url: r.url }));
-    const prensa = prensaAll.slice(0, 12);
+    const prensa = prensaAll.slice(0, 8);
     const prensaTono = {
       positivo: prensaAll.filter((p) => p.tono === "positivo").length,
       neutral: prensaAll.filter((p) => p.tono === "neutral").length,
