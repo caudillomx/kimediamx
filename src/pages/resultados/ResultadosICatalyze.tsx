@@ -193,6 +193,13 @@ const ResultadosICatalyze = () => {
                     <YAxis stroke="hsl(var(--muted-foreground))" tickLine={false} axisLine={false} fontSize={12} />
                     <Tooltip cursor={{ fill: "hsl(var(--muted) / 0.3)" }} content={<ChartTooltip />} />
                     <Bar dataKey="valor" radius={[8, 8, 0, 0]}>
+                      <LabelList
+                        dataKey="valor"
+                        position="top"
+                        fill="hsl(var(--foreground))"
+                        fontSize={13}
+                        fontWeight={700}
+                      />
                       {monthly.map((d) => (
                         <Cell
                           key={d.mes}
