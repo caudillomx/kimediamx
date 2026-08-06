@@ -8,6 +8,7 @@ import {
   CartesianGrid,
   Tooltip,
   Cell,
+  LabelList,
 } from "recharts";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -21,18 +22,17 @@ const fadeUp = {
 };
 
 const monthly = [
-  { mes: "Dic 25", valor: 14.0, peak: true },
   { mes: "Ene", valor: 5.5, peak: false },
   { mes: "Feb", valor: 1.0, peak: false },
   { mes: "Mar", valor: 3.0, peak: false },
   { mes: "Abr", valor: 11.8, peak: true },
-  { mes: "Ago", valor: 10.3, peak: true },
+  { mes: "Ago 26", valor: 10.3, peak: true },
 ];
 
 const timeline = [
   { n: "01", title: "Diagnóstico", desc: "Lectura de cuentas, formatos y desempeño histórico por red." },
   { n: "02", title: "Estrategia activa", desc: "Líneas narrativas, calendario y producción constante de contenido." },
-  { n: "03", title: "Resultados", desc: "Interacción sostenida y aprendizajes claros sobre qué formato funciona." },
+  { n: "03", title: "Resultados", desc: "200 interacciones totales en Instagram · tasa de interacción en Facebook creció 3.6x en el período." },
 ];
 
 const topPosts = [
@@ -86,7 +86,7 @@ const ResultadosICatalyze = () => {
       <section className="relative overflow-hidden border-b border-border">
         <div className="absolute inset-0 bg-mesh" />
         <div className="absolute inset-0 bg-glow" />
-        <div className="container relative mx-auto max-w-5xl px-6 py-28 md:py-36">
+        <div className="container relative mx-auto max-w-5xl px-6 py-14 md:py-20">
           <motion.div {...fadeUp}>
             <Badge className="mb-6 bg-gradient-coral text-primary-foreground">Reporte de resultados</Badge>
             <h1 className="font-display text-4xl font-bold leading-[1.05] tracking-tight md:text-6xl">
@@ -95,7 +95,7 @@ const ResultadosICatalyze = () => {
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground">
               Un resumen ejecutivo del trabajo realizado con Diane Garza: qué se construyó, cómo respondió la
-              audiencia y qué aprendizajes quedan instalados para el siguiente ciclo.
+              audiencia y qué aprendizajes quedan instalados.
             </p>
           </motion.div>
         </div>
@@ -103,7 +103,7 @@ const ResultadosICatalyze = () => {
 
       {/* 2. Contexto */}
       <section className="border-b border-border">
-        <div className="container mx-auto max-w-5xl px-6 py-20">
+        <div className="container mx-auto max-w-5xl px-6 py-10">
           <motion.div {...fadeUp}>
             <h2 className="font-display text-2xl font-bold md:text-3xl">Contexto del período</h2>
             <div className="mt-10 grid gap-6 md:grid-cols-3">
@@ -123,7 +123,7 @@ const ResultadosICatalyze = () => {
 
       {/* 3. Métricas globales */}
       <section className="border-b border-border bg-surface-elevated/40">
-        <div className="container mx-auto max-w-5xl px-6 py-20">
+        <div className="container mx-auto max-w-5xl px-6 py-10">
           <motion.div {...fadeUp}>
             <h2 className="font-display text-2xl font-bold md:text-3xl">Métricas globales</h2>
             <div className="mt-10 grid gap-6 md:grid-cols-2">
@@ -171,7 +171,7 @@ const ResultadosICatalyze = () => {
 
       {/* 4. Evolución mensual */}
       <section className="border-b border-border">
-        <div className="container mx-auto max-w-5xl px-6 py-20">
+        <div className="container mx-auto max-w-5xl px-6 py-10">
           <motion.div {...fadeUp}>
             <h2 className="font-display text-2xl font-bold md:text-3xl">Evolución mensual</h2>
             <p className="mt-2 text-sm text-muted-foreground">
@@ -218,7 +218,7 @@ const ResultadosICatalyze = () => {
 
       {/* 5. Contenido de mayor impacto */}
       <section className="border-b border-border bg-surface-elevated/40">
-        <div className="container mx-auto max-w-5xl px-6 py-20">
+        <div className="container mx-auto max-w-5xl px-6 py-10">
           <motion.div {...fadeUp}>
             <h2 className="font-display text-2xl font-bold md:text-3xl">Contenido de mayor impacto</h2>
             <p className="mt-2 text-sm text-muted-foreground">Top 3 publicaciones de Instagram del período.</p>
@@ -252,7 +252,7 @@ const ResultadosICatalyze = () => {
 
       {/* 6. Lo que instalamos */}
       <section>
-        <div className="container mx-auto max-w-5xl px-6 py-20 pb-28">
+        <div className="container mx-auto max-w-5xl px-6 py-10 pb-16">
           <motion.div {...fadeUp}>
             <h2 className="font-display text-2xl font-bold md:text-3xl">Lo que instalamos</h2>
             <div className="mt-10 grid gap-6 md:grid-cols-3">
