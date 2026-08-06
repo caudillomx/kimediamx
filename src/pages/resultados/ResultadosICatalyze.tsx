@@ -205,8 +205,8 @@ const ResultadosICatalyze = () => {
                   <Instagram className="h-5 w-5 text-primary" />
                   <span className="text-xs font-bold uppercase tracking-[1.5px] text-muted-foreground">Instagram</span>
                 </div>
-                <div className="font-display text-5xl font-bold text-gradient">8.3</div>
-                <p className="mt-2 text-sm text-muted-foreground">interacciones promedio por publicación</p>
+                <div className="font-display text-5xl font-bold text-gradient">12.88%</div>
+                <p className="mt-2 text-sm text-muted-foreground">tasa de interacción al cierre</p>
                 <div className="mt-6 border-t border-border pt-5">
                   <div className="font-display text-2xl font-bold">38</div>
                   <p className="text-sm text-muted-foreground">interacciones en el mejor post</p>
@@ -218,8 +218,8 @@ const ResultadosICatalyze = () => {
                   <Facebook className="h-5 w-5 text-cyan" />
                   <span className="text-xs font-bold uppercase tracking-[1.5px] text-muted-foreground">Facebook</span>
                 </div>
-                <div className="font-display text-5xl font-bold text-gradient-electric">1.73%</div>
-                <p className="mt-2 text-sm text-muted-foreground">tasa de interacción</p>
+                <div className="font-display text-5xl font-bold text-gradient-electric">8.90%</div>
+                <p className="mt-2 text-sm text-muted-foreground">tasa de interacción al cierre</p>
                 <div className="mt-6 border-t border-border pt-5">
                   <div className="font-display text-2xl font-bold">3.6x</div>
                   <p className="text-sm text-muted-foreground">crecimiento en el período</p>
@@ -233,7 +233,7 @@ const ResultadosICatalyze = () => {
                 <div>
                   <div className="text-[10px] font-bold uppercase tracking-[1.5px] text-primary">Dato destacado</div>
                   <p className="mt-2 font-display text-xl font-bold leading-snug md:text-2xl">
-                    Instagram supera a Facebook en rendimiento por post en 144%
+                    Instagram creció de 0% a 12.88% en el período de gestión
                   </p>
                 </div>
               </div>
@@ -242,54 +242,130 @@ const ResultadosICatalyze = () => {
         </div>
       </section>
 
+      {/* 3.5 Crecimiento de audiencia */}
+      <section className="border-b border-border">
+        <div className="container mx-auto max-w-5xl px-6 py-10">
+          <motion.div {...fadeUp}>
+            <h2 className="font-display text-2xl font-bold md:text-3xl">Crecimiento de audiencia</h2>
+            <div className="mt-8 grid gap-6 md:grid-cols-2">
+              <Card className="border-border bg-card p-6">
+                <div className="mb-4 flex items-center gap-3">
+                  <Instagram className="h-5 w-5 text-primary" />
+                  <span className="text-xs font-bold uppercase tracking-[1.5px] text-muted-foreground">
+                    Instagram · neto acumulado
+                  </span>
+                </div>
+                <div className="h-[200px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={followers} margin={{ top: 16, right: 8, left: -24, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                      <XAxis dataKey="mes" stroke="hsl(var(--muted-foreground))" tickLine={false} axisLine={false} fontSize={11} />
+                      <YAxis stroke="hsl(var(--muted-foreground))" tickLine={false} axisLine={false} fontSize={11} />
+                      <Tooltip cursor={{ fill: "hsl(var(--muted) / 0.3)" }} content={<FollowersTooltip />} />
+                      <Bar dataKey="valor" radius={[6, 6, 0, 0]}>
+                        <LabelList dataKey="valor" position="top" fill="hsl(var(--foreground))" fontSize={11} fontWeight={700} />
+                        {followers.map((d) => (
+                          <Cell key={d.mes} fill={d.peak ? "hsl(var(--coral))" : "hsl(var(--muted))"} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
+                  <span className="h-2.5 w-2.5 rounded-sm bg-coral" /> Abril · arranque del crecimiento
+                </div>
+                <div className="mt-4 border-t border-border pt-4">
+                  <div className="font-display text-2xl font-bold text-gradient">+42</div>
+                  <p className="text-sm text-muted-foreground">seguidores netos al cierre del período</p>
+                  <p className="mt-2 text-xs italic text-muted-foreground">
+                    Crecimiento orgánico sin inversión en paid media.
+                  </p>
+                </div>
+              </Card>
+
+              <Card className="border-border bg-card p-6">
+                <div className="mb-4 flex items-center gap-3">
+                  <Facebook className="h-5 w-5 text-cyan" />
+                  <span className="text-xs font-bold uppercase tracking-[1.5px] text-muted-foreground">
+                    Facebook · comportamiento estable
+                  </span>
+                </div>
+                <div className="flex items-center gap-3 rounded-xl border border-border bg-surface-elevated/40 p-5">
+                  <TrendingUp className="h-5 w-5 shrink-0 text-cyan" />
+                  <p className="text-sm text-muted-foreground">
+                    Variación entre <span className="font-semibold text-foreground">-1 y -6</span> seguidores durante todo
+                    el período.
+                  </p>
+                </div>
+                <div className="mt-4 border-t border-border pt-4">
+                  <div className="font-display text-2xl font-bold text-gradient-electric">Sin pérdida significativa</div>
+                  <p className="text-sm text-muted-foreground">de audiencia en el período</p>
+                  <p className="mt-2 text-xs italic leading-relaxed text-muted-foreground">
+                    Facebook muestra una tendencia estructural de contracción orgánica en páginas B2B — la métrica
+                    relevante en esta plataforma es la tasa de interacción, no el crecimiento de seguidores.
+                  </p>
+                </div>
+              </Card>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
       {/* 4. Evolución mensual */}
       <section className="border-b border-border">
         <div className="container mx-auto max-w-5xl px-6 py-10">
           <motion.div {...fadeUp}>
-            <h2 className="font-display text-2xl font-bold md:text-3xl">Evolución mensual</h2>
+            <h2 className="font-display text-2xl font-bold md:text-3xl">
+              Tasa de interacción mensual — Facebook vs Instagram
+            </h2>
             <p className="mt-2 text-sm text-muted-foreground">
-              Interacciones promedio por publicación en Instagram. Abril y agosto marcan los picos del ciclo de
-              estrategia activa.
+              Mayo marca el inicio de la estrategia activa de KiMedia.
             </p>
             <Card className="mt-8 border-border bg-card/60 p-6 backdrop-blur">
               <div className="h-[340px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={monthly} margin={{ top: 16, right: 8, left: -16, bottom: 0 }}>
+                  <LineChart data={monthly} margin={{ top: 16, right: 16, left: -16, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                    <XAxis
-                      dataKey="mes"
+                    <XAxis dataKey="mes" stroke="hsl(var(--muted-foreground))" tickLine={false} axisLine={false} fontSize={12} />
+                    <YAxis
                       stroke="hsl(var(--muted-foreground))"
                       tickLine={false}
                       axisLine={false}
                       fontSize={12}
+                      tickFormatter={(v) => `${v}%`}
                     />
-                    <YAxis stroke="hsl(var(--muted-foreground))" tickLine={false} axisLine={false} fontSize={12} />
-                    <Tooltip cursor={{ fill: "hsl(var(--muted) / 0.3)" }} content={<ChartTooltip />} />
-                    <Bar dataKey="valor" radius={[8, 8, 0, 0]}>
-                      <LabelList
-                        dataKey="valor"
-                        position="top"
-                        fill="hsl(var(--foreground))"
-                        fontSize={13}
-                        fontWeight={700}
-                      />
-                      {monthly.map((d) => (
-                        <Cell
-                          key={d.mes}
-                          fill={d.peak ? "hsl(var(--coral))" : "hsl(var(--muted))"}
-                        />
-                      ))}
-                    </Bar>
-                  </BarChart>
+                    <Tooltip content={<RateTooltip />} />
+                    <Legend wrapperStyle={{ fontSize: 12 }} />
+                    <ReferenceLine
+                      x="May"
+                      stroke="hsl(var(--coral))"
+                      strokeDasharray="4 4"
+                      label={{
+                        value: "Inicio estrategia KiMedia",
+                        position: "insideTopLeft",
+                        fill: "hsl(var(--coral))",
+                        fontSize: 11,
+                        fontWeight: 700,
+                      }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="facebook"
+                      name="Facebook"
+                      stroke="hsl(var(--cyan))"
+                      strokeWidth={3}
+                      dot={{ r: 3 }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="instagram"
+                      name="Instagram"
+                      stroke="hsl(var(--coral))"
+                      strokeWidth={3}
+                      dot={{ r: 3 }}
+                    />
+                  </LineChart>
                 </ResponsiveContainer>
-              </div>
-              <div className="mt-4 flex flex-wrap gap-4 text-xs text-muted-foreground">
-                <span className="flex items-center gap-2">
-                  <span className="h-2.5 w-2.5 rounded-sm bg-coral" /> Picos de rendimiento
-                </span>
-                <span className="flex items-center gap-2">
-                  <span className="h-2.5 w-2.5 rounded-sm bg-muted" /> Meses base
-                </span>
               </div>
             </Card>
           </motion.div>
@@ -316,6 +392,7 @@ const ResultadosICatalyze = () => {
                   <div>
                     <h3 className="font-display text-lg font-bold">{p.title}</h3>
                     <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{p.desc}</p>
+                    <p className="mt-2 text-sm italic leading-relaxed text-primary">{p.learning}</p>
                   </div>
                 </Card>
               ))}
