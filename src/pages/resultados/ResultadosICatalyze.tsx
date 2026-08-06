@@ -407,6 +407,27 @@ const ResultadosICatalyze = () => {
         </div>
       </section>
 
+      {/* 5.5 Recomendaciones editoriales */}
+      <section className="border-b border-border">
+        <div className="container mx-auto max-w-5xl px-6 py-10">
+          <motion.div {...fadeUp}>
+            <h2 className="font-display text-2xl font-bold md:text-3xl">Recomendaciones editoriales</h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Lineamientos para que el equipo de community management de iCatalyze los implemente de forma independiente.
+            </p>
+            <div className="mt-8 grid gap-6 md:grid-cols-2">
+              {recommendations.map((r) => (
+                <Card key={r.title} className="border-border bg-card p-6">
+                  <r.icon className="mb-4 h-6 w-6 text-primary" />
+                  <h3 className="font-display text-lg font-bold leading-tight">{r.title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{r.desc}</p>
+                </Card>
+              ))}
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
       {/* 6. Lo que instalamos */}
       <section>
         <div className="container mx-auto max-w-5xl px-6 py-10 pb-16">
