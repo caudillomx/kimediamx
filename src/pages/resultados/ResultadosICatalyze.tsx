@@ -3,6 +3,10 @@ import {
   ResponsiveContainer,
   BarChart,
   Bar,
+  LineChart,
+  Line,
+  ReferenceLine,
+  Legend,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -12,7 +16,17 @@ import {
 } from "recharts";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Instagram, Facebook, Sparkles, Video, BookOpen, MessageSquareQuote } from "lucide-react";
+import {
+  Instagram,
+  Facebook,
+  Sparkles,
+  Video,
+  BookOpen,
+  MessageSquareQuote,
+  Languages,
+  CalendarCheck,
+  TrendingUp,
+} from "lucide-react";
 
 const fadeUp = {
   initial: { opacity: 0, y: 24 },
@@ -22,11 +36,48 @@ const fadeUp = {
 };
 
 const monthly = [
-  { mes: "Ene", valor: 5.5, peak: false },
-  { mes: "Feb", valor: 1.0, peak: false },
-  { mes: "Mar", valor: 3.0, peak: false },
-  { mes: "Abr", valor: 11.8, peak: true },
-  { mes: "Ago 26", valor: 10.3, peak: true },
+  { mes: "Ene", facebook: 1.55, instagram: 0.0 },
+  { mes: "Feb", facebook: 2.74, instagram: 0.0 },
+  { mes: "Mar", facebook: 2.92, instagram: 0.0 },
+  { mes: "Abr", facebook: 3.16, instagram: 0.0 },
+  { mes: "May", facebook: 4.23, instagram: 0.66 },
+  { mes: "Jun", facebook: 6.87, instagram: 8.43 },
+  { mes: "Jul", facebook: 8.9, instagram: 12.23 },
+  { mes: "Ago", facebook: 8.9, instagram: 12.88 },
+];
+
+const followers = [
+  { mes: "Ene", valor: 0, peak: false },
+  { mes: "Feb", valor: 0, peak: false },
+  { mes: "Mar", valor: 0, peak: false },
+  { mes: "Abr", valor: 12, peak: true },
+  { mes: "May", valor: 20, peak: false },
+  { mes: "Jun", valor: 31, peak: false },
+  { mes: "Jul", valor: 36, peak: false },
+  { mes: "Ago", valor: 42, peak: false },
+];
+
+const recommendations = [
+  {
+    icon: Video,
+    title: "Prioriza video con Diane en cámara",
+    desc: "Los contenidos donde Diane aparece en situaciones reales (eventos, facilitaciones, espacios de aprendizaje) concentran el mayor rendimiento. Se recomienda mínimo 2 reels propios por mes.",
+  },
+  {
+    icon: Languages,
+    title: "Mantén el bilingüismo estratégico",
+    desc: "El contenido en español genera mayor identificación con audiencias latinoamericanas; el inglés amplía alcance hacia mercado hispano en EE.UU. Alterna según objetivo de cada publicación.",
+  },
+  {
+    icon: BookOpen,
+    title: "Usa el libro como hilo conductor, no como producto",
+    desc: "Las publicaciones que parten de una idea del EQ Playbook rinden mejor que las que lo promocionan directamente. Cada post puede anclar en una herramienta o reflexión del libro.",
+  },
+  {
+    icon: CalendarCheck,
+    title: "Frecuencia mínima: 3 publicaciones semanales en Instagram",
+    desc: "La consistencia es la primera variable que controla el algoritmo. Los meses con menor frecuencia (feb–mar) coinciden con las caídas de tasa de interacción.",
+  },
 ];
 
 const timeline = [
@@ -41,13 +92,21 @@ const topPosts = [
     value: 38,
     title: "Georgetown Panamá",
     desc: "Diane en evento presencial, registro real de su participación.",
+    learning: "La presencia real de Diane en eventos genera el mayor alcance orgánico del período",
   },
-  { n: 2, value: 26, title: "HACE Entrepreneur Program", desc: "Presencia institucional con contexto y rostro visible." },
+  {
+    n: 2,
+    value: 26,
+    title: "HACE Entrepreneur Program",
+    desc: "Presencia institucional con contexto y rostro visible.",
+    learning: "El contenido de comunidad con rostro visible supera al contenido gráfico genérico",
+  },
   {
     n: 3,
     value: 23,
     title: "“El liderazgo no es un deporte individual”",
     desc: "Mensaje de autoría propia con voz reconocible.",
+    learning: "Las frases de autoría propia con voz directa de Diane conectan de forma consistente",
   },
 ];
 
@@ -69,12 +128,26 @@ const learnings = [
   },
 ];
 
-const ChartTooltip = ({ active, payload, label }: any) => {
+const RateTooltip = ({ active, payload, label }: any) => {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="rounded-lg border border-border bg-card px-3 py-2 shadow-lg">
+      <div className="text-xs font-semibold text-muted-foreground">{label} 2026</div>
+      {payload.map((p: any) => (
+        <div key={p.dataKey} className="font-display text-sm font-bold" style={{ color: p.color }}>
+          {p.name}: {p.value}%
+        </div>
+      ))}
+    </div>
+  );
+};
+
+const FollowersTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   return (
     <div className="rounded-lg border border-border bg-card px-3 py-2 shadow-lg">
       <div className="text-xs font-semibold text-muted-foreground">{label}</div>
-      <div className="font-display text-lg font-bold text-primary">{payload[0].value} interacciones/post</div>
+      <div className="font-display text-base font-bold text-primary">+{payload[0].value} seguidores</div>
     </div>
   );
 };
