@@ -265,7 +265,7 @@ const ResultadosICatalyze = () => {
               ))}
             </div>
 
-            <div className="mt-10 rounded-3xl border border-primary/30 bg-gradient-coral/10 p-10 text-center">
+            <div className="mt-10 rounded-3xl border border-primary/30 bg-primary/5 p-10 text-center">
               <p className="mx-auto max-w-2xl font-display text-xl font-bold leading-snug md:text-2xl">
                 Esta base está instalada y lista para escalar con producción de video propio.
               </p>
