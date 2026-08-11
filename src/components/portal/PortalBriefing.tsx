@@ -476,14 +476,18 @@ export default function PortalBriefing({
           <Select value={pressPreset} onValueChange={(v) => setPressPreset(v as typeof pressPreset)}>
             <SelectTrigger className="w-[240px] h-9"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="7">Semanal (últimos 7 días)</SelectItem>
-              <SelectItem value="14">Quincenal (últimos 14 días)</SelectItem>
-              <SelectItem value="30">Mensual (últimos 30 días)</SelectItem>
+              <SelectItem value="7">Semanal (7 días)</SelectItem>
+              <SelectItem value="14">Quincenal (14 días)</SelectItem>
+              <SelectItem value="30">Mensual (30 días)</SelectItem>
               <SelectItem value="semana">Última semana completa (L–D)</SelectItem>
               <SelectItem value="quincena">Última quincena completa (L–D)</SelectItem>
               <SelectItem value="custom">Rango personalizado</SelectItem>
             </SelectContent>
           </Select>
+          <span className="block text-[10px] text-muted-foreground">
+            {fmtDia(win.from)} — {fmtDia(win.to)}
+            {!anchorIsToday && ` · anclado al último dato (${fmtDia(anchor)})`}
+          </span>
         </div>
         {pressPreset === "custom" && (
           <>
