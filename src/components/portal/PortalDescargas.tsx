@@ -24,6 +24,18 @@ type Report = { id: string; title: string; report_date: string; type: string };
 const RATE_AVG = (vals: number[]) => (vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null);
 const isoToday = () => new Date().toISOString().slice(0, 10);
 const isoDaysAgo = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString().slice(0, 10);
+const shiftIso = (d: string, n: number) =>
+  new Date(new Date(d + "T00:00:00").getTime() + n * 86_400_000).toISOString().slice(0, 10);
+const fmtDia = (d: string) => new Date(d + "T00:00:00").toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" });
+
+/** Última semana completa lunes→domingo. */
+function ultimaSemanaCompleta() {
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  const dow = hoy.getDay();
+  const domingo = new Date(hoy); domingo.setDate(hoy.getDate() - (dow === 0 ? 0 : dow));
+  const lunes = new Date(domingo); lunes.setDate(domingo.getDate() - 6);
+  return { from: lunes.toISOString().slice(0, 10), to: domingo.toISOString().slice(0, 10) };
+}
 
 const TONE_LABEL: Record<string, string> = { positivo: "Positivo", neutral: "Neutral", negativo: "Negativo", crisis: "Crisis" };
 
@@ -48,6 +60,9 @@ export default function PortalDescargas({
   const [depId, setDepId] = useState<string>("");
   const [enfoque, setEnfoque] = useState<"combinado" | "institucional" | "titular">("combinado");
   const [periodLabel, setPeriodLabel] = useState<string>("");
+  const [cut, setCut] = useState<"mensual" | "semanal">("mensual");
+  const [weekFrom, setWeekFrom] = useState(ultimaSemanaCompleta().from);
+  const [weekTo, setWeekTo] = useState(ultimaSemanaCompleta().to);
   const [busy, setBusy] = useState<string | null>(null);
 
   // Prensa
@@ -102,14 +117,23 @@ export default function PortalDescargas({
     [periods],
   );
   const activePeriods = useMemo(
-    () => periods.filter((p) => p.period_label === periodLabel),
-    [periods, periodLabel],
+    () => cut === "semanal"
+      ? periods.filter((p) => p.period_start <= weekTo && p.period_end >= weekFrom)
+      : periods.filter((p) => p.period_label === periodLabel),
+    [periods, periodLabel, cut, weekFrom, weekTo],
   );
   const prevPeriods = useMemo(() => {
-    const idx = periodLabels.indexOf(periodLabel);
+    const ref = cut === "semanal" ? activePeriods[0]?.period_label ?? "" : periodLabel;
+    const idx = periodLabels.indexOf(ref);
     if (idx <= 0) return [];
     return periods.filter((p) => p.period_label === periodLabels[idx - 1]);
-  }, [periods, periodLabels, periodLabel]);
+  }, [periods, periodLabels, periodLabel, cut, activePeriods]);
+
+  /** Etiqueta del corte activo y ventana de fechas para prensa/publicaciones. */
+  const cutLabel = cut === "semanal"
+    ? `Semana ${fmtDia(weekFrom)} — ${fmtDia(weekTo)}`
+    : (periodLabel || "Periodo");
+  const cutSlug = cut === "semanal" ? `semana-${weekFrom}` : (periodLabel || "reporte").replace(/\s+/g, "-").toLowerCase();
 
   const depOfCompetitor = useMemo(() => {
     const m = new Map<string, string>();
