@@ -8,8 +8,9 @@ import {
   CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
 } from "@/components/ui/command";
 import {
-  AlertTriangle, ArrowRight, Building2, Newspaper, Search, TrendingDown, TrendingUp, Target, Sun,
+  AlertTriangle, ArrowRight, Building2, Copy, Newspaper, Search, TrendingDown, TrendingUp, Target, Sun,
 } from "lucide-react";
+import { toast } from "sonner";
 import {
   useGabineteData, ENFOQUE_LABEL, fmtNum, fmtPct, pctDelta,
   type Enfoque, type Dependencia,
@@ -27,7 +28,10 @@ export default function PortalBriefing({
   onGoTo?: (tab: string) => void;
 }) {
   const gab = useGabineteData(clientId);
-  const { loading, pressLoading, dependencias, depById, periods, periodLabels, mentions, aggregate } = gab;
+  const {
+    loading, pressLoading, dependencias, depById, periods, periodLabels, mentions, aggregate,
+    posts, depOfCompetitor,
+  } = gab;
 
   const [enfoque, setEnfoque] = useState<Enfoque>("combinado");
   const [periodLabel, setPeriodLabel] = useState("");
