@@ -1683,6 +1683,53 @@ export type Database = {
           },
         ]
       }
+      client_portal_updates: {
+        Row: {
+          client_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          narratives_data_through: string | null
+          notes: string | null
+          press_data_through: string | null
+          social_data_through: string | null
+          updated_at: string
+          updated_on: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          narratives_data_through?: string | null
+          notes?: string | null
+          press_data_through?: string | null
+          social_data_through?: string | null
+          updated_at?: string
+          updated_on?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          narratives_data_through?: string | null
+          notes?: string | null
+          press_data_through?: string | null
+          social_data_through?: string | null
+          updated_at?: string
+          updated_on?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_portal_updates_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_portal_user_prefs: {
         Row: {
           client_id: string
@@ -3877,7 +3924,7 @@ export type Database = {
       increment_code_usage: { Args: { code_text: string }; Returns: boolean }
     }
     Enums: {
-      app_role: "admin" | "user" | "client_viewer"
+      app_role: "admin" | "user" | "client_viewer" | "executive"
       portal_dataset_source:
         | "fanpage_karma"
         | "meta_ads"
@@ -4013,7 +4060,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "user", "client_viewer"],
+      app_role: ["admin", "user", "client_viewer", "executive"],
       portal_dataset_source: [
         "fanpage_karma",
         "meta_ads",
