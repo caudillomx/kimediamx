@@ -126,6 +126,32 @@ export default function PortalBriefing({
   const curr = useMemo(() => aggregate(activeIds, enfoque), [aggregate, activeIds, enfoque]);
   const prev = useMemo(() => aggregate(prevIds, enfoque), [aggregate, prevIds, enfoque]);
 
+  // Actividad publicada dentro de la ventana granular (semana / quincena / rango).
+  const actNow = useMemo(() => gab.aggregateActivity(win.from, win.to, enfoque), [gab, win.from, win.to, enfoque]);
+  const actPrev = useMemo(() => gab.aggregateActivity(prevFrom, prevTo, enfoque), [gab, prevFrom, prevTo, enfoque]);
+
+  const actividad = useMemo(() => {
+    const sum = (m: Map<string, { publicaciones: number; interacciones: number }>) => {
+      let pub = 0, inter = 0;
+      m.forEach((v, id) => {
+        if (focusDepId && id !== focusDepId) return;
+        pub += v.publicaciones; inter += v.interacciones;
+      });
+      return { pub, inter };
+    };
+    const a = sum(actNow); const b = sum(actPrev);
+    const top = Array.from(actNow.entries())
+      .filter(([id]) => !focusDepId || id === focusDepId)
+      .sort((x, y) => y[1].interacciones - x[1].interacciones)[0];
+    return {
+      pub: a.pub, inter: a.inter,
+      dPub: pctDelta(a.pub, b.pub || null),
+      dInter: pctDelta(a.inter, b.inter || null),
+      porDia: a.pub / winDays,
+      top: top ? { nombre: depById.get(top[0])?.nombre ?? "—", ...top[1] } : null,
+    };
+  }, [actNow, actPrev, focusDepId, winDays, depById]);
+
   const focusDep = focusDepId ? depById.get(focusDepId) ?? null : null;
 
   // ---------- Prensa: ventana seleccionada vs ventana previa equivalente ----------
