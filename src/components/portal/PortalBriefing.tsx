@@ -757,6 +757,9 @@ export default function PortalBriefing({
         dep={fichaDep}
         periodLabel={periodLabel}
         enfoque={enfoque}
+        ventana={win}
+        ventanaLabel={rangoLabel}
+        mentionsOverride={winMentions}
         open={!!fichaDep}
         onOpenChange={(v) => { if (!v) setFichaDep(null); }}
         onDescargar={() => onGoTo?.("descargas")}
