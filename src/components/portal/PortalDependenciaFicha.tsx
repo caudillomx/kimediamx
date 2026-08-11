@@ -282,22 +282,47 @@ export default function PortalDependenciaFicha({
         {/* Cuentas */}
         <Panel title="Cuentas" icon={<Sparkles className="w-4 h-4 text-primary" />}>
           {cuentas.length ? (
-            <div className="overflow-x-auto -mx-1 px-1">
-              <table className="w-full min-w-[520px] text-xs">
+            <>
+              {/* Móvil: tarjetas apiladas, sin scroll lateral */}
+              <div className="space-y-2 md:hidden">
+                {cuentas.map((c, i) => (
+                  <div key={i} className="rounded-lg border border-border/60 p-2.5">
+                    <div className="text-xs font-medium break-words">{c.perfil}</div>
+                    <div className="text-[11px] text-muted-foreground capitalize mb-1.5">
+                      {c.red} · {c.tipo === "titular" ? "Titular" : "Institucional"}
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 text-[11px]">
+                      <div>
+                        <div className="text-muted-foreground">Seguidores</div>
+                        <div className="font-medium">{fmtNum(c.seguidores)}</div>
+                      </div>
+                      <div>
+                        <div className="text-muted-foreground">Engagement</div>
+                        <div className="font-medium">{fmtPct(c.engagement, 2)}</div>
+                      </div>
+                      <div>
+                        <div className="text-muted-foreground">Posts/día</div>
+                        <div className="font-medium">{c.postsDia != null ? Number(c.postsDia).toFixed(2) : "—"}</div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <table className="hidden md:table w-full table-fixed text-xs">
                 <thead className="text-muted-foreground">
                   <tr className="text-left">
-                    <th className="py-1.5 pr-3 font-medium">Perfil</th>
-                    <th className="py-1.5 pr-3 font-medium">Red</th>
-                    <th className="py-1.5 pr-3 font-medium">Tipo</th>
-                    <th className="py-1.5 pr-3 font-medium text-right">Seguidores</th>
-                    <th className="py-1.5 pr-3 font-medium text-right">Engagement</th>
-                    <th className="py-1.5 font-medium text-right">Posts/día</th>
+                    <th className="py-1.5 pr-3 font-medium w-[34%]">Perfil</th>
+                    <th className="py-1.5 pr-3 font-medium w-[13%]">Red</th>
+                    <th className="py-1.5 pr-3 font-medium w-[15%]">Tipo</th>
+                    <th className="py-1.5 pr-3 font-medium text-right w-[14%]">Seguidores</th>
+                    <th className="py-1.5 pr-3 font-medium text-right w-[13%]">Engag.</th>
+                    <th className="py-1.5 font-medium text-right w-[11%]">Posts/día</th>
                   </tr>
                 </thead>
                 <tbody>
                   {cuentas.map((c, i) => (
                     <tr key={i} className="border-t border-border/60">
-                      <td className="py-1.5 pr-3 max-w-[220px] truncate">{c.perfil}</td>
+                      <td className="py-1.5 pr-3 break-words">{c.perfil}</td>
                       <td className="py-1.5 pr-3 capitalize">{c.red}</td>
                       <td className="py-1.5 pr-3">{c.tipo === "titular" ? "Titular" : "Institucional"}</td>
                       <td className="py-1.5 pr-3 text-right">{fmtNum(c.seguidores)}</td>
@@ -307,7 +332,7 @@ export default function PortalDependenciaFicha({
                   ))}
                 </tbody>
               </table>
-            </div>
+            </>
           ) : <Empty text="No hay cuentas para el enfoque seleccionado." />}
         </Panel>
 
