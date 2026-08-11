@@ -108,6 +108,23 @@ export default function PortalBriefing({
 
   const [winMentions, setWinMentions] = useState<typeof mentions>([]);
   const [winLoading, setWinLoading] = useState(true);
+  const [winPosts, setWinPosts] = useState<typeof posts>([]);
+  const [prevPosts, setPrevPosts] = useState<typeof posts>([]);
+
+  useEffect(() => {
+    if (!periods.length) return;
+    let cancelled = false;
+    (async () => {
+      const [a, b] = await Promise.all([
+        gab.fetchPostsWindow(win.from, win.to),
+        gab.fetchPostsWindow(prevFrom, prevTo),
+      ]);
+      if (cancelled) return;
+      setWinPosts(a); setPrevPosts(b);
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [periods.length, gab.fetchPostsWindow, win.from, win.to, prevFrom, prevTo]);
 
   useEffect(() => {
     if (!dependencias.length) return;
@@ -149,8 +166,16 @@ export default function PortalBriefing({
   const prev = useMemo(() => aggregate(prevIds, enfoque), [aggregate, prevIds, enfoque]);
 
   // Actividad publicada dentro de la ventana granular (semana / quincena / rango).
-  const actNow = useMemo(() => gab.aggregateActivity(win.from, win.to, enfoque), [gab, win.from, win.to, enfoque]);
-  const actPrev = useMemo(() => gab.aggregateActivity(prevFrom, prevTo, enfoque), [gab, prevFrom, prevTo, enfoque]);
+  const actNow = useMemo(
+    () => gab.aggregateActivity(win.from, win.to, enfoque, winPosts),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [gab.aggregateActivity, win.from, win.to, enfoque, winPosts],
+  );
+  const actPrev = useMemo(
+    () => gab.aggregateActivity(prevFrom, prevTo, enfoque, prevPosts),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [gab.aggregateActivity, prevFrom, prevTo, enfoque, prevPosts],
+  );
 
   const actividad = useMemo(() => {
     const sum = (m: Map<string, { publicaciones: number; interacciones: number }>) => {
