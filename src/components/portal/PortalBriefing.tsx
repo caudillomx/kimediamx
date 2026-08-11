@@ -36,6 +36,12 @@ function ultimaSemanaCompleta() {
   return { from: lunes.toISOString().slice(0, 10), to: domingo.toISOString().slice(0, 10) };
 }
 
+/** Últimas dos semanas completas lunes→domingo (quincena cerrada). */
+function ultimaQuincenaCompleta() {
+  const s = ultimaSemanaCompleta();
+  return { from: shiftIso(s.from, -7), to: s.to };
+}
+
 export default function PortalBriefing({
   clientId, focusDepId, onFocusChange, onGoTo,
 }: {
@@ -56,7 +62,7 @@ export default function PortalBriefing({
   const [searchOpen, setSearchOpen] = useState(false);
 
   // Ventana de prensa: presets o rango personalizado.
-  const [pressPreset, setPressPreset] = useState<"7" | "14" | "30" | "semana" | "custom">("7");
+  const [pressPreset, setPressPreset] = useState<"7" | "14" | "30" | "semana" | "quincena" | "custom">("7");
   const [customFrom, setCustomFrom] = useState(isoDaysAgo(13));
   const [customTo, setCustomTo] = useState(isoToday());
 
@@ -66,6 +72,7 @@ export default function PortalBriefing({
       return { from, to };
     }
     if (pressPreset === "semana") return ultimaSemanaCompleta();
+    if (pressPreset === "quincena") return ultimaQuincenaCompleta();
     const n = Number(pressPreset);
     return { from: isoDaysAgo(n - 1), to: isoToday() };
   }, [pressPreset, customFrom, customTo]);
@@ -73,9 +80,9 @@ export default function PortalBriefing({
   const winDays = daysBetween(win.from, win.to);
   const prevFrom = shiftIso(win.from, -winDays);
   const prevTo = shiftIso(win.from, -1);
-  const rangoLabel = pressPreset === "custom" || pressPreset === "semana"
-    ? `${fmtDia(win.from)} — ${fmtDia(win.to)}`
-    : `últimos ${winDays} días`;
+  const rangoLabel = pressPreset === "7" || pressPreset === "14" || pressPreset === "30"
+    ? `últimos ${winDays} días`
+    : `${fmtDia(win.from)} — ${fmtDia(win.to)}`;
 
   const [winMentions, setWinMentions] = useState<typeof mentions>([]);
   const [winLoading, setWinLoading] = useState(true);
