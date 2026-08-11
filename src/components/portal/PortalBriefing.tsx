@@ -811,6 +811,7 @@ export default function PortalBriefing({
         ventana={win}
         ventanaLabel={rangoLabel}
         mentionsOverride={winMentions}
+        postsOverride={winPosts}
         open={!!fichaDep}
         onOpenChange={(v) => { if (!v) setFichaDep(null); }}
         onDescargar={() => onGoTo?.("descargas")}
