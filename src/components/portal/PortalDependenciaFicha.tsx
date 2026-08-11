@@ -21,7 +21,7 @@ const TONE_CLASS: Record<string, string> = {
 };
 
 export default function PortalDependenciaFicha({
-  gab, dep, periodLabel, enfoque, open, onOpenChange, onDescargar, ventana, ventanaLabel, mentionsOverride,
+  gab, dep, periodLabel, enfoque, open, onOpenChange, onDescargar, ventana, ventanaLabel, mentionsOverride, postsOverride,
 }: {
   gab: Gab;
   dep: Dependencia | null;
@@ -34,6 +34,8 @@ export default function PortalDependenciaFicha({
   ventana?: { from: string; to: string } | null;
   ventanaLabel?: string;
   mentionsOverride?: Gab["mentions"];
+  /** Publicaciones ya consultadas para la ventana (evita el sesgo del top global). */
+  postsOverride?: Gab["posts"];
 }) {
   const {
     periods, periodLabels, competitors, metrics, posts, narratives, mentions, aggregate, aggregateActivity,
@@ -46,6 +48,7 @@ export default function PortalDependenciaFicha({
   };
   const corteLabel = ventana ? (ventanaLabel || `${ventana.from} — ${ventana.to}`) : "periodo completo";
   const prensaBase = mentionsOverride ?? mentions;
+  const postsBase = ventana && postsOverride ? postsOverride : posts;
 
   const activeIds = useMemo(
     () => periods.filter((p) => p.period_label === periodLabel).map((p) => p.id),
@@ -101,19 +104,20 @@ export default function PortalDependenciaFicha({
 
   const topPosts = useMemo(() => {
     const ids = new Set(activeIds);
-    return posts
+    return postsBase
       .filter((p) => p.competitor_id && compById.has(p.competitor_id)
         && (ventana ? inWindow(p.posted_at) : ids.has(p.period_id)))
       .sort((a, b) => (b.interactions ?? 0) - (a.interactions ?? 0))
       .slice(0, 5);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [posts, compById, activeIds, ventana?.from, ventana?.to]);
+  }, [postsBase, compById, activeIds, ventana?.from, ventana?.to]);
 
   /** Actividad publicada dentro del corte granular seleccionado. */
   const actividad = useMemo(() => {
     if (!ventana || !dep) return null;
-    return aggregateActivity(ventana.from, ventana.to, enfoque).get(dep.id) ?? null;
-  }, [aggregateActivity, ventana?.from, ventana?.to, enfoque, dep?.id]);
+    return aggregateActivity(ventana.from, ventana.to, enfoque, postsOverride).get(dep.id) ?? null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [aggregateActivity, ventana?.from, ventana?.to, enfoque, dep?.id, postsOverride]);
 
   /**
    * ¿Funcionó? Compara cada publicación destacada contra la mediana de
@@ -122,7 +126,7 @@ export default function PortalDependenciaFicha({
    */
   const funciono = useMemo(() => {
     const ids = new Set(activeIds);
-    const mine = posts.filter((p) => p.competitor_id && compById.has(p.competitor_id)
+    const mine = postsBase.filter((p) => p.competitor_id && compById.has(p.competitor_id)
       && (ventana ? inWindow(p.posted_at) : ids.has(p.period_id)));
     const vals = mine.map((p) => Number(p.interactions) || 0).sort((a, b) => a - b);
     if (vals.length < 3) return null;
@@ -143,7 +147,7 @@ export default function PortalDependenciaFicha({
       top: arriba.sort((a, b) => (b.interactions ?? 0) - (a.interactions ?? 0)).slice(0, 3),
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [posts, compById, activeIds, ventana?.from, ventana?.to]);
+  }, [postsBase, compById, activeIds, ventana?.from, ventana?.to]);
 
   const axes = useMemo(() => {
     const names = new Set(depComps.map((c) => c.name.toLowerCase()));
