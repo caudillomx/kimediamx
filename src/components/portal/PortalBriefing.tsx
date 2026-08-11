@@ -243,6 +243,78 @@ export default function PortalBriefing({
     return (filtered.length ? filtered : out).slice(0, 3);
   }, [press, curr, engAvg, ranking, depById, periodLabel, focusDepId, focusDep]);
 
+  // ---------- Temas de prensa sin respuesta ----------
+  // Una mención negativa se considera "sin respuesta" cuando la dependencia no
+  // publicó nada en sus cuentas dentro de las 48 horas siguientes a la nota.
+  const postDatesByDep = useMemo(() => {
+    const m = new Map<string, string[]>();
+    for (const p of posts) {
+      if (!p.posted_at || !p.competitor_id) continue;
+      const dep = depOfCompetitor.get(p.competitor_id);
+      if (!dep) continue;
+      const arr = m.get(dep) ?? [];
+      arr.push(p.posted_at.slice(0, 10));
+      m.set(dep, arr);
+    }
+    return m;
+  }, [posts, depOfCompetitor]);
+
+  const sinRespuesta = useMemo(() => {
+    const from = isoDaysAgo(6);
+    const plusDays = (d: string, n: number) =>
+      new Date(new Date(d + "T00:00:00").getTime() + n * 86_400_000).toISOString().slice(0, 10);
+    return mentions
+      .filter((r) =>
+        r.fecha >= from && r.dep &&
+        (r.tono === "negativo" || r.tono === "crisis") &&
+        (!focusDepId || r.dep === focusDepId))
+      .filter((r) => {
+        const fechas = postDatesByDep.get(r.dep!) ?? [];
+        const limite = plusDays(r.fecha, 2);
+        return !fechas.some((f) => f >= r.fecha && f <= limite);
+      })
+      .sort((a, b) => b.fecha.localeCompare(a.fecha))
+      .slice(0, 6);
+  }, [mentions, postDatesByDep, focusDepId]);
+
+  // ---------- Bloques listos para enviar a la dependencia ----------
+  const bloques = useMemo(() => {
+    const objetivo = focusDepId
+      ? dependencias.filter((d) => d.id === focusDepId)
+      : Array.from(press.byDep.entries())
+          .sort((a, b) => b[1].neg - a[1].neg || b[1].total - a[1].total)
+          .slice(0, 3)
+          .map(([id]) => depById.get(id))
+          .filter(Boolean) as Dependencia[];
+
+    return objetivo.map((d) => {
+      const pr = press.byDep.get(d.id) ?? { total: 0, neg: 0 };
+      const v = curr.get(d.id);
+      const pendientes = sinRespuesta.filter((r) => r.dep === d.id);
+      const lineas = [
+        `${d.nombre} — corte semanal`,
+        "",
+        `Prensa (7 días): ${pr.total} menciones, ${pr.neg} con tono negativo o de crisis.`,
+        `Redes (${periodLabel || "periodo actual"}): ${fmtNum(v?.followers)} seguidores, engagement ${fmtPct(v?.engagement, 2)}${engAvg != null ? ` contra ${fmtPct(engAvg, 2)} de promedio del gabinete` : ""}.`,
+      ];
+      if (pendientes.length) {
+        lineas.push("", "Temas sin respuesta pública:");
+        pendientes.slice(0, 4).forEach((r) => lineas.push(`• ${r.fecha} · ${r.medio}: ${r.titular}`));
+      }
+      lineas.push("", "Sugerencia: agenda propia esta semana sobre los temas anteriores y sostener el ritmo de publicación.", "", "KiMedia");
+      return { dep: d, texto: lineas.join("\n"), pendientes: pendientes.length };
+    });
+  }, [focusDepId, dependencias, press, depById, curr, engAvg, periodLabel, sinRespuesta]);
+
+  const copiar = async (texto: string) => {
+    try {
+      await navigator.clipboard.writeText(texto);
+      toast.success("Resumen copiado");
+    } catch {
+      toast.error("No se pudo copiar");
+    }
+  };
+
   if (loading) {
     return (
       <div className="space-y-4">
