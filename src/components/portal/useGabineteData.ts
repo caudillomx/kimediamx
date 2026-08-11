@@ -82,6 +82,23 @@ export function useGabineteData(clientId: string, pressDays = 30) {
   const [narratives, setNarratives] = useState<any[]>([]);
   const [mentions, setMentions] = useState<Mention[]>([]);
   const [pressLoading, setPressLoading] = useState(true);
+  const [lastPressDate, setLastPressDate] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("client_portal_listening_entries")
+        .select("entry_date")
+        .eq("client_id", clientId)
+        .not("analyzed_at", "is", null)
+        .order("entry_date", { ascending: false })
+        .limit(1);
+      if (cancelled) return;
+      setLastPressDate((data?.[0] as any)?.entry_date ?? null);
+    })();
+    return () => { cancelled = true; };
+  }, [clientId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -268,6 +285,7 @@ export function useGabineteData(clientId: string, pressDays = 30) {
     loading, pressLoading,
     dependencias, depById, competitors, periods, periodLabels,
     metrics, posts, narratives, mentions,
+    lastPressDate,
     depOfCompetitor, typeOfCompetitor,
     aggregate, aggregateActivity, resolveDep, fetchMentions,
   };
