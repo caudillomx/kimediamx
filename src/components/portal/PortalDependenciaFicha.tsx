@@ -194,8 +194,7 @@ export default function PortalDependenciaFicha({
     if (mine.postsDia != null && mine.postsDia < 0.5) {
       brechas.push(`Publica ${mine.postsDia.toFixed(2)} veces al día: ritmo bajo para sostener conversación.`);
     }
-    if (prensaTono.total === 0) brechas.push("Sin menciones de prensa detectadas en los últimos 30 días.");
-    else if (false) { /* noop */ }
+    if (prensaTono.total === 0) brechas.push(`Sin menciones de prensa detectadas en ${corteLabel}.`);
     else if (prensaTono.negativo > prensaTono.positivo) {
       brechas.push(`${prensaTono.negativo} de ${prensaTono.total} menciones de prensa fueron negativas.`);
     } else if (prensaTono.positivo > 0) {
