@@ -409,7 +409,7 @@ export default function PortalDescargas({
     setDepData(data);
     try {
       await new Promise((r) => setTimeout(r, 350));
-      await renderPdf(depPdfRef, `${data.dependencia.replace(/\s+/g, "-").toLowerCase()}-${enfoque}-${periodLabel || "reporte"}.pdf`);
+      await renderPdf(depPdfRef, `${data.dependencia.replace(/\s+/g, "-").toLowerCase()}-${enfoque}-${cutSlug}.pdf`);
       toast.success("Reporte descargado", { id: "dep-pdf" });
     } catch {
       toast.error("No se pudo generar el PDF", { id: "dep-pdf" });
@@ -422,7 +422,7 @@ export default function PortalDescargas({
     toast.loading("Generando panorama…", { id: "gab-pdf" });
     try {
       await new Promise((r) => setTimeout(r, 350));
-      await renderPdf(gabPdfRef, `gabinete-${enfoque}-${periodLabel || "reporte"}.pdf`);
+      await renderPdf(gabPdfRef, `gabinete-${enfoque}-${cutSlug}.pdf`);
       toast.success("Panorama descargado", { id: "gab-pdf" });
     } catch {
       toast.error("No se pudo generar el PDF", { id: "gab-pdf" });
@@ -458,14 +458,43 @@ export default function PortalDescargas({
             </Select>
           </div>
           <div className="space-y-1">
-            <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Periodo</span>
-            <Select value={periodLabel} onValueChange={setPeriodLabel}>
-              <SelectTrigger className="w-[200px] h-9"><SelectValue /></SelectTrigger>
+            <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Corte</span>
+            <Select value={cut} onValueChange={(v) => setCut(v as typeof cut)}>
+              <SelectTrigger className="w-[170px] h-9"><SelectValue /></SelectTrigger>
               <SelectContent>
-                {periodLabels.slice().reverse().map((l) => <SelectItem key={l} value={l}>{l}</SelectItem>)}
+                <SelectItem value="mensual">Mensual</SelectItem>
+                <SelectItem value="semanal">Semanal</SelectItem>
               </SelectContent>
             </Select>
           </div>
+          {cut === "mensual" ? (
+            <div className="space-y-1">
+              <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Periodo</span>
+              <Select value={periodLabel} onValueChange={setPeriodLabel}>
+                <SelectTrigger className="w-[200px] h-9"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {periodLabels.slice().reverse().map((l) => <SelectItem key={l} value={l}>{l}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-1">
+                <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Semana desde</span>
+                <Input type="date" value={weekFrom} max={weekTo} onChange={(e) => setWeekFrom(e.target.value)} className="h-9 w-[150px]" />
+              </div>
+              <div className="space-y-1">
+                <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Hasta</span>
+                <Input type="date" value={weekTo} min={weekFrom} onChange={(e) => setWeekTo(e.target.value)} className="h-9 w-[150px]" />
+              </div>
+              <Button
+                variant="ghost" size="sm" className="h-9"
+                onClick={() => { const w = ultimaSemanaCompleta(); setWeekFrom(w.from); setWeekTo(w.to); }}
+              >
+                Última semana completa
+              </Button>
+            </>
+          )}
           <div className="space-y-1">
             <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Enfoque</span>
             <Select value={enfoque} onValueChange={(v) => setEnfoque(v as typeof enfoque)}>
