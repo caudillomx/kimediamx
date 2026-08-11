@@ -448,14 +448,15 @@ export default function PortalBriefing({
           </Select>
         </div>
         <div className="space-y-1">
-          <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Periodo de prensa</span>
+          <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Corte de análisis</span>
           <Select value={pressPreset} onValueChange={(v) => setPressPreset(v as typeof pressPreset)}>
-            <SelectTrigger className="w-[210px] h-9"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-[240px] h-9"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="7">Últimos 7 días</SelectItem>
-              <SelectItem value="14">Últimos 14 días</SelectItem>
-              <SelectItem value="30">Últimos 30 días</SelectItem>
+              <SelectItem value="7">Semanal (últimos 7 días)</SelectItem>
+              <SelectItem value="14">Quincenal (últimos 14 días)</SelectItem>
+              <SelectItem value="30">Mensual (últimos 30 días)</SelectItem>
               <SelectItem value="semana">Última semana completa (L–D)</SelectItem>
+              <SelectItem value="quincena">Última quincena completa (L–D)</SelectItem>
               <SelectItem value="custom">Rango personalizado</SelectItem>
             </SelectContent>
           </Select>
