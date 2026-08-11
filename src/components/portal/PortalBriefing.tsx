@@ -414,6 +414,31 @@ export default function PortalBriefing({
             </SelectContent>
           </Select>
         </div>
+        <div className="space-y-1">
+          <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Periodo de prensa</span>
+          <Select value={pressPreset} onValueChange={(v) => setPressPreset(v as typeof pressPreset)}>
+            <SelectTrigger className="w-[210px] h-9"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="7">Últimos 7 días</SelectItem>
+              <SelectItem value="14">Últimos 14 días</SelectItem>
+              <SelectItem value="30">Últimos 30 días</SelectItem>
+              <SelectItem value="semana">Última semana completa (L–D)</SelectItem>
+              <SelectItem value="custom">Rango personalizado</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        {pressPreset === "custom" && (
+          <>
+            <div className="space-y-1">
+              <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Desde</span>
+              <Input type="date" value={customFrom} max={customTo} onChange={(e) => setCustomFrom(e.target.value)} className="h-9 w-[150px]" />
+            </div>
+            <div className="space-y-1">
+              <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Hasta</span>
+              <Input type="date" value={customTo} min={customFrom} onChange={(e) => setCustomTo(e.target.value)} className="h-9 w-[150px]" />
+            </div>
+          </>
+        )}
         <Button variant="outline" size="sm" className="h-9 ml-auto" onClick={() => setSearchOpen(true)}>
           <Search className="w-4 h-4 mr-2" /> Buscar dependencia
           <kbd className="ml-2 text-[10px] text-muted-foreground border border-border rounded px-1">⌘K</kbd>
