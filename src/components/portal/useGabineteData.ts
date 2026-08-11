@@ -118,7 +118,7 @@ export function useGabineteData(clientId: string, pressDays = 30) {
 
       if (ps.length) {
         const ids = ps.map((p) => p.id);
-        const [m, po, nar] = await Promise.all([
+        const [m, po, nar, last] = await Promise.all([
           supabase.from("client_portal_benchmark_metrics")
             .select("period_id,competitor_id,network,followers,follower_growth_rate,engagement_rate,posts_per_day")
             .in("period_id", ids).limit(50000),
@@ -127,11 +127,16 @@ export function useGabineteData(clientId: string, pressDays = 30) {
             .in("period_id", ids).order("interactions", { ascending: false }).limit(5000),
           supabase.from("client_portal_benchmark_narratives")
             .select("profile_name,network,narratives").eq("client_id", clientId).limit(500),
+          supabase.from("client_portal_benchmark_posts")
+            .select("posted_at").in("period_id", ids)
+            .not("posted_at", "is", null)
+            .order("posted_at", { ascending: false }).limit(1),
         ]);
         if (cancelled) return;
         setMetrics((m.data ?? []) as Metric[]);
         setPosts((po.data ?? []) as Post[]);
         setNarratives(nar.data ?? []);
+        setLastPostDate(((last.data?.[0] as any)?.posted_at ?? null)?.slice?.(0, 10) ?? null);
       }
       setLoading(false);
     })();
