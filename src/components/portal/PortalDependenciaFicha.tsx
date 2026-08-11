@@ -21,7 +21,7 @@ const TONE_CLASS: Record<string, string> = {
 };
 
 export default function PortalDependenciaFicha({
-  gab, dep, periodLabel, enfoque, open, onOpenChange, onDescargar,
+  gab, dep, periodLabel, enfoque, open, onOpenChange, onDescargar, ventana, ventanaLabel, mentionsOverride,
 }: {
   gab: Gab;
   dep: Dependencia | null;
@@ -30,10 +30,22 @@ export default function PortalDependenciaFicha({
   open: boolean;
   onOpenChange: (v: boolean) => void;
   onDescargar?: (depId: string) => void;
+  /** Corte granular (semanal/quincenal/personalizado) para publicaciones y prensa. */
+  ventana?: { from: string; to: string } | null;
+  ventanaLabel?: string;
+  mentionsOverride?: Gab["mentions"];
 }) {
   const {
-    periods, periodLabels, competitors, metrics, posts, narratives, mentions, aggregate,
+    periods, periodLabels, competitors, metrics, posts, narratives, mentions, aggregate, aggregateActivity,
   } = gab;
+
+  const inWindow = (iso: string | null | undefined) => {
+    if (!ventana || !iso) return !ventana;
+    const d = iso.slice(0, 10);
+    return d >= ventana.from && d <= ventana.to;
+  };
+  const corteLabel = ventana ? (ventanaLabel || `${ventana.from} — ${ventana.to}`) : "periodo completo";
+  const prensaBase = mentionsOverride ?? mentions;
 
   const activeIds = useMemo(
     () => periods.filter((p) => p.period_label === periodLabel).map((p) => p.id),
@@ -90,10 +102,18 @@ export default function PortalDependenciaFicha({
   const topPosts = useMemo(() => {
     const ids = new Set(activeIds);
     return posts
-      .filter((p) => ids.has(p.period_id) && p.competitor_id && compById.has(p.competitor_id))
+      .filter((p) => p.competitor_id && compById.has(p.competitor_id)
+        && (ventana ? inWindow(p.posted_at) : ids.has(p.period_id)))
       .sort((a, b) => (b.interactions ?? 0) - (a.interactions ?? 0))
       .slice(0, 5);
-  }, [posts, compById, activeIds]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [posts, compById, activeIds, ventana?.from, ventana?.to]);
+
+  /** Actividad publicada dentro del corte granular seleccionado. */
+  const actividad = useMemo(() => {
+    if (!ventana || !dep) return null;
+    return aggregateActivity(ventana.from, ventana.to, enfoque).get(dep.id) ?? null;
+  }, [aggregateActivity, ventana?.from, ventana?.to, enfoque, dep?.id]);
 
   /**
    * ¿Funcionó? Compara cada publicación destacada contra la mediana de
@@ -102,7 +122,8 @@ export default function PortalDependenciaFicha({
    */
   const funciono = useMemo(() => {
     const ids = new Set(activeIds);
-    const mine = posts.filter((p) => ids.has(p.period_id) && p.competitor_id && compById.has(p.competitor_id));
+    const mine = posts.filter((p) => p.competitor_id && compById.has(p.competitor_id)
+      && (ventana ? inWindow(p.posted_at) : ids.has(p.period_id)));
     const vals = mine.map((p) => Number(p.interactions) || 0).sort((a, b) => a - b);
     if (vals.length < 3) return null;
     const mediana = vals[Math.floor(vals.length / 2)];
@@ -121,7 +142,8 @@ export default function PortalDependenciaFicha({
       mejorRed: mejorRed ? mejorRed[0] : null,
       top: arriba.sort((a, b) => (b.interactions ?? 0) - (a.interactions ?? 0)).slice(0, 3),
     };
-  }, [posts, compById, activeIds]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [posts, compById, activeIds, ventana?.from, ventana?.to]);
 
   const axes = useMemo(() => {
     const names = new Set(depComps.map((c) => c.name.toLowerCase()));
@@ -136,17 +158,19 @@ export default function PortalDependenciaFicha({
   }, [narratives, depComps]);
 
   const prensa = useMemo(
-    () => mentions.filter((m) => m.dep === dep?.id).slice(0, 8),
-    [mentions, dep?.id],
+    () => prensaBase.filter((m) => m.dep === dep?.id && inWindow(m.fecha)).slice(0, 8),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [prensaBase, dep?.id, ventana?.from, ventana?.to],
   );
   const prensaTono = useMemo(() => {
-    const rows = mentions.filter((m) => m.dep === dep?.id);
+    const rows = prensaBase.filter((m) => m.dep === dep?.id && inWindow(m.fecha));
     return {
       total: rows.length,
       positivo: rows.filter((r) => r.tono === "positivo").length,
       negativo: rows.filter((r) => r.tono === "negativo" || r.tono === "crisis").length,
     };
-  }, [mentions, dep?.id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prensaBase, dep?.id, ventana?.from, ventana?.to]);
 
   // Fortalezas y brechas, siempre con el número que las sostiene.
   const lecturas = useMemo(() => {
@@ -170,7 +194,7 @@ export default function PortalDependenciaFicha({
     if (mine.postsDia != null && mine.postsDia < 0.5) {
       brechas.push(`Publica ${mine.postsDia.toFixed(2)} veces al día: ritmo bajo para sostener conversación.`);
     }
-    if (prensaTono.total === 0) brechas.push("Sin menciones de prensa detectadas en los últimos 30 días.");
+    if (prensaTono.total === 0) brechas.push(`Sin menciones de prensa detectadas en ${corteLabel}.`);
     else if (prensaTono.negativo > prensaTono.positivo) {
       brechas.push(`${prensaTono.negativo} de ${prensaTono.total} menciones de prensa fueron negativas.`);
     } else if (prensaTono.positivo > 0) {
@@ -205,6 +229,7 @@ export default function PortalDependenciaFicha({
 
         <div className="flex flex-wrap items-center gap-2 text-[11px] min-w-0">
           <Badge variant="outline">{periodLabel || "Sin periodo"}</Badge>
+          {ventana && <Badge variant="outline">Corte {corteLabel}</Badge>}
           <Badge variant="outline">{ENFOQUE_LABEL[enfoque]}</Badge>
           <Badge variant="outline">{depComps.length} cuenta{depComps.length === 1 ? "" : "s"}</Badge>
           {onDescargar && (
@@ -240,6 +265,20 @@ export default function PortalDependenciaFicha({
           </Panel>
         </div>
 
+        {/* Actividad del corte granular */}
+        {ventana && (
+          <Panel title={`Actividad del corte · ${corteLabel}`} icon={<TrendingUp className="w-4 h-4 text-primary" />}>
+            {actividad ? (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <Kpi label="Publicaciones" value={fmtNum(actividad.publicaciones)} />
+                <Kpi label="Interacciones" value={fmtNum(actividad.interacciones)} />
+                <Kpi label="Promedio por post" value={fmtNum(actividad.promedio)} />
+                <Kpi label="Publicaciones / día" value={actividad.porDia != null ? actividad.porDia.toFixed(2) : "—"} />
+              </div>
+            ) : <Empty text="Sin publicaciones fechadas dentro del corte seleccionado." />}
+          </Panel>
+        )}
+
         {/* Cuentas */}
         <Panel title="Cuentas" icon={<Sparkles className="w-4 h-4 text-primary" />}>
           {cuentas.length ? (
@@ -273,7 +312,7 @@ export default function PortalDependenciaFicha({
         </Panel>
 
         {/* Publicaciones */}
-        <Panel title="Publicaciones con más interacción" icon={<TrendingUp className="w-4 h-4 text-primary" />}>
+        <Panel title={`Publicaciones con más interacción · ${corteLabel}`} icon={<TrendingUp className="w-4 h-4 text-primary" />}>
           {topPosts.length ? (
             <div className="space-y-2">
               {topPosts.map((p, i) => (
@@ -288,7 +327,7 @@ export default function PortalDependenciaFicha({
                 </div>
               ))}
             </div>
-          ) : <Empty text="Sin publicaciones registradas en el periodo." />}
+          ) : <Empty text="Sin publicaciones registradas en el corte." />}
         </Panel>
 
         {/* ¿Funcionó? */}
@@ -330,7 +369,7 @@ export default function PortalDependenciaFicha({
         </Panel>
 
         {/* Prensa */}
-        <Panel title={`Prensa (últimos 30 días · ${prensaTono.total} menciones)`} icon={<Newspaper className="w-4 h-4 text-primary" />}>
+        <Panel title={`Prensa (${corteLabel} · ${prensaTono.total} menciones)`} icon={<Newspaper className="w-4 h-4 text-primary" />}>
           {prensa.length ? (
             <div className="space-y-1.5">
               {prensa.map((m, i) => (
@@ -348,12 +387,13 @@ export default function PortalDependenciaFicha({
                 </div>
               ))}
             </div>
-          ) : <Empty text="Sin menciones de prensa resueltas a esta dependencia en los últimos 30 días." />}
+          ) : <Empty text="Sin menciones de prensa resueltas a esta dependencia en el corte." />}
         </Panel>
 
         <Separator />
         <p className="text-[11px] text-muted-foreground">
-          Los datos de redes corresponden al periodo <b>{periodLabel || "—"}</b> con el enfoque <b>{ENFOQUE_LABEL[enfoque].toLowerCase()}</b>.
+          Seguidores y engagement corresponden al periodo <b>{periodLabel || "—"}</b> con el enfoque <b>{ENFOQUE_LABEL[enfoque].toLowerCase()}</b>,
+          porque la fuente entrega esas métricas por mes. Publicaciones, interacciones y prensa usan el corte <b>{corteLabel}</b>.
           Las menciones de prensa se resuelven por coincidencia de nombre de la dependencia o de su titular.
         </p>
       </DialogContent>

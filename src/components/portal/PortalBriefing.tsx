@@ -36,6 +36,12 @@ function ultimaSemanaCompleta() {
   return { from: lunes.toISOString().slice(0, 10), to: domingo.toISOString().slice(0, 10) };
 }
 
+/** Últimas dos semanas completas lunes→domingo (quincena cerrada). */
+function ultimaQuincenaCompleta() {
+  const s = ultimaSemanaCompleta();
+  return { from: shiftIso(s.from, -7), to: s.to };
+}
+
 export default function PortalBriefing({
   clientId, focusDepId, onFocusChange, onGoTo,
 }: {
@@ -56,7 +62,7 @@ export default function PortalBriefing({
   const [searchOpen, setSearchOpen] = useState(false);
 
   // Ventana de prensa: presets o rango personalizado.
-  const [pressPreset, setPressPreset] = useState<"7" | "14" | "30" | "semana" | "custom">("7");
+  const [pressPreset, setPressPreset] = useState<"7" | "14" | "30" | "semana" | "quincena" | "custom">("7");
   const [customFrom, setCustomFrom] = useState(isoDaysAgo(13));
   const [customTo, setCustomTo] = useState(isoToday());
 
@@ -66,6 +72,7 @@ export default function PortalBriefing({
       return { from, to };
     }
     if (pressPreset === "semana") return ultimaSemanaCompleta();
+    if (pressPreset === "quincena") return ultimaQuincenaCompleta();
     const n = Number(pressPreset);
     return { from: isoDaysAgo(n - 1), to: isoToday() };
   }, [pressPreset, customFrom, customTo]);
@@ -73,9 +80,9 @@ export default function PortalBriefing({
   const winDays = daysBetween(win.from, win.to);
   const prevFrom = shiftIso(win.from, -winDays);
   const prevTo = shiftIso(win.from, -1);
-  const rangoLabel = pressPreset === "custom" || pressPreset === "semana"
-    ? `${fmtDia(win.from)} — ${fmtDia(win.to)}`
-    : `últimos ${winDays} días`;
+  const rangoLabel = pressPreset === "7" || pressPreset === "14" || pressPreset === "30"
+    ? `últimos ${winDays} días`
+    : `${fmtDia(win.from)} — ${fmtDia(win.to)}`;
 
   const [winMentions, setWinMentions] = useState<typeof mentions>([]);
   const [winLoading, setWinLoading] = useState(true);
@@ -118,6 +125,32 @@ export default function PortalBriefing({
 
   const curr = useMemo(() => aggregate(activeIds, enfoque), [aggregate, activeIds, enfoque]);
   const prev = useMemo(() => aggregate(prevIds, enfoque), [aggregate, prevIds, enfoque]);
+
+  // Actividad publicada dentro de la ventana granular (semana / quincena / rango).
+  const actNow = useMemo(() => gab.aggregateActivity(win.from, win.to, enfoque), [gab, win.from, win.to, enfoque]);
+  const actPrev = useMemo(() => gab.aggregateActivity(prevFrom, prevTo, enfoque), [gab, prevFrom, prevTo, enfoque]);
+
+  const actividad = useMemo(() => {
+    const sum = (m: Map<string, { publicaciones: number; interacciones: number }>) => {
+      let pub = 0, inter = 0;
+      m.forEach((v, id) => {
+        if (focusDepId && id !== focusDepId) return;
+        pub += v.publicaciones; inter += v.interacciones;
+      });
+      return { pub, inter };
+    };
+    const a = sum(actNow); const b = sum(actPrev);
+    const top = Array.from(actNow.entries())
+      .filter(([id]) => !focusDepId || id === focusDepId)
+      .sort((x, y) => y[1].interacciones - x[1].interacciones)[0];
+    return {
+      pub: a.pub, inter: a.inter,
+      dPub: pctDelta(a.pub, b.pub || null),
+      dInter: pctDelta(a.inter, b.inter || null),
+      porDia: a.pub / winDays,
+      top: top ? { nombre: depById.get(top[0])?.nombre ?? "—", ...top[1] } : null,
+    };
+  }, [actNow, actPrev, focusDepId, winDays, depById]);
 
   const focusDep = focusDepId ? depById.get(focusDepId) ?? null : null;
 
@@ -415,14 +448,15 @@ export default function PortalBriefing({
           </Select>
         </div>
         <div className="space-y-1">
-          <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Periodo de prensa</span>
+          <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Corte de análisis</span>
           <Select value={pressPreset} onValueChange={(v) => setPressPreset(v as typeof pressPreset)}>
-            <SelectTrigger className="w-[210px] h-9"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-[240px] h-9"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="7">Últimos 7 días</SelectItem>
-              <SelectItem value="14">Últimos 14 días</SelectItem>
-              <SelectItem value="30">Últimos 30 días</SelectItem>
+              <SelectItem value="7">Semanal (últimos 7 días)</SelectItem>
+              <SelectItem value="14">Quincenal (últimos 14 días)</SelectItem>
+              <SelectItem value="30">Mensual (últimos 30 días)</SelectItem>
               <SelectItem value="semana">Última semana completa (L–D)</SelectItem>
+              <SelectItem value="quincena">Última quincena completa (L–D)</SelectItem>
               <SelectItem value="custom">Rango personalizado</SelectItem>
             </SelectContent>
           </Select>
@@ -473,6 +507,29 @@ export default function PortalBriefing({
         <p className="text-[11px] text-muted-foreground">
           Prensa: {rangoLabel}. Redes: periodo <b>{periodLabel || "—"}</b> · {ENFOQUE_LABEL[enfoque].toLowerCase()}.
           {focusDep ? ` Filtrado a ${focusDep.nombre}.` : " Gabinete completo."}
+        </p>
+      </Card>
+
+      {/* Actividad en redes dentro del corte granular */}
+      <Card className="p-5 space-y-3">
+        <div className="flex items-center gap-2">
+          <TrendingUp className="w-4 h-4 text-primary" />
+          <span className="text-[11px] uppercase tracking-widest text-muted-foreground">
+            Actividad en redes · {rangoLabel}
+          </span>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <Mini label="Publicaciones" value={fmtNum(actividad.pub)} delta={actividad.dPub} />
+          <Mini label="Interacciones" value={fmtNum(actividad.inter)} delta={actividad.dInter} />
+          <Mini label="Publicaciones / día" value={actividad.porDia ? actividad.porDia.toFixed(2) : "—"} />
+          <Mini
+            label={focusDep ? "Interacciones del corte" : "Dependencia más activa"}
+            value={actividad.top ? (focusDep ? fmtNum(actividad.top.interacciones) : actividad.top.nombre) : "—"}
+          />
+        </div>
+        <p className="text-[11px] text-muted-foreground">
+          Cuenta las publicaciones fechadas dentro del corte, así que sí responde a cortes semanales o quincenales.
+          Seguidores y engagement siguen viniendo del periodo <b>{periodLabel || "—"}</b> porque la fuente los entrega por mes.
         </p>
       </Card>
 
@@ -700,6 +757,9 @@ export default function PortalBriefing({
         dep={fichaDep}
         periodLabel={periodLabel}
         enfoque={enfoque}
+        ventana={win}
+        ventanaLabel={rangoLabel}
+        mentionsOverride={winMentions}
         open={!!fichaDep}
         onOpenChange={(v) => { if (!v) setFichaDep(null); }}
         onDescargar={() => onGoTo?.("descargas")}
