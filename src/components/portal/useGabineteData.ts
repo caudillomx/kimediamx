@@ -83,6 +83,7 @@ export function useGabineteData(clientId: string, pressDays = 30) {
   const [mentions, setMentions] = useState<Mention[]>([]);
   const [pressLoading, setPressLoading] = useState(true);
   const [lastPressDate, setLastPressDate] = useState<string | null>(null);
+  const [lastPostDate, setLastPostDate] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
