@@ -187,34 +187,35 @@ export default function PortalDependenciaFicha({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[88vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="w-[calc(100vw-2rem)] sm:w-[calc(100vw-4rem)] sm:max-w-4xl max-h-[88vh] overflow-y-auto overflow-x-hidden">
+        <DialogHeader className="min-w-0">
           <DialogTitle className="flex items-start gap-3 text-left">
             <div className="p-2 rounded-lg bg-primary/10 shrink-0"><Building2 className="w-5 h-5 text-primary" /></div>
-            <div className="min-w-0">
-              <div className="font-display text-lg leading-tight">{dep.nombre}</div>
+            <div className="min-w-0 flex-1">
+              <div className="font-display text-lg leading-tight break-words pr-6">{dep.nombre}</div>
               {dep.titular && (
-                <div className="text-xs font-normal text-muted-foreground flex items-center gap-1 mt-1">
-                  <User className="w-3 h-3" /> {dep.titular}{dep.titular_cargo ? ` · ${dep.titular_cargo}` : ""}
+                <div className="text-xs font-normal text-muted-foreground flex items-start gap-1 mt-1 break-words">
+                  <User className="w-3 h-3 mt-0.5 shrink-0" />
+                  <span className="min-w-0">{dep.titular}{dep.titular_cargo ? ` · ${dep.titular_cargo}` : ""}</span>
                 </div>
               )}
             </div>
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex flex-wrap items-center gap-2 text-[11px]">
+        <div className="flex flex-wrap items-center gap-2 text-[11px] min-w-0">
           <Badge variant="outline">{periodLabel || "Sin periodo"}</Badge>
           <Badge variant="outline">{ENFOQUE_LABEL[enfoque]}</Badge>
           <Badge variant="outline">{depComps.length} cuenta{depComps.length === 1 ? "" : "s"}</Badge>
           {onDescargar && (
-            <Button size="sm" variant="outline" className="ml-auto h-7" onClick={() => onDescargar(dep.id)}>
+            <Button size="sm" variant="outline" className="sm:ml-auto h-7 w-full sm:w-auto" onClick={() => onDescargar(dep.id)}>
               Descargar reporte
             </Button>
           )}
         </div>
 
         {/* KPIs */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 min-w-0">
           <Kpi label="Seguidores" value={fmtNum(mine?.followers)} delta={dFol} />
           <Kpi label="Engagement" value={fmtPct(mine?.engagement, 2)} delta={dEng} />
           <Kpi label="Publicaciones / día" value={mine?.postsDia != null ? mine.postsDia.toFixed(2) : "—"} />
@@ -226,7 +227,7 @@ export default function PortalDependenciaFicha({
         </div>
 
         {/* Lecturas */}
-        <div className="grid md:grid-cols-2 gap-3">
+        <div className="grid md:grid-cols-2 gap-3 min-w-0">
           <Panel title="Fortalezas" icon={<Trophy className="w-4 h-4 text-emerald-500" />}>
             {lecturas.fortalezas.length
               ? <ul className="space-y-1.5">{lecturas.fortalezas.map((t, i) => <li key={i} className="text-sm leading-snug">{t}</li>)}</ul>
@@ -242,8 +243,8 @@ export default function PortalDependenciaFicha({
         {/* Cuentas */}
         <Panel title="Cuentas" icon={<Sparkles className="w-4 h-4 text-primary" />}>
           {cuentas.length ? (
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs">
+            <div className="overflow-x-auto -mx-1 px-1">
+              <table className="w-full min-w-[520px] text-xs">
                 <thead className="text-muted-foreground">
                   <tr className="text-left">
                     <th className="py-1.5 pr-3 font-medium">Perfil</th>
@@ -277,8 +278,8 @@ export default function PortalDependenciaFicha({
             <div className="space-y-2">
               {topPosts.map((p, i) => (
                 <div key={i} className="rounded-lg border border-border/60 p-3">
-                  <div className="flex items-center gap-2 text-[11px] text-muted-foreground mb-1">
-                    <span className="font-medium text-foreground truncate">{p.profile_name}</span>
+                <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground mb-1">
+                    <span className="font-medium text-foreground truncate max-w-[180px]">{p.profile_name}</span>
                     <span className="capitalize">· {p.network}</span>
                     {p.posted_at && <span>· {new Date(p.posted_at).toLocaleDateString("es-MX", { day: "numeric", month: "short" })}</span>}
                     <span className="ml-auto shrink-0">{fmtNum(p.interactions)} interacciones</span>
@@ -377,7 +378,7 @@ function Kpi({ label, value, delta, hint }: { label: string; value: string; delt
 
 function Panel({ title, icon, children }: { title: string; icon?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-border/60 p-4 space-y-2">
+    <div className="rounded-xl border border-border/60 p-4 space-y-2 min-w-0 break-words">
       <div className="flex items-center gap-2">
         {icon}
         <span className="text-[11px] uppercase tracking-widest text-muted-foreground">{title}</span>

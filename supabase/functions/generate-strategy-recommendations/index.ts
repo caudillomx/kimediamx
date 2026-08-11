@@ -33,7 +33,14 @@ CRITERIO DE CRISIS Y REPUTACIÓN (crítico — no alarmar sin evidencia):
 - Solo puedes incluir un gap con type="crisis" o una recomendación priority="alta" por motivo reputacional cuando reputacion.nivel sea "alerta" o "crisis" Y exista un evento concreto en la lista de eventos. Si no, esos hallazgos van como priority="media" y como gap de "tema" o "territorio".
 - Menciones negativas normales o quejas dispersas NO son crisis: son señal de conversación a atender, no de emergencia.
 - "coherence.level" no debe bajar a "baja" solo porque haya sentimiento negativo; bájalo únicamente cuando el contenido del cliente ignore temas dominantes de la audiencia o del sector.
-- El "sentiment_summary" debe ser descriptivo y proporcional: reporta cifras y proporción, evita adjetivos catastrofistas.`;
+- El "sentiment_summary" debe ser descriptivo y proporcional: reporta cifras y proporción, evita adjetivos catastrofistas.
+
+PROHIBIDO DEJAR SECCIONES VACÍAS:
+- Ningún arreglo del JSON puede quedar vacío si hay datos para llenarlo. Recibes, además de narrativas, las PUBLICACIONES REALES del cliente y de sus pares y un resumen de métricas.
+- Si no hay análisis narrativo formal del cliente, DEDUCE "what_client_does.narratives" leyendo sus publicaciones destacadas (3–5 ejes temáticos concretos, con el tema en el enunciado) y describe el "tone" observado en esos textos.
+- Lo mismo para "what_peers_do.dominant_narratives": dedúcelas de las publicaciones de los pares o, cuando el universo sea interno (varias dependencias de un mismo gobierno), de las dependencias con mejor desempeño.
+- "gaps_client_misses" son territorios presentes en pares o en la conversación pública y ausentes en el contenido propio. Siempre 2–4 elementos, distintos de los ejes propios.
+- Cada texto debe citar un dato concreto (cifra, fecha, medio, cuenta o publicación). Si de plano falta la señal, escribe explícitamente qué dato falta en lugar de dejar el campo vacío.`;
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
@@ -130,29 +137,74 @@ Deno.serve(async (req) => {
       for (const ev of (e.events ?? [])) events.push({ fecha: e.entry_date, ...ev });
     }
 
-    // Benchmark narratives (all rows for the range)
-    const { data: narratives } = await admin
+    // Benchmark narratives: cualquier análisis que SOLAPE el rango (los cortes de
+    // narrativas casi nunca coinciden exactamente con el rango de estrategia).
+    let { data: narratives } = await admin
       .from('client_portal_benchmark_narratives')
       .select('*')
       .eq('client_id', client_id)
-      .eq('range_start', range_start)
-      .eq('range_end', range_end);
+      .lte('range_start', range_end)
+      .gte('range_end', range_start);
+    if (!narratives?.length) {
+      const { data: latest } = await admin
+        .from('client_portal_benchmark_narratives')
+        .select('*')
+        .eq('client_id', client_id)
+        .order('created_at', { ascending: false })
+        .limit(40);
+      narratives = latest ?? [];
+    }
 
-    // Competitors and metrics for context
-    const [{ data: competitors }, { data: periods }] = await Promise.all([
-      admin.from('client_portal_benchmark_competitors').select('id,name,is_client').eq('client_id', client_id).eq('active', true),
-      admin.from('client_portal_benchmark_periods').select('id,period_start,period_end,period_label').eq('client_id', client_id).gte('period_end', range_start).lte('period_start', range_end),
+    // Cuentas propias vs pares. En portales de gobierno el "cliente" es el
+    // conjunto de dependencias: toda cuenta ligada a una dependencia es propia.
+    const [{ data: competitors }, { data: periods }, { data: clientRowDb }] = await Promise.all([
+      admin.from('client_portal_benchmark_competitors').select('id,name,is_client,dependencia_id,account_type,network').eq('client_id', client_id).eq('active', true).limit(2000),
+      admin.from('client_portal_benchmark_periods').select('id,period_start,period_end,period_label').eq('client_id', client_id).lte('period_start', range_end).gte('period_end', range_start),
+      admin.from('clients').select('name').eq('id', client_id).maybeSingle(),
     ]);
-    const clientRow = (competitors ?? []).find((c: any) => c.is_client);
-    const clientName = clientRow?.name ?? 'Cliente';
-    const periodIds = (periods ?? []).map((p: any) => p.id);
-    const { data: metrics } = periodIds.length
-      ? await admin.from('client_portal_benchmark_metrics').select('*').in('period_id', periodIds)
-      : { data: [] as any[] };
+    const comps = (competitors ?? []) as any[];
+    const isOwn = (c: any) => !!c.is_client || !!c.dependencia_id;
+    const ownIds = new Set(comps.filter(isOwn).map((c) => c.id));
+    const ownNames = new Set(comps.filter(isOwn).map((c) => String(c.name).toLowerCase()));
+    const clientName = comps.find((c) => c.is_client)?.name ?? clientRowDb?.name ?? 'Cliente';
 
-    // Build compact payload
-    const clientNarratives = (narratives ?? []).filter((n: any) => n.competitor_id === clientRow?.id).map((n: any) => ({ network: n.network, ...n.narratives }));
-    const peerNarratives = (narratives ?? []).filter((n: any) => n.competitor_id !== clientRow?.id).map((n: any) => ({ profile: n.profile_name, network: n.network, ...n.narratives }));
+    const periodIds = (periods ?? []).map((p: any) => p.id);
+    const [{ data: metrics }, { data: bpostsRaw }] = await Promise.all([
+      periodIds.length
+        ? admin.from('client_portal_benchmark_metrics').select('competitor_id,network,followers,engagement_rate,posts_per_day').in('period_id', periodIds).limit(20000)
+        : Promise.resolve({ data: [] as any[] } as any),
+      periodIds.length
+        ? admin.from('client_portal_benchmark_posts').select('competitor_id,network,profile_name,posted_at,message,interactions').in('period_id', periodIds).order('interactions', { ascending: false }).limit(400)
+        : Promise.resolve({ data: [] as any[] } as any),
+    ]);
+    const bposts = (bpostsRaw ?? []) as any[];
+    const belongsOwn = (p: any) =>
+      (p.competitor_id && ownIds.has(p.competitor_id)) || ownNames.has(String(p.profile_name ?? '').toLowerCase());
+
+    const slimPost = (p: any) => ({
+      cuenta: p.profile_name, red: p.network, fecha: p.posted_at?.slice(0, 10) ?? null,
+      interacciones: p.interactions, texto: String(p.message ?? '').slice(0, 220),
+    });
+    const ownPosts = bposts.filter(belongsOwn).slice(0, 40).map(slimPost);
+    const peerPosts = bposts.filter((p) => !belongsOwn(p)).slice(0, 25).map(slimPost);
+
+    // Resumen de métricas por cuenta (top por engagement) para dar contexto duro.
+    const nameById = new Map(comps.map((c) => [c.id, c.name]));
+    const metricRows = ((metrics ?? []) as any[]).map((m) => ({
+      cuenta: nameById.get(m.competitor_id) ?? '—',
+      propia: ownIds.has(m.competitor_id),
+      red: m.network, seguidores: m.followers,
+      engagement: m.engagement_rate, posts_dia: m.posts_per_day,
+    }));
+    const topOwnAccounts = metricRows.filter((r) => r.propia).sort((a, b) => (b.engagement ?? 0) - (a.engagement ?? 0)).slice(0, 15);
+    const topPeerAccounts = metricRows.filter((r) => !r.propia).sort((a, b) => (b.engagement ?? 0) - (a.engagement ?? 0)).slice(0, 10);
+
+    const isOwnNarrative = (n: any) =>
+      (n.competitor_id && ownIds.has(n.competitor_id)) || ownNames.has(String(n.profile_name ?? '').toLowerCase());
+    const clientNarratives = (narratives ?? []).filter(isOwnNarrative)
+      .map((n: any) => ({ perfil: n.profile_name, network: n.network, ...n.narratives }));
+    const peerNarratives = (narratives ?? []).filter((n: any) => !isOwnNarrative(n))
+      .map((n: any) => ({ profile: n.profile_name, network: n.network, ...n.narratives }));
 
     const userPrompt = [
       `CLIENTE: ${clientName}`,
@@ -170,13 +222,24 @@ Deno.serve(async (req) => {
       }, null, 2),
       '',
       'BENCHMARK — narrativas propias del cliente:',
-      JSON.stringify(clientNarratives, null, 2),
+      clientNarratives.length ? JSON.stringify(clientNarratives, null, 2) : 'No hay análisis narrativo formal. Deduce las narrativas propias leyendo las publicaciones del cliente listadas abajo.',
       '',
       'BENCHMARK — narrativas de competidores:',
-      JSON.stringify(peerNarratives, null, 2),
+      peerNarratives.length ? JSON.stringify(peerNarratives, null, 2) : 'Sin narrativas externas analizadas. Deduce las narrativas dominantes de las publicaciones y cuentas de mejor desempeño listadas abajo.',
       '',
-      'BENCHMARK — métricas agregadas (rango):',
-      JSON.stringify({ periods: periods, metrics_count: (metrics ?? []).length }, null, 2),
+      'BENCHMARK — publicaciones del cliente (propias, top por interacción):',
+      JSON.stringify(ownPosts, null, 2),
+      '',
+      'BENCHMARK — publicaciones de pares/externos (top por interacción):',
+      peerPosts.length ? JSON.stringify(peerPosts, null, 2) : 'No hay cuentas externas: el universo es interno (comparación entre cuentas propias).',
+      '',
+      'BENCHMARK — cuentas y métricas del rango:',
+      JSON.stringify({
+        periodos: (periods ?? []).map((p: any) => p.period_label),
+        cuentas_propias_top: topOwnAccounts,
+        cuentas_externas_top: topPeerAccounts,
+        total_cuentas_propias: ownIds.size,
+      }, null, 2),
     ].join('\n');
 
     const resp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {

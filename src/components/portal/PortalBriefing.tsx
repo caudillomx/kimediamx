@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import {
   CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
 } from "@/components/ui/command";
@@ -18,6 +19,22 @@ import {
 import PortalDependenciaFicha from "./PortalDependenciaFicha";
 
 const isoDaysAgo = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString().slice(0, 10);
+const isoToday = () => new Date().toISOString().slice(0, 10);
+const shiftIso = (d: string, n: number) =>
+  new Date(new Date(d + "T00:00:00").getTime() + n * 86_400_000).toISOString().slice(0, 10);
+const daysBetween = (a: string, b: string) =>
+  Math.max(1, Math.round((new Date(b + "T00:00:00").getTime() - new Date(a + "T00:00:00").getTime()) / 86_400_000) + 1);
+const fmtDia = (d: string) =>
+  new Date(d + "T00:00:00").toLocaleDateString("es-MX", { day: "2-digit", month: "short" });
+
+/** Última semana completa lunes→domingo. */
+function ultimaSemanaCompleta() {
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  const dow = hoy.getDay();
+  const domingo = new Date(hoy); domingo.setDate(hoy.getDate() - (dow === 0 ? 0 : dow));
+  const lunes = new Date(domingo); lunes.setDate(domingo.getDate() - 6);
+  return { from: lunes.toISOString().slice(0, 10), to: domingo.toISOString().slice(0, 10) };
+}
 
 export default function PortalBriefing({
   clientId, focusDepId, onFocusChange, onGoTo,
@@ -37,6 +54,45 @@ export default function PortalBriefing({
   const [periodLabel, setPeriodLabel] = useState("");
   const [fichaDep, setFichaDep] = useState<Dependencia | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
+
+  // Ventana de prensa: presets o rango personalizado.
+  const [pressPreset, setPressPreset] = useState<"7" | "14" | "30" | "semana" | "custom">("7");
+  const [customFrom, setCustomFrom] = useState(isoDaysAgo(13));
+  const [customTo, setCustomTo] = useState(isoToday());
+
+  const win = useMemo(() => {
+    if (pressPreset === "custom") {
+      const [from, to] = customFrom <= customTo ? [customFrom, customTo] : [customTo, customFrom];
+      return { from, to };
+    }
+    if (pressPreset === "semana") return ultimaSemanaCompleta();
+    const n = Number(pressPreset);
+    return { from: isoDaysAgo(n - 1), to: isoToday() };
+  }, [pressPreset, customFrom, customTo]);
+
+  const winDays = daysBetween(win.from, win.to);
+  const prevFrom = shiftIso(win.from, -winDays);
+  const prevTo = shiftIso(win.from, -1);
+  const rangoLabel = pressPreset === "custom" || pressPreset === "semana"
+    ? `${fmtDia(win.from)} — ${fmtDia(win.to)}`
+    : `últimos ${winDays} días`;
+
+  const [winMentions, setWinMentions] = useState<typeof mentions>([]);
+  const [winLoading, setWinLoading] = useState(true);
+
+  useEffect(() => {
+    if (!dependencias.length) return;
+    let cancelled = false;
+    (async () => {
+      setWinLoading(true);
+      const rows = await gab.fetchMentions(prevFrom, win.to);
+      if (cancelled) return;
+      setWinMentions(rows);
+      setWinLoading(false);
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dependencias.length, gab.fetchMentions, prevFrom, win.to]);
 
   useEffect(() => {
     if (!periodLabel && periodLabels.length) setPeriodLabel(periodLabels[periodLabels.length - 1]);
@@ -65,13 +121,11 @@ export default function PortalBriefing({
 
   const focusDep = focusDepId ? depById.get(focusDepId) ?? null : null;
 
-  // ---------- Prensa: 7 días vs 7 previos ----------
+  // ---------- Prensa: ventana seleccionada vs ventana previa equivalente ----------
   const press = useMemo(() => {
-    const from7 = isoDaysAgo(6);
-    const from14 = isoDaysAgo(13);
     const scope = (r: typeof mentions[number]) => !focusDepId || r.dep === focusDepId;
-    const last7 = mentions.filter((r) => r.fecha >= from7 && scope(r));
-    const prev7 = mentions.filter((r) => r.fecha >= from14 && r.fecha < from7 && scope(r));
+    const last7 = winMentions.filter((r) => r.fecha >= win.from && r.fecha <= win.to && scope(r));
+    const prev7 = winMentions.filter((r) => r.fecha >= prevFrom && r.fecha <= prevTo && scope(r));
     const neg = (rows: typeof mentions) => rows.filter((r) => r.tono === "negativo" || r.tono === "crisis").length;
     const pos = (rows: typeof mentions) => rows.filter((r) => r.tono === "positivo").length;
     const byDep = new Map<string, { total: number; neg: number }>();
@@ -92,9 +146,9 @@ export default function PortalBriefing({
       pos: pos(last7),
       byDep,
       topMedios: Array.from(byMedio.entries()).sort((a, b) => b[1] - a[1]).slice(0, 3),
-      ultimaFecha: last7[0]?.fecha ?? mentions[0]?.fecha ?? null,
+      ultimaFecha: last7[0]?.fecha ?? winMentions[0]?.fecha ?? null,
     };
-  }, [mentions, focusDepId]);
+  }, [winMentions, focusDepId, win.from, win.to, prevFrom, prevTo]);
 
   // ---------- Ranking y movimientos ----------
   const ranking = useMemo(
@@ -126,18 +180,18 @@ export default function PortalBriefing({
 
   // ---------- Titular del día ----------
   const titular = useMemo(() => {
-    if (pressLoading) return null;
+    if (winLoading) return null;
     const partes: string[] = [];
     const sujeto = focusDep ? focusDep.nombre : "El gabinete";
     if (press.total) {
       const dTot = press.prevTotal ? Math.round(((press.total - press.prevTotal) / press.prevTotal) * 100) : null;
       partes.push(
-        `${sujeto} registró ${press.total} menciones de prensa en los últimos 7 días` +
+        `${sujeto} registró ${press.total} menciones de prensa en ${rangoLabel === `últimos ${winDays} días` ? rangoLabel : `el periodo ${rangoLabel}`}` +
         (dTot != null ? ` (${dTot >= 0 ? "+" : ""}${dTot}% frente a los 7 previos)` : "") +
         `, ${press.neg} de ellas con tono negativo o de crisis.`,
       );
     } else {
-      partes.push(`No se detectaron menciones de prensa para ${sujeto.toLowerCase()} en los últimos 7 días.`);
+      partes.push(`No se detectaron menciones de prensa para ${sujeto.toLowerCase()} en ${rangoLabel}.`);
     }
     if (press.topMedios.length) {
       partes.push(`Los medios con más cobertura fueron ${press.topMedios.map(([m, n]) => `${m} (${n})`).join(", ")}.`);
@@ -148,7 +202,7 @@ export default function PortalBriefing({
       partes.push(`En redes, ${depById.get(ranking[0][0])?.nombre ?? "—"} lidera el engagement del periodo ${periodLabel} con ${fmtPct(ranking[0][1].engagement, 2)}.`);
     }
     return partes.join(" ");
-  }, [pressLoading, press, focusDep, focusRank, ranking, depById, periodLabel]);
+  }, [winLoading, press, focusDep, focusRank, ranking, depById, periodLabel, rangoLabel, winDays]);
 
   // ---------- Alertas ----------
   const alertas = useMemo(() => {
@@ -163,7 +217,7 @@ export default function PortalBriefing({
       out.push({
         nivel: v.neg >= 4 ? "alta" : "media",
         titulo: `Prensa negativa en ${depById.get(id)?.nombre ?? "—"}`,
-        dato: `${v.neg} de ${v.total} menciones de los últimos 7 días con tono negativo o de crisis.`,
+        dato: `${v.neg} de ${v.total} menciones de ${rangoLabel} con tono negativo o de crisis.`,
         depId: id,
       });
     }
@@ -171,7 +225,7 @@ export default function PortalBriefing({
       out.push({
         nivel: "media",
         titulo: "Repunte de cobertura negativa",
-        dato: `${press.neg} menciones negativas en 7 días contra ${press.prevNeg} de la semana previa.`,
+        dato: `${press.neg} menciones negativas en ${rangoLabel} contra ${press.prevNeg} del periodo previo equivalente.`,
       });
     }
 
@@ -202,7 +256,7 @@ export default function PortalBriefing({
     const rank = { alta: 0, media: 1, baja: 2 } as const;
     const filtered = focusDepId ? out.filter((a) => !a.depId || a.depId === focusDepId) : out;
     return filtered.sort((a, b) => rank[a.nivel] - rank[b.nivel]).slice(0, 6);
-  }, [press, curr, prev, depById, dependencias, periodLabel, focusDepId]);
+  }, [press, curr, prev, depById, dependencias, periodLabel, focusDepId, rangoLabel]);
 
   // ---------- Acciones sugeridas ----------
   const acciones = useMemo(() => {
@@ -211,7 +265,7 @@ export default function PortalBriefing({
     if (negTop && negTop[1].neg >= 2) {
       out.push({
         accion: `Preparar respuesta pública y agenda propia para ${depById.get(negTop[0])?.nombre ?? "la dependencia"}.`,
-        evidencia: `${negTop[1].neg} menciones negativas de ${negTop[1].total} en los últimos 7 días.`,
+        evidencia: `${negTop[1].neg} menciones negativas de ${negTop[1].total} en ${rangoLabel}.`,
       });
     }
     const below = Array.from(curr.entries())
@@ -241,7 +295,7 @@ export default function PortalBriefing({
       ? out.filter((a) => !focusDep || a.accion.includes(focusDep.nombre) || a.accion.startsWith("Establecer"))
       : out;
     return (filtered.length ? filtered : out).slice(0, 3);
-  }, [press, curr, engAvg, ranking, depById, periodLabel, focusDepId, focusDep]);
+  }, [press, curr, engAvg, ranking, depById, periodLabel, focusDepId, focusDep, rangoLabel]);
 
   // ---------- Temas de prensa sin respuesta ----------
   // Una mención negativa se considera "sin respuesta" cuando la dependencia no
@@ -260,12 +314,12 @@ export default function PortalBriefing({
   }, [posts, depOfCompetitor]);
 
   const sinRespuesta = useMemo(() => {
-    const from = isoDaysAgo(6);
+    const from = win.from;
     const plusDays = (d: string, n: number) =>
       new Date(new Date(d + "T00:00:00").getTime() + n * 86_400_000).toISOString().slice(0, 10);
-    return mentions
+    return winMentions
       .filter((r) =>
-        r.fecha >= from && r.dep &&
+        r.fecha >= from && r.fecha <= win.to && r.dep &&
         (r.tono === "negativo" || r.tono === "crisis") &&
         (!focusDepId || r.dep === focusDepId))
       .filter((r) => {
@@ -275,7 +329,7 @@ export default function PortalBriefing({
       })
       .sort((a, b) => b.fecha.localeCompare(a.fecha))
       .slice(0, 6);
-  }, [mentions, postDatesByDep, focusDepId]);
+  }, [winMentions, postDatesByDep, focusDepId, win.from, win.to]);
 
   // ---------- Bloques listos para enviar a la dependencia ----------
   const bloques = useMemo(() => {
@@ -292,9 +346,9 @@ export default function PortalBriefing({
       const v = curr.get(d.id);
       const pendientes = sinRespuesta.filter((r) => r.dep === d.id);
       const lineas = [
-        `${d.nombre} — corte semanal`,
+        `${d.nombre} — corte ${rangoLabel}`,
         "",
-        `Prensa (7 días): ${pr.total} menciones, ${pr.neg} con tono negativo o de crisis.`,
+        `Prensa (${rangoLabel}): ${pr.total} menciones, ${pr.neg} con tono negativo o de crisis.`,
         `Redes (${periodLabel || "periodo actual"}): ${fmtNum(v?.followers)} seguidores, engagement ${fmtPct(v?.engagement, 2)}${engAvg != null ? ` contra ${fmtPct(engAvg, 2)} de promedio del gabinete` : ""}.`,
       ];
       if (pendientes.length) {
@@ -304,7 +358,7 @@ export default function PortalBriefing({
       lineas.push("", "Sugerencia: agenda propia esta semana sobre los temas anteriores y sostener el ritmo de publicación.", "", "KiMedia");
       return { dep: d, texto: lineas.join("\n"), pendientes: pendientes.length };
     });
-  }, [focusDepId, dependencias, press, depById, curr, engAvg, periodLabel, sinRespuesta]);
+  }, [focusDepId, dependencias, press, depById, curr, engAvg, periodLabel, sinRespuesta, rangoLabel]);
 
   const copiar = async (texto: string) => {
     try {
@@ -360,6 +414,31 @@ export default function PortalBriefing({
             </SelectContent>
           </Select>
         </div>
+        <div className="space-y-1">
+          <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Periodo de prensa</span>
+          <Select value={pressPreset} onValueChange={(v) => setPressPreset(v as typeof pressPreset)}>
+            <SelectTrigger className="w-[210px] h-9"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="7">Últimos 7 días</SelectItem>
+              <SelectItem value="14">Últimos 14 días</SelectItem>
+              <SelectItem value="30">Últimos 30 días</SelectItem>
+              <SelectItem value="semana">Última semana completa (L–D)</SelectItem>
+              <SelectItem value="custom">Rango personalizado</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        {pressPreset === "custom" && (
+          <>
+            <div className="space-y-1">
+              <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Desde</span>
+              <Input type="date" value={customFrom} max={customTo} onChange={(e) => setCustomFrom(e.target.value)} className="h-9 w-[150px]" />
+            </div>
+            <div className="space-y-1">
+              <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Hasta</span>
+              <Input type="date" value={customTo} min={customFrom} onChange={(e) => setCustomTo(e.target.value)} className="h-9 w-[150px]" />
+            </div>
+          </>
+        )}
         <Button variant="outline" size="sm" className="h-9 ml-auto" onClick={() => setSearchOpen(true)}>
           <Search className="w-4 h-4 mr-2" /> Buscar dependencia
           <kbd className="ml-2 text-[10px] text-muted-foreground border border-border rounded px-1">⌘K</kbd>
@@ -379,20 +458,20 @@ export default function PortalBriefing({
             Briefing {press.ultimaFecha ? `· última bitácora ${press.ultimaFecha}` : ""}
           </span>
         </div>
-        {pressLoading ? <Skeleton className="h-12 w-full" /> : (
+        {winLoading ? <Skeleton className="h-12 w-full" /> : (
           <p className="text-[15px] leading-relaxed">{titular}</p>
         )}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-1">
-          <Mini label="Menciones (7 días)" value={fmtNum(press.total)} delta={press.prevTotal ? (press.total - press.prevTotal) / press.prevTotal : null} />
-          <Mini label="Negativas (7 días)" value={fmtNum(press.neg)} invert delta={press.prevNeg ? (press.neg - press.prevNeg) / press.prevNeg : null} />
-          <Mini label="Positivas (7 días)" value={fmtNum(press.pos)} />
+          <Mini label={`Menciones (${rangoLabel})`} value={fmtNum(press.total)} delta={press.prevTotal ? (press.total - press.prevTotal) / press.prevTotal : null} />
+          <Mini label={`Negativas (${rangoLabel})`} value={fmtNum(press.neg)} invert delta={press.prevNeg ? (press.neg - press.prevNeg) / press.prevNeg : null} />
+          <Mini label={`Positivas (${rangoLabel})`} value={fmtNum(press.pos)} />
           <Mini
             label={focusDep ? "Posición en el gabinete" : "Promedio de engagement"}
             value={focusDep ? (focusRank >= 0 ? `#${focusRank + 1} de ${ranking.length}` : "—") : fmtPct(engAvg, 2)}
           />
         </div>
         <p className="text-[11px] text-muted-foreground">
-          Prensa: últimos 7 días. Redes: periodo <b>{periodLabel || "—"}</b> · {ENFOQUE_LABEL[enfoque].toLowerCase()}.
+          Prensa: {rangoLabel}. Redes: periodo <b>{periodLabel || "—"}</b> · {ENFOQUE_LABEL[enfoque].toLowerCase()}.
           {focusDep ? ` Filtrado a ${focusDep.nombre}.` : " Gabinete completo."}
         </p>
       </Card>
@@ -497,10 +576,10 @@ export default function PortalBriefing({
         <div className="flex items-center gap-2">
           <Newspaper className="w-4 h-4 text-amber-500" />
           <span className="text-[11px] uppercase tracking-widest text-muted-foreground">
-            Prensa sin respuesta · últimos 7 días
+            Prensa sin respuesta · {rangoLabel}
           </span>
         </div>
-        {pressLoading ? (
+        {winLoading ? (
           <Skeleton className="h-24 rounded-xl" />
         ) : sinRespuesta.length ? (
           <div className="space-y-2">
@@ -637,7 +716,7 @@ function Mini({ label, value, delta, invert }: { label: string; value: string; d
       <div className="text-2xl font-display font-bold mt-0.5">{value}</div>
       {delta != null && Number.isFinite(delta) && (
         <div className={`text-[11px] mt-0.5 ${good ? "text-emerald-500" : "text-rose-500"}`}>
-          {delta >= 0 ? "+" : "−"}{fmtPct(Math.abs(delta), 0)} vs 7 días previos
+          {delta >= 0 ? "+" : "−"}{fmtPct(Math.abs(delta), 0)} vs periodo previo
         </div>
       )}
     </div>

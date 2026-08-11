@@ -24,6 +24,18 @@ type Report = { id: string; title: string; report_date: string; type: string };
 const RATE_AVG = (vals: number[]) => (vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null);
 const isoToday = () => new Date().toISOString().slice(0, 10);
 const isoDaysAgo = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString().slice(0, 10);
+const shiftIso = (d: string, n: number) =>
+  new Date(new Date(d + "T00:00:00").getTime() + n * 86_400_000).toISOString().slice(0, 10);
+const fmtDia = (d: string) => new Date(d + "T00:00:00").toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" });
+
+/** Última semana completa lunes→domingo. */
+function ultimaSemanaCompleta() {
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  const dow = hoy.getDay();
+  const domingo = new Date(hoy); domingo.setDate(hoy.getDate() - (dow === 0 ? 0 : dow));
+  const lunes = new Date(domingo); lunes.setDate(domingo.getDate() - 6);
+  return { from: lunes.toISOString().slice(0, 10), to: domingo.toISOString().slice(0, 10) };
+}
 
 const TONE_LABEL: Record<string, string> = { positivo: "Positivo", neutral: "Neutral", negativo: "Negativo", crisis: "Crisis" };
 
@@ -48,6 +60,9 @@ export default function PortalDescargas({
   const [depId, setDepId] = useState<string>("");
   const [enfoque, setEnfoque] = useState<"combinado" | "institucional" | "titular">("combinado");
   const [periodLabel, setPeriodLabel] = useState<string>("");
+  const [cut, setCut] = useState<"mensual" | "semanal">("mensual");
+  const [weekFrom, setWeekFrom] = useState(ultimaSemanaCompleta().from);
+  const [weekTo, setWeekTo] = useState(ultimaSemanaCompleta().to);
   const [busy, setBusy] = useState<string | null>(null);
 
   // Prensa
@@ -102,14 +117,23 @@ export default function PortalDescargas({
     [periods],
   );
   const activePeriods = useMemo(
-    () => periods.filter((p) => p.period_label === periodLabel),
-    [periods, periodLabel],
+    () => cut === "semanal"
+      ? periods.filter((p) => p.period_start <= weekTo && p.period_end >= weekFrom)
+      : periods.filter((p) => p.period_label === periodLabel),
+    [periods, periodLabel, cut, weekFrom, weekTo],
   );
   const prevPeriods = useMemo(() => {
-    const idx = periodLabels.indexOf(periodLabel);
+    const ref = cut === "semanal" ? activePeriods[0]?.period_label ?? "" : periodLabel;
+    const idx = periodLabels.indexOf(ref);
     if (idx <= 0) return [];
     return periods.filter((p) => p.period_label === periodLabels[idx - 1]);
-  }, [periods, periodLabels, periodLabel]);
+  }, [periods, periodLabels, periodLabel, cut, activePeriods]);
+
+  /** Etiqueta del corte activo y ventana de fechas para prensa/publicaciones. */
+  const cutLabel = cut === "semanal"
+    ? `Semana ${fmtDia(weekFrom)} — ${fmtDia(weekTo)}`
+    : (periodLabel || "Periodo");
+  const cutSlug = cut === "semanal" ? `semana-${weekFrom}` : (periodLabel || "reporte").replace(/\s+/g, "-").toLowerCase();
 
   const depOfCompetitor = useMemo(() => {
     const m = new Map<string, string>();
@@ -300,6 +324,8 @@ export default function PortalDescargas({
 
     const topPosts = posts
       .filter((p) => periodIds.includes(p.period_id) && p.competitor_id && compById.has(p.competitor_id))
+      .filter((p) => cut !== "semanal"
+        || (p.posted_at ? p.posted_at.slice(0, 10) >= weekFrom && p.posted_at.slice(0, 10) <= weekTo : false))
       .sort((a, b) => (b.interactions ?? 0) - (a.interactions ?? 0))
       .slice(0, 6)
       .map((p) => ({
@@ -317,8 +343,8 @@ export default function PortalDescargas({
     }
 
     const periodo = activePeriods[0];
-    const from = periodo?.period_start ?? pressFrom;
-    const to = periodo?.period_end ?? pressTo;
+    const from = cut === "semanal" ? weekFrom : (periodo?.period_start ?? pressFrom);
+    const to = cut === "semanal" ? weekTo : (periodo?.period_end ?? pressTo);
     const mentions = await fetchMentions(from, to);
     const prensaAll = mentions
       .filter((r) => r.dep === dep.id)
@@ -335,7 +361,7 @@ export default function PortalDescargas({
       tipo: dep.tipo,
       titular: dep.titular,
       titularCargo: dep.titular_cargo,
-      periodoLabel: `${periodLabel || "Periodo"} · ${ENFOQUE_LABEL[enfoque]}`,
+      periodoLabel: `${cutLabel} · ${ENFOQUE_LABEL[enfoque]}`,
       redes: Array.from(new Set(cuentas.map((c) => c.red))),
       cuentas,
       totales: { seguidores: mine.followers, engagement: mine.engagement, postsDia: mine.postsDia },
@@ -366,7 +392,7 @@ export default function PortalDescargas({
       return { nombre: depName.get(id) ?? "—", delta: d };
     }).filter((r) => r.delta != null) as { nombre: string; delta: number }[];
     return {
-      periodoLabel: `${periodLabel || "Periodo"} · ${ENFOQUE_LABEL[enfoque]}`,
+      periodoLabel: `${cutLabel} · ${ENFOQUE_LABEL[enfoque]}`,
       ranking,
       suben: moves.slice().sort((a, b) => b.delta - a.delta).slice(0, 5),
       bajan: moves.slice().sort((a, b) => a.delta - b.delta).slice(0, 5),
@@ -383,7 +409,7 @@ export default function PortalDescargas({
     setDepData(data);
     try {
       await new Promise((r) => setTimeout(r, 350));
-      await renderPdf(depPdfRef, `${data.dependencia.replace(/\s+/g, "-").toLowerCase()}-${enfoque}-${periodLabel || "reporte"}.pdf`);
+      await renderPdf(depPdfRef, `${data.dependencia.replace(/\s+/g, "-").toLowerCase()}-${enfoque}-${cutSlug}.pdf`);
       toast.success("Reporte descargado", { id: "dep-pdf" });
     } catch {
       toast.error("No se pudo generar el PDF", { id: "dep-pdf" });
@@ -396,7 +422,7 @@ export default function PortalDescargas({
     toast.loading("Generando panorama…", { id: "gab-pdf" });
     try {
       await new Promise((r) => setTimeout(r, 350));
-      await renderPdf(gabPdfRef, `gabinete-${enfoque}-${periodLabel || "reporte"}.pdf`);
+      await renderPdf(gabPdfRef, `gabinete-${enfoque}-${cutSlug}.pdf`);
       toast.success("Panorama descargado", { id: "gab-pdf" });
     } catch {
       toast.error("No se pudo generar el PDF", { id: "gab-pdf" });
@@ -432,14 +458,43 @@ export default function PortalDescargas({
             </Select>
           </div>
           <div className="space-y-1">
-            <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Periodo</span>
-            <Select value={periodLabel} onValueChange={setPeriodLabel}>
-              <SelectTrigger className="w-[200px] h-9"><SelectValue /></SelectTrigger>
+            <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Corte</span>
+            <Select value={cut} onValueChange={(v) => setCut(v as typeof cut)}>
+              <SelectTrigger className="w-[170px] h-9"><SelectValue /></SelectTrigger>
               <SelectContent>
-                {periodLabels.slice().reverse().map((l) => <SelectItem key={l} value={l}>{l}</SelectItem>)}
+                <SelectItem value="mensual">Mensual</SelectItem>
+                <SelectItem value="semanal">Semanal</SelectItem>
               </SelectContent>
             </Select>
           </div>
+          {cut === "mensual" ? (
+            <div className="space-y-1">
+              <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Periodo</span>
+              <Select value={periodLabel} onValueChange={setPeriodLabel}>
+                <SelectTrigger className="w-[200px] h-9"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {periodLabels.slice().reverse().map((l) => <SelectItem key={l} value={l}>{l}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-1">
+                <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Semana desde</span>
+                <Input type="date" value={weekFrom} max={weekTo} onChange={(e) => setWeekFrom(e.target.value)} className="h-9 w-[150px]" />
+              </div>
+              <div className="space-y-1">
+                <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Hasta</span>
+                <Input type="date" value={weekTo} min={weekFrom} onChange={(e) => setWeekTo(e.target.value)} className="h-9 w-[150px]" />
+              </div>
+              <Button
+                variant="ghost" size="sm" className="h-9"
+                onClick={() => { const w = ultimaSemanaCompleta(); setWeekFrom(w.from); setWeekTo(w.to); }}
+              >
+                Última semana completa
+              </Button>
+            </>
+          )}
           <div className="space-y-1">
             <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Enfoque</span>
             <Select value={enfoque} onValueChange={(v) => setEnfoque(v as typeof enfoque)}>
@@ -467,6 +522,11 @@ export default function PortalDescargas({
             {depSel.titular_cargo ? ` · ${depSel.titular_cargo}` : ""}
           </p>
         )}
+        <p className="text-[11px] text-muted-foreground">
+          {cut === "semanal"
+            ? `Corte semanal ${fmtDia(weekFrom)} — ${fmtDia(weekTo)}: publicaciones y menciones de prensa se filtran a esos días; las métricas de seguidores y engagement provienen del corte de datos ${activePeriods[0]?.period_label ?? "más cercano"}.`
+            : `Corte mensual: publicaciones, métricas y prensa del periodo ${periodLabel || "seleccionado"}.`}
+        </p>
       </Card>
 
       {/* Menciones de prensa */}
