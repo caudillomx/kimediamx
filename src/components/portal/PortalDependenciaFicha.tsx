@@ -278,8 +278,8 @@ export default function PortalDependenciaFicha({
             <div className="space-y-2">
               {topPosts.map((p, i) => (
                 <div key={i} className="rounded-lg border border-border/60 p-3">
-                  <div className="flex items-center gap-2 text-[11px] text-muted-foreground mb-1">
-                    <span className="font-medium text-foreground truncate">{p.profile_name}</span>
+                <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground mb-1">
+                    <span className="font-medium text-foreground truncate max-w-[180px]">{p.profile_name}</span>
                     <span className="capitalize">· {p.network}</span>
                     {p.posted_at && <span>· {new Date(p.posted_at).toLocaleDateString("es-MX", { day: "numeric", month: "short" })}</span>}
                     <span className="ml-auto shrink-0">{fmtNum(p.interactions)} interacciones</span>
@@ -378,7 +378,7 @@ function Kpi({ label, value, delta, hint }: { label: string; value: string; delt
 
 function Panel({ title, icon, children }: { title: string; icon?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-border/60 p-4 space-y-2">
+    <div className="rounded-xl border border-border/60 p-4 space-y-2 min-w-0 break-words">
       <div className="flex items-center gap-2">
         {icon}
         <span className="text-[11px] uppercase tracking-widest text-muted-foreground">{title}</span>
