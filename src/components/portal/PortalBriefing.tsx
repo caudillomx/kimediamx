@@ -467,7 +467,7 @@ export default function PortalBriefing({
         <div className="space-y-1">
           <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Estoy viendo como</span>
           <Select value={focusDepId ?? "gabinete"} onValueChange={(v) => onFocusChange(v === "gabinete" ? null : v)}>
-            <SelectTrigger className="w-[300px] h-9"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-[220px] h-9"><SelectValue /></SelectTrigger>
             <SelectContent className="max-h-80">
               <SelectItem value="gabinete">Gabinete completo</SelectItem>
               {dependencias.map((d) => <SelectItem key={d.id} value={d.id}>{d.nombre}</SelectItem>)}
@@ -486,7 +486,7 @@ export default function PortalBriefing({
         <div className="space-y-1">
           <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Cuentas</span>
           <Select value={enfoque} onValueChange={(v) => setEnfoque(v as Enfoque)}>
-            <SelectTrigger className="w-[230px] h-9"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-[200px] h-9"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="combinado">Dependencia + titular</SelectItem>
               <SelectItem value="institucional">Solo institucional</SelectItem>
@@ -497,7 +497,7 @@ export default function PortalBriefing({
         <div className="space-y-1">
           <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Corte de análisis</span>
           <Select value={pressPreset} onValueChange={(v) => setPressPreset(v as typeof pressPreset)}>
-            <SelectTrigger className="w-[240px] h-9"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-[210px] h-9"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="7">Semanal (7 días)</SelectItem>
               <SelectItem value="14">Quincenal (14 días)</SelectItem>
