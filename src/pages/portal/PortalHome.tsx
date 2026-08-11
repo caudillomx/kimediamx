@@ -26,6 +26,8 @@ import PortalBenchmark from "@/components/portal/PortalBenchmark";
 import PortalStrategy from "@/components/portal/PortalStrategy";
 import PortalDescargas from "@/components/portal/PortalDescargas";
 import PortalBriefing from "@/components/portal/PortalBriefing";
+import PortalFreshnessBar from "@/components/portal/PortalFreshnessBar";
+import PortalBigPicture from "@/components/portal/PortalBigPicture";
 import { Compass, Users as UsersIcon, Building2, Home } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 
@@ -928,7 +930,16 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
                   {(portalModules.benchmark_funcionarios || portalModules.benchmark_instituciones) && (
                     <TabsTrigger value="descargas" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><Download className="w-4 h-4 mr-2" />Descargas</TabsTrigger>
                   )}
+                  {canSeeBigPicture && (
+                    <TabsTrigger value="bigpicture" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><Compass className="w-4 h-4 mr-2" />Big Picture</TabsTrigger>
+                  )}
                 </TabsList>
+
+                {canSeeBigPicture && (
+                  <TabsContent value="bigpicture" className="mt-5">
+                    <PortalBigPicture clientId={portal.clientId} titulo={portal.displayName} />
+                  </TabsContent>
+                )}
 
                 {isGabinete && (
                   <TabsContent value="inicio" className="mt-5 space-y-4">
