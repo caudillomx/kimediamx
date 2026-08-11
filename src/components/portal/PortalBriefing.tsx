@@ -492,6 +492,71 @@ export default function PortalBriefing({
         )}
       </Card>
 
+      {/* Temas de prensa sin respuesta */}
+      <Card className="p-5 space-y-3">
+        <div className="flex items-center gap-2">
+          <Newspaper className="w-4 h-4 text-amber-500" />
+          <span className="text-[11px] uppercase tracking-widest text-muted-foreground">
+            Prensa sin respuesta · últimos 7 días
+          </span>
+        </div>
+        {pressLoading ? (
+          <Skeleton className="h-24 rounded-xl" />
+        ) : sinRespuesta.length ? (
+          <div className="space-y-2">
+            {sinRespuesta.map((r, i) => (
+              <div key={`${r.url}-${i}`} className="rounded-xl border border-border/60 p-3 flex items-start gap-3">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-500 mt-1 shrink-0" />
+                <div className="min-w-0">
+                  <div className="text-sm font-medium leading-snug">{r.titular}</div>
+                  <div className="text-[11px] text-muted-foreground mt-0.5">
+                    {r.fecha} · {r.medio} · {depById.get(r.dep!)?.nombre ?? "sin dependencia"} · tono {r.tono}
+                  </div>
+                </div>
+                {r.url && (
+                  <a href={r.url} target="_blank" rel="noreferrer" className="ml-auto text-[11px] text-primary shrink-0">
+                    Abrir
+                  </a>
+                )}
+              </div>
+            ))}
+            <p className="text-[11px] text-muted-foreground italic">
+              Criterio: nota con tono negativo o de crisis sin ninguna publicación de la dependencia en las 48 horas siguientes.
+            </p>
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground italic">
+            Sin temas pendientes: cada nota negativa de la semana tuvo publicación de la dependencia dentro de 48 horas.
+          </p>
+        )}
+      </Card>
+
+      {/* Bloques listos para enviar */}
+      {bloques.length > 0 && (
+        <Card className="p-5 space-y-3">
+          <div className="flex items-center gap-2">
+            <Copy className="w-4 h-4 text-primary" />
+            <span className="text-[11px] uppercase tracking-widest text-muted-foreground">
+              Resúmenes listos para enviar
+            </span>
+          </div>
+          <div className="grid gap-3 md:grid-cols-3">
+            {bloques.map((b) => (
+              <div key={b.dep.id} className="rounded-xl border border-border/60 p-3 space-y-2">
+                <div className="text-xs font-semibold truncate">{b.dep.nombre}</div>
+                <pre className="text-[10px] leading-snug text-muted-foreground whitespace-pre-wrap max-h-32 overflow-hidden font-sans">
+                  {b.texto}
+                </pre>
+                <Button size="sm" variant="outline" className="h-7 text-xs w-full" onClick={() => copiar(b.texto)}>
+                  <Copy className="w-3 h-3 mr-1.5" /> Copiar resumen
+                  {b.pendientes > 0 && <span className="ml-1 text-amber-500">({b.pendientes} pendientes)</span>}
+                </Button>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
       {/* Directorio rápido */}
       <Card className="p-5 space-y-3">
         <div className="flex items-center gap-2">
