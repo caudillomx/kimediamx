@@ -213,6 +213,25 @@ export function useGabineteData(clientId: string, pressDays = 30) {
 
   const periodLabels = useMemo(() => Array.from(new Set(periods.map((p) => p.period_label))), [periods]);
 
+  /**
+   * Publicaciones fechadas dentro de una ventana exacta. Se consulta a la base
+   * en vez de usar `posts` (que sólo trae el top por interacciones) para que los
+   * cortes semanales y quincenales cuenten todo lo publicado.
+   */
+  const fetchPostsWindow = useCallback(async (from: string, to: string): Promise<Post[]> => {
+    if (!periods.length) return [];
+    const ids = periods.map((p) => p.id);
+    const { data } = await supabase
+      .from("client_portal_benchmark_posts")
+      .select("period_id,competitor_id,network,profile_name,posted_at,message,interactions,link")
+      .in("period_id", ids)
+      .gte("posted_at", `${from}T00:00:00`)
+      .lte("posted_at", `${to}T23:59:59`)
+      .order("interactions", { ascending: false })
+      .limit(20000);
+    return (data ?? []) as Post[];
+  }, [periods]);
+
   const depOfCompetitor = useMemo(() => {
     const m = new Map<string, string>();
     competitors.forEach((c) => { if (c.dependencia_id) m.set(c.id, c.dependencia_id); });
@@ -259,10 +278,10 @@ export function useGabineteData(clientId: string, pressDays = 30) {
    * ventana exacta. Permite cortes semanales o quincenales aunque las métricas de
    * cuenta (seguidores, engagement) sólo existan por periodo mensual.
    */
-  const aggregateActivity = useCallback((from: string, to: string, enfoque: Enfoque) => {
+  const aggregateActivity = useCallback((from: string, to: string, enfoque: Enfoque, source?: Post[]) => {
     const dias = daysInWindow(from, to);
     const acc = new Map<string, { n: number; sum: number; mejor: Post | null }>();
-    for (const p of posts) {
+    for (const p of (source ?? posts)) {
       if (!p.posted_at || !p.competitor_id) continue;
       const fecha = p.posted_at.slice(0, 10);
       if (fecha < from || fecha > to) continue;
@@ -291,8 +310,8 @@ export function useGabineteData(clientId: string, pressDays = 30) {
     loading, pressLoading,
     dependencias, depById, competitors, periods, periodLabels,
     metrics, posts, narratives, mentions,
-    lastPressDate,
+    lastPressDate, lastPostDate,
     depOfCompetitor, typeOfCompetitor,
-    aggregate, aggregateActivity, resolveDep, fetchMentions,
+    aggregate, aggregateActivity, resolveDep, fetchMentions, fetchPostsWindow,
   };
 }
