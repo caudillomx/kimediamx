@@ -21,7 +21,7 @@ const TONE_CLASS: Record<string, string> = {
 };
 
 export default function PortalDependenciaFicha({
-  gab, dep, periodLabel, enfoque, open, onOpenChange, onDescargar,
+  gab, dep, periodLabel, enfoque, open, onOpenChange, onDescargar, ventana, ventanaLabel, mentionsOverride,
 }: {
   gab: Gab;
   dep: Dependencia | null;
@@ -30,10 +30,22 @@ export default function PortalDependenciaFicha({
   open: boolean;
   onOpenChange: (v: boolean) => void;
   onDescargar?: (depId: string) => void;
+  /** Corte granular (semanal/quincenal/personalizado) para publicaciones y prensa. */
+  ventana?: { from: string; to: string } | null;
+  ventanaLabel?: string;
+  mentionsOverride?: Gab["mentions"];
 }) {
   const {
-    periods, periodLabels, competitors, metrics, posts, narratives, mentions, aggregate,
+    periods, periodLabels, competitors, metrics, posts, narratives, mentions, aggregate, aggregateActivity,
   } = gab;
+
+  const inWindow = (iso: string | null | undefined) => {
+    if (!ventana || !iso) return !ventana;
+    const d = iso.slice(0, 10);
+    return d >= ventana.from && d <= ventana.to;
+  };
+  const corteLabel = ventana ? (ventanaLabel || `${ventana.from} — ${ventana.to}`) : "periodo completo";
+  const prensaBase = mentionsOverride ?? mentions;
 
   const activeIds = useMemo(
     () => periods.filter((p) => p.period_label === periodLabel).map((p) => p.id),
@@ -90,10 +102,18 @@ export default function PortalDependenciaFicha({
   const topPosts = useMemo(() => {
     const ids = new Set(activeIds);
     return posts
-      .filter((p) => ids.has(p.period_id) && p.competitor_id && compById.has(p.competitor_id))
+      .filter((p) => p.competitor_id && compById.has(p.competitor_id)
+        && (ventana ? inWindow(p.posted_at) : ids.has(p.period_id)))
       .sort((a, b) => (b.interactions ?? 0) - (a.interactions ?? 0))
       .slice(0, 5);
-  }, [posts, compById, activeIds]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [posts, compById, activeIds, ventana?.from, ventana?.to]);
+
+  /** Actividad publicada dentro del corte granular seleccionado. */
+  const actividad = useMemo(() => {
+    if (!ventana || !dep) return null;
+    return aggregateActivity(ventana.from, ventana.to, enfoque).get(dep.id) ?? null;
+  }, [aggregateActivity, ventana?.from, ventana?.to, enfoque, dep?.id]);
 
   /**
    * ¿Funcionó? Compara cada publicación destacada contra la mediana de
@@ -102,7 +122,8 @@ export default function PortalDependenciaFicha({
    */
   const funciono = useMemo(() => {
     const ids = new Set(activeIds);
-    const mine = posts.filter((p) => ids.has(p.period_id) && p.competitor_id && compById.has(p.competitor_id));
+    const mine = posts.filter((p) => p.competitor_id && compById.has(p.competitor_id)
+      && (ventana ? inWindow(p.posted_at) : ids.has(p.period_id)));
     const vals = mine.map((p) => Number(p.interactions) || 0).sort((a, b) => a - b);
     if (vals.length < 3) return null;
     const mediana = vals[Math.floor(vals.length / 2)];
@@ -121,7 +142,8 @@ export default function PortalDependenciaFicha({
       mejorRed: mejorRed ? mejorRed[0] : null,
       top: arriba.sort((a, b) => (b.interactions ?? 0) - (a.interactions ?? 0)).slice(0, 3),
     };
-  }, [posts, compById, activeIds]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [posts, compById, activeIds, ventana?.from, ventana?.to]);
 
   const axes = useMemo(() => {
     const names = new Set(depComps.map((c) => c.name.toLowerCase()));
@@ -136,17 +158,19 @@ export default function PortalDependenciaFicha({
   }, [narratives, depComps]);
 
   const prensa = useMemo(
-    () => mentions.filter((m) => m.dep === dep?.id).slice(0, 8),
-    [mentions, dep?.id],
+    () => prensaBase.filter((m) => m.dep === dep?.id && inWindow(m.fecha)).slice(0, 8),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [prensaBase, dep?.id, ventana?.from, ventana?.to],
   );
   const prensaTono = useMemo(() => {
-    const rows = mentions.filter((m) => m.dep === dep?.id);
+    const rows = prensaBase.filter((m) => m.dep === dep?.id && inWindow(m.fecha));
     return {
       total: rows.length,
       positivo: rows.filter((r) => r.tono === "positivo").length,
       negativo: rows.filter((r) => r.tono === "negativo" || r.tono === "crisis").length,
     };
-  }, [mentions, dep?.id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prensaBase, dep?.id, ventana?.from, ventana?.to]);
 
   // Fortalezas y brechas, siempre con el número que las sostiene.
   const lecturas = useMemo(() => {
