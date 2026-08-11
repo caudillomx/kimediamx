@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import {
   CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
 } from "@/components/ui/command";
@@ -18,6 +19,22 @@ import {
 import PortalDependenciaFicha from "./PortalDependenciaFicha";
 
 const isoDaysAgo = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString().slice(0, 10);
+const isoToday = () => new Date().toISOString().slice(0, 10);
+const shiftIso = (d: string, n: number) =>
+  new Date(new Date(d + "T00:00:00").getTime() + n * 86_400_000).toISOString().slice(0, 10);
+const daysBetween = (a: string, b: string) =>
+  Math.max(1, Math.round((new Date(b + "T00:00:00").getTime() - new Date(a + "T00:00:00").getTime()) / 86_400_000) + 1);
+const fmtDia = (d: string) =>
+  new Date(d + "T00:00:00").toLocaleDateString("es-MX", { day: "2-digit", month: "short" });
+
+/** Última semana completa lunes→domingo. */
+function ultimaSemanaCompleta() {
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  const dow = hoy.getDay();
+  const domingo = new Date(hoy); domingo.setDate(hoy.getDate() - (dow === 0 ? 0 : dow));
+  const lunes = new Date(domingo); lunes.setDate(domingo.getDate() - 6);
+  return { from: lunes.toISOString().slice(0, 10), to: domingo.toISOString().slice(0, 10) };
+}
 
 export default function PortalBriefing({
   clientId, focusDepId, onFocusChange, onGoTo,
@@ -37,6 +54,45 @@ export default function PortalBriefing({
   const [periodLabel, setPeriodLabel] = useState("");
   const [fichaDep, setFichaDep] = useState<Dependencia | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
+
+  // Ventana de prensa: presets o rango personalizado.
+  const [pressPreset, setPressPreset] = useState<"7" | "14" | "30" | "semana" | "custom">("7");
+  const [customFrom, setCustomFrom] = useState(isoDaysAgo(13));
+  const [customTo, setCustomTo] = useState(isoToday());
+
+  const win = useMemo(() => {
+    if (pressPreset === "custom") {
+      const [from, to] = customFrom <= customTo ? [customFrom, customTo] : [customTo, customFrom];
+      return { from, to };
+    }
+    if (pressPreset === "semana") return ultimaSemanaCompleta();
+    const n = Number(pressPreset);
+    return { from: isoDaysAgo(n - 1), to: isoToday() };
+  }, [pressPreset, customFrom, customTo]);
+
+  const winDays = daysBetween(win.from, win.to);
+  const prevFrom = shiftIso(win.from, -winDays);
+  const prevTo = shiftIso(win.from, -1);
+  const rangoLabel = pressPreset === "custom" || pressPreset === "semana"
+    ? `${fmtDia(win.from)} — ${fmtDia(win.to)}`
+    : `últimos ${winDays} días`;
+
+  const [winMentions, setWinMentions] = useState<typeof mentions>([]);
+  const [winLoading, setWinLoading] = useState(true);
+
+  useEffect(() => {
+    if (!dependencias.length) return;
+    let cancelled = false;
+    (async () => {
+      setWinLoading(true);
+      const rows = await gab.fetchMentions(prevFrom, win.to);
+      if (cancelled) return;
+      setWinMentions(rows);
+      setWinLoading(false);
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dependencias.length, gab.fetchMentions, prevFrom, win.to]);
 
   useEffect(() => {
     if (!periodLabel && periodLabels.length) setPeriodLabel(periodLabels[periodLabels.length - 1]);
