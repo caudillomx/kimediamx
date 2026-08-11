@@ -510,6 +510,29 @@ export default function PortalBriefing({
         </p>
       </Card>
 
+      {/* Actividad en redes dentro del corte granular */}
+      <Card className="p-5 space-y-3">
+        <div className="flex items-center gap-2">
+          <TrendingUp className="w-4 h-4 text-primary" />
+          <span className="text-[11px] uppercase tracking-widest text-muted-foreground">
+            Actividad en redes · {rangoLabel}
+          </span>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <Mini label="Publicaciones" value={fmtNum(actividad.pub)} delta={actividad.dPub} />
+          <Mini label="Interacciones" value={fmtNum(actividad.inter)} delta={actividad.dInter} />
+          <Mini label="Publicaciones / día" value={actividad.porDia ? actividad.porDia.toFixed(2) : "—"} />
+          <Mini
+            label={focusDep ? "Interacciones del corte" : "Dependencia más activa"}
+            value={actividad.top ? (focusDep ? fmtNum(actividad.top.interacciones) : actividad.top.nombre) : "—"}
+          />
+        </div>
+        <p className="text-[11px] text-muted-foreground">
+          Cuenta las publicaciones fechadas dentro del corte, así que sí responde a cortes semanales o quincenales.
+          Seguidores y engagement siguen viniendo del periodo <b>{periodLabel || "—"}</b> porque la fuente los entrega por mes.
+        </p>
+      </Card>
+
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Alertas */}
         <Card className="p-5 space-y-3">
