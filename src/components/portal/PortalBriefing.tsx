@@ -18,7 +18,6 @@ import {
 } from "./useGabineteData";
 import PortalDependenciaFicha from "./PortalDependenciaFicha";
 
-const isoDaysAgo = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString().slice(0, 10);
 const isoToday = () => new Date().toISOString().slice(0, 10);
 const shiftIso = (d: string, n: number) =>
   new Date(new Date(d + "T00:00:00").getTime() + n * 86_400_000).toISOString().slice(0, 10);
@@ -27,9 +26,9 @@ const daysBetween = (a: string, b: string) =>
 const fmtDia = (d: string) =>
   new Date(d + "T00:00:00").toLocaleDateString("es-MX", { day: "2-digit", month: "short" });
 
-/** Última semana completa lunes→domingo. */
-function ultimaSemanaCompleta() {
-  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+/** Última semana completa lunes→domingo relativa a una fecha ancla. */
+function ultimaSemanaCompleta(anchorIso: string) {
+  const hoy = new Date(anchorIso + "T00:00:00");
   const dow = hoy.getDay();
   const domingo = new Date(hoy); domingo.setDate(hoy.getDate() - (dow === 0 ? 0 : dow));
   const lunes = new Date(domingo); lunes.setDate(domingo.getDate() - 6);
@@ -37,8 +36,8 @@ function ultimaSemanaCompleta() {
 }
 
 /** Últimas dos semanas completas lunes→domingo (quincena cerrada). */
-function ultimaQuincenaCompleta() {
-  const s = ultimaSemanaCompleta();
+function ultimaQuincenaCompleta(anchorIso: string) {
+  const s = ultimaSemanaCompleta(anchorIso);
   return { from: shiftIso(s.from, -7), to: s.to };
 }
 
@@ -53,7 +52,7 @@ export default function PortalBriefing({
   const gab = useGabineteData(clientId);
   const {
     loading, pressLoading, dependencias, depById, periods, periodLabels, mentions, aggregate,
-    posts, depOfCompetitor,
+    posts, depOfCompetitor, lastPressDate, lastPostDate,
   } = gab;
 
   const [enfoque, setEnfoque] = useState<Enfoque>("combinado");
@@ -63,29 +62,69 @@ export default function PortalBriefing({
 
   // Ventana de prensa: presets o rango personalizado.
   const [pressPreset, setPressPreset] = useState<"7" | "14" | "30" | "semana" | "quincena" | "custom">("7");
-  const [customFrom, setCustomFrom] = useState(isoDaysAgo(13));
-  const [customTo, setCustomTo] = useState(isoToday());
+  const [customFrom, setCustomFrom] = useState("");
+  const [customTo, setCustomTo] = useState("");
+
+  /**
+   * Los cortes se anclan al último día con información cargada (publicaciones,
+   * periodo de benchmark o bitácora de prensa). Si se anclaran a "hoy", los
+   * cortes semanales y quincenales saldrían vacíos mientras la carga va atrasada.
+   */
+  const anchor = useMemo(() => {
+    const hoy = isoToday();
+    const post = lastPostDate && lastPostDate <= hoy ? lastPostDate : null;
+    const press = lastPressDate && lastPressDate <= hoy ? lastPressDate : null;
+    // El día más reciente con ambos insumos, para que el corte no salga vacío.
+    if (post && press) return post < press ? post : press;
+    return post ?? press ?? hoy;
+  }, [lastPostDate, lastPressDate]);
+
+  const anchorIsToday = anchor === isoToday();
+
+  useEffect(() => {
+    if (!customFrom && !customTo && anchor) {
+      setCustomFrom(shiftIso(anchor, -13));
+      setCustomTo(anchor);
+    }
+  }, [anchor, customFrom, customTo]);
 
   const win = useMemo(() => {
-    if (pressPreset === "custom") {
+    if (pressPreset === "custom" && customFrom && customTo) {
       const [from, to] = customFrom <= customTo ? [customFrom, customTo] : [customTo, customFrom];
       return { from, to };
     }
-    if (pressPreset === "semana") return ultimaSemanaCompleta();
-    if (pressPreset === "quincena") return ultimaQuincenaCompleta();
-    const n = Number(pressPreset);
-    return { from: isoDaysAgo(n - 1), to: isoToday() };
-  }, [pressPreset, customFrom, customTo]);
+    if (pressPreset === "semana") return ultimaSemanaCompleta(anchor);
+    if (pressPreset === "quincena") return ultimaQuincenaCompleta(anchor);
+    const n = Number(pressPreset) || 7;
+    return { from: shiftIso(anchor, -(n - 1)), to: anchor };
+  }, [pressPreset, customFrom, customTo, anchor]);
 
   const winDays = daysBetween(win.from, win.to);
   const prevFrom = shiftIso(win.from, -winDays);
   const prevTo = shiftIso(win.from, -1);
-  const rangoLabel = pressPreset === "7" || pressPreset === "14" || pressPreset === "30"
+  const rangoLabel = (pressPreset === "7" || pressPreset === "14" || pressPreset === "30") && anchorIsToday
     ? `últimos ${winDays} días`
     : `${fmtDia(win.from)} — ${fmtDia(win.to)}`;
 
   const [winMentions, setWinMentions] = useState<typeof mentions>([]);
   const [winLoading, setWinLoading] = useState(true);
+  const [winPosts, setWinPosts] = useState<typeof posts>([]);
+  const [prevPosts, setPrevPosts] = useState<typeof posts>([]);
+
+  useEffect(() => {
+    if (!periods.length) return;
+    let cancelled = false;
+    (async () => {
+      const [a, b] = await Promise.all([
+        gab.fetchPostsWindow(win.from, win.to),
+        gab.fetchPostsWindow(prevFrom, prevTo),
+      ]);
+      if (cancelled) return;
+      setWinPosts(a); setPrevPosts(b);
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [periods.length, gab.fetchPostsWindow, win.from, win.to, prevFrom, prevTo]);
 
   useEffect(() => {
     if (!dependencias.length) return;
@@ -127,8 +166,16 @@ export default function PortalBriefing({
   const prev = useMemo(() => aggregate(prevIds, enfoque), [aggregate, prevIds, enfoque]);
 
   // Actividad publicada dentro de la ventana granular (semana / quincena / rango).
-  const actNow = useMemo(() => gab.aggregateActivity(win.from, win.to, enfoque), [gab, win.from, win.to, enfoque]);
-  const actPrev = useMemo(() => gab.aggregateActivity(prevFrom, prevTo, enfoque), [gab, prevFrom, prevTo, enfoque]);
+  const actNow = useMemo(
+    () => gab.aggregateActivity(win.from, win.to, enfoque, winPosts),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [gab.aggregateActivity, win.from, win.to, enfoque, winPosts],
+  );
+  const actPrev = useMemo(
+    () => gab.aggregateActivity(prevFrom, prevTo, enfoque, prevPosts),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [gab.aggregateActivity, prevFrom, prevTo, enfoque, prevPosts],
+  );
 
   const actividad = useMemo(() => {
     const sum = (m: Map<string, { publicaciones: number; interacciones: number }>) => {
@@ -452,14 +499,18 @@ export default function PortalBriefing({
           <Select value={pressPreset} onValueChange={(v) => setPressPreset(v as typeof pressPreset)}>
             <SelectTrigger className="w-[240px] h-9"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="7">Semanal (últimos 7 días)</SelectItem>
-              <SelectItem value="14">Quincenal (últimos 14 días)</SelectItem>
-              <SelectItem value="30">Mensual (últimos 30 días)</SelectItem>
+              <SelectItem value="7">Semanal (7 días)</SelectItem>
+              <SelectItem value="14">Quincenal (14 días)</SelectItem>
+              <SelectItem value="30">Mensual (30 días)</SelectItem>
               <SelectItem value="semana">Última semana completa (L–D)</SelectItem>
               <SelectItem value="quincena">Última quincena completa (L–D)</SelectItem>
               <SelectItem value="custom">Rango personalizado</SelectItem>
             </SelectContent>
           </Select>
+          <span className="block text-[10px] text-muted-foreground">
+            {fmtDia(win.from)} — {fmtDia(win.to)}
+            {!anchorIsToday && ` · anclado al último dato (${fmtDia(anchor)})`}
+          </span>
         </div>
         {pressPreset === "custom" && (
           <>
@@ -760,6 +811,7 @@ export default function PortalBriefing({
         ventana={win}
         ventanaLabel={rangoLabel}
         mentionsOverride={winMentions}
+        postsOverride={winPosts}
         open={!!fichaDep}
         onOpenChange={(v) => { if (!v) setFichaDep(null); }}
         onDescargar={() => onGoTo?.("descargas")}

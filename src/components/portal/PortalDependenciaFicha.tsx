@@ -21,7 +21,7 @@ const TONE_CLASS: Record<string, string> = {
 };
 
 export default function PortalDependenciaFicha({
-  gab, dep, periodLabel, enfoque, open, onOpenChange, onDescargar, ventana, ventanaLabel, mentionsOverride,
+  gab, dep, periodLabel, enfoque, open, onOpenChange, onDescargar, ventana, ventanaLabel, mentionsOverride, postsOverride,
 }: {
   gab: Gab;
   dep: Dependencia | null;
@@ -34,6 +34,8 @@ export default function PortalDependenciaFicha({
   ventana?: { from: string; to: string } | null;
   ventanaLabel?: string;
   mentionsOverride?: Gab["mentions"];
+  /** Publicaciones ya consultadas para la ventana (evita el sesgo del top global). */
+  postsOverride?: Gab["posts"];
 }) {
   const {
     periods, periodLabels, competitors, metrics, posts, narratives, mentions, aggregate, aggregateActivity,
@@ -46,6 +48,7 @@ export default function PortalDependenciaFicha({
   };
   const corteLabel = ventana ? (ventanaLabel || `${ventana.from} — ${ventana.to}`) : "periodo completo";
   const prensaBase = mentionsOverride ?? mentions;
+  const postsBase = ventana && postsOverride ? postsOverride : posts;
 
   const activeIds = useMemo(
     () => periods.filter((p) => p.period_label === periodLabel).map((p) => p.id),
@@ -101,19 +104,20 @@ export default function PortalDependenciaFicha({
 
   const topPosts = useMemo(() => {
     const ids = new Set(activeIds);
-    return posts
+    return postsBase
       .filter((p) => p.competitor_id && compById.has(p.competitor_id)
         && (ventana ? inWindow(p.posted_at) : ids.has(p.period_id)))
       .sort((a, b) => (b.interactions ?? 0) - (a.interactions ?? 0))
       .slice(0, 5);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [posts, compById, activeIds, ventana?.from, ventana?.to]);
+  }, [postsBase, compById, activeIds, ventana?.from, ventana?.to]);
 
   /** Actividad publicada dentro del corte granular seleccionado. */
   const actividad = useMemo(() => {
     if (!ventana || !dep) return null;
-    return aggregateActivity(ventana.from, ventana.to, enfoque).get(dep.id) ?? null;
-  }, [aggregateActivity, ventana?.from, ventana?.to, enfoque, dep?.id]);
+    return aggregateActivity(ventana.from, ventana.to, enfoque, postsOverride).get(dep.id) ?? null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [aggregateActivity, ventana?.from, ventana?.to, enfoque, dep?.id, postsOverride]);
 
   /**
    * ¿Funcionó? Compara cada publicación destacada contra la mediana de
@@ -122,7 +126,7 @@ export default function PortalDependenciaFicha({
    */
   const funciono = useMemo(() => {
     const ids = new Set(activeIds);
-    const mine = posts.filter((p) => p.competitor_id && compById.has(p.competitor_id)
+    const mine = postsBase.filter((p) => p.competitor_id && compById.has(p.competitor_id)
       && (ventana ? inWindow(p.posted_at) : ids.has(p.period_id)));
     const vals = mine.map((p) => Number(p.interactions) || 0).sort((a, b) => a - b);
     if (vals.length < 3) return null;
@@ -143,7 +147,7 @@ export default function PortalDependenciaFicha({
       top: arriba.sort((a, b) => (b.interactions ?? 0) - (a.interactions ?? 0)).slice(0, 3),
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [posts, compById, activeIds, ventana?.from, ventana?.to]);
+  }, [postsBase, compById, activeIds, ventana?.from, ventana?.to]);
 
   const axes = useMemo(() => {
     const names = new Set(depComps.map((c) => c.name.toLowerCase()));
@@ -282,22 +286,47 @@ export default function PortalDependenciaFicha({
         {/* Cuentas */}
         <Panel title="Cuentas" icon={<Sparkles className="w-4 h-4 text-primary" />}>
           {cuentas.length ? (
-            <div className="overflow-x-auto -mx-1 px-1">
-              <table className="w-full min-w-[520px] text-xs">
+            <>
+              {/* Móvil: tarjetas apiladas, sin scroll lateral */}
+              <div className="space-y-2 md:hidden">
+                {cuentas.map((c, i) => (
+                  <div key={i} className="rounded-lg border border-border/60 p-2.5">
+                    <div className="text-xs font-medium break-words">{c.perfil}</div>
+                    <div className="text-[11px] text-muted-foreground capitalize mb-1.5">
+                      {c.red} · {c.tipo === "titular" ? "Titular" : "Institucional"}
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 text-[11px]">
+                      <div>
+                        <div className="text-muted-foreground">Seguidores</div>
+                        <div className="font-medium">{fmtNum(c.seguidores)}</div>
+                      </div>
+                      <div>
+                        <div className="text-muted-foreground">Engagement</div>
+                        <div className="font-medium">{fmtPct(c.engagement, 2)}</div>
+                      </div>
+                      <div>
+                        <div className="text-muted-foreground">Posts/día</div>
+                        <div className="font-medium">{c.postsDia != null ? Number(c.postsDia).toFixed(2) : "—"}</div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <table className="hidden md:table w-full table-fixed text-xs">
                 <thead className="text-muted-foreground">
                   <tr className="text-left">
-                    <th className="py-1.5 pr-3 font-medium">Perfil</th>
-                    <th className="py-1.5 pr-3 font-medium">Red</th>
-                    <th className="py-1.5 pr-3 font-medium">Tipo</th>
-                    <th className="py-1.5 pr-3 font-medium text-right">Seguidores</th>
-                    <th className="py-1.5 pr-3 font-medium text-right">Engagement</th>
-                    <th className="py-1.5 font-medium text-right">Posts/día</th>
+                    <th className="py-1.5 pr-3 font-medium w-[34%]">Perfil</th>
+                    <th className="py-1.5 pr-3 font-medium w-[13%]">Red</th>
+                    <th className="py-1.5 pr-3 font-medium w-[15%]">Tipo</th>
+                    <th className="py-1.5 pr-3 font-medium text-right w-[14%]">Seguidores</th>
+                    <th className="py-1.5 pr-3 font-medium text-right w-[13%]">Engag.</th>
+                    <th className="py-1.5 font-medium text-right w-[11%]">Posts/día</th>
                   </tr>
                 </thead>
                 <tbody>
                   {cuentas.map((c, i) => (
                     <tr key={i} className="border-t border-border/60">
-                      <td className="py-1.5 pr-3 max-w-[220px] truncate">{c.perfil}</td>
+                      <td className="py-1.5 pr-3 break-words">{c.perfil}</td>
                       <td className="py-1.5 pr-3 capitalize">{c.red}</td>
                       <td className="py-1.5 pr-3">{c.tipo === "titular" ? "Titular" : "Institucional"}</td>
                       <td className="py-1.5 pr-3 text-right">{fmtNum(c.seguidores)}</td>
@@ -307,7 +336,7 @@ export default function PortalDependenciaFicha({
                   ))}
                 </tbody>
               </table>
-            </div>
+            </>
           ) : <Empty text="No hay cuentas para el enfoque seleccionado." />}
         </Panel>
 

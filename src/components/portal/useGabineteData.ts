@@ -82,6 +82,24 @@ export function useGabineteData(clientId: string, pressDays = 30) {
   const [narratives, setNarratives] = useState<any[]>([]);
   const [mentions, setMentions] = useState<Mention[]>([]);
   const [pressLoading, setPressLoading] = useState(true);
+  const [lastPressDate, setLastPressDate] = useState<string | null>(null);
+  const [lastPostDate, setLastPostDate] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("client_portal_listening_entries")
+        .select("entry_date")
+        .eq("client_id", clientId)
+        .not("analyzed_at", "is", null)
+        .order("entry_date", { ascending: false })
+        .limit(1);
+      if (cancelled) return;
+      setLastPressDate((data?.[0] as any)?.entry_date ?? null);
+    })();
+    return () => { cancelled = true; };
+  }, [clientId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -100,7 +118,7 @@ export function useGabineteData(clientId: string, pressDays = 30) {
 
       if (ps.length) {
         const ids = ps.map((p) => p.id);
-        const [m, po, nar] = await Promise.all([
+        const [m, po, nar, last] = await Promise.all([
           supabase.from("client_portal_benchmark_metrics")
             .select("period_id,competitor_id,network,followers,follower_growth_rate,engagement_rate,posts_per_day")
             .in("period_id", ids).limit(50000),
@@ -109,11 +127,16 @@ export function useGabineteData(clientId: string, pressDays = 30) {
             .in("period_id", ids).order("interactions", { ascending: false }).limit(5000),
           supabase.from("client_portal_benchmark_narratives")
             .select("profile_name,network,narratives").eq("client_id", clientId).limit(500),
+          supabase.from("client_portal_benchmark_posts")
+            .select("posted_at").in("period_id", ids)
+            .not("posted_at", "is", null)
+            .order("posted_at", { ascending: false }).limit(1),
         ]);
         if (cancelled) return;
         setMetrics((m.data ?? []) as Metric[]);
         setPosts((po.data ?? []) as Post[]);
         setNarratives(nar.data ?? []);
+        setLastPostDate(((last.data?.[0] as any)?.posted_at ?? null)?.slice?.(0, 10) ?? null);
       }
       setLoading(false);
     })();
@@ -190,6 +213,34 @@ export function useGabineteData(clientId: string, pressDays = 30) {
 
   const periodLabels = useMemo(() => Array.from(new Set(periods.map((p) => p.period_label))), [periods]);
 
+  /**
+   * Publicaciones fechadas dentro de una ventana exacta. Se consulta a la base
+   * en vez de usar `posts` (que sólo trae el top por interacciones) para que los
+   * cortes semanales y quincenales cuenten todo lo publicado.
+   */
+  const fetchPostsWindow = useCallback(async (from: string, to: string): Promise<Post[]> => {
+    if (!periods.length) return [];
+    const ids = periods.map((p) => p.id);
+    const PAGE = 1000;
+    const out: Post[] = [];
+    // PostgREST corta en 1000 filas por respuesta: se pagina hasta agotar la ventana.
+    for (let offset = 0; offset < 30000; offset += PAGE) {
+      const { data, error } = await supabase
+        .from("client_portal_benchmark_posts")
+        .select("period_id,competitor_id,network,profile_name,posted_at,message,interactions,link")
+        .in("period_id", ids)
+        .gte("posted_at", `${from}T00:00:00`)
+        .lte("posted_at", `${to}T23:59:59`)
+        .order("posted_at", { ascending: true })
+        .range(offset, offset + PAGE - 1);
+      if (error) break;
+      const rows = (data ?? []) as Post[];
+      out.push(...rows);
+      if (rows.length < PAGE) break;
+    }
+    return out;
+  }, [periods]);
+
   const depOfCompetitor = useMemo(() => {
     const m = new Map<string, string>();
     competitors.forEach((c) => { if (c.dependencia_id) m.set(c.id, c.dependencia_id); });
@@ -236,10 +287,10 @@ export function useGabineteData(clientId: string, pressDays = 30) {
    * ventana exacta. Permite cortes semanales o quincenales aunque las métricas de
    * cuenta (seguidores, engagement) sólo existan por periodo mensual.
    */
-  const aggregateActivity = useCallback((from: string, to: string, enfoque: Enfoque) => {
+  const aggregateActivity = useCallback((from: string, to: string, enfoque: Enfoque, source?: Post[]) => {
     const dias = daysInWindow(from, to);
     const acc = new Map<string, { n: number; sum: number; mejor: Post | null }>();
-    for (const p of posts) {
+    for (const p of (source ?? posts)) {
       if (!p.posted_at || !p.competitor_id) continue;
       const fecha = p.posted_at.slice(0, 10);
       if (fecha < from || fecha > to) continue;
@@ -268,7 +319,8 @@ export function useGabineteData(clientId: string, pressDays = 30) {
     loading, pressLoading,
     dependencias, depById, competitors, periods, periodLabels,
     metrics, posts, narratives, mentions,
+    lastPressDate, lastPostDate,
     depOfCompetitor, typeOfCompetitor,
-    aggregate, aggregateActivity, resolveDep, fetchMentions,
+    aggregate, aggregateActivity, resolveDep, fetchMentions, fetchPostsWindow,
   };
 }
