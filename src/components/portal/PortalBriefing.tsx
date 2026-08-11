@@ -27,9 +27,9 @@ const daysBetween = (a: string, b: string) =>
 const fmtDia = (d: string) =>
   new Date(d + "T00:00:00").toLocaleDateString("es-MX", { day: "2-digit", month: "short" });
 
-/** Última semana completa lunes→domingo. */
-function ultimaSemanaCompleta() {
-  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+/** Última semana completa lunes→domingo relativa a una fecha ancla. */
+function ultimaSemanaCompleta(anchorIso: string) {
+  const hoy = new Date(anchorIso + "T00:00:00");
   const dow = hoy.getDay();
   const domingo = new Date(hoy); domingo.setDate(hoy.getDate() - (dow === 0 ? 0 : dow));
   const lunes = new Date(domingo); lunes.setDate(domingo.getDate() - 6);
@@ -37,8 +37,8 @@ function ultimaSemanaCompleta() {
 }
 
 /** Últimas dos semanas completas lunes→domingo (quincena cerrada). */
-function ultimaQuincenaCompleta() {
-  const s = ultimaSemanaCompleta();
+function ultimaQuincenaCompleta(anchorIso: string) {
+  const s = ultimaSemanaCompleta(anchorIso);
   return { from: shiftIso(s.from, -7), to: s.to };
 }
 
@@ -53,7 +53,7 @@ export default function PortalBriefing({
   const gab = useGabineteData(clientId);
   const {
     loading, pressLoading, dependencias, depById, periods, periodLabels, mentions, aggregate,
-    posts, depOfCompetitor,
+    posts, depOfCompetitor, lastPressDate,
   } = gab;
 
   const [enfoque, setEnfoque] = useState<Enfoque>("combinado");
@@ -63,24 +63,48 @@ export default function PortalBriefing({
 
   // Ventana de prensa: presets o rango personalizado.
   const [pressPreset, setPressPreset] = useState<"7" | "14" | "30" | "semana" | "quincena" | "custom">("7");
-  const [customFrom, setCustomFrom] = useState(isoDaysAgo(13));
-  const [customTo, setCustomTo] = useState(isoToday());
+  const [customFrom, setCustomFrom] = useState("");
+  const [customTo, setCustomTo] = useState("");
+
+  /**
+   * Los cortes se anclan al último día con información cargada (publicaciones,
+   * periodo de benchmark o bitácora de prensa). Si se anclaran a "hoy", los
+   * cortes semanales y quincenales saldrían vacíos mientras la carga va atrasada.
+   */
+  const anchor = useMemo(() => {
+    const cands: string[] = [];
+    for (const p of posts) if (p.posted_at) cands.push(p.posted_at.slice(0, 10));
+    for (const p of periods) if (p.period_end) cands.push(p.period_end.slice(0, 10));
+    if (lastPressDate) cands.push(lastPressDate.slice(0, 10));
+    const hoy = isoToday();
+    const max = cands.filter((d) => d <= hoy).sort().pop();
+    return max ?? hoy;
+  }, [posts, periods, lastPressDate]);
+
+  const anchorIsToday = anchor === isoToday();
+
+  useEffect(() => {
+    if (!customFrom && !customTo && anchor) {
+      setCustomFrom(shiftIso(anchor, -13));
+      setCustomTo(anchor);
+    }
+  }, [anchor, customFrom, customTo]);
 
   const win = useMemo(() => {
-    if (pressPreset === "custom") {
+    if (pressPreset === "custom" && customFrom && customTo) {
       const [from, to] = customFrom <= customTo ? [customFrom, customTo] : [customTo, customFrom];
       return { from, to };
     }
-    if (pressPreset === "semana") return ultimaSemanaCompleta();
-    if (pressPreset === "quincena") return ultimaQuincenaCompleta();
-    const n = Number(pressPreset);
-    return { from: isoDaysAgo(n - 1), to: isoToday() };
-  }, [pressPreset, customFrom, customTo]);
+    if (pressPreset === "semana") return ultimaSemanaCompleta(anchor);
+    if (pressPreset === "quincena") return ultimaQuincenaCompleta(anchor);
+    const n = Number(pressPreset) || 7;
+    return { from: shiftIso(anchor, -(n - 1)), to: anchor };
+  }, [pressPreset, customFrom, customTo, anchor]);
 
   const winDays = daysBetween(win.from, win.to);
   const prevFrom = shiftIso(win.from, -winDays);
   const prevTo = shiftIso(win.from, -1);
-  const rangoLabel = pressPreset === "7" || pressPreset === "14" || pressPreset === "30"
+  const rangoLabel = (pressPreset === "7" || pressPreset === "14" || pressPreset === "30") && anchorIsToday
     ? `últimos ${winDays} días`
     : `${fmtDia(win.from)} — ${fmtDia(win.to)}`;
 
