@@ -290,6 +290,30 @@ export default function PortalDependenciaFicha({
           ) : <Empty text="Sin publicaciones registradas en el periodo." />}
         </Panel>
 
+        {/* ¿Funcionó? */}
+        <Panel title="¿Funcionó?" icon={<TrendingUp className="w-4 h-4 text-primary" />}>
+          {funciono ? (
+            <div className="space-y-2">
+              <p className="text-xs leading-relaxed">
+                {funciono.arriba} de {funciono.total} publicaciones superaron en más de 50% la mediana de la
+                dependencia ({fmtNum(funciono.mediana)} interacciones).
+                {funciono.mejorRed && ` La red donde más veces despegó el contenido fue ${funciono.mejorRed}.`}
+              </p>
+              {funciono.top.map((p, i) => (
+                <div key={i} className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-2.5">
+                  <div className="text-[11px] text-muted-foreground flex items-center gap-2">
+                    <span className="capitalize">{p.network}</span>
+                    <span className="ml-auto text-emerald-600">
+                      {fmtNum(p.interactions)} · {Math.round(((Number(p.interactions) || 0) / (funciono.mediana || 1)) * 100)}% de la mediana
+                    </span>
+                  </div>
+                  <p className="text-xs leading-snug line-clamp-2 mt-1">{p.message || "(sin texto)"}</p>
+                </div>
+              ))}
+            </div>
+          ) : <Empty text="Se necesitan al menos 3 publicaciones en el periodo para evaluar qué funcionó." />}
+        </Panel>
+
         {/* Narrativas */}
         <Panel title="Narrativas dominantes" icon={<Sparkles className="w-4 h-4 text-primary" />}>
           {axes.length ? (
