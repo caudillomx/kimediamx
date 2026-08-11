@@ -29,6 +29,18 @@ export const ENFOQUE_LABEL: Record<Enfoque, string> = {
 };
 
 export type DepAgg = { followers: number; engagement: number | null; postsDia: number | null; cuentas: number };
+/** Actividad publicada dentro de una ventana de fechas exacta (semana, quincena, rango). */
+export type DepActivity = {
+  publicaciones: number; interacciones: number; promedio: number | null;
+  porDia: number | null; mejor: Post | null;
+};
+
+export function daysInWindow(from: string, to: string) {
+  return Math.max(
+    1,
+    Math.round((new Date(to + "T00:00:00").getTime() - new Date(from + "T00:00:00").getTime()) / 86_400_000) + 1,
+  );
+}
 
 const RATE_AVG = (v: number[]) => (v.length ? v.reduce((a, b) => a + b, 0) / v.length : null);
 const isoDaysAgo = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString().slice(0, 10);
@@ -219,11 +231,44 @@ export function useGabineteData(clientId: string, pressDays = 30) {
     return out;
   }, [metrics, depOfCompetitor, typeOfCompetitor]);
 
+  /**
+   * Agregado por dependencia a partir de las publicaciones fechadas dentro de una
+   * ventana exacta. Permite cortes semanales o quincenales aunque las métricas de
+   * cuenta (seguidores, engagement) sólo existan por periodo mensual.
+   */
+  const aggregateActivity = useCallback((from: string, to: string, enfoque: Enfoque) => {
+    const dias = daysInWindow(from, to);
+    const acc = new Map<string, { n: number; sum: number; mejor: Post | null }>();
+    for (const p of posts) {
+      if (!p.posted_at || !p.competitor_id) continue;
+      const fecha = p.posted_at.slice(0, 10);
+      if (fecha < from || fecha > to) continue;
+      const dep = depOfCompetitor.get(p.competitor_id);
+      if (!dep) continue;
+      const tipo = typeOfCompetitor.get(p.competitor_id) ?? "institucional";
+      if (enfoque !== "combinado" && tipo !== enfoque) continue;
+      const e = acc.get(dep) ?? { n: 0, sum: 0, mejor: null as Post | null };
+      e.n += 1;
+      e.sum += Number(p.interactions) || 0;
+      if (!e.mejor || (Number(p.interactions) || 0) > (Number(e.mejor.interactions) || 0)) e.mejor = p;
+      acc.set(dep, e);
+    }
+    const out = new Map<string, DepActivity>();
+    acc.forEach((v, k) => out.set(k, {
+      publicaciones: v.n,
+      interacciones: v.sum,
+      promedio: v.n ? v.sum / v.n : null,
+      porDia: v.n / dias,
+      mejor: v.mejor,
+    }));
+    return out;
+  }, [posts, depOfCompetitor, typeOfCompetitor]);
+
   return {
     loading, pressLoading,
     dependencias, depById, competitors, periods, periodLabels,
     metrics, posts, narratives, mentions,
     depOfCompetitor, typeOfCompetitor,
-    aggregate, resolveDep, fetchMentions,
+    aggregate, aggregateActivity, resolveDep, fetchMentions,
   };
 }
