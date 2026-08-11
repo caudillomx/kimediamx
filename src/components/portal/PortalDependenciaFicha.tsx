@@ -95,6 +95,34 @@ export default function PortalDependenciaFicha({
       .slice(0, 5);
   }, [posts, compById, activeIds]);
 
+  /**
+   * ¿Funcionó? Compara cada publicación destacada contra la mediana de
+   * interacciones de la propia dependencia en el periodo, para saber si el
+   * contenido rindió por encima de su propio estándar.
+   */
+  const funciono = useMemo(() => {
+    const ids = new Set(activeIds);
+    const mine = posts.filter((p) => ids.has(p.period_id) && p.competitor_id && compById.has(p.competitor_id));
+    const vals = mine.map((p) => Number(p.interactions) || 0).sort((a, b) => a - b);
+    if (vals.length < 3) return null;
+    const mediana = vals[Math.floor(vals.length / 2)];
+    const arriba = mine.filter((p) => (Number(p.interactions) || 0) > mediana * 1.5);
+    const porRed = new Map<string, { n: number; sum: number }>();
+    for (const p of arriba) {
+      const e = porRed.get(p.network) ?? { n: 0, sum: 0 };
+      e.n += 1; e.sum += Number(p.interactions) || 0;
+      porRed.set(p.network, e);
+    }
+    const mejorRed = Array.from(porRed.entries()).sort((a, b) => b[1].n - a[1].n)[0];
+    return {
+      mediana,
+      total: mine.length,
+      arriba: arriba.length,
+      mejorRed: mejorRed ? mejorRed[0] : null,
+      top: arriba.sort((a, b) => (b.interactions ?? 0) - (a.interactions ?? 0)).slice(0, 3),
+    };
+  }, [posts, compById, activeIds]);
+
   const axes = useMemo(() => {
     const names = new Set(depComps.map((c) => c.name.toLowerCase()));
     const out: { name: string; description?: string }[] = [];
@@ -260,6 +288,30 @@ export default function PortalDependenciaFicha({
               ))}
             </div>
           ) : <Empty text="Sin publicaciones registradas en el periodo." />}
+        </Panel>
+
+        {/* ¿Funcionó? */}
+        <Panel title="¿Funcionó?" icon={<TrendingUp className="w-4 h-4 text-primary" />}>
+          {funciono ? (
+            <div className="space-y-2">
+              <p className="text-xs leading-relaxed">
+                {funciono.arriba} de {funciono.total} publicaciones superaron en más de 50% la mediana de la
+                dependencia ({fmtNum(funciono.mediana)} interacciones).
+                {funciono.mejorRed && ` La red donde más veces despegó el contenido fue ${funciono.mejorRed}.`}
+              </p>
+              {funciono.top.map((p, i) => (
+                <div key={i} className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-2.5">
+                  <div className="text-[11px] text-muted-foreground flex items-center gap-2">
+                    <span className="capitalize">{p.network}</span>
+                    <span className="ml-auto text-emerald-600">
+                      {fmtNum(p.interactions)} · {Math.round(((Number(p.interactions) || 0) / (funciono.mediana || 1)) * 100)}% de la mediana
+                    </span>
+                  </div>
+                  <p className="text-xs leading-snug line-clamp-2 mt-1">{p.message || "(sin texto)"}</p>
+                </div>
+              ))}
+            </div>
+          ) : <Empty text="Se necesitan al menos 3 publicaciones en el periodo para evaluar qué funcionó." />}
         </Panel>
 
         {/* Narrativas */}

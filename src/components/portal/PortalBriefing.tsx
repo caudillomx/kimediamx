@@ -8,8 +8,9 @@ import {
   CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
 } from "@/components/ui/command";
 import {
-  AlertTriangle, ArrowRight, Building2, Newspaper, Search, TrendingDown, TrendingUp, Target, Sun,
+  AlertTriangle, ArrowRight, Building2, Copy, Newspaper, Search, TrendingDown, TrendingUp, Target, Sun,
 } from "lucide-react";
+import { toast } from "sonner";
 import {
   useGabineteData, ENFOQUE_LABEL, fmtNum, fmtPct, pctDelta,
   type Enfoque, type Dependencia,
@@ -27,7 +28,10 @@ export default function PortalBriefing({
   onGoTo?: (tab: string) => void;
 }) {
   const gab = useGabineteData(clientId);
-  const { loading, pressLoading, dependencias, depById, periods, periodLabels, mentions, aggregate } = gab;
+  const {
+    loading, pressLoading, dependencias, depById, periods, periodLabels, mentions, aggregate,
+    posts, depOfCompetitor,
+  } = gab;
 
   const [enfoque, setEnfoque] = useState<Enfoque>("combinado");
   const [periodLabel, setPeriodLabel] = useState("");
@@ -239,6 +243,78 @@ export default function PortalBriefing({
     return (filtered.length ? filtered : out).slice(0, 3);
   }, [press, curr, engAvg, ranking, depById, periodLabel, focusDepId, focusDep]);
 
+  // ---------- Temas de prensa sin respuesta ----------
+  // Una mención negativa se considera "sin respuesta" cuando la dependencia no
+  // publicó nada en sus cuentas dentro de las 48 horas siguientes a la nota.
+  const postDatesByDep = useMemo(() => {
+    const m = new Map<string, string[]>();
+    for (const p of posts) {
+      if (!p.posted_at || !p.competitor_id) continue;
+      const dep = depOfCompetitor.get(p.competitor_id);
+      if (!dep) continue;
+      const arr = m.get(dep) ?? [];
+      arr.push(p.posted_at.slice(0, 10));
+      m.set(dep, arr);
+    }
+    return m;
+  }, [posts, depOfCompetitor]);
+
+  const sinRespuesta = useMemo(() => {
+    const from = isoDaysAgo(6);
+    const plusDays = (d: string, n: number) =>
+      new Date(new Date(d + "T00:00:00").getTime() + n * 86_400_000).toISOString().slice(0, 10);
+    return mentions
+      .filter((r) =>
+        r.fecha >= from && r.dep &&
+        (r.tono === "negativo" || r.tono === "crisis") &&
+        (!focusDepId || r.dep === focusDepId))
+      .filter((r) => {
+        const fechas = postDatesByDep.get(r.dep!) ?? [];
+        const limite = plusDays(r.fecha, 2);
+        return !fechas.some((f) => f >= r.fecha && f <= limite);
+      })
+      .sort((a, b) => b.fecha.localeCompare(a.fecha))
+      .slice(0, 6);
+  }, [mentions, postDatesByDep, focusDepId]);
+
+  // ---------- Bloques listos para enviar a la dependencia ----------
+  const bloques = useMemo(() => {
+    const objetivo = focusDepId
+      ? dependencias.filter((d) => d.id === focusDepId)
+      : Array.from(press.byDep.entries())
+          .sort((a, b) => b[1].neg - a[1].neg || b[1].total - a[1].total)
+          .slice(0, 3)
+          .map(([id]) => depById.get(id))
+          .filter(Boolean) as Dependencia[];
+
+    return objetivo.map((d) => {
+      const pr = press.byDep.get(d.id) ?? { total: 0, neg: 0 };
+      const v = curr.get(d.id);
+      const pendientes = sinRespuesta.filter((r) => r.dep === d.id);
+      const lineas = [
+        `${d.nombre} — corte semanal`,
+        "",
+        `Prensa (7 días): ${pr.total} menciones, ${pr.neg} con tono negativo o de crisis.`,
+        `Redes (${periodLabel || "periodo actual"}): ${fmtNum(v?.followers)} seguidores, engagement ${fmtPct(v?.engagement, 2)}${engAvg != null ? ` contra ${fmtPct(engAvg, 2)} de promedio del gabinete` : ""}.`,
+      ];
+      if (pendientes.length) {
+        lineas.push("", "Temas sin respuesta pública:");
+        pendientes.slice(0, 4).forEach((r) => lineas.push(`• ${r.fecha} · ${r.medio}: ${r.titular}`));
+      }
+      lineas.push("", "Sugerencia: agenda propia esta semana sobre los temas anteriores y sostener el ritmo de publicación.", "", "KiMedia");
+      return { dep: d, texto: lineas.join("\n"), pendientes: pendientes.length };
+    });
+  }, [focusDepId, dependencias, press, depById, curr, engAvg, periodLabel, sinRespuesta]);
+
+  const copiar = async (texto: string) => {
+    try {
+      await navigator.clipboard.writeText(texto);
+      toast.success("Resumen copiado");
+    } catch {
+      toast.error("No se pudo copiar");
+    }
+  };
+
   if (loading) {
     return (
       <div className="space-y-4">
@@ -415,6 +491,71 @@ export default function PortalBriefing({
           <p className="text-xs text-muted-foreground italic">Sin acciones sugeridas: no hay señales suficientes en el periodo.</p>
         )}
       </Card>
+
+      {/* Temas de prensa sin respuesta */}
+      <Card className="p-5 space-y-3">
+        <div className="flex items-center gap-2">
+          <Newspaper className="w-4 h-4 text-amber-500" />
+          <span className="text-[11px] uppercase tracking-widest text-muted-foreground">
+            Prensa sin respuesta · últimos 7 días
+          </span>
+        </div>
+        {pressLoading ? (
+          <Skeleton className="h-24 rounded-xl" />
+        ) : sinRespuesta.length ? (
+          <div className="space-y-2">
+            {sinRespuesta.map((r, i) => (
+              <div key={`${r.url}-${i}`} className="rounded-xl border border-border/60 p-3 flex items-start gap-3">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-500 mt-1 shrink-0" />
+                <div className="min-w-0">
+                  <div className="text-sm font-medium leading-snug">{r.titular}</div>
+                  <div className="text-[11px] text-muted-foreground mt-0.5">
+                    {r.fecha} · {r.medio} · {depById.get(r.dep!)?.nombre ?? "sin dependencia"} · tono {r.tono}
+                  </div>
+                </div>
+                {r.url && (
+                  <a href={r.url} target="_blank" rel="noreferrer" className="ml-auto text-[11px] text-primary shrink-0">
+                    Abrir
+                  </a>
+                )}
+              </div>
+            ))}
+            <p className="text-[11px] text-muted-foreground italic">
+              Criterio: nota con tono negativo o de crisis sin ninguna publicación de la dependencia en las 48 horas siguientes.
+            </p>
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground italic">
+            Sin temas pendientes: cada nota negativa de la semana tuvo publicación de la dependencia dentro de 48 horas.
+          </p>
+        )}
+      </Card>
+
+      {/* Bloques listos para enviar */}
+      {bloques.length > 0 && (
+        <Card className="p-5 space-y-3">
+          <div className="flex items-center gap-2">
+            <Copy className="w-4 h-4 text-primary" />
+            <span className="text-[11px] uppercase tracking-widest text-muted-foreground">
+              Resúmenes listos para enviar
+            </span>
+          </div>
+          <div className="grid gap-3 md:grid-cols-3">
+            {bloques.map((b) => (
+              <div key={b.dep.id} className="rounded-xl border border-border/60 p-3 space-y-2">
+                <div className="text-xs font-semibold truncate">{b.dep.nombre}</div>
+                <pre className="text-[10px] leading-snug text-muted-foreground whitespace-pre-wrap max-h-32 overflow-hidden font-sans">
+                  {b.texto}
+                </pre>
+                <Button size="sm" variant="outline" className="h-7 text-xs w-full" onClick={() => copiar(b.texto)}>
+                  <Copy className="w-3 h-3 mr-1.5" /> Copiar resumen
+                  {b.pendientes > 0 && <span className="ml-1 text-amber-500">({b.pendientes} pendientes)</span>}
+                </Button>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {/* Directorio rápido */}
       <Card className="p-5 space-y-3">

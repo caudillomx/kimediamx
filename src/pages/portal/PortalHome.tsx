@@ -26,6 +26,8 @@ import PortalBenchmark from "@/components/portal/PortalBenchmark";
 import PortalStrategy from "@/components/portal/PortalStrategy";
 import PortalDescargas from "@/components/portal/PortalDescargas";
 import PortalBriefing from "@/components/portal/PortalBriefing";
+import PortalFreshnessBar from "@/components/portal/PortalFreshnessBar";
+import PortalBigPicture from "@/components/portal/PortalBigPicture";
 import { Compass, Users as UsersIcon, Building2, Home } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 
@@ -216,6 +218,7 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
   const [denied, setDenied] = useState(false);
+  const [role, setRole] = useState<"admin" | "executive" | null>(null);
   const [selectedWeek, setSelectedWeek] = useState<string | null>(null);
   const [compareKey, setCompareKey] = useState("week");
   const [customRange, setCustomRange] = useState<DateRange | undefined>();
@@ -251,6 +254,19 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
   const pdfRef = useRef<HTMLDivElement>(null);
 
   const isGabinete = !!(portalModules.benchmark_funcionarios || portalModules.benchmark_instituciones);
+  const canSeeBigPicture = isGabinete && (role === "admin" || role === "executive");
+
+  // Rol interno del usuario: define quién registra el corte semanal y quién ve el Big Picture.
+  useEffect(() => {
+    (async () => {
+      const { data: s } = await supabase.auth.getSession();
+      if (!s.session) return;
+      const { data } = await supabase
+        .from("user_roles").select("role").eq("user_id", s.session.user.id);
+      const roles = (data ?? []).map((r: any) => r.role as string);
+      setRole(roles.includes("admin") ? "admin" : roles.includes("executive") ? "executive" : null);
+    })();
+  }, []);
 
   useEffect(() => {
     if (focusDepId) localStorage.setItem("portal-focus-dep", focusDepId);
@@ -782,6 +798,10 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
       </header>
 
       <main className="relative max-w-7xl mx-auto px-6 py-6 space-y-6">
+        {isGabinete && (
+          <PortalFreshnessBar clientId={portal.clientId} canEdit={role === "admin"} />
+        )}
+
         {/* Week bar (listening scope: only for Panorama/Histórico) */}
         {analyses.length > 0 && activeTab !== "inicio" && activeTab !== "benchmark" && activeTab !== "benchmark_funcionarios" && activeTab !== "benchmark_instituciones" && activeTab !== "estrategia" && activeTab !== "prensa" && activeTab !== "descargas" && (
         <div className="glass rounded-2xl p-4 flex flex-col lg:flex-row lg:items-center gap-4">
@@ -910,7 +930,16 @@ export default function PortalHome({ portal }: { portal: ClientPortalConfig }) {
                   {(portalModules.benchmark_funcionarios || portalModules.benchmark_instituciones) && (
                     <TabsTrigger value="descargas" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><Download className="w-4 h-4 mr-2" />Descargas</TabsTrigger>
                   )}
+                  {canSeeBigPicture && (
+                    <TabsTrigger value="bigpicture" className="rounded-lg data-[state=active]:bg-coral/10 data-[state=active]:text-coral"><Compass className="w-4 h-4 mr-2" />Big Picture</TabsTrigger>
+                  )}
                 </TabsList>
+
+                {canSeeBigPicture && (
+                  <TabsContent value="bigpicture" className="mt-5">
+                    <PortalBigPicture clientId={portal.clientId} titulo={portal.displayName} />
+                  </TabsContent>
+                )}
 
                 {isGabinete && (
                   <TabsContent value="inicio" className="mt-5 space-y-4">
