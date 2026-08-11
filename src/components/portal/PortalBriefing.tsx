@@ -121,13 +121,11 @@ export default function PortalBriefing({
 
   const focusDep = focusDepId ? depById.get(focusDepId) ?? null : null;
 
-  // ---------- Prensa: 7 días vs 7 previos ----------
+  // ---------- Prensa: ventana seleccionada vs ventana previa equivalente ----------
   const press = useMemo(() => {
-    const from7 = isoDaysAgo(6);
-    const from14 = isoDaysAgo(13);
     const scope = (r: typeof mentions[number]) => !focusDepId || r.dep === focusDepId;
-    const last7 = mentions.filter((r) => r.fecha >= from7 && scope(r));
-    const prev7 = mentions.filter((r) => r.fecha >= from14 && r.fecha < from7 && scope(r));
+    const last7 = winMentions.filter((r) => r.fecha >= win.from && r.fecha <= win.to && scope(r));
+    const prev7 = winMentions.filter((r) => r.fecha >= prevFrom && r.fecha <= prevTo && scope(r));
     const neg = (rows: typeof mentions) => rows.filter((r) => r.tono === "negativo" || r.tono === "crisis").length;
     const pos = (rows: typeof mentions) => rows.filter((r) => r.tono === "positivo").length;
     const byDep = new Map<string, { total: number; neg: number }>();
@@ -148,9 +146,9 @@ export default function PortalBriefing({
       pos: pos(last7),
       byDep,
       topMedios: Array.from(byMedio.entries()).sort((a, b) => b[1] - a[1]).slice(0, 3),
-      ultimaFecha: last7[0]?.fecha ?? mentions[0]?.fecha ?? null,
+      ultimaFecha: last7[0]?.fecha ?? winMentions[0]?.fecha ?? null,
     };
-  }, [mentions, focusDepId]);
+  }, [winMentions, focusDepId, win.from, win.to, prevFrom, prevTo]);
 
   // ---------- Ranking y movimientos ----------
   const ranking = useMemo(
