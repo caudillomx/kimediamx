@@ -463,7 +463,7 @@ export default function PortalBriefing({
   return (
     <div className="space-y-5">
       {/* Barra de contexto */}
-      <Card className="p-4 flex flex-wrap items-end gap-3">
+      <Card className="p-4 flex flex-wrap items-start gap-x-3 gap-y-4">
         <div className="space-y-1">
           <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Estoy viendo como</span>
           <Select value={focusDepId ?? "gabinete"} onValueChange={(v) => onFocusChange(v === "gabinete" ? null : v)}>
@@ -524,12 +524,12 @@ export default function PortalBriefing({
             </div>
           </>
         )}
-        <Button variant="outline" size="sm" className="h-9 ml-auto" onClick={() => setSearchOpen(true)}>
+        <Button variant="outline" size="sm" className="h-9 ml-auto mt-[22px]" onClick={() => setSearchOpen(true)}>
           <Search className="w-4 h-4 mr-2" /> Buscar dependencia
           <kbd className="ml-2 text-[10px] text-muted-foreground border border-border rounded px-1">⌘K</kbd>
         </Button>
         {focusDep && (
-          <Button size="sm" className="h-9" onClick={() => setFichaDep(focusDep)}>
+          <Button size="sm" className="h-9 mt-[22px]" onClick={() => setFichaDep(focusDep)}>
             Ver ficha completa <ArrowRight className="w-4 h-4 ml-2" />
           </Button>
         )}
