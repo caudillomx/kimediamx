@@ -49,8 +49,8 @@ En la ficha de dependencia, un bloque **¿funcionó?**: para las publicaciones m
 
 ## Orden de trabajo
 
-1. Semana oficial (tabla, publicación, barra de estado) — es la base de todo lo demás.
+1. Barra de estado y tablero de frescura (ritmo del lunes 12:00).
 2. Briefing del lunes con temas sin respuesta y resúmenes copiables.
-3. Entregables: genérico ajustado, reporte profundo, Big Picture.
+3. Entregables: genérico, reporte profundo quincenal/mensual y Big Picture semanal.
 4. Rol ejecutivo y retiro de accesos por dependencia.
 5. Bloque de tendencias en la ficha.
