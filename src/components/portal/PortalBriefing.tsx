@@ -463,11 +463,11 @@ export default function PortalBriefing({
   return (
     <div className="space-y-5">
       {/* Barra de contexto */}
-      <Card className="p-4 flex flex-wrap items-end gap-3">
+      <Card className="p-4 flex flex-wrap items-start gap-x-3 gap-y-4">
         <div className="space-y-1">
           <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Estoy viendo como</span>
           <Select value={focusDepId ?? "gabinete"} onValueChange={(v) => onFocusChange(v === "gabinete" ? null : v)}>
-            <SelectTrigger className="w-[300px] h-9"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-[220px] h-9"><SelectValue /></SelectTrigger>
             <SelectContent className="max-h-80">
               <SelectItem value="gabinete">Gabinete completo</SelectItem>
               {dependencias.map((d) => <SelectItem key={d.id} value={d.id}>{d.nombre}</SelectItem>)}
@@ -486,7 +486,7 @@ export default function PortalBriefing({
         <div className="space-y-1">
           <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Cuentas</span>
           <Select value={enfoque} onValueChange={(v) => setEnfoque(v as Enfoque)}>
-            <SelectTrigger className="w-[230px] h-9"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-[200px] h-9"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="combinado">Dependencia + titular</SelectItem>
               <SelectItem value="institucional">Solo institucional</SelectItem>
@@ -497,7 +497,7 @@ export default function PortalBriefing({
         <div className="space-y-1">
           <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Corte de análisis</span>
           <Select value={pressPreset} onValueChange={(v) => setPressPreset(v as typeof pressPreset)}>
-            <SelectTrigger className="w-[240px] h-9"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-[210px] h-9"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="7">Semanal (7 días)</SelectItem>
               <SelectItem value="14">Quincenal (14 días)</SelectItem>
@@ -524,12 +524,12 @@ export default function PortalBriefing({
             </div>
           </>
         )}
-        <Button variant="outline" size="sm" className="h-9 ml-auto" onClick={() => setSearchOpen(true)}>
+        <Button variant="outline" size="sm" className="h-9 ml-auto mt-[22px]" onClick={() => setSearchOpen(true)}>
           <Search className="w-4 h-4 mr-2" /> Buscar dependencia
           <kbd className="ml-2 text-[10px] text-muted-foreground border border-border rounded px-1">⌘K</kbd>
         </Button>
         {focusDep && (
-          <Button size="sm" className="h-9" onClick={() => setFichaDep(focusDep)}>
+          <Button size="sm" className="h-9 mt-[22px]" onClick={() => setFichaDep(focusDep)}>
             Ver ficha completa <ArrowRight className="w-4 h-4 ml-2" />
           </Button>
         )}
