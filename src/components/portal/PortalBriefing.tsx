@@ -52,7 +52,7 @@ export default function PortalBriefing({
   const gab = useGabineteData(clientId);
   const {
     loading, pressLoading, dependencias, depById, periods, periodLabels, mentions, aggregate,
-    posts, depOfCompetitor, lastPressDate,
+    posts, depOfCompetitor, lastPressDate, lastPostDate,
   } = gab;
 
   const [enfoque, setEnfoque] = useState<Enfoque>("combinado");
@@ -71,14 +71,13 @@ export default function PortalBriefing({
    * cortes semanales y quincenales saldrían vacíos mientras la carga va atrasada.
    */
   const anchor = useMemo(() => {
-    const cands: string[] = [];
-    for (const p of posts) if (p.posted_at) cands.push(p.posted_at.slice(0, 10));
-    for (const p of periods) if (p.period_end) cands.push(p.period_end.slice(0, 10));
-    if (lastPressDate) cands.push(lastPressDate.slice(0, 10));
     const hoy = isoToday();
-    const max = cands.filter((d) => d <= hoy).sort().pop();
-    return max ?? hoy;
-  }, [posts, periods, lastPressDate]);
+    const post = lastPostDate && lastPostDate <= hoy ? lastPostDate : null;
+    const press = lastPressDate && lastPressDate <= hoy ? lastPressDate : null;
+    // El día más reciente con ambos insumos, para que el corte no salga vacío.
+    if (post && press) return post < press ? post : press;
+    return post ?? press ?? hoy;
+  }, [lastPostDate, lastPressDate]);
 
   const anchorIsToday = anchor === isoToday();
 
