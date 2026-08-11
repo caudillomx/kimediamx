@@ -180,18 +180,18 @@ export default function PortalBriefing({
 
   // ---------- Titular del día ----------
   const titular = useMemo(() => {
-    if (pressLoading) return null;
+    if (winLoading) return null;
     const partes: string[] = [];
     const sujeto = focusDep ? focusDep.nombre : "El gabinete";
     if (press.total) {
       const dTot = press.prevTotal ? Math.round(((press.total - press.prevTotal) / press.prevTotal) * 100) : null;
       partes.push(
-        `${sujeto} registró ${press.total} menciones de prensa en los últimos 7 días` +
+        `${sujeto} registró ${press.total} menciones de prensa en ${rangoLabel === `últimos ${winDays} días` ? rangoLabel : `el periodo ${rangoLabel}`}` +
         (dTot != null ? ` (${dTot >= 0 ? "+" : ""}${dTot}% frente a los 7 previos)` : "") +
         `, ${press.neg} de ellas con tono negativo o de crisis.`,
       );
     } else {
-      partes.push(`No se detectaron menciones de prensa para ${sujeto.toLowerCase()} en los últimos 7 días.`);
+      partes.push(`No se detectaron menciones de prensa para ${sujeto.toLowerCase()} en ${rangoLabel}.`);
     }
     if (press.topMedios.length) {
       partes.push(`Los medios con más cobertura fueron ${press.topMedios.map(([m, n]) => `${m} (${n})`).join(", ")}.`);
@@ -202,7 +202,7 @@ export default function PortalBriefing({
       partes.push(`En redes, ${depById.get(ranking[0][0])?.nombre ?? "—"} lidera el engagement del periodo ${periodLabel} con ${fmtPct(ranking[0][1].engagement, 2)}.`);
     }
     return partes.join(" ");
-  }, [pressLoading, press, focusDep, focusRank, ranking, depById, periodLabel]);
+  }, [winLoading, press, focusDep, focusRank, ranking, depById, periodLabel, rangoLabel, winDays]);
 
   // ---------- Alertas ----------
   const alertas = useMemo(() => {
@@ -217,7 +217,7 @@ export default function PortalBriefing({
       out.push({
         nivel: v.neg >= 4 ? "alta" : "media",
         titulo: `Prensa negativa en ${depById.get(id)?.nombre ?? "—"}`,
-        dato: `${v.neg} de ${v.total} menciones de los últimos 7 días con tono negativo o de crisis.`,
+        dato: `${v.neg} de ${v.total} menciones de ${rangoLabel} con tono negativo o de crisis.`,
         depId: id,
       });
     }
@@ -225,7 +225,7 @@ export default function PortalBriefing({
       out.push({
         nivel: "media",
         titulo: "Repunte de cobertura negativa",
-        dato: `${press.neg} menciones negativas en 7 días contra ${press.prevNeg} de la semana previa.`,
+        dato: `${press.neg} menciones negativas en ${rangoLabel} contra ${press.prevNeg} del periodo previo equivalente.`,
       });
     }
 
@@ -256,7 +256,7 @@ export default function PortalBriefing({
     const rank = { alta: 0, media: 1, baja: 2 } as const;
     const filtered = focusDepId ? out.filter((a) => !a.depId || a.depId === focusDepId) : out;
     return filtered.sort((a, b) => rank[a.nivel] - rank[b.nivel]).slice(0, 6);
-  }, [press, curr, prev, depById, dependencias, periodLabel, focusDepId]);
+  }, [press, curr, prev, depById, dependencias, periodLabel, focusDepId, rangoLabel]);
 
   // ---------- Acciones sugeridas ----------
   const acciones = useMemo(() => {
@@ -265,7 +265,7 @@ export default function PortalBriefing({
     if (negTop && negTop[1].neg >= 2) {
       out.push({
         accion: `Preparar respuesta pública y agenda propia para ${depById.get(negTop[0])?.nombre ?? "la dependencia"}.`,
-        evidencia: `${negTop[1].neg} menciones negativas de ${negTop[1].total} en los últimos 7 días.`,
+        evidencia: `${negTop[1].neg} menciones negativas de ${negTop[1].total} en ${rangoLabel}.`,
       });
     }
     const below = Array.from(curr.entries())
@@ -295,7 +295,7 @@ export default function PortalBriefing({
       ? out.filter((a) => !focusDep || a.accion.includes(focusDep.nombre) || a.accion.startsWith("Establecer"))
       : out;
     return (filtered.length ? filtered : out).slice(0, 3);
-  }, [press, curr, engAvg, ranking, depById, periodLabel, focusDepId, focusDep]);
+  }, [press, curr, engAvg, ranking, depById, periodLabel, focusDepId, focusDep, rangoLabel]);
 
   // ---------- Temas de prensa sin respuesta ----------
   // Una mención negativa se considera "sin respuesta" cuando la dependencia no
@@ -314,12 +314,12 @@ export default function PortalBriefing({
   }, [posts, depOfCompetitor]);
 
   const sinRespuesta = useMemo(() => {
-    const from = isoDaysAgo(6);
+    const from = win.from;
     const plusDays = (d: string, n: number) =>
       new Date(new Date(d + "T00:00:00").getTime() + n * 86_400_000).toISOString().slice(0, 10);
-    return mentions
+    return winMentions
       .filter((r) =>
-        r.fecha >= from && r.dep &&
+        r.fecha >= from && r.fecha <= win.to && r.dep &&
         (r.tono === "negativo" || r.tono === "crisis") &&
         (!focusDepId || r.dep === focusDepId))
       .filter((r) => {
@@ -329,7 +329,7 @@ export default function PortalBriefing({
       })
       .sort((a, b) => b.fecha.localeCompare(a.fecha))
       .slice(0, 6);
-  }, [mentions, postDatesByDep, focusDepId]);
+  }, [winMentions, postDatesByDep, focusDepId, win.from, win.to]);
 
   // ---------- Bloques listos para enviar a la dependencia ----------
   const bloques = useMemo(() => {
@@ -346,9 +346,9 @@ export default function PortalBriefing({
       const v = curr.get(d.id);
       const pendientes = sinRespuesta.filter((r) => r.dep === d.id);
       const lineas = [
-        `${d.nombre} — corte semanal`,
+        `${d.nombre} — corte ${rangoLabel}`,
         "",
-        `Prensa (7 días): ${pr.total} menciones, ${pr.neg} con tono negativo o de crisis.`,
+        `Prensa (${rangoLabel}): ${pr.total} menciones, ${pr.neg} con tono negativo o de crisis.`,
         `Redes (${periodLabel || "periodo actual"}): ${fmtNum(v?.followers)} seguidores, engagement ${fmtPct(v?.engagement, 2)}${engAvg != null ? ` contra ${fmtPct(engAvg, 2)} de promedio del gabinete` : ""}.`,
       ];
       if (pendientes.length) {
@@ -358,7 +358,7 @@ export default function PortalBriefing({
       lineas.push("", "Sugerencia: agenda propia esta semana sobre los temas anteriores y sostener el ritmo de publicación.", "", "KiMedia");
       return { dep: d, texto: lineas.join("\n"), pendientes: pendientes.length };
     });
-  }, [focusDepId, dependencias, press, depById, curr, engAvg, periodLabel, sinRespuesta]);
+  }, [focusDepId, dependencias, press, depById, curr, engAvg, periodLabel, sinRespuesta, rangoLabel]);
 
   const copiar = async (texto: string) => {
     try {
@@ -433,20 +433,20 @@ export default function PortalBriefing({
             Briefing {press.ultimaFecha ? `· última bitácora ${press.ultimaFecha}` : ""}
           </span>
         </div>
-        {pressLoading ? <Skeleton className="h-12 w-full" /> : (
+        {winLoading ? <Skeleton className="h-12 w-full" /> : (
           <p className="text-[15px] leading-relaxed">{titular}</p>
         )}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-1">
-          <Mini label="Menciones (7 días)" value={fmtNum(press.total)} delta={press.prevTotal ? (press.total - press.prevTotal) / press.prevTotal : null} />
-          <Mini label="Negativas (7 días)" value={fmtNum(press.neg)} invert delta={press.prevNeg ? (press.neg - press.prevNeg) / press.prevNeg : null} />
-          <Mini label="Positivas (7 días)" value={fmtNum(press.pos)} />
+          <Mini label={`Menciones (${rangoLabel})`} value={fmtNum(press.total)} delta={press.prevTotal ? (press.total - press.prevTotal) / press.prevTotal : null} />
+          <Mini label={`Negativas (${rangoLabel})`} value={fmtNum(press.neg)} invert delta={press.prevNeg ? (press.neg - press.prevNeg) / press.prevNeg : null} />
+          <Mini label={`Positivas (${rangoLabel})`} value={fmtNum(press.pos)} />
           <Mini
             label={focusDep ? "Posición en el gabinete" : "Promedio de engagement"}
             value={focusDep ? (focusRank >= 0 ? `#${focusRank + 1} de ${ranking.length}` : "—") : fmtPct(engAvg, 2)}
           />
         </div>
         <p className="text-[11px] text-muted-foreground">
-          Prensa: últimos 7 días. Redes: periodo <b>{periodLabel || "—"}</b> · {ENFOQUE_LABEL[enfoque].toLowerCase()}.
+          Prensa: {rangoLabel}. Redes: periodo <b>{periodLabel || "—"}</b> · {ENFOQUE_LABEL[enfoque].toLowerCase()}.
           {focusDep ? ` Filtrado a ${focusDep.nombre}.` : " Gabinete completo."}
         </p>
       </Card>
@@ -551,10 +551,10 @@ export default function PortalBriefing({
         <div className="flex items-center gap-2">
           <Newspaper className="w-4 h-4 text-amber-500" />
           <span className="text-[11px] uppercase tracking-widest text-muted-foreground">
-            Prensa sin respuesta · últimos 7 días
+            Prensa sin respuesta · {rangoLabel}
           </span>
         </div>
-        {pressLoading ? (
+        {winLoading ? (
           <Skeleton className="h-24 rounded-xl" />
         ) : sinRespuesta.length ? (
           <div className="space-y-2">
@@ -691,7 +691,7 @@ function Mini({ label, value, delta, invert }: { label: string; value: string; d
       <div className="text-2xl font-display font-bold mt-0.5">{value}</div>
       {delta != null && Number.isFinite(delta) && (
         <div className={`text-[11px] mt-0.5 ${good ? "text-emerald-500" : "text-rose-500"}`}>
-          {delta >= 0 ? "+" : "−"}{fmtPct(Math.abs(delta), 0)} vs 7 días previos
+          {delta >= 0 ? "+" : "−"}{fmtPct(Math.abs(delta), 0)} vs periodo previo
         </div>
       )}
     </div>
