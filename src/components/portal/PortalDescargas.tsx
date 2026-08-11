@@ -522,6 +522,11 @@ export default function PortalDescargas({
             {depSel.titular_cargo ? ` · ${depSel.titular_cargo}` : ""}
           </p>
         )}
+        <p className="text-[11px] text-muted-foreground">
+          {cut === "semanal"
+            ? `Corte semanal ${fmtDia(weekFrom)} — ${fmtDia(weekTo)}: publicaciones y menciones de prensa se filtran a esos días; las métricas de seguidores y engagement provienen del corte de datos ${activePeriods[0]?.period_label ?? "más cercano"}.`
+            : `Corte mensual: publicaciones, métricas y prensa del periodo ${periodLabel || "seleccionado"}.`}
+        </p>
       </Card>
 
       {/* Menciones de prensa */}
