@@ -324,6 +324,8 @@ export default function PortalDescargas({
 
     const topPosts = posts
       .filter((p) => periodIds.includes(p.period_id) && p.competitor_id && compById.has(p.competitor_id))
+      .filter((p) => cut !== "semanal"
+        || (p.posted_at ? p.posted_at.slice(0, 10) >= weekFrom && p.posted_at.slice(0, 10) <= weekTo : false))
       .sort((a, b) => (b.interactions ?? 0) - (a.interactions ?? 0))
       .slice(0, 6)
       .map((p) => ({
@@ -341,8 +343,8 @@ export default function PortalDescargas({
     }
 
     const periodo = activePeriods[0];
-    const from = periodo?.period_start ?? pressFrom;
-    const to = periodo?.period_end ?? pressTo;
+    const from = cut === "semanal" ? weekFrom : (periodo?.period_start ?? pressFrom);
+    const to = cut === "semanal" ? weekTo : (periodo?.period_end ?? pressTo);
     const mentions = await fetchMentions(from, to);
     const prensaAll = mentions
       .filter((r) => r.dep === dep.id)
@@ -359,7 +361,7 @@ export default function PortalDescargas({
       tipo: dep.tipo,
       titular: dep.titular,
       titularCargo: dep.titular_cargo,
-      periodoLabel: `${periodLabel || "Periodo"} · ${ENFOQUE_LABEL[enfoque]}`,
+      periodoLabel: `${cutLabel} · ${ENFOQUE_LABEL[enfoque]}`,
       redes: Array.from(new Set(cuentas.map((c) => c.red))),
       cuentas,
       totales: { seguidores: mine.followers, engagement: mine.engagement, postsDia: mine.postsDia },
@@ -390,7 +392,7 @@ export default function PortalDescargas({
       return { nombre: depName.get(id) ?? "—", delta: d };
     }).filter((r) => r.delta != null) as { nombre: string; delta: number }[];
     return {
-      periodoLabel: `${periodLabel || "Periodo"} · ${ENFOQUE_LABEL[enfoque]}`,
+      periodoLabel: `${cutLabel} · ${ENFOQUE_LABEL[enfoque]}`,
       ranking,
       suben: moves.slice().sort((a, b) => b.delta - a.delta).slice(0, 5),
       bajan: moves.slice().sort((a, b) => a.delta - b.delta).slice(0, 5),
