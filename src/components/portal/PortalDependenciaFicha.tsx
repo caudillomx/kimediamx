@@ -229,6 +229,7 @@ export default function PortalDependenciaFicha({
 
         <div className="flex flex-wrap items-center gap-2 text-[11px] min-w-0">
           <Badge variant="outline">{periodLabel || "Sin periodo"}</Badge>
+          {ventana && <Badge variant="outline">Corte {corteLabel}</Badge>}
           <Badge variant="outline">{ENFOQUE_LABEL[enfoque]}</Badge>
           <Badge variant="outline">{depComps.length} cuenta{depComps.length === 1 ? "" : "s"}</Badge>
           {onDescargar && (
@@ -264,6 +265,20 @@ export default function PortalDependenciaFicha({
           </Panel>
         </div>
 
+        {/* Actividad del corte granular */}
+        {ventana && (
+          <Panel title={`Actividad del corte · ${corteLabel}`} icon={<TrendingUp className="w-4 h-4 text-primary" />}>
+            {actividad ? (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <Kpi label="Publicaciones" value={fmtNum(actividad.publicaciones)} />
+                <Kpi label="Interacciones" value={fmtNum(actividad.interacciones)} />
+                <Kpi label="Promedio por post" value={fmtNum(actividad.promedio)} />
+                <Kpi label="Publicaciones / día" value={actividad.porDia != null ? actividad.porDia.toFixed(2) : "—"} />
+              </div>
+            ) : <Empty text="Sin publicaciones fechadas dentro del corte seleccionado." />}
+          </Panel>
+        )}
+
         {/* Cuentas */}
         <Panel title="Cuentas" icon={<Sparkles className="w-4 h-4 text-primary" />}>
           {cuentas.length ? (
@@ -297,7 +312,7 @@ export default function PortalDependenciaFicha({
         </Panel>
 
         {/* Publicaciones */}
-        <Panel title="Publicaciones con más interacción" icon={<TrendingUp className="w-4 h-4 text-primary" />}>
+        <Panel title={`Publicaciones con más interacción · ${corteLabel}`} icon={<TrendingUp className="w-4 h-4 text-primary" />}>
           {topPosts.length ? (
             <div className="space-y-2">
               {topPosts.map((p, i) => (
@@ -312,7 +327,7 @@ export default function PortalDependenciaFicha({
                 </div>
               ))}
             </div>
-          ) : <Empty text="Sin publicaciones registradas en el periodo." />}
+          ) : <Empty text="Sin publicaciones registradas en el corte." />}
         </Panel>
 
         {/* ¿Funcionó? */}
@@ -354,7 +369,7 @@ export default function PortalDependenciaFicha({
         </Panel>
 
         {/* Prensa */}
-        <Panel title={`Prensa (últimos 30 días · ${prensaTono.total} menciones)`} icon={<Newspaper className="w-4 h-4 text-primary" />}>
+        <Panel title={`Prensa (${corteLabel} · ${prensaTono.total} menciones)`} icon={<Newspaper className="w-4 h-4 text-primary" />}>
           {prensa.length ? (
             <div className="space-y-1.5">
               {prensa.map((m, i) => (
@@ -372,12 +387,13 @@ export default function PortalDependenciaFicha({
                 </div>
               ))}
             </div>
-          ) : <Empty text="Sin menciones de prensa resueltas a esta dependencia en los últimos 30 días." />}
+          ) : <Empty text="Sin menciones de prensa resueltas a esta dependencia en el corte." />}
         </Panel>
 
         <Separator />
         <p className="text-[11px] text-muted-foreground">
-          Los datos de redes corresponden al periodo <b>{periodLabel || "—"}</b> con el enfoque <b>{ENFOQUE_LABEL[enfoque].toLowerCase()}</b>.
+          Seguidores y engagement corresponden al periodo <b>{periodLabel || "—"}</b> con el enfoque <b>{ENFOQUE_LABEL[enfoque].toLowerCase()}</b>,
+          porque la fuente entrega esas métricas por mes. Publicaciones, interacciones y prensa usan el corte <b>{corteLabel}</b>.
           Las menciones de prensa se resuelven por coincidencia de nombre de la dependencia o de su titular.
         </p>
       </DialogContent>
