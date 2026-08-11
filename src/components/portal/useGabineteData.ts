@@ -221,15 +221,24 @@ export function useGabineteData(clientId: string, pressDays = 30) {
   const fetchPostsWindow = useCallback(async (from: string, to: string): Promise<Post[]> => {
     if (!periods.length) return [];
     const ids = periods.map((p) => p.id);
-    const { data } = await supabase
-      .from("client_portal_benchmark_posts")
-      .select("period_id,competitor_id,network,profile_name,posted_at,message,interactions,link")
-      .in("period_id", ids)
-      .gte("posted_at", `${from}T00:00:00`)
-      .lte("posted_at", `${to}T23:59:59`)
-      .order("interactions", { ascending: false })
-      .limit(20000);
-    return (data ?? []) as Post[];
+    const PAGE = 1000;
+    const out: Post[] = [];
+    // PostgREST corta en 1000 filas por respuesta: se pagina hasta agotar la ventana.
+    for (let offset = 0; offset < 30000; offset += PAGE) {
+      const { data, error } = await supabase
+        .from("client_portal_benchmark_posts")
+        .select("period_id,competitor_id,network,profile_name,posted_at,message,interactions,link")
+        .in("period_id", ids)
+        .gte("posted_at", `${from}T00:00:00`)
+        .lte("posted_at", `${to}T23:59:59`)
+        .order("posted_at", { ascending: true })
+        .range(offset, offset + PAGE - 1);
+      if (error) break;
+      const rows = (data ?? []) as Post[];
+      out.push(...rows);
+      if (rows.length < PAGE) break;
+    }
+    return out;
   }, [periods]);
 
   const depOfCompetitor = useMemo(() => {
