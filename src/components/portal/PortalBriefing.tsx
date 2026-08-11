@@ -18,7 +18,6 @@ import {
 } from "./useGabineteData";
 import PortalDependenciaFicha from "./PortalDependenciaFicha";
 
-const isoDaysAgo = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString().slice(0, 10);
 const isoToday = () => new Date().toISOString().slice(0, 10);
 const shiftIso = (d: string, n: number) =>
   new Date(new Date(d + "T00:00:00").getTime() + n * 86_400_000).toISOString().slice(0, 10);
