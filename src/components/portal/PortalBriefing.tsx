@@ -472,7 +472,7 @@ export default function PortalBriefing({
           `${dInt != null ? ` (${dInt >= 0 ? "+" : "−"}${fmtPct(Math.abs(dInt))} vs corte previo)` : ""}.`,
         );
         if (act.mejor?.message) {
-          L.push(`· Mejor publicación (${fmtNum(act.mejor.interacciones)} interacciones): "${act.mejor.message.replace(/\s+/g, " ").slice(0, 140)}".`);
+          L.push(`· Mejor publicación (${fmtNum(act.mejor.interactions)} interacciones): "${act.mejor.message.replace(/\s+/g, " ").slice(0, 140)}".`);
         }
       } else {
         L.push("· Sin publicaciones fechadas dentro del corte.");
