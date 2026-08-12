@@ -1523,7 +1523,9 @@ export type Database = {
           key_quotes: Json | null
           media_mentions: Json
           mentions: Json | null
+          national_context: Json
           raw_source_ref: string | null
+          scope_counts: Json
           sentiment: string | null
           sentiment_counts: Json | null
           sentiment_score: number | null
@@ -1551,7 +1553,9 @@ export type Database = {
           key_quotes?: Json | null
           media_mentions?: Json
           mentions?: Json | null
+          national_context?: Json
           raw_source_ref?: string | null
+          scope_counts?: Json
           sentiment?: string | null
           sentiment_counts?: Json | null
           sentiment_score?: number | null
@@ -1579,7 +1583,9 @@ export type Database = {
           key_quotes?: Json | null
           media_mentions?: Json
           mentions?: Json | null
+          national_context?: Json
           raw_source_ref?: string | null
+          scope_counts?: Json
           sentiment?: string | null
           sentiment_counts?: Json | null
           sentiment_score?: number | null
