@@ -30,6 +30,8 @@ type Entry = {
   sentiment_counts?: any | null;
   media_mentions?: any[] | null;
   social_mentions?: any[] | null;
+  scope_counts?: any | null;
+  national_context?: any[] | null;
 };
 
 const SENT_COLORS: Record<string, string> = {
@@ -92,7 +94,7 @@ export default function PortalAnalysis({ clientId, fromDate, toDate, mode = "soc
     (async () => {
       setLoading(true);
       const e = await supabase.from("client_portal_listening_entries")
-        .select("entry_date, sentiment, sentiment_score, urgency, topics, mentions, summary, analyzed_at, channels, entities, events, key_quotes, competitors, total_mentions, sentiment_counts, media_mentions, social_mentions")
+        .select("entry_date, sentiment, sentiment_score, urgency, topics, mentions, summary, analyzed_at, channels, entities, events, key_quotes, competitors, total_mentions, sentiment_counts, media_mentions, social_mentions, scope_counts, national_context")
         .eq("client_id", clientId)
         .gte("entry_date", fromDate).lte("entry_date", toDate)
         .not("analyzed_at", "is", null)
@@ -135,6 +137,23 @@ export default function PortalAnalysis({ clientId, fromDate, toDate, mode = "soc
       setTrendPeriods(withDelta);
     })();
   }, [clientId, fromDate, toDate]);
+
+  // Ámbito: separa lo que sí toca al cliente de la agenda nacional / de otras entidades
+  const scopeSummary = useMemo(() => {
+    const counts = { local: 0, nacional_impacto: 0, nacional_contexto: 0, otra_entidad: 0 };
+    const context: { date: string; title: string; detail?: string; why?: string; scope: string }[] = [];
+    for (const e of entries) {
+      const sc = (e.scope_counts ?? {}) as Record<string, any>;
+      for (const k of Object.keys(counts) as (keyof typeof counts)[]) counts[k] += Number(sc[k] ?? 0) || 0;
+      for (const n of (e.national_context ?? [])) {
+        if (!n?.title) continue;
+        context.push({ date: e.entry_date, title: n.title, detail: n.detail, why: n.why_excluded, scope: n.scope ?? "nacional_contexto" });
+      }
+    }
+    const relevant = counts.local + counts.nacional_impacto;
+    const excluded = counts.nacional_contexto + counts.otra_entidad;
+    return { counts, context: context.slice(0, 12), relevant, excluded, hasData: relevant + excluded > 0 };
+  }, [entries]);
 
   const volumeByDay = useMemo(() => {
     const map = new Map<string, { date: string; total: number; positivo: number; neutral: number; negativo: number; crisis: number }>();
@@ -930,6 +949,56 @@ export default function PortalAnalysis({ clientId, fromDate, toDate, mode = "soc
 
   return (
     <div className="space-y-6">
+      {/* Ámbito del análisis: qué toca al cliente y qué es contexto nacional */}
+      {isPress && scopeSummary.hasData && (
+        <Card className="p-5">
+          <div className="flex items-center gap-2 mb-3 flex-wrap">
+            <Flag className="w-4 h-4 text-primary" />
+            <h4 className="text-sm font-semibold">Ámbito del análisis</h4>
+            <span className="text-[11px] text-muted-foreground">
+              El sentimiento y los conteos del periodo solo consideran lo que toca al cliente.
+            </span>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-4">
+            {[
+              { k: "local", label: "Agenda local", n: scopeSummary.counts.local, cls: "text-emerald-600" },
+              { k: "nacional_impacto", label: "Nacional con impacto", n: scopeSummary.counts.nacional_impacto, cls: "text-amber-600" },
+              { k: "nacional_contexto", label: "Nacional · solo contexto", n: scopeSummary.counts.nacional_contexto, cls: "text-muted-foreground" },
+              { k: "otra_entidad", label: "Otras entidades", n: scopeSummary.counts.otra_entidad, cls: "text-muted-foreground" },
+            ].map((s) => (
+              <div key={s.k} className="rounded-lg border border-border/50 p-3">
+                <p className="text-[10px] uppercase tracking-widest text-muted-foreground">{s.label}</p>
+                <p className={`text-xl font-semibold tabular-nums ${s.cls}`}>{s.n.toLocaleString("es-MX")}</p>
+              </div>
+            ))}
+          </div>
+          {scopeSummary.excluded > 0 && (
+            <p className="text-[11px] text-muted-foreground mt-3">
+              {scopeSummary.excluded.toLocaleString("es-MX")} menciones del periodo son agenda nacional o de otros estados y
+              <span className="font-medium text-foreground"> no mueven el sentimiento ni las alertas</span> del cliente.
+            </p>
+          )}
+          {scopeSummary.context.length > 0 && (
+            <div className="mt-4 space-y-2">
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Contexto nacional del periodo</p>
+              {scopeSummary.context.map((c, i) => (
+                <div key={i} className="text-sm flex items-start gap-3 p-2 rounded bg-muted/40">
+                  <Badge variant="secondary" className="text-[10px] shrink-0">
+                    {c.scope === "otra_entidad" ? "Otra entidad" : "Nacional"}
+                  </Badge>
+                  <div className="min-w-0 flex-1">
+                    <div className="font-medium">{c.title}</div>
+                    {c.detail && <div className="text-xs text-muted-foreground">{c.detail}</div>}
+                    {c.why && <div className="text-[11px] text-muted-foreground italic mt-0.5">No afecta al cliente: {c.why}</div>}
+                  </div>
+                  <span className="text-[10px] text-muted-foreground shrink-0">{c.date}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      )}
+
       {/* Alertas: hitos críticos del período */}
       {milestones.some(m => isPress ? (m.impact === "alto" && m.kind === "crisis") : (m.impact === "alto" || m.kind === "crisis")) && (
         <Card className="p-5 border-rose-500/30 bg-rose-500/5">
