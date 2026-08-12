@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import {
-  useGabineteData, ENFOQUE_LABEL, fmtNum, fmtPct, pctDelta,
+  useGabineteData, ENFOQUE_LABEL, fmtNum, fmtPct, pctDelta, periodRangeOf,
   type Enfoque, type Dependencia,
 } from "./useGabineteData";
 import PortalDependenciaFicha from "./PortalDependenciaFicha";
@@ -548,10 +548,7 @@ export default function PortalBriefing({
             <SelectContent>
               {periodLabels.slice().reverse().map((l) => {
                 const ps = periods.filter((p) => p.period_label === l);
-                const rango = ps.length
-                  ? `${periodRangeOf(ps[0])}`.replace(/ \d{4}$/, (m) =>
-                      ps.length > 1 ? m : m)
-                  : "";
+                const rango = ps.length ? periodRangeOf(ps[0]) : "";
                 return (
                   <SelectItem key={l} value={l}>
                     <span className="flex flex-col">
