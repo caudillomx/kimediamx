@@ -65,7 +65,7 @@ export function parseWhatsappTxt(text: string): ParsedEntry[] {
     buffer = [];
     if (!body || isNoise(body)) return;
     const arr = byDate.get(currentDate) ?? [];
-    arr.push({ author: currentAuthor ?? "", body, priority: PRIORITY_RE.test(body) });
+    arr.push({ author: currentAuthor ?? "", body, priority: PRIORITY_RE.test(body) && body.length >= 200 });
     byDate.set(currentDate, arr);
   };
 
