@@ -546,7 +546,21 @@ export default function PortalBriefing({
           <Select value={periodLabel} onValueChange={setPeriodLabel}>
             <SelectTrigger className="w-[170px] h-9"><SelectValue placeholder="Periodo" /></SelectTrigger>
             <SelectContent>
-              {periodLabels.slice().reverse().map((l) => <SelectItem key={l} value={l}>{l}</SelectItem>)}
+              {periodLabels.slice().reverse().map((l) => {
+                const ps = periods.filter((p) => p.period_label === l);
+                const rango = ps.length
+                  ? `${periodRangeOf(ps[0])}`.replace(/ \d{4}$/, (m) =>
+                      ps.length > 1 ? m : m)
+                  : "";
+                return (
+                  <SelectItem key={l} value={l}>
+                    <span className="flex flex-col">
+                      <span>{l}</span>
+                      {rango && <span className="text-[10px] text-muted-foreground">{rango}</span>}
+                    </span>
+                  </SelectItem>
+                );
+              })}
             </SelectContent>
           </Select>
         </div>
