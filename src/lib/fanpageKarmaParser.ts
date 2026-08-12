@@ -251,10 +251,7 @@ export async function parsePosts(file: File): Promise<ParsedFile<PostRow>> {
     const r = rowToObject(header, raw);
     const profile = toStr(r["Profile"]);
     if (!profile) continue;
-    let postedAt: string | null = null;
-    const d = r["Date"];
-    if (d instanceof Date) postedAt = d.toISOString();
-    else if (typeof d === "string" && d) postedAt = new Date(d.replace(" ", "T")).toISOString();
+    const postedAt = parsePostedAt(r["Date"] ?? r["Fecha"]);
     rows.push({
       profile,
       network: normalizeNetwork(r["Network"]),
