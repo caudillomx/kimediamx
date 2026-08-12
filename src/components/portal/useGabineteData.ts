@@ -67,6 +67,41 @@ export function fmtNum(v: number | null | undefined) {
   return new Intl.NumberFormat("es-MX").format(Math.round(v));
 }
 
+const MES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+const MES_LARGO = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+
+/**
+ * Etiqueta determinista de un periodo a partir de sus fechas reales. Evita que
+ * una carga que abarca dos meses (p. ej. 1 jul – 12 ago) se muestre como un solo
+ * mes y esconda los datos más recientes.
+ */
+export function periodLabelOf(p: { period_start: string; period_end: string; period_label?: string }) {
+  const s = new Date(p.period_start + "T00:00:00");
+  const e = new Date(p.period_end + "T00:00:00");
+  if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) return p.period_label ?? "—";
+  const mismoMes = s.getFullYear() === e.getFullYear() && s.getMonth() === e.getMonth();
+  if (mismoMes) return `${MES_LARGO[s.getMonth()]} ${s.getFullYear()}`;
+  const d = (x: Date) => `${String(x.getDate()).padStart(2, "0")} ${MES[x.getMonth()]}`;
+  return `${d(s)} – ${d(e)} ${e.getFullYear()}`;
+}
+
+/** Lee una tabla completa paginando: PostgREST corta cada respuesta en 1000 filas. */
+async function fetchAllPages<T>(
+  run: (from: number, to: number) => any,
+  pageSize = 1000,
+  maxRows = 60000,
+): Promise<T[]> {
+  const out: T[] = [];
+  for (let offset = 0; offset < maxRows; offset += pageSize) {
+    const { data, error } = await run(offset, offset + pageSize - 1);
+    if (error) break;
+    const rows = (data ?? []) as T[];
+    out.push(...rows);
+    if (rows.length < pageSize) break;
+  }
+  return out;
+}
+
 /**
  * Carga y normaliza el universo dependencia–titular de un portal:
  * directorio, cuentas, periodos, métricas, publicaciones, narrativas y
@@ -119,12 +154,18 @@ export function useGabineteData(clientId: string, pressDays = 30) {
       if (ps.length) {
         const ids = ps.map((p) => p.id);
         const [m, po, nar, last] = await Promise.all([
-          supabase.from("client_portal_benchmark_metrics")
-            .select("period_id,competitor_id,network,followers,follower_growth_rate,engagement_rate,posts_per_day")
-            .in("period_id", ids).limit(50000),
-          supabase.from("client_portal_benchmark_posts")
-            .select("period_id,competitor_id,network,profile_name,posted_at,message,interactions,link")
-            .in("period_id", ids).order("interactions", { ascending: false }).limit(5000),
+          fetchAllPages<Metric>((from, to) =>
+            supabase.from("client_portal_benchmark_metrics")
+              .select("period_id,competitor_id,network,followers,follower_growth_rate,engagement_rate,posts_per_day")
+              .in("period_id", ids)
+              .order("period_id", { ascending: true })
+              .range(from, to)),
+          fetchAllPages<Post>((from, to) =>
+            supabase.from("client_portal_benchmark_posts")
+              .select("period_id,competitor_id,network,profile_name,posted_at,message,interactions,link")
+              .in("period_id", ids)
+              .order("interactions", { ascending: false })
+              .range(from, to), 1000, 20000),
           supabase.from("client_portal_benchmark_narratives")
             .select("profile_name,network,narratives").eq("client_id", clientId).limit(500),
           supabase.from("client_portal_benchmark_posts")
@@ -133,8 +174,8 @@ export function useGabineteData(clientId: string, pressDays = 30) {
             .order("posted_at", { ascending: false }).limit(1),
         ]);
         if (cancelled) return;
-        setMetrics((m.data ?? []) as Metric[]);
-        setPosts((po.data ?? []) as Post[]);
+        setMetrics(m);
+        setPosts(po);
         setNarratives(nar.data ?? []);
         setLastPostDate(((last.data?.[0] as any)?.posted_at ?? null)?.slice?.(0, 10) ?? null);
       }
