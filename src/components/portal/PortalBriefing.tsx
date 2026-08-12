@@ -780,7 +780,7 @@ export default function PortalBriefing({
           </div>
         ) : (
           <p className="text-xs text-muted-foreground italic">
-            Sin temas pendientes: cada nota negativa de la semana tuvo publicación de la dependencia dentro de 48 horas.
+            Sin temas abiertos: cada nota negativa del corte tuvo publicación de la dependencia dentro de 48 horas.
           </p>
         )}
       </Card>
