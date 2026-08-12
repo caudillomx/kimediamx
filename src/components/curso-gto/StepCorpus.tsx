@@ -173,16 +173,18 @@ export const StepCorpus = ({ initial, onSave, onBack, sesionId, participanteId }
       toast.error("No se pudo eliminar el archivo.");
       return;
     }
-    await supabase.storage.from("gto-corpus").remove([row.storage_path]);
+    await supabase.functions.invoke("gto-corpus-file", {
+      body: { action: "delete", sesion_id: sesionId, participante_id: participanteId, path: row.storage_path },
+    });
     setUploads((prev) => prev.filter((u) => u.id !== row.id));
     toast.success("Archivo eliminado.");
   };
 
   const handleDownload = async (row: UploadRow) => {
-    const { data, error } = await supabase.storage
-      .from("gto-corpus")
-      .createSignedUrl(row.storage_path, 60);
-    if (error || !data) {
+    const { data, error } = await supabase.functions.invoke("gto-corpus-file", {
+      body: { action: "download-url", sesion_id: sesionId, participante_id: participanteId, path: row.storage_path },
+    });
+    if (error || !data?.signedUrl) {
       toast.error("No se pudo abrir el archivo.");
       return;
     }
