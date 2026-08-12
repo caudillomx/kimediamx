@@ -10,6 +10,7 @@ import {
   fmtNum, fmtPct, pctDelta, ENFOQUE_LABEL,
   type Enfoque, type Dependencia,
 } from "./useGabineteData";
+import { mxDay } from "@/lib/tz";
 
 type Gab = ReturnType<typeof import("./useGabineteData").useGabineteData>;
 
@@ -43,8 +44,8 @@ export default function PortalDependenciaFicha({
 
   const inWindow = (iso: string | null | undefined) => {
     if (!ventana || !iso) return !ventana;
-    const d = iso.slice(0, 10);
-    return d >= ventana.from && d <= ventana.to;
+    const d = mxDay(iso);
+    return !!d && d >= ventana.from && d <= ventana.to;
   };
   const corteLabel = ventana ? (ventanaLabel || `${ventana.from} — ${ventana.to}`) : "periodo completo";
   const prensaBase = mentionsOverride ?? mentions;
