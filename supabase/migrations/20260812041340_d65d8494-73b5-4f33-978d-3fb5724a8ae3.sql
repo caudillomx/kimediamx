@@ -1,0 +1,1 @@
+ALTER TABLE public.client_portal_benchmark_follower_daily ALTER COLUMN delta TYPE double precision USING delta::double precision;
