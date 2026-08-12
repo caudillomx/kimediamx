@@ -98,7 +98,7 @@ export function parseWhatsappTxt(text: string): ParsedEntry[] {
       return { entry_date, msgs: ordered };
     })
     .filter(({ msgs }) => msgs.length > 0)
-    .sort(([a], [b]) => (a < b ? 1 : -1))
+    .sort((a, b) => (a.entry_date < b.entry_date ? 1 : -1))
     .map(({ entry_date, msgs }) => ({
       entry_date,
       content_md: msgs
