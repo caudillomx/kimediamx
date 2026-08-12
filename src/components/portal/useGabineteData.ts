@@ -146,7 +146,9 @@ export function useGabineteData(clientId: string, pressDays = 30) {
         supabase.from("client_portal_benchmark_periods").select("id,period_label,period_start,period_end").eq("client_id", clientId).order("period_start"),
       ]);
       if (cancelled) return;
-      const ps = (per.data ?? []) as Period[];
+      // La etiqueta se recalcula desde las fechas reales del periodo: si la carga
+      // abarca dos meses, el selector debe decirlo en vez de mostrar sólo el primero.
+      const ps = ((per.data ?? []) as Period[]).map((p) => ({ ...p, period_label: periodLabelOf(p) }));
       setDependencias((dep.data ?? []) as Dependencia[]);
       setCompetitors((comp.data ?? []) as Competitor[]);
       setPeriods(ps);
