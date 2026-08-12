@@ -3736,6 +3736,10 @@ export type Database = {
       }
     }
     Functions: {
+      brand_kit_apply_patch: {
+        Args: { _id: string; _patch: Json; _token: string }
+        Returns: undefined
+      }
       fpk_to_num: { Args: { v: string }; Returns: number }
       get_brand_kit_by_token: {
         Args: { _id: string; _token: string }

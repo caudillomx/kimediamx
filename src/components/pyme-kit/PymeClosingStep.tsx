@@ -9,13 +9,14 @@ import { toast } from "@/hooks/use-toast";
 
 interface Props {
   profileId: string | null;
+  profileToken?: string | null;
   companyName: string;
   industry: string;
   email: string;
   socialHandle: string;
 }
 
-export function PymeClosingStep({ profileId, companyName, industry, email, socialHandle }: Props) {
+export function PymeClosingStep({ profileId, profileToken, companyName, industry, email, socialHandle }: Props) {
   const [consentEmail, setConsentEmail] = useState(false);
   const [consentWhatsapp, setConsentWhatsapp] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -24,10 +25,11 @@ export function PymeClosingStep({ profileId, companyName, industry, email, socia
   const handleSubmit = async () => {
     setSending(true);
     try {
-      if (profileId) {
-        await supabase.from("brand_kit_profiles").update({
-          consent_email: consentEmail, consent_whatsapp: consentWhatsapp,
-        }).eq("id", profileId);
+      if (profileId && profileToken) {
+        await supabase.rpc("brand_kit_apply_patch", {
+          _id: profileId, _token: profileToken,
+          _patch: { consent_email: consentEmail, consent_whatsapp: consentWhatsapp } as any,
+        });
       }
 
       await supabase.functions.invoke("send-brief-summary", {

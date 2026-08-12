@@ -19,17 +19,25 @@ const STEP_ICONS = [Building2, Activity, Search, Lightbulb, Layers, Star];
 export default function KitPyme() {
   const [step, setStep] = useState<Step>("welcome");
   const [profileId, setProfileId] = useState<string | null>(null);
+  const [profileToken, setProfileToken] = useState<string | null>(null);
   const [participantInfo, setParticipantInfo] = useState<PymeParticipantInfo | null>(null);
 
   const currentIdx = stepOrder.indexOf(step);
   const progress = (currentIdx / (stepOrder.length - 1)) * 100;
 
+  // El token es la credencial del briefing: sin él nadie más puede editar la ficha.
+  const patchProfile = async (patch: Record<string, unknown>) => {
+    if (!profileId || !profileToken) return;
+    await supabase.rpc("brand_kit_apply_patch", { _id: profileId, _token: profileToken, _patch: patch as any });
+  };
+
   const handleWelcome = async (info: PymeParticipantInfo) => {
     setParticipantInfo(info);
     try {
       const newId = crypto.randomUUID();
+      const newToken = `${crypto.randomUUID()}${crypto.randomUUID()}`.replace(/-/g, "");
       const { error } = await supabase.from("brand_kit_profiles").insert({
-        id: newId,
+        id: newId, profile_token: newToken,
         full_name: info.fullName, email: info.email, profession: "Empresa",
         social_handle: info.socialHandle, industry: info.industry, main_channel: info.mainChannel,
         approx_followers: info.approxFollowers, has_website: info.hasWebsite, kit_type: "pyme",
@@ -37,6 +45,7 @@ export default function KitPyme() {
       });
       if (error) throw error;
       setProfileId(newId);
+      setProfileToken(newToken);
     } catch {
       toast({ title: "Error guardando datos", variant: "destructive" });
     }
@@ -44,44 +53,34 @@ export default function KitPyme() {
   };
 
   const handleDiagnostic = async (score: number, level: string, extras: { frequency: string; perception: string; goal: string }) => {
-    if (profileId) {
-      await supabase.from("brand_kit_profiles").update({
-        diagnostic_score: score, diagnostic_level: level,
-        publication_frequency: extras.frequency, self_perception: extras.perception, goal_90_days: extras.goal,
-      }).eq("id", profileId);
-    }
+    await patchProfile({
+      diagnostic_score: score, diagnostic_level: level,
+      publication_frequency: extras.frequency, self_perception: extras.perception, goal_90_days: extras.goal,
+    });
     setStep("competitive");
   };
 
   const handleCompetitive = async (data: { competitors: string; marketPosition: string }) => {
-    if (profileId) {
-      await supabase.from("brand_kit_profiles").update({
-        competitors: data.competitors, market_position: data.marketPosition,
-      }).eq("id", profileId);
-    }
+    await patchProfile({ competitors: data.competitors, market_position: data.marketPosition });
     setStep("identity");
   };
 
   const handleIdentity = async (data: { valueProposition: string; targetAudience: string; differentiator: string; brandTone: string }) => {
-    if (profileId) {
-      await supabase.from("brand_kit_profiles").update({
-        value_proposition: data.valueProposition, target_audience: data.targetAudience,
-        differentiator: data.differentiator, brand_tone: data.brandTone,
-      }).eq("id", profileId);
-    }
+    await patchProfile({
+      value_proposition: data.valueProposition, target_audience: data.targetAudience,
+      differentiator: data.differentiator, brand_tone: data.brandTone,
+    });
     setStep("context");
   };
 
   const handleContext = async (data: ContentContextData) => {
-    if (profileId) {
-      await supabase.from("brand_kit_profiles").update({
-        content_pillars: data.contentPillars as any,
-        reference_accounts: data.referenceAccounts || null,
-        content_restrictions: data.contentRestrictions || null,
-        key_dates: data.keyDates || null,
-        preferred_formats: data.preferredFormats as any,
-      }).eq("id", profileId);
-    }
+    await patchProfile({
+      content_pillars: data.contentPillars,
+      reference_accounts: data.referenceAccounts || null,
+      content_restrictions: data.contentRestrictions || null,
+      key_dates: data.keyDates || null,
+      preferred_formats: data.preferredFormats,
+    });
     setStep("closing");
   };
 
@@ -132,7 +131,7 @@ export default function KitPyme() {
             {step === "identity" && <PymeIdentityStep key="identity" onNext={handleIdentity} />}
             {step === "context" && <ContentContextStep key="context" onNext={handleContext} onBack={() => setStep("identity")} />}
             {step === "closing" && participantInfo && (
-              <PymeClosingStep key="closing" profileId={profileId}
+              <PymeClosingStep key="closing" profileId={profileId} profileToken={profileToken}
                 companyName={participantInfo.companyName} industry={participantInfo.industry}
                 email={participantInfo.email} socialHandle={participantInfo.socialHandle} />
             )}

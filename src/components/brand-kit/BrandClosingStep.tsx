@@ -9,6 +9,7 @@ import { toast } from "@/hooks/use-toast";
 
 interface BrandClosingStepProps {
   profileId: string | null;
+  profileToken?: string | null;
   name: string;
   profession: string;
   industry: string;
@@ -17,7 +18,7 @@ interface BrandClosingStepProps {
 }
 
 export function BrandClosingStep({
-  profileId, name, profession, industry, email, socialHandle,
+  profileId, profileToken, name, profession, industry, email, socialHandle,
 }: BrandClosingStepProps) {
   const [consentEmail, setConsentEmail] = useState(false);
   const [consentWhatsapp, setConsentWhatsapp] = useState(false);
@@ -27,10 +28,11 @@ export function BrandClosingStep({
   const handleSubmit = async () => {
     setSending(true);
     try {
-      if (profileId) {
-        await supabase.from("brand_kit_profiles").update({
-          consent_email: consentEmail, consent_whatsapp: consentWhatsapp,
-        }).eq("id", profileId);
+      if (profileId && profileToken) {
+        await supabase.rpc("brand_kit_apply_patch", {
+          _id: profileId, _token: profileToken,
+          _patch: { consent_email: consentEmail, consent_whatsapp: consentWhatsapp } as any,
+        });
       }
 
       // Send brief summary email
