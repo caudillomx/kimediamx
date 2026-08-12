@@ -340,6 +340,8 @@ Deno.serve(async (req) => {
       sentiment_counts: (a.sentiment_counts && typeof a.sentiment_counts === 'object') ? a.sentiment_counts : {},
       media_mentions: Array.isArray(a.media_mentions) ? a.media_mentions.slice(0, 40) : [],
       social_mentions: Array.isArray(a.social_mentions) ? a.social_mentions.slice(0, 40) : [],
+      scope_counts: (a.scope_counts && typeof a.scope_counts === 'object') ? a.scope_counts : {},
+      national_context: Array.isArray(a.national_context) ? a.national_context.slice(0, 12) : [],
       analyzed_at: new Date().toISOString(),
     });
 
