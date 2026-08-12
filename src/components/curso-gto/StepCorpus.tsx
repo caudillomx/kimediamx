@@ -121,11 +121,16 @@ export const StepCorpus = ({ initial, onSave, onBack, sesionId, participanteId }
     }
     setUploadingFor(docId);
     try {
-      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-      const path = `${participanteId}/${docId}/${Date.now()}_${safeName}`;
+      // El bucket ya no acepta escrituras directas: el servidor valida el par
+      // sesión+participante y devuelve una URL firmada de subida.
+      const { data: signed, error: signErr } = await supabase.functions.invoke("gto-corpus-file", {
+        body: { action: "upload-url", sesion_id: sesionId, participante_id: participanteId, doc_tipo: docId, file_name: file.name },
+      });
+      if (signErr || !signed?.path) throw signErr ?? new Error("No se pudo preparar la subida.");
+      const path = signed.path as string;
       const { error: upErr } = await supabase.storage
         .from("gto-corpus")
-        .upload(path, file, { upsert: false });
+        .uploadToSignedUrl(path, signed.token as string, file);
       if (upErr) throw upErr;
       const { data: row, error: insErr } = await supabase
         .from("gto_corpus_uploads")
