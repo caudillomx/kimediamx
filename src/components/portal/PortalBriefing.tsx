@@ -751,7 +751,7 @@ export default function PortalBriefing({
         <div className="flex items-center gap-2">
           <Newspaper className="w-4 h-4 text-amber-500" />
           <span className="text-[11px] uppercase tracking-widest text-muted-foreground">
-            Prensa sin respuesta · {rangoLabel}
+            Temas abiertos en la conversación · {rangoLabel}
           </span>
         </div>
         {winLoading ? (
@@ -791,14 +791,24 @@ export default function PortalBriefing({
           <div className="flex items-center gap-2">
             <Copy className="w-4 h-4 text-primary" />
             <span className="text-[11px] uppercase tracking-widest text-muted-foreground">
-              Resúmenes listos para enviar
+              Resúmenes por dependencia · listos para enviar
+            </span>
+            <span className="ml-auto text-[10px] text-muted-foreground">
+              {focusDepId ? "Dependencia en foco" : "Las 3 con más señales del corte"}
             </span>
           </div>
           <div className="grid gap-3 md:grid-cols-3">
             {bloques.map((b) => (
-              <div key={b.dep.id} className="rounded-xl border border-border/60 p-3 space-y-2">
-                <div className="text-xs font-semibold truncate">{b.dep.nombre}</div>
-                <pre className="text-[10px] leading-snug text-muted-foreground whitespace-pre-wrap max-h-32 overflow-hidden font-sans">
+              <div key={b.dep.id} className="rounded-xl border border-border/60 p-3 space-y-2 flex flex-col">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold truncate">{b.dep.nombre}</span>
+                  {b.negativas > 0 && (
+                    <Badge variant="outline" className="text-[9px] bg-rose-500/10 text-rose-600 border-rose-500/30 shrink-0">
+                      {b.negativas} neg.
+                    </Badge>
+                  )}
+                </div>
+                <pre className="text-[10px] leading-snug text-muted-foreground whitespace-pre-wrap max-h-56 overflow-y-auto font-sans flex-1">
                   {b.texto}
                 </pre>
                 <Button size="sm" variant="outline" className="h-7 text-xs w-full" onClick={() => copiar(b.texto)}>
