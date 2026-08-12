@@ -90,7 +90,49 @@ function toStr(v: unknown): string | null {
 
 async function readWorkbook(file: File) {
   const buf = await file.arrayBuffer();
-  return XLSX.read(buf, { type: "array", cellDates: true });
+  // Sin `cellDates`: las fechas llegan como serial de Excel (número), que es
+  // inequívoco. Con Date, SheetJS aplica la zona del navegador y las horas
+  // terminaban desplazadas al guardarse.
+  return XLSX.read(buf, { type: "array" });
+}
+
+/**
+ * FanpageKarma exporta la hora local de la cuenta (México). Convertimos el
+ * serial de Excel a su hora de reloj y la anclamos explícitamente a -06:00
+ * para que la marca de tiempo guardada corresponda al momento real de publicación.
+ */
+const MX_OFFSET = "-06:00";
+
+function wallClockToIso(y: number, mo: number, d: number, h: number, mi: number, s: number) {
+  const p = (x: number) => String(x).padStart(2, "0");
+  return `${y}-${p(mo)}-${p(d)}T${p(h)}:${p(mi)}:${p(s)}${MX_OFFSET}`;
+}
+
+export function parsePostedAt(v: unknown): string | null {
+  if (v == null || v === "") return null;
+  if (typeof v === "number" && Number.isFinite(v)) {
+    const ms = Math.round((v - 25569) * 86400000);
+    const d = new Date(ms); // sus componentes UTC son la hora de reloj del archivo
+    return wallClockToIso(
+      d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate(),
+      d.getUTCHours(), d.getUTCMinutes(), d.getUTCSeconds(),
+    );
+  }
+  if (v instanceof Date && !Number.isNaN(v.getTime())) {
+    return wallClockToIso(
+      v.getFullYear(), v.getMonth() + 1, v.getDate(),
+      v.getHours(), v.getMinutes(), v.getSeconds(),
+    );
+  }
+  const s = String(v).trim();
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{1,2}):(\d{2})(?::(\d{2}))?/);
+  if (m) return wallClockToIso(+m[1], +m[2], +m[3], +m[4], +m[5], +(m[6] ?? 0));
+  m = s.match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})(?:[T ,]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+  if (m) {
+    const year = m[3].length === 2 ? 2000 + +m[3] : +m[3];
+    return wallClockToIso(year, +m[2], +m[1], +(m[4] ?? 0), +(m[5] ?? 0), +(m[6] ?? 0));
+  }
+  return null;
 }
 
 // FanpageKarma sheets: row index 1 col F contains "1 ene 2026 - 31 ene 2026",
@@ -209,10 +251,7 @@ export async function parsePosts(file: File): Promise<ParsedFile<PostRow>> {
     const r = rowToObject(header, raw);
     const profile = toStr(r["Profile"]);
     if (!profile) continue;
-    let postedAt: string | null = null;
-    const d = r["Date"];
-    if (d instanceof Date) postedAt = d.toISOString();
-    else if (typeof d === "string" && d) postedAt = new Date(d.replace(" ", "T")).toISOString();
+    const postedAt = parsePostedAt(r["Date"] ?? r["Fecha"]);
     rows.push({
       profile,
       network: normalizeNetwork(r["Network"]),

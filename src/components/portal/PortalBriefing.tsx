@@ -16,6 +16,7 @@ import {
   useGabineteData, ENFOQUE_LABEL, fmtNum, fmtPct, pctDelta,
   type Enfoque, type Dependencia,
 } from "./useGabineteData";
+import { mxDay } from "@/lib/tz";
 import PortalDependenciaFicha from "./PortalDependenciaFicha";
 
 const isoToday = () => new Date().toISOString().slice(0, 10);
@@ -387,7 +388,9 @@ export default function PortalBriefing({
       const dep = depOfCompetitor.get(p.competitor_id);
       if (!dep) continue;
       const arr = m.get(dep) ?? [];
-      arr.push(p.posted_at.slice(0, 10));
+      const dia = mxDay(p.posted_at);
+      if (!dia) continue;
+      arr.push(dia);
       m.set(dep, arr);
     }
     return m;

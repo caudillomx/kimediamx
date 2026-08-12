@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { inMxRange } from "@/lib/tz";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -325,7 +326,7 @@ export default function PortalDescargas({
     const topPosts = posts
       .filter((p) => periodIds.includes(p.period_id) && p.competitor_id && compById.has(p.competitor_id))
       .filter((p) => cut !== "semanal"
-        || (p.posted_at ? p.posted_at.slice(0, 10) >= weekFrom && p.posted_at.slice(0, 10) <= weekTo : false))
+        || inMxRange(p.posted_at, weekFrom, weekTo))
       .sort((a, b) => (b.interactions ?? 0) - (a.interactions ?? 0))
       .slice(0, 6)
       .map((p) => ({

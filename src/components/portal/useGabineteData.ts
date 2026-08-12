@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { mxDay, mxRangeBounds } from "@/lib/tz";
 import { nameTokens } from "@/lib/entityNames";
 
 export type Dependencia = {
@@ -293,8 +294,8 @@ export function useGabineteData(clientId: string, pressDays = 30) {
         .from("client_portal_benchmark_posts")
         .select("period_id,competitor_id,network,profile_name,posted_at,message,interactions,link")
         .in("period_id", ids)
-        .gte("posted_at", `${from}T00:00:00`)
-        .lte("posted_at", `${to}T23:59:59`)
+        .gte("posted_at", mxRangeBounds(from, to).gte)
+        .lte("posted_at", mxRangeBounds(from, to).lte)
         .order("posted_at", { ascending: true })
         .range(offset, offset + PAGE - 1);
       if (error) break;
@@ -356,8 +357,8 @@ export function useGabineteData(clientId: string, pressDays = 30) {
     const acc = new Map<string, { n: number; sum: number; mejor: Post | null }>();
     for (const p of (source ?? posts)) {
       if (!p.posted_at || !p.competitor_id) continue;
-      const fecha = p.posted_at.slice(0, 10);
-      if (fecha < from || fecha > to) continue;
+      const fecha = mxDay(p.posted_at);
+      if (!fecha || fecha < from || fecha > to) continue;
       const dep = depOfCompetitor.get(p.competitor_id);
       if (!dep) continue;
       const tipo = typeOfCompetitor.get(p.competitor_id) ?? "institucional";
