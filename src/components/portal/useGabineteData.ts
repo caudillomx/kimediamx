@@ -71,16 +71,32 @@ const MES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct
 const MES_LARGO = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
 
 /**
- * Etiqueta determinista de un periodo a partir de sus fechas reales. Evita que
- * una carga que abarca dos meses (p. ej. 1 jul – 12 ago) se muestre como un solo
- * mes y esconda los datos más recientes.
+ * Etiqueta determinista y homogénea: todos los periodos se nombran por el mes
+ * al que pertenece la mayor parte de sus días. Así el selector nunca mezcla
+ * "Junio 2026" con "01 jul – 12 ago 2026"; el rango exacto se muestra aparte.
  */
 export function periodLabelOf(p: { period_start: string; period_end: string; period_label?: string }) {
   const s = new Date(p.period_start + "T00:00:00");
   const e = new Date(p.period_end + "T00:00:00");
   if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) return p.period_label ?? "—";
-  const mismoMes = s.getFullYear() === e.getFullYear() && s.getMonth() === e.getMonth();
-  if (mismoMes) return `${MES_LARGO[s.getMonth()]} ${s.getFullYear()}`;
+  // Mes con más días cubiertos dentro del rango.
+  const dias = new Map<string, number>();
+  const cur = new Date(s);
+  while (cur <= e) {
+    const k = `${cur.getFullYear()}-${cur.getMonth()}`;
+    dias.set(k, (dias.get(k) ?? 0) + 1);
+    cur.setDate(cur.getDate() + 1);
+  }
+  const [k] = Array.from(dias.entries()).sort((a, b) => b[1] - a[1])[0] ?? [`${s.getFullYear()}-${s.getMonth()}`];
+  const [y, m] = k.split("-").map(Number);
+  return `${MES_LARGO[m]} ${y}`;
+}
+
+/** Rango exacto del periodo, para mostrarlo como apoyo debajo de la etiqueta. */
+export function periodRangeOf(p: { period_start: string; period_end: string }) {
+  const s = new Date(p.period_start + "T00:00:00");
+  const e = new Date(p.period_end + "T00:00:00");
+  if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) return "";
   const d = (x: Date) => `${String(x.getDate()).padStart(2, "0")} ${MES[x.getMonth()]}`;
   return `${d(s)} – ${d(e)} ${e.getFullYear()}`;
 }
