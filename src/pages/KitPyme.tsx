@@ -131,7 +131,7 @@ export default function KitPyme() {
             {step === "identity" && <PymeIdentityStep key="identity" onNext={handleIdentity} />}
             {step === "context" && <ContentContextStep key="context" onNext={handleContext} onBack={() => setStep("identity")} />}
             {step === "closing" && participantInfo && (
-              <PymeClosingStep key="closing" profileId={profileId}
+              <PymeClosingStep key="closing" profileId={profileId} profileToken={profileToken}
                 companyName={participantInfo.companyName} industry={participantInfo.industry}
                 email={participantInfo.email} socialHandle={participantInfo.socialHandle} />
             )}

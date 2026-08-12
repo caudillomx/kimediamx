@@ -127,7 +127,7 @@ export default function KitMarcaPersonal() {
             {step === "identity" && <BrandIdentityStep key="identity" onNext={handleIdentity} />}
             {step === "context" && <ContentContextStep key="context" onNext={handleContext} onBack={() => setStep("identity")} />}
             {step === "closing" && participantInfo && (
-              <BrandClosingStep key="closing" profileId={profileId}
+              <BrandClosingStep key="closing" profileId={profileId} profileToken={profileToken}
                 name={participantInfo.fullName} profession={participantInfo.profession}
                 industry={participantInfo.industry} email={participantInfo.email}
                 socialHandle={participantInfo.socialHandle} />
