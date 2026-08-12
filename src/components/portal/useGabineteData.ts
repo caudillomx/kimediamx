@@ -70,26 +70,11 @@ export function fmtNum(v: number | null | undefined) {
 const MES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
 const MES_LARGO = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
 
-/**
- * Etiqueta determinista y homogénea: todos los periodos se nombran por el mes
- * al que pertenece la mayor parte de sus días. Así el selector nunca mezcla
- * "Junio 2026" con "01 jul – 12 ago 2026"; el rango exacto se muestra aparte.
- */
+/** Etiqueta mensual: una carga parcial pertenece al mes de su fecha de corte. */
 export function periodLabelOf(p: { period_start: string; period_end: string; period_label?: string }) {
-  const s = new Date(p.period_start + "T00:00:00");
   const e = new Date(p.period_end + "T00:00:00");
-  if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) return p.period_label ?? "—";
-  // Mes con más días cubiertos dentro del rango.
-  const dias = new Map<string, number>();
-  const cur = new Date(s);
-  while (cur <= e) {
-    const k = `${cur.getFullYear()}-${cur.getMonth()}`;
-    dias.set(k, (dias.get(k) ?? 0) + 1);
-    cur.setDate(cur.getDate() + 1);
-  }
-  const [k] = Array.from(dias.entries()).sort((a, b) => b[1] - a[1])[0] ?? [`${s.getFullYear()}-${s.getMonth()}`];
-  const [y, m] = k.split("-").map(Number);
-  return `${MES_LARGO[m]} ${y}`;
+  if (Number.isNaN(e.getTime())) return p.period_label ?? "—";
+  return MES_LARGO[e.getMonth()];
 }
 
 /** Rango exacto del periodo, para mostrarlo como apoyo debajo de la etiqueta. */
@@ -162,17 +147,9 @@ export function useGabineteData(clientId: string, pressDays = 30) {
         supabase.from("client_portal_benchmark_periods").select("id,period_label,period_start,period_end").eq("client_id", clientId).order("period_start"),
       ]);
       if (cancelled) return;
-      // Etiqueta homogénea por mes dominante. Si dos cargas caen en el mismo mes
-      // se desambigua con el rango para no fusionarlas silenciosamente.
-      const base = ((per.data ?? []) as Period[]).map((p) => ({ ...p, period_label: periodLabelOf(p) }));
-      const repetidas = new Set(
-        base.map((p) => p.period_label).filter((l, i, arr) => arr.indexOf(l) !== i),
-      );
-      const ps = base.map((p) =>
-        repetidas.has(p.period_label)
-          ? { ...p, period_label: `${p.period_label} · ${periodRangeOf(p)}` }
-          : p,
-      );
+      // Cada carga se agrupa por el mes de su fecha de corte. Si hay varias
+      // cargas del mismo mes, sus IDs permanecen bajo una sola opción mensual.
+      const ps = ((per.data ?? []) as Period[]).map((p) => ({ ...p, period_label: periodLabelOf(p) }));
       setDependencias((dep.data ?? []) as Dependencia[]);
       setCompetitors((comp.data ?? []) as Competitor[]);
       setPeriods(ps);
