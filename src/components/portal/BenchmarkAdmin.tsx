@@ -163,7 +163,17 @@ export default function BenchmarkAdmin({ clientId, clientName, scope = "general"
         preview = { ...preview, period: p.period, posts: p.rows };
         p.rows.forEach((r) => addKey(r.profile, r.network, r.profileExternalId, null, null));
       }
-      const existingKeys = new Set(competitors.map((c) => `${c.name.toLowerCase()}|${c.network.toLowerCase()}`));
+      // A profile is globally unique per client+network, regardless of the current scope.
+      // Older imports may have left Guanajuato profiles under "general"; include those
+      // here so the preview does not incorrectly mark them as new.
+      const { data: allClientCompetitors, error: competitorsError } = await supabase
+        .from("client_portal_benchmark_competitors")
+        .select("name,network")
+        .eq("client_id", clientId);
+      if (competitorsError) throw competitorsError;
+      const existingKeys = new Set(
+        (allClientCompetitors ?? []).map((c) => `${c.name.toLowerCase()}|${c.network.toLowerCase()}`)
+      );
       preview.profileKeys = Array.from(profileKeys.values()).map((k) => ({
         ...k,
         isNew: !existingKeys.has(`${k.profile.toLowerCase()}|${k.network.toLowerCase()}`),
@@ -206,8 +216,19 @@ export default function BenchmarkAdmin({ clientId, clientName, scope = "general"
         .single();
       if (pErr) throw pErr;
 
-      // 2) auto-register competitors
-      const toCreate = parsedPreview.profileKeys.filter((k) => k.isNew);
+      // 2) auto-register competitors. Recheck every client scope at save time so a
+      // stale preview or a legacy "general" profile cannot cause a duplicate insert.
+      const { data: allExisting, error: existingError } = await supabase
+        .from("client_portal_benchmark_competitors")
+        .select("*")
+        .eq("client_id", clientId);
+      if (existingError) throw existingError;
+      const allExistingMap = new Map(
+        (allExisting ?? []).map((c: any) => [`${c.name.toLowerCase()}|${c.network.toLowerCase()}`, c])
+      );
+      const toCreate = parsedPreview.profileKeys.filter(
+        (k) => !allExistingMap.has(`${k.profile.toLowerCase()}|${k.network.toLowerCase()}`)
+      );
       let nextColor = competitors.length;
       if (toCreate.length > 0) {
         const rows = toCreate.map((k, i) => ({
@@ -228,6 +249,18 @@ export default function BenchmarkAdmin({ clientId, clientName, scope = "general"
         }));
         const { error: cErr } = await supabase.from("client_portal_benchmark_competitors").insert(rows);
         if (cErr) throw cErr;
+      }
+
+      const legacyIds = parsedPreview.profileKeys
+        .map((k) => allExistingMap.get(`${k.profile.toLowerCase()}|${k.network.toLowerCase()}`))
+        .filter((c: any) => c && c.scope !== scope)
+        .map((c: any) => c.id as string);
+      if (legacyIds.length > 0) {
+        const { error: scopeError } = await supabase
+          .from("client_portal_benchmark_competitors")
+          .update({ scope })
+          .in("id", legacyIds);
+        if (scopeError) throw scopeError;
       }
 
       // reload competitors to get IDs
