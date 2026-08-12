@@ -138,6 +138,23 @@ export default function PortalAnalysis({ clientId, fromDate, toDate, mode = "soc
     })();
   }, [clientId, fromDate, toDate]);
 
+  // Ámbito: separa lo que sí toca al cliente de la agenda nacional / de otras entidades
+  const scopeSummary = useMemo(() => {
+    const counts = { local: 0, nacional_impacto: 0, nacional_contexto: 0, otra_entidad: 0 };
+    const context: { date: string; title: string; detail?: string; why?: string; scope: string }[] = [];
+    for (const e of entries) {
+      const sc = (e.scope_counts ?? {}) as Record<string, any>;
+      for (const k of Object.keys(counts) as (keyof typeof counts)[]) counts[k] += Number(sc[k] ?? 0) || 0;
+      for (const n of (e.national_context ?? [])) {
+        if (!n?.title) continue;
+        context.push({ date: e.entry_date, title: n.title, detail: n.detail, why: n.why_excluded, scope: n.scope ?? "nacional_contexto" });
+      }
+    }
+    const relevant = counts.local + counts.nacional_impacto;
+    const excluded = counts.nacional_contexto + counts.otra_entidad;
+    return { counts, context: context.slice(0, 12), relevant, excluded, hasData: relevant + excluded > 0 };
+  }, [entries]);
+
   const volumeByDay = useMemo(() => {
     const map = new Map<string, { date: string; total: number; positivo: number; neutral: number; negativo: number; crisis: number }>();
     for (const e of entries) {
