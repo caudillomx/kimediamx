@@ -162,9 +162,17 @@ export function useGabineteData(clientId: string, pressDays = 30) {
         supabase.from("client_portal_benchmark_periods").select("id,period_label,period_start,period_end").eq("client_id", clientId).order("period_start"),
       ]);
       if (cancelled) return;
-      // La etiqueta se recalcula desde las fechas reales del periodo: si la carga
-      // abarca dos meses, el selector debe decirlo en vez de mostrar sólo el primero.
-      const ps = ((per.data ?? []) as Period[]).map((p) => ({ ...p, period_label: periodLabelOf(p) }));
+      // Etiqueta homogénea por mes dominante. Si dos cargas caen en el mismo mes
+      // se desambigua con el rango para no fusionarlas silenciosamente.
+      const base = ((per.data ?? []) as Period[]).map((p) => ({ ...p, period_label: periodLabelOf(p) }));
+      const repetidas = new Set(
+        base.map((p) => p.period_label).filter((l, i, arr) => arr.indexOf(l) !== i),
+      );
+      const ps = base.map((p) =>
+        repetidas.has(p.period_label)
+          ? { ...p, period_label: `${p.period_label} · ${periodRangeOf(p)}` }
+          : p,
+      );
       setDependencias((dep.data ?? []) as Dependencia[]);
       setCompetitors((comp.data ?? []) as Competitor[]);
       setPeriods(ps);
