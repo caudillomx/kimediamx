@@ -411,7 +411,9 @@ export default function PortalBriefing({
       .slice(0, 6);
   }, [winMentions, postDatesByDep, focusDepId, win.from, win.to]);
 
-  // ---------- Bloques listos para enviar a la dependencia ----------
+  // ---------- Resúmenes por dependencia, listos para enviar ----------
+  // Se arma con lo que sí está medido: prensa del corte, redes del periodo con su
+  // comparativo, actividad publicada y los temas abiertos. Sin frases de relleno.
   const bloques = useMemo(() => {
     const objetivo = focusDepId
       ? dependencias.filter((d) => d.id === focusDepId)
@@ -424,21 +426,86 @@ export default function PortalBriefing({
     return objetivo.map((d) => {
       const pr = press.byDep.get(d.id) ?? { total: 0, neg: 0 };
       const v = curr.get(d.id);
+      const p = prev.get(d.id);
+      const act = actNow.get(d.id);
+      const actAnt = actPrev.get(d.id);
       const pendientes = sinRespuesta.filter((r) => r.dep === d.id);
-      const lineas = [
-        `${d.nombre} — corte ${rangoLabel}`,
-        "",
-        `Prensa (${rangoLabel}): ${pr.total} menciones, ${pr.neg} con tono negativo o de crisis.`,
-        `Redes (${periodLabel || "periodo actual"}): ${fmtNum(v?.followers)} seguidores, engagement ${fmtPct(v?.engagement, 2)}${engAvg != null ? ` contra ${fmtPct(engAvg, 2)} de promedio del gabinete` : ""}.`,
-      ];
-      if (pendientes.length) {
-        lineas.push("", "Temas sin respuesta pública:");
-        pendientes.slice(0, 4).forEach((r) => lineas.push(`• ${r.fecha} · ${r.medio}: ${r.titular}`));
+      const pos = ranking.findIndex(([id]) => id === d.id);
+      const dFol = pctDelta(v?.followers, p?.followers);
+      const dInt = pctDelta(act?.interacciones ?? null, actAnt?.interacciones || null);
+      const medios = Array.from(
+        winMentions
+          .filter((r) => r.dep === d.id && r.fecha >= win.from && r.fecha <= win.to)
+          .reduce((m, r) => m.set(r.medio, (m.get(r.medio) ?? 0) + 1), new Map<string, number>())
+          .entries(),
+      ).sort((a, b) => b[1] - a[1]).slice(0, 3);
+
+      const L: string[] = [];
+      L.push(`${d.nombre}${d.titular ? ` · ${d.titular}` : ""}`);
+      L.push(`Corte ${rangoLabel}`);
+      L.push("");
+
+      L.push("PRENSA");
+      if (pr.total) {
+        L.push(`· ${pr.total} menciones, ${pr.neg} con tono negativo o de crisis (${Math.round((pr.neg / pr.total) * 100)}%).`);
+        if (medios.length) L.push(`· Medios con más cobertura: ${medios.map(([m, n]) => `${m} (${n})`).join(", ")}.`);
+      } else {
+        L.push("· Sin menciones registradas en el corte.");
       }
-      lineas.push("", "Sugerencia: agenda propia esta semana sobre los temas anteriores y sostener el ritmo de publicación.", "", "KiMedia");
-      return { dep: d, texto: lineas.join("\n"), pendientes: pendientes.length };
+
+      L.push("");
+      L.push(`REDES (${periodLabel || "periodo actual"})`);
+      if (v) {
+        L.push(
+          `· ${fmtNum(v.followers)} seguidores${dFol != null ? ` (${dFol >= 0 ? "+" : "−"}${fmtPct(Math.abs(dFol))} vs periodo previo)` : ""} en ${v.cuentas} cuenta${v.cuentas === 1 ? "" : "s"}.`,
+        );
+        L.push(
+          `· Engagement ${fmtPct(v.engagement, 2)}${engAvg != null ? ` contra ${fmtPct(engAvg, 2)} del gabinete` : ""}` +
+          `${pos >= 0 ? ` · posición #${pos + 1} de ${ranking.length}` : ""}.`,
+        );
+      } else {
+        L.push("· Sin métricas de cuenta cargadas para este periodo.");
+      }
+      if (act?.publicaciones) {
+        L.push(
+          `· ${act.publicaciones} publicaciones y ${fmtNum(act.interacciones)} interacciones en el corte` +
+          `${dInt != null ? ` (${dInt >= 0 ? "+" : "−"}${fmtPct(Math.abs(dInt))} vs corte previo)` : ""}.`,
+        );
+        if (act.mejor?.message) {
+          L.push(`· Mejor publicación (${fmtNum(act.mejor.interactions)} interacciones): "${act.mejor.message.replace(/\s+/g, " ").slice(0, 140)}".`);
+        }
+      } else {
+        L.push("· Sin publicaciones fechadas dentro del corte.");
+      }
+
+      if (pendientes.length) {
+        L.push("");
+        L.push("TEMAS ABIERTOS (sin publicación propia en 48 h)");
+        pendientes.slice(0, 4).forEach((r) => L.push(`· ${fmtDia(r.fecha)} · ${r.medio}: ${r.titular}`));
+      }
+
+      L.push("");
+      L.push("PRIORIDAD SUGERIDA");
+      if (pendientes.length) {
+        L.push(`· Responder o fijar agenda propia sobre ${pendientes.length} tema${pendientes.length === 1 ? "" : "s"} abierto${pendientes.length === 1 ? "" : "s"}, empezando por ${pendientes[0].medio}.`);
+      } else if (pr.neg >= 2) {
+        L.push("· Sostener mensajes propios: la cobertura negativa se concentró sin tema abierto pendiente.");
+      } else if (engAvg != null && v?.engagement != null && v.engagement < engAvg) {
+        L.push(`· Subir el desempeño en redes: está ${fmtPct((engAvg - v.engagement) / engAvg)} por debajo del promedio del gabinete.`);
+      } else if (!act?.publicaciones) {
+        L.push("· Recuperar ritmo de publicación: no hubo contenido propio en el corte.");
+      } else {
+        L.push("· Mantener el ritmo actual; no hay señales de riesgo en el corte.");
+      }
+      L.push("");
+      L.push("KiMedia · Inteligencia digital");
+
+      return { dep: d, texto: L.join("\n"), pendientes: pendientes.length, negativas: pr.neg };
     });
-  }, [focusDepId, dependencias, press, depById, curr, engAvg, periodLabel, sinRespuesta, rangoLabel]);
+  }, [
+    focusDepId, dependencias, press, depById, curr, prev, actNow, actPrev, engAvg,
+    periodLabel, sinRespuesta, rangoLabel, ranking, winMentions, win.from, win.to,
+  ]);
 
   const copiar = async (texto: string) => {
     try {
@@ -684,7 +751,7 @@ export default function PortalBriefing({
         <div className="flex items-center gap-2">
           <Newspaper className="w-4 h-4 text-amber-500" />
           <span className="text-[11px] uppercase tracking-widest text-muted-foreground">
-            Prensa sin respuesta · {rangoLabel}
+            Temas abiertos en la conversación · {rangoLabel}
           </span>
         </div>
         {winLoading ? (
@@ -713,7 +780,7 @@ export default function PortalBriefing({
           </div>
         ) : (
           <p className="text-xs text-muted-foreground italic">
-            Sin temas pendientes: cada nota negativa de la semana tuvo publicación de la dependencia dentro de 48 horas.
+            Sin temas abiertos: cada nota negativa del corte tuvo publicación de la dependencia dentro de 48 horas.
           </p>
         )}
       </Card>
@@ -724,14 +791,24 @@ export default function PortalBriefing({
           <div className="flex items-center gap-2">
             <Copy className="w-4 h-4 text-primary" />
             <span className="text-[11px] uppercase tracking-widest text-muted-foreground">
-              Resúmenes listos para enviar
+              Resúmenes por dependencia · listos para enviar
+            </span>
+            <span className="ml-auto text-[10px] text-muted-foreground">
+              {focusDepId ? "Dependencia en foco" : "Las 3 con más señales del corte"}
             </span>
           </div>
           <div className="grid gap-3 md:grid-cols-3">
             {bloques.map((b) => (
-              <div key={b.dep.id} className="rounded-xl border border-border/60 p-3 space-y-2">
-                <div className="text-xs font-semibold truncate">{b.dep.nombre}</div>
-                <pre className="text-[10px] leading-snug text-muted-foreground whitespace-pre-wrap max-h-32 overflow-hidden font-sans">
+              <div key={b.dep.id} className="rounded-xl border border-border/60 p-3 space-y-2 flex flex-col">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold truncate">{b.dep.nombre}</span>
+                  {b.negativas > 0 && (
+                    <Badge variant="outline" className="text-[9px] bg-rose-500/10 text-rose-600 border-rose-500/30 shrink-0">
+                      {b.negativas} neg.
+                    </Badge>
+                  )}
+                </div>
+                <pre className="text-[10px] leading-snug text-muted-foreground whitespace-pre-wrap max-h-56 overflow-y-auto font-sans flex-1">
                   {b.texto}
                 </pre>
                 <Button size="sm" variant="outline" className="h-7 text-xs w-full" onClick={() => copiar(b.texto)}>
