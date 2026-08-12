@@ -155,7 +155,12 @@ export function useGabineteData(clientId: string, pressDays = 30) {
 
       if (ps.length) {
         const ids = ps.map((p) => p.id);
-        const [m, po, nar, last] = await Promise.all([
+        // El histórico de publicaciones es muy grande (decenas de miles), así que
+        // se traen dos cortes acotados: las de mayor interacción de todo el
+        // histórico y las más recientes por fecha, que son las que alimentan los
+        // cortes semanales/quincenales del Inicio.
+        const desdeReciente = isoDaysAgo(150);
+        const [m, poTop, poRec, nar, last] = await Promise.all([
           fetchAllPages<Metric>((from, to) =>
             supabase.from("client_portal_benchmark_metrics")
               .select("period_id,competitor_id,network,followers,follower_growth_rate,engagement_rate,posts_per_day")
@@ -167,7 +172,14 @@ export function useGabineteData(clientId: string, pressDays = 30) {
               .select("period_id,competitor_id,network,profile_name,posted_at,message,interactions,link")
               .in("period_id", ids)
               .order("interactions", { ascending: false })
-              .range(from, to), 1000, 20000),
+              .range(from, to), 1000, 6000),
+          fetchAllPages<Post>((from, to) =>
+            supabase.from("client_portal_benchmark_posts")
+              .select("period_id,competitor_id,network,profile_name,posted_at,message,interactions,link")
+              .in("period_id", ids)
+              .gte("posted_at", desdeReciente)
+              .order("posted_at", { ascending: false })
+              .range(from, to), 1000, 8000),
           supabase.from("client_portal_benchmark_narratives")
             .select("profile_name,network,narratives").eq("client_id", clientId).limit(500),
           supabase.from("client_portal_benchmark_posts")
@@ -176,6 +188,14 @@ export function useGabineteData(clientId: string, pressDays = 30) {
             .order("posted_at", { ascending: false }).limit(1),
         ]);
         if (cancelled) return;
+        const vistos = new Set<string>();
+        const po: Post[] = [];
+        for (const p of [...poTop, ...poRec]) {
+          const k = `${p.period_id}|${p.competitor_id ?? p.profile_name}|${p.posted_at ?? ""}|${(p.message ?? "").slice(0, 60)}`;
+          if (vistos.has(k)) continue;
+          vistos.add(k);
+          po.push(p);
+        }
         setMetrics(m);
         setPosts(po);
         setNarratives(nar.data ?? []);
