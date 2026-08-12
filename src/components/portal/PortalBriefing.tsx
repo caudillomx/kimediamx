@@ -387,7 +387,9 @@ export default function PortalBriefing({
       const dep = depOfCompetitor.get(p.competitor_id);
       if (!dep) continue;
       const arr = m.get(dep) ?? [];
-      arr.push(p.posted_at.slice(0, 10));
+      const dia = mxDay(p.posted_at);
+      if (!dia) continue;
+      arr.push(dia);
       m.set(dep, arr);
     }
     return m;
