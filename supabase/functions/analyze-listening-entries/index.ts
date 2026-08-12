@@ -48,8 +48,30 @@ Devuelve SIEMPRE JSON estricto con estas claves:
     "topic": string,             // Tema del post (corto, minúsculas)
     "quote": string | null,      // Fragmento o cita del post (máx 240 chars)
     "sentiment": "positivo"|"neutral"|"negativo"|"crisis"
-  }]
+  }],
+  "scope_counts": { "local": number, "nacional_impacto": number, "nacional_contexto": number, "otra_entidad": number },
+  "national_context": [{ "title": string, "scope": "nacional_contexto"|"otra_entidad", "detail": string, "why_excluded": string }]
 }
+
+REGLA DE ÁMBITO (LA MÁS IMPORTANTE):
+La bitácora diaria mezcla agenda NACIONAL, agenda de OTRAS ENTIDADES y agenda LOCAL del cliente.
+Clasifica CADA ítem (nota, tuit, video, columna) en uno de estos cuatro ámbitos y agrégale el campo
+"scope" dentro de media_mentions y social_mentions, más "scope_reason" (una frase):
+  * "local": habla directamente del cliente, su gobierno, sus dependencias, sus funcionarios o hechos ocurridos en su territorio.
+  * "nacional_impacto": tema nacional o de otro estado que SÍ toca al cliente de forma explícita y verificable en el texto
+    (lo menciona, afecta su presupuesto, sus programas, a sus funcionarios o a su territorio). Si el texto no lo evidencia, NO uses este ámbito.
+  * "nacional_contexto": agenda nacional sin vínculo con el cliente (política federal, declaraciones presidenciales, economía nacional…).
+  * "otra_entidad": hechos de otro estado o municipio ajeno al cliente (por ejemplo la detención de un exgobernador de otro estado).
+
+Consecuencias obligatorias:
+- "total_mentions", "sentiment_counts", "sentiment", "sentiment_score", "urgency", "entities", "events",
+  "competitors", "key_quotes" y "summary" se calculan SOLO con los ítems "local" y "nacional_impacto".
+  NUNCA dejes que un tema nacional o de otro estado mueva el sentimiento o la urgencia del cliente.
+- Los ítems "nacional_contexto" y "otra_entidad" van en "national_context" (máx 12), explicando en "why_excluded"
+  por qué no afectan al cliente. También se conservan en media_mentions/social_mentions con su "scope".
+- "scope_counts" cuenta los ítems de cada ámbito y debe cuadrar con la clasificación anterior.
+- Ante la duda de si un tema nacional golpea al cliente, elige "nacional_contexto". Preferimos subestimar el impacto antes que inventarlo.
+- "summary": primero lo local; si hay contexto nacional relevante, ciérralo con una frase separada que lo marque como contexto.
 
 Reglas duras:
 - Devuelve arrays vacíos si no hay datos, NUNCA inventes nombres, canales ni citas.
@@ -197,8 +219,33 @@ async function analyzeOne(entry: Entry) {
   const raw = j?.choices?.[0]?.message?.content ?? '{}';
   const parsed = JSON.parse(raw);
 
-  // Override con totales declarados explícitamente en el texto (fuente de verdad)
-  const declared = extractDeclaredTotals(entry.content_md);
+  // Ámbito: normaliza los scopes por ítem y recalcula scope_counts de forma determinista
+  const SCOPES = ['local', 'nacional_impacto', 'nacional_contexto', 'otra_entidad'] as const;
+  const normScope = (s: any) => {
+    const v = String(s ?? '').toLowerCase().trim();
+    return (SCOPES as readonly string[]).includes(v) ? v : 'local';
+  };
+  const scopeCounts: Record<string, number> = { local: 0, nacional_impacto: 0, nacional_contexto: 0, otra_entidad: 0 };
+  let classified = 0;
+  for (const key of ['media_mentions', 'social_mentions']) {
+    if (!Array.isArray(parsed[key])) continue;
+    parsed[key] = parsed[key].map((it: any) => {
+      const hadScope = typeof it?.scope === 'string';
+      const scope = normScope(it?.scope);
+      if (hadScope) classified++;
+      scopeCounts[scope]++;
+      return { ...it, scope };
+    });
+  }
+  parsed.scope_counts = classified > 0 ? scopeCounts : (parsed.scope_counts ?? {});
+  parsed.national_context = Array.isArray(parsed.national_context)
+    ? parsed.national_context.slice(0, 12).map((n: any) => ({ ...n, scope: normScope(n?.scope) }))
+    : [];
+
+  // Si el análisis distinguió ámbitos, los totales del cliente NO se sobrescriben con los
+  // totales declarados en la bitácora (esos incluyen la agenda nacional completa).
+  const scopeAware = classified > 0 && (scopeCounts.nacional_contexto + scopeCounts.otra_entidad) > 0;
+  const declared = scopeAware ? {} as any : extractDeclaredTotals(entry.content_md);
   if (declared.total && declared.total > (Number(parsed.total_mentions) || 0)) {
     parsed.total_mentions = declared.total;
   }
@@ -235,8 +282,12 @@ async function analyzeOne(entry: Entry) {
     }
   }
   const fromText = countChannelsFromText(entry.content_md);
-  // Toma el MÁXIMO entre LLM y evidencia dura de URLs (no sumar para no duplicar)
-  for (const k of CANONICAL_CHANNELS) merged[k] = Math.max(merged[k], fromText[k]);
+  // Toma el MÁXIMO entre LLM y evidencia dura de URLs (no sumar para no duplicar).
+  // Con clasificación de ámbito, las URLs del texto incluyen agenda nacional, así que
+  // no sirven como piso: se respeta el conteo del análisis.
+  if (!scopeAware) {
+    for (const k of CANONICAL_CHANNELS) merged[k] = Math.max(merged[k], fromText[k]);
+  }
   parsed.channels = CANONICAL_CHANNELS
     .filter(k => merged[k] > 0)
     .map(k => ({ name: k, count: merged[k] }));
