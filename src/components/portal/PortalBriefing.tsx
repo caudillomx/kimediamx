@@ -16,6 +16,7 @@ import {
   useGabineteData, ENFOQUE_LABEL, fmtNum, fmtPct, pctDelta,
   type Enfoque, type Dependencia,
 } from "./useGabineteData";
+import { mxDay } from "@/lib/tz";
 import PortalDependenciaFicha from "./PortalDependenciaFicha";
 
 const isoToday = () => new Date().toISOString().slice(0, 10);
