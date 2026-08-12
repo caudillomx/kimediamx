@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import {
-  useGabineteData, ENFOQUE_LABEL, fmtNum, fmtPct, pctDelta, periodRangeOf,
+  useGabineteData, ENFOQUE_LABEL, fmtNum, fmtPct, pctDelta,
   type Enfoque, type Dependencia,
 } from "./useGabineteData";
 import PortalDependenciaFicha from "./PortalDependenciaFicha";
@@ -546,18 +546,9 @@ export default function PortalBriefing({
           <Select value={periodLabel} onValueChange={setPeriodLabel}>
             <SelectTrigger className="w-[170px] h-9"><SelectValue placeholder="Periodo" /></SelectTrigger>
             <SelectContent>
-              {periodLabels.slice().reverse().map((l) => {
-                const ps = periods.filter((p) => p.period_label === l);
-                const rango = ps.length ? periodRangeOf(ps[0]) : "";
-                return (
-                  <SelectItem key={l} value={l}>
-                    <span className="flex flex-col">
-                      <span>{l}</span>
-                      {rango && <span className="text-[10px] text-muted-foreground">{rango}</span>}
-                    </span>
-                  </SelectItem>
-                );
-              })}
+              {periodLabels.slice().reverse().map((l) => (
+                <SelectItem key={l} value={l}>{l}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
