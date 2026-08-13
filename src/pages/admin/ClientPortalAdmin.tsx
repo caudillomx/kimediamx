@@ -112,7 +112,7 @@ export default function ClientPortalAdmin() {
   // Listening state
   const [listening, setListening] = useState<ListeningEntry[]>([]);
   const [importing, setImporting] = useState(false);
-  const [importPreview, setImportPreview] = useState<{ date: string; chars: number }[] | null>(null);
+  const [importPreview, setImportPreview] = useState<{ date: string; chars: number; kinds: string[]; dated: boolean }[] | null>(null);
   const [importText, setImportText] = useState<string>("");
   const [importFileName, setImportFileName] = useState<string>("");
 
@@ -445,7 +445,9 @@ export default function ClientPortalAdmin() {
     const text = await file.text();
     setImportText(text);
     const parsed = parseWhatsappTxt(text);
-    setImportPreview(parsed.map((p) => ({ date: p.entry_date, chars: p.content_md.length })));
+    setImportPreview(parsed.map((p) => ({
+      date: p.entry_date, chars: p.content_md.length, kinds: p.kinds, dated: p.dated,
+    })));
   };
 
   const importWhatsapp = async (mode: "upsert" | "skip") => {
@@ -908,6 +910,18 @@ export default function ClientPortalAdmin() {
                   <div className="text-xs text-muted-foreground">
                     Detectadas <strong>{importPreview.length}</strong> fechas · rango{" "}
                     {importPreview[importPreview.length - 1]?.date} → {importPreview[0]?.date}
+                  </div>
+                  <div className="max-h-56 overflow-auto rounded border divide-y">
+                    {importPreview.map((p) => (
+                      <div key={p.date} className="flex items-center justify-between gap-2 px-2 py-1 text-xs">
+                        <span className="font-medium">{p.date}</span>
+                        <span className="text-muted-foreground">
+                          {p.kinds.map((k) => k === "listening" ? "Escucha" : k === "medios" ? "Medios" : "Nota").join(" + ")}
+                          {" · "}{p.chars.toLocaleString("es-MX")} car.
+                          {p.dated ? "" : " · fecha de envío"}
+                        </span>
+                      </div>
+                    ))}
                   </div>
                   <div className="flex gap-2">
                     <Button size="sm" disabled={importing} onClick={() => importWhatsapp("skip")}>
