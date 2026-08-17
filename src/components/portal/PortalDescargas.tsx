@@ -183,20 +183,23 @@ export default function PortalDescargas({
   const matchesEnfoque = (accountType: string | null | undefined) =>
     enfoque === "combinado" ? true : (accountType ?? "institucional") === enfoque;
 
+  const matchesScope = (accountType: string | null | undefined, scope: "combinado" | ScopeKey) =>
+    scope === "combinado" ? true : (accountType ?? "institucional") === scope;
+
   const ENFOQUE_LABEL: Record<string, string> = {
     combinado: "Dependencia + titular",
     institucional: "Solo cuentas institucionales",
     titular: "Solo cuentas del titular",
   };
 
-  /** Agregado por dependencia para un conjunto de periodos. */
-  const aggregate = (periodIds: string[]) => {
+  /** Agregado por dependencia para un conjunto de periodos y un ámbito. */
+  const aggregate = (periodIds: string[], scope: "combinado" | ScopeKey = enfoque) => {
     const acc = new Map<string, { followers: number; eng: number[]; posts: number[] }>();
     for (const m of metrics) {
       if (!periodIds.includes(m.period_id)) continue;
       const dep = depOfCompetitor.get(m.competitor_id);
       if (!dep) continue;
-      if (!matchesEnfoque(typeOfCompetitor.get(m.competitor_id))) continue;
+      if (!matchesScope(typeOfCompetitor.get(m.competitor_id), scope)) continue;
       const e = acc.get(dep) ?? { followers: 0, eng: [], posts: [] };
       e.followers += Number(m.followers) || 0;
       if (Number.isFinite(Number(m.engagement_rate))) e.eng.push(Number(m.engagement_rate));
