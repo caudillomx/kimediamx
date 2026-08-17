@@ -397,16 +397,19 @@ function BlockSection({ b, compacto }: { b: ScopeBlock; compacto: boolean }) {
               border: `1px solid ${LINE}`, borderLeft: `3px solid ${TONE_COLOR[m.tono] ?? MUTED}`,
               borderRadius: 7, padding: "6px 9px", marginBottom: 5, background: "#ffffff",
             }}>
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 12, fontSize: 9, color: MUTED }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, fontSize: 9, color: MUTED }}>
                 <span>{m.fecha} · {m.medio}{m.canal && m.canal !== "medios" ? ` · ${m.canal}` : ""}</span>
                 <span style={{
                   color: "#ffffff", background: TONE_COLOR[m.tono] ?? MUTED, borderRadius: 3,
-                  padding: "1px 6px", textTransform: "capitalize", fontWeight: 700, fontSize: 8.5,
+                  padding: "2px 6px 3px", textTransform: "capitalize", fontWeight: 700, fontSize: 8.5,
+                  lineHeight: 1, whiteSpace: "nowrap", display: "inline-block", flexShrink: 0,
                 }}>
                   {m.tono}
                 </span>
               </div>
-              <div style={{ marginTop: 2, fontSize: 10.2, fontWeight: 600 }}>{stripEmoji(m.titular).slice(0, 130) || "(sin titular)"}</div>
+              <div style={{ marginTop: 2, fontSize: 10.2, fontWeight: 600 }}>
+                {stripEmoji(m.titular).slice(0, 130) || "(sin titular)"}{stripEmoji(m.titular).length > 130 ? "…" : ""}
+              </div>
               {m.cita && (
                 <div style={{ marginTop: 2, fontSize: 9.4, color: "#475569" }}>
                   “{stripEmoji(m.cita).slice(0, 180)}{stripEmoji(m.cita).length > 180 ? "…" : ""}”
