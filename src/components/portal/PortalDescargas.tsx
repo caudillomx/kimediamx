@@ -92,7 +92,7 @@ export default function PortalDescargas({
   const [pressMedio, setPressMedio] = useState<string>("todos");
   const [pressTono, setPressTono] = useState<string>("todos");
   const [pressRows, setPressRows] = useState<DepPressRow[] & { _dep?: string }[]>([]);
-  const [pressAll, setPressAll] = useState<{ fecha: string; medio: string; titular: string; cita: string; url: string; tono: string; canal: string; dep: string | null }[]>([]);
+  const [pressAll, setPressAll] = useState<{ fecha: string; medio: string; titular: string; cita: string; url: string; tono: string; canal: string; dep: string | null; scope: ScopeKey | null }[]>([]);
   const [pressLoading, setPressLoading] = useState(false);
 
   const depPdfRef = useRef<HTMLDivElement>(null);
