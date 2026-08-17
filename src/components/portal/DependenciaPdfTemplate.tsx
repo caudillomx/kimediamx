@@ -1,19 +1,19 @@
 import { forwardRef } from "react";
+import kimediaLogo from "@/assets/kimedia-logo.png";
 
-/** Wordmark tipográfico de KiMedia (mismo criterio que el PDF semanal). */
-function KiMediaMark({ size = 13, muted = false }: { size?: number; muted?: boolean }) {
+/** Logo oficial de KiMedia (versión clara sobre placa oscura). */
+function KiMediaMark({ size = 26 }: { size?: number }) {
   return (
     <span
       style={{
-        fontFamily: "'Space Grotesk', system-ui, sans-serif",
-        fontWeight: 700,
-        fontSize: size,
-        letterSpacing: "-0.02em",
-        color: muted ? "#64748b" : "#0f172a",
-        whiteSpace: "nowrap",
+        display: "inline-flex",
+        alignItems: "center",
+        background: "#0b0b0b",
+        borderRadius: 6,
+        padding: `${Math.round(size * 0.3)}px ${Math.round(size * 0.45)}px`,
       }}
     >
-      ki<span style={{ color: "#ef6a4d" }}>media</span>
+      <img src={kimediaLogo} alt="KiMedia" style={{ height: size, width: "auto", display: "block" }} />
     </span>
   );
 }
@@ -58,6 +58,7 @@ export type DependenciaReportData = {
   variacion: { seguidores: number | null; engagement: number | null } | null;
   topPosts: DepPostRow[];
   prensa: DepPressRow[];
+  prensaTotal?: number;
   prensaTono: { positivo: number; neutral: number; negativo: number };
   narrativas: { name: string; description?: string }[];
 };
@@ -85,12 +86,12 @@ const df = (n: number | null | undefined) =>
 const page: React.CSSProperties = {
   width: 794,
   boxSizing: "border-box",
-  padding: "18px 46px 6px",
+  padding: "16px 44px 6px",
   background: "#ffffff",
   color: "#0f172a",
   fontFamily: "'Inter', system-ui, sans-serif",
-  fontSize: 11.5,
-  lineHeight: 1.6,
+  fontSize: 10.5,
+  lineHeight: 1.45,
 };
 const sectionTitle: React.CSSProperties = {
   fontSize: 10,
@@ -101,8 +102,8 @@ const sectionTitle: React.CSSProperties = {
 };
 const cardStyle: React.CSSProperties = {
   border: "1px solid #e2e8f0",
-  borderRadius: 10,
-  padding: "12px 14px",
+  borderRadius: 9,
+  padding: "9px 11px",
   background: "#f8fafc",
 };
 const th: React.CSSProperties = {
@@ -115,25 +116,25 @@ const th: React.CSSProperties = {
   padding: "6px 6px",
 };
 const td: React.CSSProperties = {
-  padding: "6px 6px",
+  padding: "4px 6px",
   borderBottom: "1px solid #f1f5f9",
   verticalAlign: "top",
 };
 
 function Header({ title, subtitle, periodo }: { title: string; subtitle?: string | null; periodo: string }) {
   return (
-    <div className="pdf-avoid" style={{ borderBottom: "2px solid #0f172a", paddingBottom: 14, marginBottom: 20 }}>
+    <div className="pdf-avoid" style={{ borderBottom: "2px solid #0f172a", paddingBottom: 10, marginBottom: 14 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 9.5, letterSpacing: "0.16em", textTransform: "uppercase", color: "#64748b" }}>
             Reporte de comunicación digital
           </div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, margin: "6px 0 2px", lineHeight: 1.25 }}>{title}</h1>
+          <h1 style={{ fontSize: 20, fontWeight: 700, margin: "5px 0 2px", lineHeight: 1.2 }}>{title}</h1>
           {subtitle && <div style={{ color: "#475569", fontSize: 11.5 }}>{subtitle}</div>}
           <div style={{ color: "#64748b", fontSize: 11, marginTop: 4 }}>{periodo}</div>
         </div>
         <div style={{ textAlign: "right" }}>
-          <KiMediaMark size={16} />
+          <KiMediaMark size={22} />
           <div style={{ fontSize: 9, color: "#94a3b8", marginTop: 2 }}>
             {new Date().toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" })}
           </div>
@@ -146,15 +147,15 @@ function Header({ title, subtitle, periodo }: { title: string; subtitle?: string
 function Footer() {
   return (
     <div className="pdf-avoid" style={{ marginTop: 10, paddingTop: 6, borderTop: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-      <span style={{ fontSize: 9, color: "#94a3b8" }}>Documento generado automáticamente desde el portal de análisis.</span>
-      <KiMediaMark size={11} muted />
+      <span style={{ fontSize: 9, color: "#94a3b8" }}>Documento generado automáticamente desde el portal de análisis de KiMedia.</span>
+      <KiMediaMark size={12} />
     </div>
   );
 }
 
 export const DependenciaPdfTemplate = forwardRef<HTMLDivElement, { data: DependenciaReportData | null }>(({ data }, ref) => {
   if (!data) return <div ref={ref} style={page} />;
-  const prensaTotal = data.prensa.length;
+  const prensaTotal = data.prensaTotal ?? data.prensa.length;
   return (
     <div ref={ref} style={page}>
       <Header
@@ -164,7 +165,7 @@ export const DependenciaPdfTemplate = forwardRef<HTMLDivElement, { data: Depende
       />
 
       {/* KPIs */}
-      <div className="pdf-avoid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 22 }}>
+      <div className="pdf-avoid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 9, marginBottom: 14 }}>
         <div style={cardStyle}>
           <div style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.1em", color: "#64748b" }}>Seguidores</div>
           <div style={{ fontSize: 19, fontWeight: 700, marginTop: 2 }}>{nf(data.totales.seguidores)}</div>
@@ -192,7 +193,7 @@ export const DependenciaPdfTemplate = forwardRef<HTMLDivElement, { data: Depende
       </div>
 
       {/* Cuentas */}
-      <div className="pdf-avoid" style={{ marginBottom: 22 }}>
+      <div className="pdf-avoid" style={{ marginBottom: 14 }}>
         <div style={sectionTitle}>Cuentas de la dependencia</div>
         {data.cuentas.length === 0 ? (
           <div style={{ color: "#64748b" }}>Sin cuentas con datos en el periodo.</div>
@@ -210,7 +211,7 @@ export const DependenciaPdfTemplate = forwardRef<HTMLDivElement, { data: Depende
               </tr>
             </thead>
             <tbody>
-              {data.cuentas.map((c, i) => (
+              {data.cuentas.slice(0, 12).map((c, i) => (
                 <tr key={i}>
                   <td style={td}>{c.perfil}</td>
                   <td style={td}>{c.red}</td>
@@ -228,13 +229,13 @@ export const DependenciaPdfTemplate = forwardRef<HTMLDivElement, { data: Depende
 
       {/* Narrativas */}
       {data.narrativas.length > 0 && (
-        <div className="pdf-avoid" style={{ marginBottom: 22 }}>
+        <div className="pdf-avoid" style={{ marginBottom: 14 }}>
           <div style={sectionTitle}>Territorios narrativos detectados</div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10 }}>
-            {data.narrativas.slice(0, 6).map((n, i) => (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 9 }}>
+            {data.narrativas.slice(0, 4).map((n, i) => (
               <div key={i} style={cardStyle}>
                 <div style={{ fontWeight: 600 }}>{n.name}</div>
-                {n.description && <div style={{ fontSize: 10.5, color: "#475569" }}>{n.description}</div>}
+                {n.description && <div style={{ fontSize: 9.8, color: "#475569" }}>{n.description}</div>}
               </div>
             ))}
           </div>
@@ -242,18 +243,18 @@ export const DependenciaPdfTemplate = forwardRef<HTMLDivElement, { data: Depende
       )}
 
       {/* Top posts */}
-      <div style={{ marginBottom: 22 }}>
+      <div style={{ marginBottom: 14 }}>
         <div style={sectionTitle}>Publicaciones con mayor interacción</div>
         {data.topPosts.length === 0 ? (
           <div style={{ color: "#64748b" }}>Sin publicaciones registradas en el periodo.</div>
         ) : (
-          data.topPosts.slice(0, 6).map((p, i) => (
-            <div className="pdf-avoid" key={i} style={{ ...cardStyle, marginBottom: 8 }}>
+          data.topPosts.slice(0, 3).map((p, i) => (
+            <div className="pdf-avoid" key={i} style={{ ...cardStyle, marginBottom: 6 }}>
               <div style={{ display: "flex", justifyContent: "space-between", gap: 12, fontSize: 10, color: "#64748b" }}>
                 <span>{p.perfil} · {p.red}</span>
                 <span>{p.fecha ? new Date(p.fecha).toLocaleDateString("es-MX") : ""} · {nf(p.interacciones)} interacciones</span>
               </div>
-              <div style={{ marginTop: 4, fontSize: 11 }}>{p.texto.slice(0, 320)}{p.texto.length > 320 ? "…" : ""}</div>
+              <div style={{ marginTop: 3, fontSize: 10.2 }}>{p.texto.slice(0, 220)}{p.texto.length > 220 ? "…" : ""}</div>
             </div>
           ))
         )}
@@ -275,20 +276,20 @@ export const DependenciaPdfTemplate = forwardRef<HTMLDivElement, { data: Depende
               </tr>
             </thead>
             <tbody>
-              {data.prensa.slice(0, 25).map((m, i) => (
+              {data.prensa.slice(0, 12).map((m, i) => (
                 <tr key={i}>
                   <td style={{ ...td, whiteSpace: "nowrap" }}>{m.fecha}</td>
                   <td style={td}>{m.medio}</td>
-                  <td style={td}>{m.titular}</td>
+                  <td style={td}>{m.titular.slice(0, 110)}</td>
                   <td style={{ ...td, color: TONE_COLOR[m.tono] ?? "#64748b", textTransform: "capitalize" }}>{m.tono}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         )}
-        {data.prensa.length > 25 && (
+        {prensaTotal > data.prensa.length && (
           <div style={{ fontSize: 9.5, color: "#94a3b8", marginTop: 6 }}>
-            Se muestran las primeras 25 de {data.prensa.length} menciones. La lista completa está disponible en la descarga de Excel.
+            Se muestran las primeras {data.prensa.length} de {prensaTotal} menciones. La lista completa está en la descarga de Excel.
           </div>
         )}
       </div>
