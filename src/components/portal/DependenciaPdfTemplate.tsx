@@ -58,6 +58,7 @@ export type DependenciaReportData = {
   variacion: { seguidores: number | null; engagement: number | null } | null;
   topPosts: DepPostRow[];
   prensa: DepPressRow[];
+  prensaTotal?: number;
   prensaTono: { positivo: number; neutral: number; negativo: number };
   narrativas: { name: string; description?: string }[];
 };
@@ -154,7 +155,7 @@ function Footer() {
 
 export const DependenciaPdfTemplate = forwardRef<HTMLDivElement, { data: DependenciaReportData | null }>(({ data }, ref) => {
   if (!data) return <div ref={ref} style={page} />;
-  const prensaTotal = data.prensa.length;
+  const prensaTotal = data.prensaTotal ?? data.prensa.length;
   return (
     <div ref={ref} style={page}>
       <Header
@@ -210,7 +211,7 @@ export const DependenciaPdfTemplate = forwardRef<HTMLDivElement, { data: Depende
               </tr>
             </thead>
             <tbody>
-              {data.cuentas.map((c, i) => (
+              {data.cuentas.slice(0, 12).map((c, i) => (
                 <tr key={i}>
                   <td style={td}>{c.perfil}</td>
                   <td style={td}>{c.red}</td>
