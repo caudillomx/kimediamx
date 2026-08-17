@@ -145,11 +145,14 @@ export default function PortalDescargas({
     () => Array.from(new Set(periods.map((p) => p.period_label))),
     [periods],
   );
+  /** En corte semanal las métricas provienen del último corte de datos disponible. */
+  const semanalLabel = useMemo(() => {
+    const cand = periods.filter((p) => p.period_start <= weekTo);
+    return cand.length ? cand[cand.length - 1].period_label : (periodLabels[periodLabels.length - 1] ?? "");
+  }, [periods, periodLabels, weekTo]);
   const activePeriods = useMemo(
-    () => cut === "semanal"
-      ? periods.filter((p) => p.period_start <= weekTo && p.period_end >= weekFrom)
-      : periods.filter((p) => p.period_label === periodLabel),
-    [periods, periodLabel, cut, weekFrom, weekTo],
+    () => periods.filter((p) => p.period_label === (cut === "semanal" ? semanalLabel : periodLabel)),
+    [periods, periodLabel, cut, semanalLabel],
   );
   const prevPeriods = useMemo(() => {
     const ref = cut === "semanal" ? activePeriods[0]?.period_label ?? "" : periodLabel;
@@ -356,7 +359,7 @@ export default function PortalDescargas({
       .filter((p) => cut !== "semanal"
         || inMxRange(p.posted_at, weekFrom, weekTo))
       .sort((a, b) => (b.interactions ?? 0) - (a.interactions ?? 0))
-      .slice(0, 6)
+      .slice(0, 3)
       .map((p) => ({
         perfil: p.profile_name || compById.get(p.competitor_id!)?.name || "",
         red: p.network, fecha: p.posted_at, texto: p.message ?? "", interacciones: p.interactions ?? 0,
