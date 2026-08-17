@@ -23,6 +23,24 @@ type Post = { period_id: string; competitor_id: string | null; network: string; 
 type Report = { id: string; title: string; report_date: string; type: string };
 
 const RATE_AVG = (vals: number[]) => (vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null);
+
+/** PostgREST corta en 1000 filas: paginamos siempre. */
+async function fetchAllPages<T>(
+  run: (from: number, to: number) => any,
+  pageSize = 1000,
+  maxRows = 60000,
+): Promise<T[]> {
+  const out: T[] = [];
+  for (let offset = 0; offset < maxRows; offset += pageSize) {
+    const { data, error } = await run(offset, offset + pageSize - 1);
+    if (error) break;
+    const rows = (data ?? []) as T[];
+    out.push(...rows);
+    if (rows.length < pageSize) break;
+  }
+  return out;
+}
+
 const isoToday = () => new Date().toISOString().slice(0, 10);
 const isoDaysAgo = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString().slice(0, 10);
 const shiftIso = (d: string, n: number) =>
@@ -84,15 +102,19 @@ export default function PortalDescargas({
   useEffect(() => {
     (async () => {
       setLoading(true);
-      const [dep, comp, per, rep] = await Promise.all([
+      const [dep, comps, per, rep] = await Promise.all([
         supabase.from("client_portal_dependencias").select("*").eq("client_id", clientId).order("sort_order"),
-        supabase.from("client_portal_benchmark_competitors").select("id,name,network,dependencia_id,account_type").eq("client_id", clientId).eq("active", true).limit(2000),
+        fetchAllPages<Competitor>((from, to) =>
+          supabase.from("client_portal_benchmark_competitors")
+            .select("id,name,network,dependencia_id,account_type")
+            .eq("client_id", clientId).eq("active", true)
+            .order("id").range(from, to)),
         supabase.from("client_portal_benchmark_periods").select("id,period_label,period_start,period_end").eq("client_id", clientId).order("period_start"),
         supabase.from("client_portal_reports").select("id,title,report_date,type").eq("client_id", clientId).order("report_date", { ascending: false }).limit(30),
       ]);
       const ps = (per.data ?? []) as Period[];
       setDependencias((dep.data ?? []) as Dependencia[]);
-      setCompetitors((comp.data ?? []) as Competitor[]);
+      setCompetitors(comps);
       setPeriods(ps);
       setReports((rep.data ?? []) as Report[]);
       if (ps.length) {
@@ -100,12 +122,18 @@ export default function PortalDescargas({
         setPeriodLabel(labels[labels.length - 1]);
         const ids = ps.map((p) => p.id);
         const [m, po, nar] = await Promise.all([
-          supabase.from("client_portal_benchmark_metrics").select("period_id,competitor_id,network,followers,follower_growth_rate,engagement_rate,posts_per_day").in("period_id", ids).limit(20000),
-          supabase.from("client_portal_benchmark_posts").select("period_id,competitor_id,network,profile_name,posted_at,message,interactions").in("period_id", ids).order("interactions", { ascending: false }).limit(3000),
+          fetchAllPages<Metric>((from, to) =>
+            supabase.from("client_portal_benchmark_metrics")
+              .select("period_id,competitor_id,network,followers,follower_growth_rate,engagement_rate,posts_per_day")
+              .in("period_id", ids).order("period_id").range(from, to)),
+          fetchAllPages<Post>((from, to) =>
+            supabase.from("client_portal_benchmark_posts")
+              .select("period_id,competitor_id,network,profile_name,posted_at,message,interactions")
+              .in("period_id", ids).order("interactions", { ascending: false }).range(from, to), 1000, 8000),
           supabase.from("client_portal_benchmark_narratives").select("profile_name,network,narratives").eq("client_id", clientId).limit(500),
         ]);
-        setMetrics((m.data ?? []) as Metric[]);
-        setPosts((po.data ?? []) as Post[]);
+        setMetrics(m);
+        setPosts(po);
         setNarratives(nar.data ?? []);
       }
       if ((dep.data ?? []).length) setDepId((dep.data as Dependencia[])[0].id);
