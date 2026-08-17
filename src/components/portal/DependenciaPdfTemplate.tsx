@@ -152,6 +152,7 @@ function Logo({ height = 26 }: { height?: number }) {
 export function stripEmoji(text: string): string {
   return (text ?? "")
     .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}\u{20E3}\u{2190}-\u{21FF}\u{2B00}-\u{2BFF}]/gu, "")
+    .replace(/\?{2,}/g, "")
     .replace(/\s{2,}/g, " ")
     .trim();
 }
