@@ -245,7 +245,7 @@ function BlockSection({ b, compacto }: { b: ScopeBlock; compacto: boolean }) {
   const maxCuentas = compacto ? 6 : 12;
   const maxNarr = compacto ? 2 : 4;
   const maxPosts = compacto ? 2 : 3;
-  const maxPrensa = compacto ? 3 : 6;
+  const maxPrensa = compacto ? 5 : 8;
   const cuentasActivas = b.cuentas.filter((c) => !c.sinDatos);
   const cuentasInactivas = b.cuentas.filter((c) => c.sinDatos);
 
@@ -401,9 +401,8 @@ function BlockSection({ b, compacto }: { b: ScopeBlock; compacto: boolean }) {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, fontSize: 9, color: MUTED }}>
                 <span>{m.fecha} · {m.medio}{m.canal && m.canal !== "medios" ? ` · ${m.canal}` : ""}</span>
                 <span style={{
-                  color: "#ffffff", background: TONE_COLOR[m.tono] ?? MUTED, borderRadius: 3,
-                  padding: "2px 6px 3px", textTransform: "capitalize", fontWeight: 700, fontSize: 8.5,
-                  lineHeight: 1, whiteSpace: "nowrap", display: "inline-block", flexShrink: 0,
+                  color: TONE_COLOR[m.tono] ?? MUTED, textTransform: "uppercase", fontWeight: 700,
+                  fontSize: 8.5, letterSpacing: "0.08em", whiteSpace: "nowrap", flexShrink: 0,
                 }}>
                   {m.tono}
                 </span>
