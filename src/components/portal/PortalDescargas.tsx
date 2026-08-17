@@ -372,9 +372,20 @@ export default function PortalDescargas({
       if (Number.isFinite(Number(m.followers))) prevFollowers.set(`${m.competitor_id}|${m.network}`, Number(m.followers));
     }
 
-    // Publicaciones del periodo por cuenta/red.
+    // Publicaciones del periodo: se consultan aquí para no depender del cache global (que viene truncado).
+    let depPosts: Post[] = [];
+    if (depComps.length && periodIds.length) {
+      depPosts = await fetchAllPages<Post>((from, to) =>
+        supabase.from("client_portal_benchmark_posts")
+          .select("period_id,competitor_id,network,profile_name,posted_at,message,interactions")
+          .in("period_id", periodIds)
+          .in("competitor_id", depComps.map((c) => c.id))
+          .order("interactions", { ascending: false })
+          .range(from, to), 1000, 8000);
+    }
+
     const postsCount = new Map<string, number>();
-    for (const p of posts) {
+    for (const p of depPosts) {
       if (!p.competitor_id || !compById.has(p.competitor_id)) continue;
       if (!periodIds.includes(p.period_id)) continue;
       if (cut === "semanal" && !inMxRange(p.posted_at, weekFrom, weekTo)) continue;
@@ -448,7 +459,7 @@ export default function PortalDescargas({
       return { axes, fuentes };
     };
 
-    const postsDe = (scope: ScopeKey) => posts
+    const postsDe = (scope: ScopeKey) => depPosts
       .filter((p) => periodIds.includes(p.period_id) && p.competitor_id && compById.has(p.competitor_id))
       .filter((p) => (compById.get(p.competitor_id!)?.account_type ?? "institucional") === scope)
       .filter((p) => cut !== "semanal" || inMxRange(p.posted_at, weekFrom, weekTo))
