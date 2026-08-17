@@ -1,19 +1,23 @@
 import { forwardRef } from "react";
-import kimediaLogo from "@/assets/kimedia-logo.png";
 
-/** Logo oficial de KiMedia (versión clara sobre placa oscura). */
-function KiMediaMark({ size = 26 }: { size?: number }) {
+/**
+ * Wordmark de KiMedia dibujado con tipografía: html2canvas renderiza el PNG
+ * original como una placa negra, así que aquí usamos texto vectorial.
+ */
+function KiMediaMark({ size = 18 }: { size?: number }) {
   return (
     <span
       style={{
-        display: "inline-flex",
-        alignItems: "center",
-        background: "#0b0b0b",
-        borderRadius: 6,
-        padding: `${Math.round(size * 0.3)}px ${Math.round(size * 0.45)}px`,
+        display: "inline-block",
+        fontFamily: "'Inter', system-ui, sans-serif",
+        fontSize: size,
+        fontWeight: 800,
+        letterSpacing: "-0.02em",
+        color: "#0f172a",
+        lineHeight: 1,
       }}
     >
-      <img src={kimediaLogo} alt="KiMedia" style={{ height: size, width: "auto", display: "block" }} />
+      Ki<span style={{ color: "#e11d48" }}>Media</span>
     </span>
   );
 }
@@ -42,6 +46,8 @@ export type DepPressRow = {
   titular: string;
   tono: string;
   url: string;
+  cita?: string;
+  canal?: string;
 };
 
 export type DependenciaReportData = {
@@ -50,9 +56,14 @@ export type DependenciaReportData = {
   titular: string | null;
   titularCargo: string | null;
   periodoLabel: string;
+  enfoqueLabel: string;
   redes: string[];
   cuentas: DepAccountRow[];
   totales: { seguidores: number; engagement: number | null; postsDia: number | null };
+  desglose: {
+    institucional: { cuentas: number; seguidores: number; engagement: number | null; postsDia: number | null };
+    titular: { cuentas: number; seguidores: number; engagement: number | null; postsDia: number | null };
+  };
   promedioGabinete: { engagement: number | null; seguidores: number | null };
   posicion: { rank: number | null; total: number } | null;
   variacion: { seguidores: number | null; engagement: number | null } | null;
@@ -60,7 +71,9 @@ export type DependenciaReportData = {
   prensa: DepPressRow[];
   prensaTotal?: number;
   prensaTono: { positivo: number; neutral: number; negativo: number };
+  prensaMedios?: { medio: string; n: number }[];
   narrativas: { name: string; description?: string }[];
+  narrativasFuentes?: string[];
 };
 
 export type GabineteReportData = {
