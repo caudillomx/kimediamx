@@ -171,14 +171,19 @@ function SectionTitle({ text, color = INK, hint }: { text: string; color?: strin
   );
 }
 
-function Kpi({ label, value, foot, color, footColor }: {
-  label: string; value: string; foot?: string; color: string; footColor?: string;
+function Kpi({ label, value, foot, color, footColor, explain }: {
+  label: string; value: string; foot?: string; color: string; footColor?: string; explain?: string;
 }) {
   return (
     <div style={{ border: `1px solid ${LINE}`, borderTop: `3px solid ${color}`, borderRadius: 8, padding: "7px 9px", background: "#ffffff" }}>
       <div style={{ fontSize: 8.5, textTransform: "uppercase", letterSpacing: "0.1em", color: MUTED }}>{label}</div>
       <div style={{ fontSize: 17, fontWeight: 700, marginTop: 1, color: INK }}>{value}</div>
       {foot && <div style={{ fontSize: 8.8, color: footColor ?? MUTED, marginTop: 1 }}>{foot}</div>}
+      {explain && (
+        <div style={{ fontSize: 8, color: "#94a3b8", marginTop: 3, lineHeight: 1.3, borderTop: `1px dashed ${LINE}`, paddingTop: 3 }}>
+          {explain}
+        </div>
+      )}
     </div>
   );
 }
@@ -188,10 +193,92 @@ function ScopeChip({ scope }: { scope: ScopeKey | "conjunto" }) {
   return (
     <span style={{
       display: "inline-block", background: s.main, color: "#ffffff", borderRadius: 4,
-      padding: "2px 7px", fontSize: 8.5, letterSpacing: "0.09em", textTransform: "uppercase", fontWeight: 700,
+      padding: "0 7px", height: 15, lineHeight: "15px", fontSize: 8.5,
+      letterSpacing: "0.09em", textTransform: "uppercase", fontWeight: 700,
+      whiteSpace: "nowrap", flexShrink: 0,
     }}>
       {s.tag}
     </span>
+  );
+}
+
+/** Bloque didáctico: explica qué es una sección y por qué importa. */
+function Explainer({ text, color }: { text: string; color: string }) {
+  return (
+    <div style={{
+      background: "#f8fafc", borderLeft: `3px solid ${color}`, borderRadius: "0 6px 6px 0",
+      padding: "5px 8px", marginBottom: 6, fontSize: 8.8, color: "#475569", lineHeight: 1.4,
+    }}>
+      {text}
+    </div>
+  );
+}
+
+const GLOSARIO: { termino: string; que: string; porque: string }[] = [
+  {
+    termino: "Seguidores",
+    que: "Total de personas suscritas a las cuentas consideradas, sumando todas las redes.",
+    porque: "Es el alcance potencial: cuánta gente puede recibir un mensaje sin pagar publicidad.",
+  },
+  {
+    termino: "Crecimiento por día (Crec./día)",
+    que: "Porcentaje promedio diario en que aumenta o disminuye la base de seguidores.",
+    porque: "Muestra si la audiencia se está construyendo de forma sostenida, más allá de picos aislados.",
+  },
+  {
+    termino: "Interacción (engagement)",
+    que: "Reacciones, comentarios y compartidos divididos entre los seguidores de la cuenta.",
+    porque: "Mide calidad, no tamaño: una cuenta pequeña con alta interacción comunica mejor que una grande e inerte. Referencia sana en gobierno: 0.5%–2%.",
+  },
+  {
+    termino: "Publicaciones por día (Pub./día)",
+    que: "Ritmo de publicación promedio en el periodo.",
+    porque: "Permite ver si la baja interacción viene de poco contenido o de contenido poco relevante.",
+  },
+  {
+    termino: "Posición en el gabinete",
+    que: "Lugar que ocupa la cuenta al ordenar a todas las dependencias (o titulares) por interacción.",
+    porque: "Da contexto: compara contra pares con condiciones similares, no contra marcas comerciales.",
+  },
+  {
+    termino: "Menciones de prensa y tono",
+    que: "Notas de medios monitoreados en el periodo, clasificadas como positiva, neutral o negativa.",
+    porque: "Es la conversación que no controlamos; el tono anticipa riesgos reputacionales y temas por atender.",
+  },
+  {
+    termino: "Narrativas / territorios",
+    que: "Temas recurrentes detectados en las publicaciones propias del periodo.",
+    porque: "Revelan de qué se habla realmente y si la agenda pública prioritaria está siendo comunicada.",
+  },
+  {
+    termino: "s/d",
+    que: "Sin dato: la red social no reportó esa métrica en el periodo consultado.",
+    porque: "No significa cero; significa que el dato no está disponible y no debe interpretarse como caída.",
+  },
+];
+
+function Glosario() {
+  return (
+    <div style={{ marginTop: 12 }}>
+      <SectionTitle
+        text="Glosario: cómo leer estos indicadores"
+        color={SCOPE.conjunto.main}
+        hint="Referencia rápida de los términos técnicos usados en el reporte y de por qué importan para la toma de decisiones."
+      />
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+        {GLOSARIO.map((g, i) => (
+          <div className="pdf-avoid" key={i} style={{
+            border: `1px solid ${LINE}`, borderRadius: 7, padding: "6px 8px", background: "#ffffff",
+          }}>
+            <div style={{ fontSize: 9.6, fontWeight: 700, color: INK }}>{g.termino}</div>
+            <div style={{ fontSize: 8.8, color: "#475569", marginTop: 1 }}>{g.que}</div>
+            <div style={{ fontSize: 8.8, color: MUTED, marginTop: 2 }}>
+              <b style={{ color: SCOPE.institucional.main }}>Por qué importa:</b> {g.porque}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -255,30 +342,43 @@ function BlockSection({ b, compacto }: { b: ScopeBlock; compacto: boolean }) {
       <div className="pdf-avoid" style={{
         background: s.soft, border: `1px solid ${s.border}`, borderLeft: `4px solid ${s.main}`,
         borderRadius: 8, padding: "7px 10px", marginBottom: 8,
-        display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12,
+        display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12,
       }}>
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 7, height: 16 }}>
             <ScopeChip scope={b.key} />
-            <span style={{ fontSize: 12.5, fontWeight: 700 }}>{b.label}</span>
+            <span style={{ fontSize: 12.5, fontWeight: 700, lineHeight: "15px", display: "inline-block" }}>{b.label}</span>
           </div>
-          <div style={{ fontSize: 9.5, color: "#475569", marginTop: 2 }}>{b.sujeto}</div>
+          <div style={{ fontSize: 9.5, color: "#475569", marginTop: 3, lineHeight: 1.3 }}>{b.sujeto}</div>
         </div>
-        <div style={{ fontSize: 9, color: MUTED, textAlign: "right" }}>
+        <div style={{ fontSize: 9, color: MUTED, textAlign: "right", lineHeight: "15px", flexShrink: 0 }}>
           {b.cuentas.length} cuenta{b.cuentas.length === 1 ? "" : "s"} · {b.publicaciones} publicaciones en el periodo
         </div>
       </div>
 
+      <Explainer
+        color={s.main}
+        text={
+          b.key === "titular"
+            ? "Este bloque mide la voz personal del titular: sus cuentas propias, lo que publica y cómo la prensa lo menciona por nombre. Sirve para evaluar liderazgo y vocería."
+            : "Este bloque mide la voz institucional de la dependencia: cuentas oficiales, contenido publicado y cobertura de prensa a nombre de la institución. Sirve para evaluar la comunicación de la política pública."
+        }
+      />
+
       {/* KPIs del bloque */}
       <div className="pdf-avoid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 10 }}>
         <Kpi label="Seguidores" value={nf(b.seguidores)} color={s.main}
-             foot={`${df(b.variacionSeguidores)} vs periodo previo`} footColor={deltaColor(b.variacionSeguidores)} />
+             foot={`${df(b.variacionSeguidores)} vs periodo previo`} footColor={deltaColor(b.variacionSeguidores)}
+             explain="Audiencia propia acumulada: a cuánta gente se puede llegar sin pagar pauta." />
         <Kpi label="Interacción" value={pf(b.engagement)} color={s.main}
-             foot={`Promedio gabinete: ${pf(b.promedioGabinete)}`} />
+             foot={`Promedio gabinete: ${pf(b.promedioGabinete)}`}
+             explain="Reacciones + comentarios + compartidos entre seguidores. Mide relevancia del contenido, no tamaño." />
         <Kpi label="Posición en el gabinete" value={b.rank ? `#${b.rank}` : "s/d"} color={s.main}
-             foot={`de ${b.rankTotal} ${b.key === "titular" ? "titulares" : "dependencias"}`} />
+             foot={`de ${b.rankTotal} ${b.key === "titular" ? "titulares" : "dependencias"}`}
+             explain="Lugar al ordenar por interacción a todos los pares del gabinete en el mismo periodo." />
         <Kpi label="Menciones de prensa" value={String(b.prensaTotal)} color={s.main}
-             foot={`${b.prensaTono.positivo} pos · ${b.prensaTono.neutral} neu · ${b.prensaTono.negativo} neg`} />
+             foot={`${b.prensaTono.positivo} pos · ${b.prensaTono.neutral} neu · ${b.prensaTono.negativo} neg`}
+             explain="Cobertura de medios monitoreados. El tono anticipa riesgos y temas que requieren respuesta." />
       </div>
 
       {/* Cuentas */}
@@ -353,6 +453,7 @@ function BlockSection({ b, compacto }: { b: ScopeBlock; compacto: boolean }) {
         <SectionTitle
           text={b.key === "titular" ? "Publicaciones del titular con mayor interacción" : "Publicaciones institucionales con mayor interacción"}
           color={s.main}
+          hint="Contenido con más reacciones, comentarios y compartidos del periodo. Indica qué mensajes conectaron con la audiencia y conviene replicar."
         />
         {b.topPosts.length === 0 ? (
           <div style={{ color: MUTED, fontSize: 10 }}>Sin publicaciones registradas en el periodo.</div>
@@ -462,6 +563,7 @@ export const DependenciaPdfTemplate = forwardRef<HTMLDivElement, { data: Depende
             <b>Cómo leer este reporte.</b> Incluye dos bloques independientes: en <span style={{ color: SCOPE.institucional.main, fontWeight: 700 }}>azul</span> lo que corresponde a las cuentas
             institucionales de la dependencia y en <span style={{ color: SCOPE.titular.main, fontWeight: 700 }}>rojo</span> lo que corresponde a las cuentas personales del titular.
             Cada bloque tiene sus propios indicadores, cuentas, narrativas, publicaciones y menciones de prensa; el resumen conjunto de abajo suma ambos.
+            Cada indicador incluye una nota que explica qué mide y por qué importa, y al final encontrará un glosario con los términos técnicos.
           </>
         ) : data.modo === "titular" ? (
           <>
@@ -480,12 +582,20 @@ export const DependenciaPdfTemplate = forwardRef<HTMLDivElement, { data: Depende
       {combinado && c && (
         <div className="pdf-avoid" style={{ marginBottom: 14 }}>
           <SectionTitle text="Resumen conjunto (institución + titular)" color={SCOPE.conjunto.main} />
+          <Explainer
+            color={SCOPE.conjunto.main}
+            text="Suma de la comunicación institucional y la del titular. Es la fotografía general del esfuerzo comunicativo de la dependencia; el detalle por ámbito se desglosa en los bloques siguientes."
+          />
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
             <Kpi label="Seguidores totales" value={nf(c.seguidores)} color={INK}
-                 foot={`${df(c.variacionSeguidores)} vs periodo previo`} footColor={deltaColor(c.variacionSeguidores)} />
-            <Kpi label="Interacción promedio" value={pf(c.engagement)} color={INK} foot="Promedio de todas las cuentas" />
-            <Kpi label="Posición combinada" value={c.rank ? `#${c.rank}` : "s/d"} color={INK} foot={`de ${c.rankTotal} dependencias`} />
-            <Kpi label="Menciones de prensa" value={String(c.prensaTotal)} color={INK} foot="Dependencia y titular" />
+                 foot={`${df(c.variacionSeguidores)} vs periodo previo`} footColor={deltaColor(c.variacionSeguidores)}
+                 explain="Audiencia sumada de cuentas institucionales y del titular." />
+            <Kpi label="Interacción promedio" value={pf(c.engagement)} color={INK} foot="Promedio de todas las cuentas"
+                 explain="Qué tanto responde la gente al contenido publicado por ambos ámbitos." />
+            <Kpi label="Posición combinada" value={c.rank ? `#${c.rank}` : "s/d"} color={INK} foot={`de ${c.rankTotal} dependencias`}
+                 explain="Lugar frente al resto del gabinete considerando ambos ámbitos." />
+            <Kpi label="Menciones de prensa" value={String(c.prensaTotal)} color={INK} foot="Dependencia y titular"
+                 explain="Notas de medios del periodo que aluden a la institución o a su titular." />
           </div>
         </div>
       )}
@@ -493,6 +603,8 @@ export const DependenciaPdfTemplate = forwardRef<HTMLDivElement, { data: Depende
       {data.bloques.map((b) => (
         <BlockSection key={b.key} b={b} compacto={combinado} />
       ))}
+
+      <Glosario />
 
       <Footer />
     </div>
