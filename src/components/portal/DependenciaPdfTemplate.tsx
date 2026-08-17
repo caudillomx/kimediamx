@@ -368,7 +368,7 @@ function BlockSection({ b, compacto }: { b: ScopeBlock; compacto: boolean }) {
                   <b style={{ color: INK }}>{nf(p.interacciones)}</b> interacciones
                 </span>
               </div>
-              <div style={{ marginTop: 2, fontSize: 9.8 }}>{p.texto.slice(0, 190)}{p.texto.length > 190 ? "…" : ""}</div>
+              <div style={{ marginTop: 2, fontSize: 9.8 }}>{stripEmoji(p.texto).slice(0, 190)}{stripEmoji(p.texto).length > 190 ? "…" : ""}</div>
             </div>
           ))
         )}
@@ -406,10 +406,10 @@ function BlockSection({ b, compacto }: { b: ScopeBlock; compacto: boolean }) {
                   {m.tono}
                 </span>
               </div>
-              <div style={{ marginTop: 2, fontSize: 10.2, fontWeight: 600 }}>{m.titular.slice(0, 130) || "(sin titular)"}</div>
+              <div style={{ marginTop: 2, fontSize: 10.2, fontWeight: 600 }}>{stripEmoji(m.titular).slice(0, 130) || "(sin titular)"}</div>
               {m.cita && (
                 <div style={{ marginTop: 2, fontSize: 9.4, color: "#475569" }}>
-                  “{m.cita.slice(0, 180)}{m.cita.length > 180 ? "…" : ""}”
+                  “{stripEmoji(m.cita).slice(0, 180)}{stripEmoji(m.cita).length > 180 ? "…" : ""}”
                 </div>
               )}
             </div>
