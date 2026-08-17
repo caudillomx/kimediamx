@@ -301,17 +301,18 @@ export default function PortalDescargas({
       .not("analyzed_at", "is", null)
       .order("entry_date", { ascending: false })
       .limit(600);
-    const rows: { fecha: string; medio: string; titular: string; cita: string; url: string; tono: string; canal: string; dep: string | null }[] = [];
+    const rows: { fecha: string; medio: string; titular: string; cita: string; url: string; tono: string; canal: string; dep: string | null; scope: ScopeKey | null }[] = [];
     for (const e of (data ?? []) as any[]) {
       for (const m of (e.media_mentions ?? [])) {
         const medio = String(m?.outlet ?? "").trim();
         if (!medio) continue;
         const titular = String(m?.headline ?? m?.topic ?? "").trim();
         const cita = String(m?.quote ?? "").trim();
+        const r = resolveMention([titular, cita, String(m?.topic ?? "")].join(" "));
         rows.push({
           fecha: e.entry_date, medio, titular, cita, url: String(m?.url ?? ""),
           tono: String(m?.sentiment ?? "neutral"), canal: "medios",
-          dep: resolveDep([titular, cita, String(m?.topic ?? "")].join(" ")),
+          dep: r.dep, scope: r.scope,
         });
       }
       for (const p of (e.social_mentions ?? [])) {
@@ -319,10 +320,11 @@ export default function PortalDescargas({
         if (!medio) continue;
         const titular = String(p?.topic ?? "").trim();
         const cita = String(p?.quote ?? "").trim();
+        const r = resolveMention([titular, cita].join(" "));
         rows.push({
           fecha: e.entry_date, medio, titular, cita, url: String(p?.url ?? ""),
           tono: String(p?.sentiment ?? "neutral"), canal: String(p?.platform ?? "social"),
-          dep: resolveDep([titular, cita].join(" ")),
+          dep: r.dep, scope: r.scope,
         });
       }
     }
