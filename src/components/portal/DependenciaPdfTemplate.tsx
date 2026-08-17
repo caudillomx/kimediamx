@@ -325,29 +325,29 @@ export const DependenciaPdfTemplate = forwardRef<HTMLDivElement, { data: Depende
       {/* Prensa */}
       <div>
         <div style={sectionTitle}>Menciones de prensa en el periodo</div>
+        <div style={{ fontSize: 9, color: "#94a3b8", marginTop: -4, marginBottom: 6 }}>
+          Notas y publicaciones donde se menciona a la dependencia o a su titular, con el extracto que motivó la clasificación de tono.
+          {prensaTotal > 0 && ` Total: ${prensaTotal} menciones (${data.prensaTono.positivo} positivas, ${data.prensaTono.neutral} neutrales, ${data.prensaTono.negativo} negativas).`}
+          {data.prensaMedios?.length ? ` Medios más activos: ${data.prensaMedios.slice(0, 4).map((m) => `${m.medio} (${m.n})`).join(", ")}.` : ""}
+        </div>
         {data.prensa.length === 0 ? (
           <div style={{ color: "#64748b" }}>Sin menciones registradas para la dependencia o su titular.</div>
         ) : (
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr>
-                <th style={th}>Fecha</th>
-                <th style={th}>Medio</th>
-                <th style={th}>Titular</th>
-                <th style={th}>Tono</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.prensa.slice(0, 12).map((m, i) => (
-                <tr key={i}>
-                  <td style={{ ...td, whiteSpace: "nowrap" }}>{m.fecha}</td>
-                  <td style={td}>{m.medio}</td>
-                  <td style={td}>{m.titular.slice(0, 110)}</td>
-                  <td style={{ ...td, color: TONE_COLOR[m.tono] ?? "#64748b", textTransform: "capitalize" }}>{m.tono}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          data.prensa.slice(0, 8).map((m, i) => (
+            <div className="pdf-avoid" key={i} style={{ ...cardStyle, marginBottom: 6, borderLeft: `3px solid ${TONE_COLOR[m.tono] ?? "#94a3b8"}` }}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 12, fontSize: 9.5, color: "#64748b" }}>
+                <span>{m.fecha} · {m.medio}{m.canal && m.canal !== "medios" ? ` · ${m.canal}` : ""}</span>
+                <span style={{ color: TONE_COLOR[m.tono] ?? "#64748b", textTransform: "capitalize", fontWeight: 600 }}>{m.tono}</span>
+              </div>
+              <div style={{ marginTop: 2, fontSize: 10.5, fontWeight: 600 }}>{m.titular.slice(0, 130) || "(sin titular)"}</div>
+              {m.cita && (
+                <div style={{ marginTop: 2, fontSize: 9.8, color: "#475569" }}>
+                  “{m.cita.slice(0, 200)}{m.cita.length > 200 ? "…" : ""}”
+                </div>
+              )}
+              {m.url && <div style={{ marginTop: 2, fontSize: 8.5, color: "#94a3b8" }}>{m.url.slice(0, 110)}</div>}
+            </div>
+          ))
         )}
         {prensaTotal > data.prensa.length && (
           <div style={{ fontSize: 9.5, color: "#94a3b8", marginTop: 6 }}>
