@@ -1,19 +1,23 @@
 import { forwardRef } from "react";
-import kimediaLogo from "@/assets/kimedia-logo.png";
 
-/** Logo oficial de KiMedia (versión clara sobre placa oscura). */
-function KiMediaMark({ size = 26 }: { size?: number }) {
+/**
+ * Wordmark de KiMedia dibujado con tipografía: html2canvas renderiza el PNG
+ * original como una placa negra, así que aquí usamos texto vectorial.
+ */
+function KiMediaMark({ size = 18 }: { size?: number }) {
   return (
     <span
       style={{
-        display: "inline-flex",
-        alignItems: "center",
-        background: "#0b0b0b",
-        borderRadius: 6,
-        padding: `${Math.round(size * 0.3)}px ${Math.round(size * 0.45)}px`,
+        display: "inline-block",
+        fontFamily: "'Inter', system-ui, sans-serif",
+        fontSize: size,
+        fontWeight: 800,
+        letterSpacing: "-0.02em",
+        color: "#0f172a",
+        lineHeight: 1,
       }}
     >
-      <img src={kimediaLogo} alt="KiMedia" style={{ height: size, width: "auto", display: "block" }} />
+      Ki<span style={{ color: "#e11d48" }}>Media</span>
     </span>
   );
 }
@@ -42,6 +46,8 @@ export type DepPressRow = {
   titular: string;
   tono: string;
   url: string;
+  cita?: string;
+  canal?: string;
 };
 
 export type DependenciaReportData = {
@@ -50,9 +56,14 @@ export type DependenciaReportData = {
   titular: string | null;
   titularCargo: string | null;
   periodoLabel: string;
+  enfoqueLabel: string;
   redes: string[];
   cuentas: DepAccountRow[];
   totales: { seguidores: number; engagement: number | null; postsDia: number | null };
+  desglose: {
+    institucional: { cuentas: number; seguidores: number; engagement: number | null; postsDia: number | null };
+    titular: { cuentas: number; seguidores: number; engagement: number | null; postsDia: number | null };
+  };
   promedioGabinete: { engagement: number | null; seguidores: number | null };
   posicion: { rank: number | null; total: number } | null;
   variacion: { seguidores: number | null; engagement: number | null } | null;
@@ -60,7 +71,9 @@ export type DependenciaReportData = {
   prensa: DepPressRow[];
   prensaTotal?: number;
   prensaTono: { positivo: number; neutral: number; negativo: number };
+  prensaMedios?: { medio: string; n: number }[];
   narrativas: { name: string; description?: string }[];
+  narrativasFuentes?: string[];
 };
 
 export type GabineteReportData = {
@@ -121,7 +134,7 @@ const td: React.CSSProperties = {
   verticalAlign: "top",
 };
 
-function Header({ title, subtitle, periodo }: { title: string; subtitle?: string | null; periodo: string }) {
+function Header({ title, subtitle, periodo, scope }: { title: string; subtitle?: string | null; periodo: string; scope?: string }) {
   return (
     <div className="pdf-avoid" style={{ borderBottom: "2px solid #0f172a", paddingBottom: 10, marginBottom: 14 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
@@ -132,9 +145,14 @@ function Header({ title, subtitle, periodo }: { title: string; subtitle?: string
           <h1 style={{ fontSize: 20, fontWeight: 700, margin: "5px 0 2px", lineHeight: 1.2 }}>{title}</h1>
           {subtitle && <div style={{ color: "#475569", fontSize: 11.5 }}>{subtitle}</div>}
           <div style={{ color: "#64748b", fontSize: 11, marginTop: 4 }}>{periodo}</div>
+          {scope && (
+            <div style={{ marginTop: 5, display: "inline-block", background: "#0f172a", color: "#ffffff", borderRadius: 4, padding: "3px 8px", fontSize: 9, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+              {scope}
+            </div>
+          )}
         </div>
         <div style={{ textAlign: "right" }}>
-          <KiMediaMark size={22} />
+          <KiMediaMark size={20} />
           <div style={{ fontSize: 9, color: "#94a3b8", marginTop: 2 }}>
             {new Date().toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" })}
           </div>
@@ -162,6 +180,7 @@ export const DependenciaPdfTemplate = forwardRef<HTMLDivElement, { data: Depende
         title={data.dependencia}
         subtitle={data.titular ? `${data.titular}${data.titularCargo ? ` · ${data.titularCargo}` : ""}` : data.tipo}
         periodo={data.periodoLabel}
+        scope={data.enfoqueLabel}
       />
 
       {/* KPIs */}
@@ -192,9 +211,48 @@ export const DependenciaPdfTemplate = forwardRef<HTMLDivElement, { data: Depende
         </div>
       </div>
 
+      {/* Institución vs titular */}
+      <div className="pdf-avoid" style={{ marginBottom: 14 }}>
+        <div style={sectionTitle}>Qué corresponde a la institución y qué al titular</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 9 }}>
+          {([
+            ["Cuentas institucionales", data.desglose.institucional],
+            ["Cuentas del titular", data.desglose.titular],
+          ] as const).map(([label, d]) => (
+            <div key={label} style={cardStyle}>
+              <div style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.1em", color: "#64748b" }}>{label}</div>
+              {d.cuentas === 0 ? (
+                <div style={{ fontSize: 10.5, color: "#94a3b8", marginTop: 4 }}>Sin cuentas registradas en este enfoque.</div>
+              ) : (
+                <div style={{ display: "flex", gap: 14, marginTop: 4, flexWrap: "wrap" }}>
+                  <div>
+                    <div style={{ fontSize: 15, fontWeight: 700 }}>{nf(d.seguidores)}</div>
+                    <div style={{ fontSize: 9, color: "#64748b" }}>seguidores · {d.cuentas} cuenta{d.cuentas === 1 ? "" : "s"}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 15, fontWeight: 700 }}>{pf(d.engagement)}</div>
+                    <div style={{ fontSize: 9, color: "#64748b" }}>interacción</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 15, fontWeight: 700 }}>{nf(d.postsDia, 2)}</div>
+                    <div style={{ fontSize: 9, color: "#64748b" }}>pub./día</div>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+        <div style={{ fontSize: 9, color: "#94a3b8", marginTop: 5 }}>
+          Los indicadores de la parte superior suman ambos bloques según el enfoque seleccionado ({data.enfoqueLabel.toLowerCase()}).
+        </div>
+      </div>
+
       {/* Cuentas */}
       <div className="pdf-avoid" style={{ marginBottom: 14 }}>
         <div style={sectionTitle}>Cuentas de la dependencia</div>
+        <div style={{ fontSize: 9, color: "#94a3b8", marginTop: -4, marginBottom: 6 }}>
+          Crec./día = crecimiento promedio diario de seguidores. Pub./día = publicaciones por día. Un guion indica que la red no reportó ese dato en el periodo.
+        </div>
         {data.cuentas.length === 0 ? (
           <div style={{ color: "#64748b" }}>Sin cuentas con datos en el periodo.</div>
         ) : (
@@ -230,7 +288,11 @@ export const DependenciaPdfTemplate = forwardRef<HTMLDivElement, { data: Depende
       {/* Narrativas */}
       {data.narrativas.length > 0 && (
         <div className="pdf-avoid" style={{ marginBottom: 14 }}>
-          <div style={sectionTitle}>Territorios narrativos detectados</div>
+          <div style={sectionTitle}>De qué habla la dependencia en sus redes</div>
+          <div style={{ fontSize: 9, color: "#94a3b8", marginTop: -4, marginBottom: 6 }}>
+            Temas recurrentes identificados con IA a partir de las publicaciones propias del periodo
+            {data.narrativasFuentes?.length ? ` (${data.narrativasFuentes.slice(0, 4).join(", ")})` : ""}. No son recomendaciones: describen el contenido ya publicado.
+          </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 9 }}>
             {data.narrativas.slice(0, 4).map((n, i) => (
               <div key={i} style={cardStyle}>
@@ -263,29 +325,29 @@ export const DependenciaPdfTemplate = forwardRef<HTMLDivElement, { data: Depende
       {/* Prensa */}
       <div>
         <div style={sectionTitle}>Menciones de prensa en el periodo</div>
+        <div style={{ fontSize: 9, color: "#94a3b8", marginTop: -4, marginBottom: 6 }}>
+          Notas y publicaciones donde se menciona a la dependencia o a su titular, con el extracto que motivó la clasificación de tono.
+          {prensaTotal > 0 && ` Total: ${prensaTotal} menciones (${data.prensaTono.positivo} positivas, ${data.prensaTono.neutral} neutrales, ${data.prensaTono.negativo} negativas).`}
+          {data.prensaMedios?.length ? ` Medios más activos: ${data.prensaMedios.slice(0, 4).map((m) => `${m.medio} (${m.n})`).join(", ")}.` : ""}
+        </div>
         {data.prensa.length === 0 ? (
           <div style={{ color: "#64748b" }}>Sin menciones registradas para la dependencia o su titular.</div>
         ) : (
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr>
-                <th style={th}>Fecha</th>
-                <th style={th}>Medio</th>
-                <th style={th}>Titular</th>
-                <th style={th}>Tono</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.prensa.slice(0, 12).map((m, i) => (
-                <tr key={i}>
-                  <td style={{ ...td, whiteSpace: "nowrap" }}>{m.fecha}</td>
-                  <td style={td}>{m.medio}</td>
-                  <td style={td}>{m.titular.slice(0, 110)}</td>
-                  <td style={{ ...td, color: TONE_COLOR[m.tono] ?? "#64748b", textTransform: "capitalize" }}>{m.tono}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          data.prensa.slice(0, 8).map((m, i) => (
+            <div className="pdf-avoid" key={i} style={{ ...cardStyle, marginBottom: 6, borderLeft: `3px solid ${TONE_COLOR[m.tono] ?? "#94a3b8"}` }}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 12, fontSize: 9.5, color: "#64748b" }}>
+                <span>{m.fecha} · {m.medio}{m.canal && m.canal !== "medios" ? ` · ${m.canal}` : ""}</span>
+                <span style={{ color: TONE_COLOR[m.tono] ?? "#64748b", textTransform: "capitalize", fontWeight: 600 }}>{m.tono}</span>
+              </div>
+              <div style={{ marginTop: 2, fontSize: 10.5, fontWeight: 600 }}>{m.titular.slice(0, 130) || "(sin titular)"}</div>
+              {m.cita && (
+                <div style={{ marginTop: 2, fontSize: 9.8, color: "#475569" }}>
+                  “{m.cita.slice(0, 200)}{m.cita.length > 200 ? "…" : ""}”
+                </div>
+              )}
+              {m.url && <div style={{ marginTop: 2, fontSize: 8.5, color: "#94a3b8" }}>{m.url.slice(0, 110)}</div>}
+            </div>
+          ))
         )}
         {prensaTotal > data.prensa.length && (
           <div style={{ fontSize: 9.5, color: "#94a3b8", marginTop: 6 }}>

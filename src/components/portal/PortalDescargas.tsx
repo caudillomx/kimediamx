@@ -326,17 +326,70 @@ export default function PortalDescargas({
     const depComps = competitors.filter((c) => c.dependencia_id === dep.id && matchesEnfoque(c.account_type));
     const compById = new Map(depComps.map((c) => [c.id, c]));
 
+    const periodo0 = activePeriods[0];
+    const winFrom = cut === "semanal" ? weekFrom : (periodo0?.period_start ?? pressFrom);
+    const winTo = cut === "semanal" ? weekTo : (periodo0?.period_end ?? pressTo);
+    const winDays = Math.max(
+      1,
+      Math.round((new Date(winTo + "T00:00:00").getTime() - new Date(winFrom + "T00:00:00").getTime()) / 86_400_000) + 1,
+    );
+
+    // Fallbacks para crecimiento/día y publicaciones/día cuando la métrica llega vacía.
+    const growthByKey = new Map<string, number[]>();
+    if (depComps.length && periodIds.length) {
+      const { data: fd } = await supabase
+        .from("client_portal_benchmark_follower_daily")
+        .select("competitor_id,network,day,delta")
+        .in("period_id", periodIds)
+        .in("competitor_id", depComps.map((c) => c.id))
+        .limit(20000);
+      for (const r of (fd ?? []) as any[]) {
+        if (cut === "semanal" && (r.day < weekFrom || r.day > weekTo)) continue;
+        const k = `${r.competitor_id}|${r.network}`;
+        growthByKey.set(k, [...(growthByKey.get(k) ?? []), Number(r.delta) || 0]);
+      }
+    }
+    const postsCount = new Map<string, number>();
+    for (const p of posts) {
+      if (!p.competitor_id || !compById.has(p.competitor_id)) continue;
+      if (!periodIds.includes(p.period_id)) continue;
+      if (cut === "semanal" && !inMxRange(p.posted_at, weekFrom, weekTo)) continue;
+      const k = `${p.competitor_id}|${p.network}`;
+      postsCount.set(k, (postsCount.get(k) ?? 0) + 1);
+    }
+
     const cuentas = metrics
       .filter((m) => periodIds.includes(m.period_id) && compById.has(m.competitor_id))
       .map((m) => {
         const c = compById.get(m.competitor_id)!;
+        const k = `${m.competitor_id}|${m.network}`;
+        const deltas = growthByKey.get(k) ?? [];
+        const avgDelta = deltas.length ? deltas.reduce((a, b) => a + b, 0) / deltas.length : null;
+        const crecimiento = Number.isFinite(Number(m.follower_growth_rate)) && m.follower_growth_rate != null
+          ? Number(m.follower_growth_rate)
+          : (avgDelta != null && Number(m.followers) ? avgDelta / Number(m.followers) : null);
+        const postsDia = Number.isFinite(Number(m.posts_per_day)) && m.posts_per_day != null
+          ? Number(m.posts_per_day)
+          : (postsCount.has(k) ? (postsCount.get(k) as number) / winDays : null);
         return {
           perfil: c.name, red: m.network, tipo: c.account_type ?? "institucional",
-          seguidores: m.followers, crecimiento: m.follower_growth_rate,
-          engagement: m.engagement_rate, postsDia: m.posts_per_day,
+          seguidores: m.followers, crecimiento,
+          engagement: m.engagement_rate, postsDia,
         };
       })
       .sort((a, b) => (b.seguidores ?? 0) - (a.seguidores ?? 0));
+
+    const bucket = (tipo: "institucional" | "titular") => {
+      const rows = cuentas.filter((c) => (c.tipo ?? "institucional") === tipo);
+      const engs = rows.map((r) => r.engagement).filter((v): v is number => v != null && Number.isFinite(v));
+      const pds = rows.map((r) => r.postsDia).filter((v): v is number => v != null && Number.isFinite(v));
+      return {
+        cuentas: rows.length,
+        seguidores: rows.reduce((a, r) => a + (r.seguidores ?? 0), 0),
+        engagement: RATE_AVG(engs),
+        postsDia: pds.length ? pds.reduce((a, b) => a + b, 0) : null,
+      };
+    };
 
     const curr = aggregate(periodIds);
     const prev = aggregate(prevPeriods.map((p) => p.id));
@@ -366,22 +419,30 @@ export default function PortalDescargas({
       }));
 
     const profileNames = new Set(depComps.map((c) => c.name.toLowerCase()));
+    const narrativasFuentes: string[] = [];
     const axes: { name: string; description?: string }[] = [];
     for (const n of narratives) {
       if (!profileNames.has(String(n.profile_name ?? "").toLowerCase())) continue;
+      const fuente = `${n.profile_name} · ${n.network}`;
+      if (!narrativasFuentes.includes(fuente)) narrativasFuentes.push(fuente);
       for (const a of (n.narratives?.narrative_axes ?? [])) {
         if (a?.name && !axes.some((x) => x.name === a.name)) axes.push({ name: a.name, description: a.description });
       }
     }
 
-    const periodo = activePeriods[0];
-    const from = cut === "semanal" ? weekFrom : (periodo?.period_start ?? pressFrom);
-    const to = cut === "semanal" ? weekTo : (periodo?.period_end ?? pressTo);
-    const mentions = await fetchMentions(from, to);
+    const mentions = await fetchMentions(winFrom, winTo);
     const prensaAll = mentions
       .filter((r) => r.dep === dep.id)
-      .map((r) => ({ fecha: r.fecha, medio: r.medio, titular: r.titular || r.cita.slice(0, 90), tono: r.tono, url: r.url }));
-    const prensa = prensaAll.slice(0, 12);
+      .map((r) => ({
+        fecha: r.fecha, medio: r.medio, titular: r.titular || r.cita.slice(0, 90),
+        tono: r.tono, url: r.url, cita: r.cita, canal: r.canal,
+      }));
+    const prensa = prensaAll.slice(0, 8);
+    const medioCount = new Map<string, number>();
+    prensaAll.forEach((p) => medioCount.set(p.medio, (medioCount.get(p.medio) ?? 0) + 1));
+    const prensaMedios = Array.from(medioCount.entries())
+      .map(([medio, n]) => ({ medio, n }))
+      .sort((a, b) => b.n - a.n);
     const prensaTono = {
       positivo: prensaAll.filter((p) => p.tono === "positivo").length,
       neutral: prensaAll.filter((p) => p.tono === "neutral").length,
@@ -393,10 +454,12 @@ export default function PortalDescargas({
       tipo: dep.tipo,
       titular: dep.titular,
       titularCargo: dep.titular_cargo,
-      periodoLabel: `${cutLabel} · ${ENFOQUE_LABEL[enfoque]}`,
+      periodoLabel: cutLabel,
+      enfoqueLabel: ENFOQUE_LABEL[enfoque],
       redes: Array.from(new Set(cuentas.map((c) => c.red))),
       cuentas,
       totales: { seguidores: mine.followers, engagement: mine.engagement, postsDia: mine.postsDia },
+      desglose: { institucional: bucket("institucional"), titular: bucket("titular") },
       promedioGabinete: { engagement: engAvg, seguidores: folAvg },
       posicion: { rank: rank >= 0 ? rank + 1 : null, total: engEntries.length },
       variacion: {
@@ -407,7 +470,9 @@ export default function PortalDescargas({
       prensa,
       prensaTotal: prensaAll.length,
       prensaTono,
+      prensaMedios,
       narrativas: axes,
+      narrativasFuentes,
     };
   };
 
