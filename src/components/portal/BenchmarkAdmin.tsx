@@ -326,12 +326,12 @@ export default function BenchmarkAdmin({ clientId, clientName, scope = "general"
         }
       } else if (parsedPreview.type === "seguidores") {
         await supabase.from("client_portal_benchmark_follower_daily").delete().eq("period_id", periodRow.id);
-        const rows: any[] = [];
+        const rowMap = new Map<string, any>();
         for (const r of parsedPreview.seguidores!) {
           const cid = findCompId(r.profile, r.network);
           if (!cid) continue;
           for (const d of r.days) {
-            rows.push({
+            rowMap.set(`${cid}|${r.network}|${d.date}`, {
               client_id: clientId,
               period_id: periodRow.id,
               competitor_id: cid,
@@ -341,10 +341,13 @@ export default function BenchmarkAdmin({ clientId, clientName, scope = "general"
             });
           }
         }
-        // Chunk inserts to avoid payload limits
+        const rows = Array.from(rowMap.values());
+        // Chunk upserts to avoid payload limits; la llave única es (competitor_id, network, day)
         const CHUNK = 500;
         for (let i = 0; i < rows.length; i += CHUNK) {
-          const { error } = await supabase.from("client_portal_benchmark_follower_daily").insert(rows.slice(i, i + CHUNK));
+          const { error } = await supabase
+            .from("client_portal_benchmark_follower_daily")
+            .upsert(rows.slice(i, i + CHUNK), { onConflict: "competitor_id,network,day" });
           if (error) throw error;
         }
       } else {
