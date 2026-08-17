@@ -224,16 +224,22 @@ export default function PortalDescargas({
     });
   }, [dependencias]);
 
-  const resolveDep = (haystack: string): string | null => {
+  /** Resuelve una mención a dependencia y distingue si apunta al titular o a la institución. */
+  const resolveMention = (haystack: string): { dep: string | null; scope: ScopeKey | null } => {
     const toks = new Set(nameTokens(haystack));
     for (const m of depMatchers) {
-      if (m.titTokens.length >= 2 && m.titTokens.filter((t) => toks.has(t)).length >= 2) return m.id;
+      if (m.titTokens.length >= 2 && m.titTokens.filter((t) => toks.has(t)).length >= 2) {
+        return { dep: m.id, scope: "titular" };
+      }
     }
     for (const m of depMatchers) {
-      if (m.depTokens.length && m.depTokens.every((t) => toks.has(t))) return m.id;
+      if (m.depTokens.length && m.depTokens.every((t) => toks.has(t))) {
+        return { dep: m.id, scope: "institucional" };
+      }
     }
-    return null;
+    return { dep: null, scope: null };
   };
+  const resolveDep = (haystack: string): string | null => resolveMention(haystack).dep;
 
   const loadPress = async () => {
     setPressLoading(true);
