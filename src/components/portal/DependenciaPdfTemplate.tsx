@@ -171,14 +171,19 @@ function SectionTitle({ text, color = INK, hint }: { text: string; color?: strin
   );
 }
 
-function Kpi({ label, value, foot, color, footColor }: {
-  label: string; value: string; foot?: string; color: string; footColor?: string;
+function Kpi({ label, value, foot, color, footColor, explain }: {
+  label: string; value: string; foot?: string; color: string; footColor?: string; explain?: string;
 }) {
   return (
     <div style={{ border: `1px solid ${LINE}`, borderTop: `3px solid ${color}`, borderRadius: 8, padding: "7px 9px", background: "#ffffff" }}>
       <div style={{ fontSize: 8.5, textTransform: "uppercase", letterSpacing: "0.1em", color: MUTED }}>{label}</div>
       <div style={{ fontSize: 17, fontWeight: 700, marginTop: 1, color: INK }}>{value}</div>
       {foot && <div style={{ fontSize: 8.8, color: footColor ?? MUTED, marginTop: 1 }}>{foot}</div>}
+      {explain && (
+        <div style={{ fontSize: 8, color: "#94a3b8", marginTop: 3, lineHeight: 1.3, borderTop: `1px dashed ${LINE}`, paddingTop: 3 }}>
+          {explain}
+        </div>
+      )}
     </div>
   );
 }
@@ -188,10 +193,92 @@ function ScopeChip({ scope }: { scope: ScopeKey | "conjunto" }) {
   return (
     <span style={{
       display: "inline-block", background: s.main, color: "#ffffff", borderRadius: 4,
-      padding: "2px 7px", fontSize: 8.5, letterSpacing: "0.09em", textTransform: "uppercase", fontWeight: 700,
+      padding: "0 7px", height: 15, lineHeight: "15px", fontSize: 8.5,
+      letterSpacing: "0.09em", textTransform: "uppercase", fontWeight: 700,
+      whiteSpace: "nowrap", flexShrink: 0,
     }}>
       {s.tag}
     </span>
+  );
+}
+
+/** Bloque didáctico: explica qué es una sección y por qué importa. */
+function Explainer({ text, color }: { text: string; color: string }) {
+  return (
+    <div style={{
+      background: "#f8fafc", borderLeft: `3px solid ${color}`, borderRadius: "0 6px 6px 0",
+      padding: "5px 8px", marginBottom: 6, fontSize: 8.8, color: "#475569", lineHeight: 1.4,
+    }}>
+      {text}
+    </div>
+  );
+}
+
+const GLOSARIO: { termino: string; que: string; porque: string }[] = [
+  {
+    termino: "Seguidores",
+    que: "Total de personas suscritas a las cuentas consideradas, sumando todas las redes.",
+    porque: "Es el alcance potencial: cuánta gente puede recibir un mensaje sin pagar publicidad.",
+  },
+  {
+    termino: "Crecimiento por día (Crec./día)",
+    que: "Porcentaje promedio diario en que aumenta o disminuye la base de seguidores.",
+    porque: "Muestra si la audiencia se está construyendo de forma sostenida, más allá de picos aislados.",
+  },
+  {
+    termino: "Interacción (engagement)",
+    que: "Reacciones, comentarios y compartidos divididos entre los seguidores de la cuenta.",
+    porque: "Mide calidad, no tamaño: una cuenta pequeña con alta interacción comunica mejor que una grande e inerte. Referencia sana en gobierno: 0.5%–2%.",
+  },
+  {
+    termino: "Publicaciones por día (Pub./día)",
+    que: "Ritmo de publicación promedio en el periodo.",
+    porque: "Permite ver si la baja interacción viene de poco contenido o de contenido poco relevante.",
+  },
+  {
+    termino: "Posición en el gabinete",
+    que: "Lugar que ocupa la cuenta al ordenar a todas las dependencias (o titulares) por interacción.",
+    porque: "Da contexto: compara contra pares con condiciones similares, no contra marcas comerciales.",
+  },
+  {
+    termino: "Menciones de prensa y tono",
+    que: "Notas de medios monitoreados en el periodo, clasificadas como positiva, neutral o negativa.",
+    porque: "Es la conversación que no controlamos; el tono anticipa riesgos reputacionales y temas por atender.",
+  },
+  {
+    termino: "Narrativas / territorios",
+    que: "Temas recurrentes detectados en las publicaciones propias del periodo.",
+    porque: "Revelan de qué se habla realmente y si la agenda pública prioritaria está siendo comunicada.",
+  },
+  {
+    termino: "s/d",
+    que: "Sin dato: la red social no reportó esa métrica en el periodo consultado.",
+    porque: "No significa cero; significa que el dato no está disponible y no debe interpretarse como caída.",
+  },
+];
+
+function Glosario() {
+  return (
+    <div style={{ marginTop: 12 }}>
+      <SectionTitle
+        text="Glosario: cómo leer estos indicadores"
+        color={SCOPE.conjunto.main}
+        hint="Referencia rápida de los términos técnicos usados en el reporte y de por qué importan para la toma de decisiones."
+      />
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+        {GLOSARIO.map((g, i) => (
+          <div className="pdf-avoid" key={i} style={{
+            border: `1px solid ${LINE}`, borderRadius: 7, padding: "6px 8px", background: "#ffffff",
+          }}>
+            <div style={{ fontSize: 9.6, fontWeight: 700, color: INK }}>{g.termino}</div>
+            <div style={{ fontSize: 8.8, color: "#475569", marginTop: 1 }}>{g.que}</div>
+            <div style={{ fontSize: 8.8, color: MUTED, marginTop: 2 }}>
+              <b style={{ color: SCOPE.institucional.main }}>Por qué importa:</b> {g.porque}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
