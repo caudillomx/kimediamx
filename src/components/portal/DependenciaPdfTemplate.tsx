@@ -342,30 +342,43 @@ function BlockSection({ b, compacto }: { b: ScopeBlock; compacto: boolean }) {
       <div className="pdf-avoid" style={{
         background: s.soft, border: `1px solid ${s.border}`, borderLeft: `4px solid ${s.main}`,
         borderRadius: 8, padding: "7px 10px", marginBottom: 8,
-        display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12,
+        display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12,
       }}>
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 7, height: 16 }}>
             <ScopeChip scope={b.key} />
-            <span style={{ fontSize: 12.5, fontWeight: 700 }}>{b.label}</span>
+            <span style={{ fontSize: 12.5, fontWeight: 700, lineHeight: "15px", display: "inline-block" }}>{b.label}</span>
           </div>
-          <div style={{ fontSize: 9.5, color: "#475569", marginTop: 2 }}>{b.sujeto}</div>
+          <div style={{ fontSize: 9.5, color: "#475569", marginTop: 3, lineHeight: 1.3 }}>{b.sujeto}</div>
         </div>
-        <div style={{ fontSize: 9, color: MUTED, textAlign: "right" }}>
+        <div style={{ fontSize: 9, color: MUTED, textAlign: "right", lineHeight: "15px", flexShrink: 0 }}>
           {b.cuentas.length} cuenta{b.cuentas.length === 1 ? "" : "s"} · {b.publicaciones} publicaciones en el periodo
         </div>
       </div>
 
+      <Explainer
+        color={s.main}
+        text={
+          b.key === "titular"
+            ? "Este bloque mide la voz personal del titular: sus cuentas propias, lo que publica y cómo la prensa lo menciona por nombre. Sirve para evaluar liderazgo y vocería."
+            : "Este bloque mide la voz institucional de la dependencia: cuentas oficiales, contenido publicado y cobertura de prensa a nombre de la institución. Sirve para evaluar la comunicación de la política pública."
+        }
+      />
+
       {/* KPIs del bloque */}
       <div className="pdf-avoid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 10 }}>
         <Kpi label="Seguidores" value={nf(b.seguidores)} color={s.main}
-             foot={`${df(b.variacionSeguidores)} vs periodo previo`} footColor={deltaColor(b.variacionSeguidores)} />
+             foot={`${df(b.variacionSeguidores)} vs periodo previo`} footColor={deltaColor(b.variacionSeguidores)}
+             explain="Audiencia propia acumulada: a cuánta gente se puede llegar sin pagar pauta." />
         <Kpi label="Interacción" value={pf(b.engagement)} color={s.main}
-             foot={`Promedio gabinete: ${pf(b.promedioGabinete)}`} />
+             foot={`Promedio gabinete: ${pf(b.promedioGabinete)}`}
+             explain="Reacciones + comentarios + compartidos entre seguidores. Mide relevancia del contenido, no tamaño." />
         <Kpi label="Posición en el gabinete" value={b.rank ? `#${b.rank}` : "s/d"} color={s.main}
-             foot={`de ${b.rankTotal} ${b.key === "titular" ? "titulares" : "dependencias"}`} />
+             foot={`de ${b.rankTotal} ${b.key === "titular" ? "titulares" : "dependencias"}`}
+             explain="Lugar al ordenar por interacción a todos los pares del gabinete en el mismo periodo." />
         <Kpi label="Menciones de prensa" value={String(b.prensaTotal)} color={s.main}
-             foot={`${b.prensaTono.positivo} pos · ${b.prensaTono.neutral} neu · ${b.prensaTono.negativo} neg`} />
+             foot={`${b.prensaTono.positivo} pos · ${b.prensaTono.neutral} neu · ${b.prensaTono.negativo} neg`}
+             explain="Cobertura de medios monitoreados. El tono anticipa riesgos y temas que requieren respuesta." />
       </div>
 
       {/* Cuentas */}
