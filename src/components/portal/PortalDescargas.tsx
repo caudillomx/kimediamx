@@ -13,6 +13,7 @@ import { nameTokens } from "@/lib/entityNames";
 import {
   DependenciaPdfTemplate, GabinetePdfTemplate,
   type DependenciaReportData, type GabineteReportData, type DepPressRow,
+  type ScopeBlock, type ScopeKey, type DepAccountRow,
 } from "./DependenciaPdfTemplate";
 
 type Dependencia = { id: string; nombre: string; tipo: string | null; titular: string | null; titular_cargo: string | null; sort_order: number | null };
