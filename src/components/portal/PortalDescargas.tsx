@@ -454,7 +454,7 @@ export default function PortalDescargas({
       tipo: dep.tipo,
       titular: dep.titular,
       titularCargo: dep.titular_cargo,
-      periodoLabel: `${cutLabel} · ${ENFOQUE_LABEL[enfoque]}`,
+      periodoLabel: cutLabel,
       enfoqueLabel: ENFOQUE_LABEL[enfoque],
       redes: Array.from(new Set(cuentas.map((c) => c.red))),
       cuentas,
