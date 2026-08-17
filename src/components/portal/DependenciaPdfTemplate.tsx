@@ -180,6 +180,7 @@ export const DependenciaPdfTemplate = forwardRef<HTMLDivElement, { data: Depende
         title={data.dependencia}
         subtitle={data.titular ? `${data.titular}${data.titularCargo ? ` · ${data.titularCargo}` : ""}` : data.tipo}
         periodo={data.periodoLabel}
+        scope={data.enfoqueLabel}
       />
 
       {/* KPIs */}
@@ -210,9 +211,48 @@ export const DependenciaPdfTemplate = forwardRef<HTMLDivElement, { data: Depende
         </div>
       </div>
 
+      {/* Institución vs titular */}
+      <div className="pdf-avoid" style={{ marginBottom: 14 }}>
+        <div style={sectionTitle}>Qué corresponde a la institución y qué al titular</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 9 }}>
+          {([
+            ["Cuentas institucionales", data.desglose.institucional],
+            ["Cuentas del titular", data.desglose.titular],
+          ] as const).map(([label, d]) => (
+            <div key={label} style={cardStyle}>
+              <div style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.1em", color: "#64748b" }}>{label}</div>
+              {d.cuentas === 0 ? (
+                <div style={{ fontSize: 10.5, color: "#94a3b8", marginTop: 4 }}>Sin cuentas registradas en este enfoque.</div>
+              ) : (
+                <div style={{ display: "flex", gap: 14, marginTop: 4, flexWrap: "wrap" }}>
+                  <div>
+                    <div style={{ fontSize: 15, fontWeight: 700 }}>{nf(d.seguidores)}</div>
+                    <div style={{ fontSize: 9, color: "#64748b" }}>seguidores · {d.cuentas} cuenta{d.cuentas === 1 ? "" : "s"}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 15, fontWeight: 700 }}>{pf(d.engagement)}</div>
+                    <div style={{ fontSize: 9, color: "#64748b" }}>interacción</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 15, fontWeight: 700 }}>{nf(d.postsDia, 2)}</div>
+                    <div style={{ fontSize: 9, color: "#64748b" }}>pub./día</div>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+        <div style={{ fontSize: 9, color: "#94a3b8", marginTop: 5 }}>
+          Los indicadores de la parte superior suman ambos bloques según el enfoque seleccionado ({data.enfoqueLabel.toLowerCase()}).
+        </div>
+      </div>
+
       {/* Cuentas */}
       <div className="pdf-avoid" style={{ marginBottom: 14 }}>
         <div style={sectionTitle}>Cuentas de la dependencia</div>
+        <div style={{ fontSize: 9, color: "#94a3b8", marginTop: -4, marginBottom: 6 }}>
+          Crec./día = crecimiento promedio diario de seguidores. Pub./día = publicaciones por día. Un guion indica que la red no reportó ese dato en el periodo.
+        </div>
         {data.cuentas.length === 0 ? (
           <div style={{ color: "#64748b" }}>Sin cuentas con datos en el periodo.</div>
         ) : (
@@ -248,7 +288,11 @@ export const DependenciaPdfTemplate = forwardRef<HTMLDivElement, { data: Depende
       {/* Narrativas */}
       {data.narrativas.length > 0 && (
         <div className="pdf-avoid" style={{ marginBottom: 14 }}>
-          <div style={sectionTitle}>Territorios narrativos detectados</div>
+          <div style={sectionTitle}>De qué habla la dependencia en sus redes</div>
+          <div style={{ fontSize: 9, color: "#94a3b8", marginTop: -4, marginBottom: 6 }}>
+            Temas recurrentes identificados con IA a partir de las publicaciones propias del periodo
+            {data.narrativasFuentes?.length ? ` (${data.narrativasFuentes.slice(0, 4).join(", ")})` : ""}. No son recomendaciones: describen el contenido ya publicado.
+          </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 9 }}>
             {data.narrativas.slice(0, 4).map((n, i) => (
               <div key={i} style={cardStyle}>
