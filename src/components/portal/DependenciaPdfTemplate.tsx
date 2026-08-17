@@ -1,19 +1,19 @@
 import { forwardRef } from "react";
+import kimediaLogo from "@/assets/kimedia-logo.png";
 
-/** Wordmark tipográfico de KiMedia (mismo criterio que el PDF semanal). */
-function KiMediaMark({ size = 13, muted = false }: { size?: number; muted?: boolean }) {
+/** Logo oficial de KiMedia (versión clara sobre placa oscura). */
+function KiMediaMark({ size = 26 }: { size?: number }) {
   return (
     <span
       style={{
-        fontFamily: "'Space Grotesk', system-ui, sans-serif",
-        fontWeight: 700,
-        fontSize: size,
-        letterSpacing: "-0.02em",
-        color: muted ? "#64748b" : "#0f172a",
-        whiteSpace: "nowrap",
+        display: "inline-flex",
+        alignItems: "center",
+        background: "#0b0b0b",
+        borderRadius: 6,
+        padding: `${Math.round(size * 0.3)}px ${Math.round(size * 0.45)}px`,
       }}
     >
-      ki<span style={{ color: "#ef6a4d" }}>media</span>
+      <img src={kimediaLogo} alt="KiMedia" style={{ height: size, width: "auto", display: "block" }} />
     </span>
   );
 }
