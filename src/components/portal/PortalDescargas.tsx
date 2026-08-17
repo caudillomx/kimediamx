@@ -335,7 +335,9 @@ export default function PortalDescargas({
     const dep = dependencias.find((d) => d.id === depId);
     if (!dep) return null;
     const periodIds = activePeriods.map((p) => p.id);
-    const depComps = competitors.filter((c) => c.dependencia_id === dep.id && matchesEnfoque(c.account_type));
+    const prevIds = prevPeriods.map((p) => p.id);
+    const allDepComps = competitors.filter((c) => c.dependencia_id === dep.id);
+    const depComps = allDepComps.filter((c) => matchesEnfoque(c.account_type));
     const compById = new Map(depComps.map((c) => [c.id, c]));
 
     const periodo0 = activePeriods[0];
@@ -346,7 +348,7 @@ export default function PortalDescargas({
       Math.round((new Date(winTo + "T00:00:00").getTime() - new Date(winFrom + "T00:00:00").getTime()) / 86_400_000) + 1,
     );
 
-    // Fallbacks para crecimiento/día y publicaciones/día cuando la métrica llega vacía.
+    // Crecimiento diario real (fallback cuando la métrica del periodo llega vacía).
     const growthByKey = new Map<string, number[]>();
     if (depComps.length && periodIds.length) {
       const { data: fd } = await supabase
@@ -361,6 +363,16 @@ export default function PortalDescargas({
         growthByKey.set(k, [...(growthByKey.get(k) ?? []), Number(r.delta) || 0]);
       }
     }
+
+    // Seguidores del periodo previo por cuenta/red: segundo fallback de crecimiento.
+    const prevFollowers = new Map<string, number>();
+    for (const m of metrics) {
+      if (!prevIds.includes(m.period_id)) continue;
+      if (!compById.has(m.competitor_id)) continue;
+      if (Number.isFinite(Number(m.followers))) prevFollowers.set(`${m.competitor_id}|${m.network}`, Number(m.followers));
+    }
+
+    // Publicaciones del periodo por cuenta/red.
     const postsCount = new Map<string, number>();
     for (const p of posts) {
       if (!p.competitor_id || !compById.has(p.competitor_id)) continue;
@@ -370,59 +382,76 @@ export default function PortalDescargas({
       postsCount.set(k, (postsCount.get(k) ?? 0) + 1);
     }
 
-    const cuentas = metrics
+    const cuentas: DepAccountRow[] = metrics
       .filter((m) => periodIds.includes(m.period_id) && compById.has(m.competitor_id))
       .map((m) => {
         const c = compById.get(m.competitor_id)!;
         const k = `${m.competitor_id}|${m.network}`;
         const deltas = growthByKey.get(k) ?? [];
         const avgDelta = deltas.length ? deltas.reduce((a, b) => a + b, 0) / deltas.length : null;
-        const crecimiento = Number.isFinite(Number(m.follower_growth_rate)) && m.follower_growth_rate != null
-          ? Number(m.follower_growth_rate)
-          : (avgDelta != null && Number(m.followers) ? avgDelta / Number(m.followers) : null);
+        const prevF = prevFollowers.get(k) ?? null;
+        const followers = Number.isFinite(Number(m.followers)) ? Number(m.followers) : null;
+        let crecimiento: number | null =
+          Number.isFinite(Number(m.follower_growth_rate)) && m.follower_growth_rate != null
+            ? Number(m.follower_growth_rate)
+            : null;
+        if (crecimiento == null && avgDelta != null && followers) crecimiento = avgDelta / followers;
+        if (crecimiento == null && prevF && followers) crecimiento = (followers - prevF) / prevF / winDays;
+        const publicaciones = postsCount.get(k) ?? null;
         const postsDia = Number.isFinite(Number(m.posts_per_day)) && m.posts_per_day != null
           ? Number(m.posts_per_day)
-          : (postsCount.has(k) ? (postsCount.get(k) as number) / winDays : null);
+          : (publicaciones != null ? publicaciones / winDays : null);
+        const eng = Number.isFinite(Number(m.engagement_rate)) ? Number(m.engagement_rate) : null;
+        const sinDatos = !followers && !eng && !publicaciones;
         return {
           perfil: c.name, red: m.network, tipo: c.account_type ?? "institucional",
-          seguidores: m.followers, crecimiento,
-          engagement: m.engagement_rate, postsDia,
+          seguidores: followers, crecimiento, engagement: eng, postsDia, publicaciones, sinDatos,
         };
       })
       .sort((a, b) => (b.seguidores ?? 0) - (a.seguidores ?? 0));
 
-    const bucket = (tipo: "institucional" | "titular") => {
-      const rows = cuentas.filter((c) => (c.tipo ?? "institucional") === tipo);
-      const engs = rows.map((r) => r.engagement).filter((v): v is number => v != null && Number.isFinite(v));
-      const pds = rows.map((r) => r.postsDia).filter((v): v is number => v != null && Number.isFinite(v));
+    // Rankings del gabinete por ámbito.
+    const rankingDe = (scope: "combinado" | ScopeKey) => {
+      const curr = aggregate(periodIds, scope);
+      const prev = aggregate(prevIds, scope);
+      const entries = Array.from(curr.entries())
+        .filter(([, v]) => v.engagement != null && v.engagement > 0)
+        .sort((a, b) => (b[1].engagement ?? 0) - (a[1].engagement ?? 0));
+      const idx = entries.findIndex(([id]) => id === dep.id);
       return {
-        cuentas: rows.length,
-        seguidores: rows.reduce((a, r) => a + (r.seguidores ?? 0), 0),
-        engagement: RATE_AVG(engs),
-        postsDia: pds.length ? pds.reduce((a, b) => a + b, 0) : null,
+        mine: curr.get(dep.id) ?? { followers: 0, engagement: null, postsDia: null },
+        prevMine: prev.get(dep.id) ?? null,
+        rank: idx >= 0 ? idx + 1 : null,
+        total: entries.length,
+        promedio: RATE_AVG(entries.map(([, v]) => v.engagement as number)),
       };
     };
-
-    const curr = aggregate(periodIds);
-    const prev = aggregate(prevPeriods.map((p) => p.id));
-    const mine = curr.get(dep.id) ?? { followers: 0, engagement: null, postsDia: null };
-    const prevMine = prev.get(dep.id);
-
-    const engEntries = Array.from(curr.entries()).filter(([, v]) => v.engagement != null && v.engagement > 0)
-      .sort((a, b) => (b[1].engagement ?? 0) - (a[1].engagement ?? 0));
-    const rank = engEntries.findIndex(([id]) => id === dep.id);
-    const engAvg = RATE_AVG(engEntries.map(([, v]) => v.engagement as number));
-    const folAvg = engEntries.length
-      ? Array.from(curr.values()).reduce((a, b) => a + b.followers, 0) / curr.size
-      : null;
 
     const pctDelta = (a: number | null | undefined, b: number | null | undefined) =>
       a == null || b == null || !b ? null : (a - b) / Math.abs(b);
 
-    const topPosts = posts
+    // Narrativas y publicaciones por ámbito.
+    const narrativasDe = (scope: ScopeKey) => {
+      const names = new Set(
+        depComps.filter((c) => (c.account_type ?? "institucional") === scope).map((c) => c.name.toLowerCase()),
+      );
+      const fuentes: string[] = [];
+      const axes: { name: string; description?: string }[] = [];
+      for (const n of narratives) {
+        if (!names.has(String(n.profile_name ?? "").toLowerCase())) continue;
+        const fuente = `${n.profile_name} · ${n.network}`;
+        if (!fuentes.includes(fuente)) fuentes.push(fuente);
+        for (const a of (n.narratives?.narrative_axes ?? [])) {
+          if (a?.name && !axes.some((x) => x.name === a.name)) axes.push({ name: a.name, description: a.description });
+        }
+      }
+      return { axes, fuentes };
+    };
+
+    const postsDe = (scope: ScopeKey) => posts
       .filter((p) => periodIds.includes(p.period_id) && p.competitor_id && compById.has(p.competitor_id))
-      .filter((p) => cut !== "semanal"
-        || inMxRange(p.posted_at, weekFrom, weekTo))
+      .filter((p) => (compById.get(p.competitor_id!)?.account_type ?? "institucional") === scope)
+      .filter((p) => cut !== "semanal" || inMxRange(p.posted_at, weekFrom, weekTo))
       .sort((a, b) => (b.interactions ?? 0) - (a.interactions ?? 0))
       .slice(0, 3)
       .map((p) => ({
@@ -430,36 +459,74 @@ export default function PortalDescargas({
         red: p.network, fecha: p.posted_at, texto: p.message ?? "", interacciones: p.interactions ?? 0,
       }));
 
-    const profileNames = new Set(depComps.map((c) => c.name.toLowerCase()));
-    const narrativasFuentes: string[] = [];
-    const axes: { name: string; description?: string }[] = [];
-    for (const n of narratives) {
-      if (!profileNames.has(String(n.profile_name ?? "").toLowerCase())) continue;
-      const fuente = `${n.profile_name} · ${n.network}`;
-      if (!narrativasFuentes.includes(fuente)) narrativasFuentes.push(fuente);
-      for (const a of (n.narratives?.narrative_axes ?? [])) {
-        if (a?.name && !axes.some((x) => x.name === a.name)) axes.push({ name: a.name, description: a.description });
-      }
-    }
-
-    const mentions = await fetchMentions(winFrom, winTo);
-    const prensaAll = mentions
-      .filter((r) => r.dep === dep.id)
-      .map((r) => ({
-        fecha: r.fecha, medio: r.medio, titular: r.titular || r.cita.slice(0, 90),
-        tono: r.tono, url: r.url, cita: r.cita, canal: r.canal,
-      }));
-    const prensa = prensaAll.slice(0, 8);
-    const medioCount = new Map<string, number>();
-    prensaAll.forEach((p) => medioCount.set(p.medio, (medioCount.get(p.medio) ?? 0) + 1));
-    const prensaMedios = Array.from(medioCount.entries())
-      .map(([medio, n]) => ({ medio, n }))
-      .sort((a, b) => b.n - a.n);
-    const prensaTono = {
-      positivo: prensaAll.filter((p) => p.tono === "positivo").length,
-      neutral: prensaAll.filter((p) => p.tono === "neutral").length,
-      negativo: prensaAll.filter((p) => p.tono === "negativo" || p.tono === "crisis").length,
+    // Prensa separada: menciones al titular vs a la institución.
+    const mentions = (await fetchMentions(winFrom, winTo)).filter((r) => r.dep === dep.id);
+    const prensaDe = (scope: ScopeKey) => {
+      const rows = mentions
+        .filter((r) => (r.scope ?? "institucional") === scope)
+        .map((r) => ({
+          fecha: r.fecha, medio: r.medio, titular: r.titular || r.cita.slice(0, 90),
+          tono: r.tono, url: r.url, cita: r.cita, canal: r.canal,
+        }));
+      const medioCount = new Map<string, number>();
+      rows.forEach((p) => medioCount.set(p.medio, (medioCount.get(p.medio) ?? 0) + 1));
+      return {
+        prensa: rows.slice(0, 8),
+        prensaTotal: rows.length,
+        prensaMedios: Array.from(medioCount.entries()).map(([medio, n]) => ({ medio, n })).sort((a, b) => b.n - a.n),
+        prensaTono: {
+          positivo: rows.filter((p) => p.tono === "positivo").length,
+          neutral: rows.filter((p) => p.tono === "neutral").length,
+          negativo: rows.filter((p) => p.tono === "negativo" || p.tono === "crisis").length,
+        },
+      };
     };
+
+    const bloqueDe = (scope: ScopeKey): ScopeBlock => {
+      const rows = cuentas.filter((c) => (c.tipo ?? "institucional") === scope);
+      const r = rankingDe(scope);
+      const nar = narrativasDe(scope);
+      const pr = prensaDe(scope);
+      const engs = rows.map((x) => x.engagement).filter((v): v is number => v != null && Number.isFinite(v) && v > 0);
+      const pds = rows.map((x) => x.postsDia).filter((v): v is number => v != null && Number.isFinite(v));
+      return {
+        key: scope,
+        label: scope === "titular" ? "Comunicación del titular" : "Comunicación institucional",
+        sujeto: scope === "titular"
+          ? `${dep.titular ?? "Titular sin registrar"}${dep.titular_cargo ? ` · ${dep.titular_cargo}` : ""}`
+          : dep.nombre,
+        cuentas: rows,
+        seguidores: rows.reduce((a, x) => a + (x.seguidores ?? 0), 0),
+        engagement: RATE_AVG(engs),
+        postsDia: pds.length ? pds.reduce((a, b) => a + b, 0) : null,
+        publicaciones: rows.reduce((a, x) => a + (x.publicaciones ?? 0), 0),
+        variacionSeguidores: pctDelta(r.mine.followers, r.prevMine?.followers),
+        rank: r.rank,
+        rankTotal: r.total,
+        promedioGabinete: r.promedio,
+        topPosts: postsDe(scope),
+        narrativas: nar.axes,
+        narrativasFuentes: nar.fuentes,
+        ...pr,
+      };
+    };
+
+    const bloques: ScopeBlock[] =
+      enfoque === "combinado" ? [bloqueDe("institucional"), bloqueDe("titular")]
+        : [bloqueDe(enfoque)];
+
+    const comb = rankingDe("combinado");
+    const conjunto = enfoque === "combinado"
+      ? {
+          seguidores: bloques.reduce((a, b) => a + b.seguidores, 0),
+          engagement: comb.mine.engagement,
+          postsDia: comb.mine.postsDia,
+          prensaTotal: bloques.reduce((a, b) => a + b.prensaTotal, 0),
+          variacionSeguidores: pctDelta(comb.mine.followers, comb.prevMine?.followers),
+          rank: comb.rank,
+          rankTotal: comb.total,
+        }
+      : null;
 
     return {
       dependencia: dep.nombre,
@@ -467,24 +534,10 @@ export default function PortalDescargas({
       titular: dep.titular,
       titularCargo: dep.titular_cargo,
       periodoLabel: cutLabel,
+      modo: enfoque,
       enfoqueLabel: ENFOQUE_LABEL[enfoque],
-      redes: Array.from(new Set(cuentas.map((c) => c.red))),
-      cuentas,
-      totales: { seguidores: mine.followers, engagement: mine.engagement, postsDia: mine.postsDia },
-      desglose: { institucional: bucket("institucional"), titular: bucket("titular") },
-      promedioGabinete: { engagement: engAvg, seguidores: folAvg },
-      posicion: { rank: rank >= 0 ? rank + 1 : null, total: engEntries.length },
-      variacion: {
-        seguidores: pctDelta(mine.followers, prevMine?.followers),
-        engagement: pctDelta(mine.engagement, prevMine?.engagement),
-      },
-      topPosts,
-      prensa,
-      prensaTotal: prensaAll.length,
-      prensaTono,
-      prensaMedios,
-      narrativas: axes,
-      narrativasFuentes,
+      bloques,
+      conjunto,
     };
   };
 
