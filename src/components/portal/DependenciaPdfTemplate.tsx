@@ -287,9 +287,9 @@ export const DependenciaPdfTemplate = forwardRef<HTMLDivElement, { data: Depende
             </tbody>
           </table>
         )}
-        {data.prensa.length > 12 && (
+        {prensaTotal > data.prensa.length && (
           <div style={{ fontSize: 9.5, color: "#94a3b8", marginTop: 6 }}>
-            Se muestran las primeras 12 de {data.prensa.length} menciones. La lista completa está en la descarga de Excel.
+            Se muestran las primeras {data.prensa.length} de {prensaTotal} menciones. La lista completa está en la descarga de Excel.
           </div>
         )}
       </div>
