@@ -453,6 +453,7 @@ function BlockSection({ b, compacto }: { b: ScopeBlock; compacto: boolean }) {
         <SectionTitle
           text={b.key === "titular" ? "Publicaciones del titular con mayor interacción" : "Publicaciones institucionales con mayor interacción"}
           color={s.main}
+          hint="Contenido con más reacciones, comentarios y compartidos del periodo. Indica qué mensajes conectaron con la audiencia y conviene replicar."
         />
         {b.topPosts.length === 0 ? (
           <div style={{ color: MUTED, fontSize: 10 }}>Sin publicaciones registradas en el periodo.</div>
@@ -562,6 +563,7 @@ export const DependenciaPdfTemplate = forwardRef<HTMLDivElement, { data: Depende
             <b>Cómo leer este reporte.</b> Incluye dos bloques independientes: en <span style={{ color: SCOPE.institucional.main, fontWeight: 700 }}>azul</span> lo que corresponde a las cuentas
             institucionales de la dependencia y en <span style={{ color: SCOPE.titular.main, fontWeight: 700 }}>rojo</span> lo que corresponde a las cuentas personales del titular.
             Cada bloque tiene sus propios indicadores, cuentas, narrativas, publicaciones y menciones de prensa; el resumen conjunto de abajo suma ambos.
+            Cada indicador incluye una nota que explica qué mide y por qué importa, y al final encontrará un glosario con los términos técnicos.
           </>
         ) : data.modo === "titular" ? (
           <>
@@ -580,12 +582,20 @@ export const DependenciaPdfTemplate = forwardRef<HTMLDivElement, { data: Depende
       {combinado && c && (
         <div className="pdf-avoid" style={{ marginBottom: 14 }}>
           <SectionTitle text="Resumen conjunto (institución + titular)" color={SCOPE.conjunto.main} />
+          <Explainer
+            color={SCOPE.conjunto.main}
+            text="Suma de la comunicación institucional y la del titular. Es la fotografía general del esfuerzo comunicativo de la dependencia; el detalle por ámbito se desglosa en los bloques siguientes."
+          />
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
             <Kpi label="Seguidores totales" value={nf(c.seguidores)} color={INK}
-                 foot={`${df(c.variacionSeguidores)} vs periodo previo`} footColor={deltaColor(c.variacionSeguidores)} />
-            <Kpi label="Interacción promedio" value={pf(c.engagement)} color={INK} foot="Promedio de todas las cuentas" />
-            <Kpi label="Posición combinada" value={c.rank ? `#${c.rank}` : "s/d"} color={INK} foot={`de ${c.rankTotal} dependencias`} />
-            <Kpi label="Menciones de prensa" value={String(c.prensaTotal)} color={INK} foot="Dependencia y titular" />
+                 foot={`${df(c.variacionSeguidores)} vs periodo previo`} footColor={deltaColor(c.variacionSeguidores)}
+                 explain="Audiencia sumada de cuentas institucionales y del titular." />
+            <Kpi label="Interacción promedio" value={pf(c.engagement)} color={INK} foot="Promedio de todas las cuentas"
+                 explain="Qué tanto responde la gente al contenido publicado por ambos ámbitos." />
+            <Kpi label="Posición combinada" value={c.rank ? `#${c.rank}` : "s/d"} color={INK} foot={`de ${c.rankTotal} dependencias`}
+                 explain="Lugar frente al resto del gabinete considerando ambos ámbitos." />
+            <Kpi label="Menciones de prensa" value={String(c.prensaTotal)} color={INK} foot="Dependencia y titular"
+                 explain="Notas de medios del periodo que aluden a la institución o a su titular." />
           </div>
         </div>
       )}
@@ -593,6 +603,8 @@ export const DependenciaPdfTemplate = forwardRef<HTMLDivElement, { data: Depende
       {data.bloques.map((b) => (
         <BlockSection key={b.key} b={b} compacto={combinado} />
       ))}
+
+      <Glosario />
 
       <Footer />
     </div>
