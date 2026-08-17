@@ -1,5 +1,5 @@
 import { forwardRef } from "react";
-import kimediaLogo from "@/assets/kimedia-logo-full.png";
+import kimediaLogo from "@/assets/kimedia-logo-full.png?inline";
 
 /* ------------------------------------------------------------------ */
 /* Tipos                                                               */
@@ -142,18 +142,18 @@ const td: React.CSSProperties = {
 
 function Logo({ height = 26 }: { height?: number }) {
   return (
-    <span
-      style={{
-        display: "inline-block",
-        background: INK,
-        borderRadius: 6,
-        padding: "6px 10px",
-        lineHeight: 0,
-      }}
-    >
+    <span style={{ display: "inline-block", borderRadius: 6, overflow: "hidden", lineHeight: 0 }}>
       <img src={kimediaLogo} alt="KiMedia" style={{ height, width: "auto", display: "block" }} />
     </span>
   );
+}
+
+/** html2canvas no rasteriza emojis: se eliminan para evitar cadenas de "?". */
+export function stripEmoji(text: string): string {
+  return (text ?? "")
+    .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}\u{20E3}\u{2190}-\u{21FF}\u{2B00}-\u{2BFF}]/gu, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
 }
 
 function SectionTitle({ text, color = INK, hint }: { text: string; color?: string; hint?: string }) {
