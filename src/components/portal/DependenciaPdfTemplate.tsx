@@ -134,7 +134,7 @@ const td: React.CSSProperties = {
   verticalAlign: "top",
 };
 
-function Header({ title, subtitle, periodo }: { title: string; subtitle?: string | null; periodo: string }) {
+function Header({ title, subtitle, periodo, scope }: { title: string; subtitle?: string | null; periodo: string; scope?: string }) {
   return (
     <div className="pdf-avoid" style={{ borderBottom: "2px solid #0f172a", paddingBottom: 10, marginBottom: 14 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
@@ -145,9 +145,14 @@ function Header({ title, subtitle, periodo }: { title: string; subtitle?: string
           <h1 style={{ fontSize: 20, fontWeight: 700, margin: "5px 0 2px", lineHeight: 1.2 }}>{title}</h1>
           {subtitle && <div style={{ color: "#475569", fontSize: 11.5 }}>{subtitle}</div>}
           <div style={{ color: "#64748b", fontSize: 11, marginTop: 4 }}>{periodo}</div>
+          {scope && (
+            <div style={{ marginTop: 5, display: "inline-block", background: "#0f172a", color: "#ffffff", borderRadius: 4, padding: "3px 8px", fontSize: 9, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+              {scope}
+            </div>
+          )}
         </div>
         <div style={{ textAlign: "right" }}>
-          <KiMediaMark size={22} />
+          <KiMediaMark size={20} />
           <div style={{ fontSize: 9, color: "#94a3b8", marginTop: 2 }}>
             {new Date().toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" })}
           </div>
