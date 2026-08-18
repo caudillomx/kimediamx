@@ -92,7 +92,7 @@ export default function PortalDescargas({
   const [pressMedio, setPressMedio] = useState<string>("todos");
   const [pressTono, setPressTono] = useState<string>("todos");
   const [pressRows, setPressRows] = useState<DepPressRow[] & { _dep?: string }[]>([]);
-  const [pressAll, setPressAll] = useState<{ fecha: string; medio: string; titular: string; cita: string; url: string; tono: string; canal: string; dep: string | null; scope: ScopeKey | null }[]>([]);
+  const [pressAll, setPressAll] = useState<{ fecha: string; medio: string; titular: string; cita: string; url: string; tono: string; canal: string; dep: string | null; scope: ScopeKey | null; match: string | null }[]>([]);
   const [pressLoading, setPressLoading] = useState(false);
 
   const depPdfRef = useRef<HTMLDivElement>(null);
@@ -330,7 +330,7 @@ export default function PortalDescargas({
       .not("analyzed_at", "is", null)
       .order("entry_date", { ascending: false })
       .limit(600);
-    const rows: { fecha: string; medio: string; titular: string; cita: string; url: string; tono: string; canal: string; dep: string | null; scope: ScopeKey | null }[] = [];
+    const rows: { fecha: string; medio: string; titular: string; cita: string; url: string; tono: string; canal: string; dep: string | null; scope: ScopeKey | null; match: string | null }[] = [];
     for (const e of (data ?? []) as any[]) {
       for (const m of (e.media_mentions ?? [])) {
         const medio = String(m?.outlet ?? "").trim();
@@ -341,7 +341,7 @@ export default function PortalDescargas({
         rows.push({
           fecha: e.entry_date, medio, titular, cita, url: String(m?.url ?? ""),
           tono: String(m?.sentiment ?? "neutral"), canal: "medios",
-          dep: r.dep, scope: r.scope,
+          dep: r.dep, scope: r.scope, match: r.match,
         });
       }
       for (const p of (e.social_mentions ?? [])) {
@@ -353,7 +353,7 @@ export default function PortalDescargas({
         rows.push({
           fecha: e.entry_date, medio, titular, cita, url: String(p?.url ?? ""),
           tono: String(p?.sentiment ?? "neutral"), canal: String(p?.platform ?? "social"),
-          dep: r.dep, scope: r.scope,
+          dep: r.dep, scope: r.scope, match: r.match,
         });
       }
     }
@@ -506,7 +506,7 @@ export default function PortalDescargas({
         .filter((r) => (r.scope ?? "institucional") === scope)
         .map((r) => ({
           fecha: r.fecha, medio: r.medio, titular: r.titular || r.cita.slice(0, 90),
-          tono: r.tono, url: r.url, cita: r.cita, canal: r.canal,
+          tono: r.tono, url: r.url, cita: r.cita, canal: r.canal, match: r.match ?? undefined,
         }));
       const medioCount = new Map<string, number>();
       rows.forEach((p) => medioCount.set(p.medio, (medioCount.get(p.medio) ?? 0) + 1));
