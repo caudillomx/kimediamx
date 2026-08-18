@@ -1,5 +1,4 @@
 import { forwardRef } from "react";
-import kimediaLogo from "@/assets/kimedia-logo-full.png?inline";
 
 /* ------------------------------------------------------------------ */
 /* Tipos                                                               */
@@ -143,9 +142,14 @@ const td: React.CSSProperties = {
 };
 
 function Logo({ height = 26 }: { height?: number }) {
+  const fontSize = Math.max(10, Math.round(height * 0.72));
   return (
-    <span style={{ display: "inline-block", borderRadius: 6, overflow: "hidden", lineHeight: 0 }}>
-      <img src={kimediaLogo} alt="KiMedia" style={{ height, width: "auto", display: "block" }} />
+    <span style={{
+      display: "inline-block", color: INK, fontFamily: "Arial, sans-serif",
+      fontSize, fontWeight: 800, lineHeight: `${height}px`, height,
+      letterSpacing: 0, whiteSpace: "nowrap",
+    }} aria-label="KiMedia">
+      ki<span style={{ color: "#ef6a4d" }}>media</span>
     </span>
   );
 }
@@ -190,26 +194,40 @@ function Kpi({ label, value, foot, color, footColor, explain }: {
   );
 }
 
-/**
- * Etiqueta PDF deliberadamente simple: dos cajas block, sin flex interno,
- * altura fija ni line-height heredado. html2canvas recorta glifos en pills
- * inline/flex; esta estructura deja espacio real arriba y abajo del texto.
- */
 function PdfLabel({ text, color }: { text: string; color: string }) {
+  const normalized = text.toUpperCase();
+  const widths: Record<string, number> = {
+    "INSTITUCIÓN": 82,
+    "TITULAR": 59,
+    "CONJUNTO": 69,
+    "DEPENDENCIA + TITULAR": 142,
+    "SOLO INSTITUCIONAL": 127,
+    "SOLO TITULAR": 88,
+  };
+  const width = widths[normalized] ?? Math.max(62, normalized.length * 6.2 + 20);
   return (
-    <div style={{
-      display: "block", width: "max-content", maxWidth: "100%",
-      boxSizing: "border-box", background: color, borderRadius: 4,
-      padding: "5px 10px 6px", overflow: "visible",
-    }}>
-      <div style={{
-        display: "block", color: "#ffffff", fontFamily: "Arial, sans-serif",
-        fontSize: 8, lineHeight: "12px", letterSpacing: 0,
-        textTransform: "uppercase", fontWeight: 700, whiteSpace: "nowrap",
-      }}>
-        {text}
-      </div>
-    </div>
+    <svg
+      width={width}
+      height="24"
+      viewBox={`0 0 ${width} 24`}
+      xmlns="http://www.w3.org/2000/svg"
+      role="img"
+      aria-label={text}
+      style={{ display: "block", width, height: 24, overflow: "visible", flexShrink: 0 }}
+    >
+      <rect x="0" y="0" width={width} height="24" rx="4" fill={color} />
+      <text
+        x="10"
+        y="15.5"
+        fill="#ffffff"
+        fontFamily="Arial, sans-serif"
+        fontSize="8"
+        fontWeight="700"
+        letterSpacing="0"
+      >
+        {normalized}
+      </text>
+    </svg>
   );
 }
 
