@@ -177,10 +177,10 @@ function Kpi({ label, value, foot, color, footColor, explain }: {
   label: string; value: string; foot?: string; color: string; footColor?: string; explain?: string;
 }) {
   return (
-    <div style={{ border: `1px solid ${LINE}`, borderTop: `3px solid ${color}`, borderRadius: 8, padding: "7px 9px", background: "#ffffff" }}>
-      <div style={{ fontSize: 8.5, textTransform: "uppercase", letterSpacing: "0.1em", color: MUTED }}>{label}</div>
+    <div style={{ minWidth: 0, boxSizing: "border-box", border: `1px solid ${LINE}`, borderTop: `3px solid ${color}`, borderRadius: 8, padding: "7px 9px", background: "#ffffff", overflow: "hidden" }}>
+      <div style={{ fontSize: 8.2, textTransform: "uppercase", letterSpacing: "0.06em", color: MUTED, lineHeight: 1.25, overflowWrap: "anywhere" }}>{label}</div>
       <div style={{ fontSize: 17, fontWeight: 700, marginTop: 1, color: INK }}>{value}</div>
-      {foot && <div style={{ fontSize: 8.8, color: footColor ?? MUTED, marginTop: 1 }}>{foot}</div>}
+      {foot && <div style={{ fontSize: 8.6, color: footColor ?? MUTED, marginTop: 1, lineHeight: 1.25, overflowWrap: "anywhere" }}>{foot}</div>}
       {explain && (
         <div style={{ fontSize: 8, color: "#94a3b8", marginTop: 3, lineHeight: 1.3, borderTop: `1px dashed ${LINE}`, paddingTop: 3 }}>
           {explain}
@@ -194,11 +194,11 @@ function ScopeChip({ scope }: { scope: ScopeKey | "conjunto" }) {
   const s = SCOPE[scope];
   return (
     <span style={{
-      display: "inline-block", boxSizing: "border-box",
+      display: "inline-flex", boxSizing: "border-box", alignItems: "center", justifyContent: "center",
       background: s.main, color: "#ffffff", borderRadius: 4,
-      padding: "0 10px 0 7px", height: 15, lineHeight: "15px", fontSize: 8.5,
-      letterSpacing: "0.07em", textTransform: "uppercase", fontWeight: 700,
-      whiteSpace: "nowrap", flexShrink: 0, overflow: "hidden",
+      padding: "3px 8px 3px 8px", minHeight: 17, lineHeight: 1, fontSize: 8,
+      letterSpacing: "0.04em", textTransform: "uppercase", fontWeight: 700,
+      whiteSpace: "nowrap", flexShrink: 0,
     }}>
       {s.tag}
     </span>
@@ -291,23 +291,24 @@ function Header({ title, subtitle, periodo, scope }: {
   return (
     <div className="pdf-avoid" style={{ borderBottom: `2px solid ${INK}`, paddingBottom: 10, marginBottom: 12 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
-        <div style={{ flex: 1 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 9, letterSpacing: "0.16em", textTransform: "uppercase", color: MUTED }}>
             Reporte de comunicación digital
           </div>
-          <h1 style={{ fontSize: 19, fontWeight: 700, margin: "4px 0 2px", lineHeight: 1.2 }}>{title}</h1>
-          {subtitle && <div style={{ color: "#475569", fontSize: 11 }}>{subtitle}</div>}
+          <h1 style={{ fontSize: 19, fontWeight: 700, margin: "4px 0 2px", lineHeight: 1.2, overflowWrap: "anywhere" }}>{title}</h1>
+          {subtitle && <div style={{ color: "#475569", fontSize: 11, lineHeight: 1.3, overflowWrap: "anywhere" }}>{subtitle}</div>}
           <div style={{ color: MUTED, fontSize: 10.5, marginTop: 3 }}>{periodo}</div>
           {scope && (
             <div style={{
               marginTop: 5, display: "inline-block", background: INK, color: "#ffffff", borderRadius: 4,
-              padding: "3px 8px", fontSize: 8.5, letterSpacing: "0.09em", textTransform: "uppercase", fontWeight: 700,
+              padding: "4px 8px", fontSize: 8, lineHeight: 1.15, letterSpacing: "0.04em", textTransform: "uppercase", fontWeight: 700,
+              maxWidth: "100%", overflowWrap: "anywhere",
             }}>
               {scope}
             </div>
           )}
         </div>
-        <div style={{ textAlign: "right" }}>
+        <div style={{ textAlign: "right", flexShrink: 0 }}>
           <Logo height={24} />
           <div style={{ fontSize: 8.5, color: "#94a3b8", marginTop: 3 }}>
             {new Date().toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" })}
@@ -345,17 +346,17 @@ function BlockSection({ b, compacto }: { b: ScopeBlock; compacto: boolean }) {
       <div className="pdf-avoid" style={{
         background: s.soft, border: `1px solid ${s.border}`, borderLeft: `4px solid ${s.main}`,
         borderRadius: 8, padding: "7px 10px", marginBottom: 8,
-        display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12,
+        display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", alignItems: "start", columnGap: 12, rowGap: 4,
       }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 7, minHeight: 16, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap", minWidth: 0 }}>
             <ScopeChip scope={b.key} />
-            <span style={{ fontSize: 12.5, fontWeight: 700, lineHeight: "15px", display: "inline-block", wordBreak: "break-word" }}>{b.label}</span>
+            <span style={{ flex: "1 1 180px", minWidth: 0, fontSize: 12.5, fontWeight: 700, lineHeight: 1.25, display: "block", overflowWrap: "anywhere" }}>{b.label}</span>
           </div>
-          <div style={{ fontSize: 9.5, color: "#475569", marginTop: 3, lineHeight: 1.3, wordBreak: "break-word" }}>{b.sujeto}</div>
+          <div style={{ fontSize: 9.5, color: "#475569", marginTop: 4, lineHeight: 1.3, overflowWrap: "anywhere" }}>{b.sujeto}</div>
         </div>
-        <div style={{ fontSize: 9, color: MUTED, textAlign: "right", lineHeight: "15px", flexShrink: 0 }}>
-          {b.cuentas.length} cuenta{b.cuentas.length === 1 ? "" : "s"} · {b.publicaciones} publicaciones en el periodo
+        <div style={{ maxWidth: 205, fontSize: 8.8, color: MUTED, textAlign: "right", lineHeight: 1.3, overflowWrap: "anywhere" }}>
+          {b.cuentas.length} cuenta{b.cuentas.length === 1 ? "" : "s"}<br />{b.publicaciones} publicaciones en el periodo
         </div>
       </div>
 
@@ -394,11 +395,11 @@ function BlockSection({ b, compacto }: { b: ScopeBlock; compacto: boolean }) {
         {cuentasActivas.length === 0 ? (
           <div style={{ color: MUTED, fontSize: 10 }}>Sin cuentas con actividad en el periodo.</div>
         ) : (
-          <table style={{ width: "100%", borderCollapse: "collapse", border: `1px solid ${LINE}`, borderRadius: 6, overflow: "hidden" }}>
+          <table style={{ width: "100%", tableLayout: "fixed", borderCollapse: "collapse", border: `1px solid ${LINE}`, borderRadius: 6, overflow: "hidden" }}>
             <thead>
               <tr style={{ background: s.main }}>
-                <th style={th}>Perfil</th>
-                <th style={th}>Red</th>
+                <th style={{ ...th, width: "24%" }}>Perfil</th>
+                <th style={{ ...th, width: "12%" }}>Red</th>
                 <th style={{ ...th, textAlign: "right" }}>Seguidores</th>
                 <th style={{ ...th, textAlign: "right" }}>Crec./día</th>
                 <th style={{ ...th, textAlign: "right" }}>Interacción</th>
@@ -409,8 +410,8 @@ function BlockSection({ b, compacto }: { b: ScopeBlock; compacto: boolean }) {
             <tbody>
               {cuentasActivas.slice(0, maxCuentas).map((c, i) => (
                 <tr key={i} style={{ background: i % 2 ? "#f8fafc" : "#ffffff" }}>
-                  <td style={{ ...td, fontWeight: 600 }}>{c.perfil}</td>
-                  <td style={{ ...td, textTransform: "capitalize" }}>{c.red}</td>
+                  <td style={{ ...td, fontWeight: 600, overflowWrap: "anywhere" }}>{c.perfil}</td>
+                  <td style={{ ...td, textTransform: "capitalize", overflowWrap: "anywhere" }}>{c.red}</td>
                   <td style={{ ...td, textAlign: "right" }}>{nf(c.seguidores)}</td>
                   <td style={{ ...td, textAlign: "right", color: deltaColor(c.crecimiento) }}>{pf(c.crecimiento, 3)}</td>
                   <td style={{ ...td, textAlign: "right" }}>{pf(c.engagement)}</td>
