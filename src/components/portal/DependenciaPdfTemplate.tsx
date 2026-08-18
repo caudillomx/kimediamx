@@ -33,6 +33,8 @@ export type DepPressRow = {
   url: string;
   cita?: string;
   canal?: string;
+  /** Nombre (titular o dependencia) que originó la coincidencia; sirve como evidencia. */
+  match?: string;
 };
 
 export type ScopeKey = "institucional" | "titular";
@@ -192,10 +194,11 @@ function ScopeChip({ scope }: { scope: ScopeKey | "conjunto" }) {
   const s = SCOPE[scope];
   return (
     <span style={{
-      display: "inline-block", background: s.main, color: "#ffffff", borderRadius: 4,
-      padding: "0 7px", height: 15, lineHeight: "15px", fontSize: 8.5,
-      letterSpacing: "0.09em", textTransform: "uppercase", fontWeight: 700,
-      whiteSpace: "nowrap", flexShrink: 0,
+      display: "inline-block", boxSizing: "border-box",
+      background: s.main, color: "#ffffff", borderRadius: 4,
+      padding: "0 10px 0 7px", height: 15, lineHeight: "15px", fontSize: 8.5,
+      letterSpacing: "0.07em", textTransform: "uppercase", fontWeight: 700,
+      whiteSpace: "nowrap", flexShrink: 0, overflow: "hidden",
     }}>
       {s.tag}
     </span>
@@ -344,12 +347,12 @@ function BlockSection({ b, compacto }: { b: ScopeBlock; compacto: boolean }) {
         borderRadius: 8, padding: "7px 10px", marginBottom: 8,
         display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12,
       }}>
-        <div style={{ flex: 1 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 7, height: 16 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 7, minHeight: 16, flexWrap: "wrap" }}>
             <ScopeChip scope={b.key} />
-            <span style={{ fontSize: 12.5, fontWeight: 700, lineHeight: "15px", display: "inline-block" }}>{b.label}</span>
+            <span style={{ fontSize: 12.5, fontWeight: 700, lineHeight: "15px", display: "inline-block", wordBreak: "break-word" }}>{b.label}</span>
           </div>
-          <div style={{ fontSize: 9.5, color: "#475569", marginTop: 3, lineHeight: 1.3 }}>{b.sujeto}</div>
+          <div style={{ fontSize: 9.5, color: "#475569", marginTop: 3, lineHeight: 1.3, wordBreak: "break-word" }}>{b.sujeto}</div>
         </div>
         <div style={{ fontSize: 9, color: MUTED, textAlign: "right", lineHeight: "15px", flexShrink: 0 }}>
           {b.cuentas.length} cuenta{b.cuentas.length === 1 ? "" : "s"} · {b.publicaciones} publicaciones en el periodo
@@ -508,12 +511,17 @@ function BlockSection({ b, compacto }: { b: ScopeBlock; compacto: boolean }) {
                   {m.tono}
                 </span>
               </div>
-              <div style={{ marginTop: 2, fontSize: 10.2, fontWeight: 600 }}>
+              <div style={{ marginTop: 2, fontSize: 10.2, fontWeight: 600, wordBreak: "break-word", overflowWrap: "anywhere" }}>
                 {stripEmoji(m.titular).slice(0, 130) || "(sin titular)"}{stripEmoji(m.titular).length > 130 ? "…" : ""}
               </div>
               {m.cita && (
-                <div style={{ marginTop: 2, fontSize: 9.4, color: "#475569" }}>
+                <div style={{ marginTop: 2, fontSize: 9.4, color: "#475569", wordBreak: "break-word", overflowWrap: "anywhere" }}>
                   “{stripEmoji(m.cita).slice(0, 180)}{stripEmoji(m.cita).length > 180 ? "…" : ""}”
+                </div>
+              )}
+              {m.match && (
+                <div style={{ marginTop: 3, fontSize: 8.4, color: "#94a3b8" }}>
+                  Vinculada por coincidencia con: {m.match}
                 </div>
               )}
             </div>
