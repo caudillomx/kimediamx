@@ -194,10 +194,10 @@ function ScopeChip({ scope }: { scope: ScopeKey | "conjunto" }) {
   const s = SCOPE[scope];
   return (
     <span style={{
-      display: "inline-flex", boxSizing: "border-box", alignItems: "center", justifyContent: "center",
+      display: "inline-block", boxSizing: "border-box",
       background: s.main, color: "#ffffff", borderRadius: 4,
-      padding: "3px 8px 3px 8px", minHeight: 17, lineHeight: 1, fontSize: 8,
-      letterSpacing: "0.04em", textTransform: "uppercase", fontWeight: 700,
+      padding: "3px 8px 4px", lineHeight: 1.4, fontSize: 7.5,
+      letterSpacing: 0, textTransform: "uppercase", fontWeight: 700,
       whiteSpace: "nowrap", flexShrink: 0,
     }}>
       {s.tag}
@@ -262,7 +262,12 @@ const GLOSARIO: { termino: string; que: string; porque: string }[] = [
 
 function Glosario() {
   return (
-    <div style={{ marginTop: 12 }}>
+    <div className="pdf-page-break" style={{
+      marginTop: 0,
+      paddingTop: 4,
+      pageBreakBefore: "always",
+      breakBefore: "page",
+    }}>
       <SectionTitle
         text="Glosario: cómo leer estos indicadores"
         color={SCOPE.conjunto.main}
@@ -301,7 +306,7 @@ function Header({ title, subtitle, periodo, scope }: {
           {scope && (
             <div style={{
               marginTop: 5, display: "inline-block", background: INK, color: "#ffffff", borderRadius: 4,
-              padding: "4px 8px", fontSize: 8, lineHeight: 1.15, letterSpacing: "0.04em", textTransform: "uppercase", fontWeight: 700,
+              padding: "3px 8px 4px", fontSize: 7.5, lineHeight: 1.4, letterSpacing: 0, textTransform: "uppercase", fontWeight: 700,
               maxWidth: "100%", overflowWrap: "anywhere",
             }}>
               {scope}

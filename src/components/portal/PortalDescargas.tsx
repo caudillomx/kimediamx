@@ -316,7 +316,11 @@ export default function PortalDescargas({
       filename,
       html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff", windowWidth: 794, scrollX: 0, scrollY: 0 },
       jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-      pagebreak: { mode: ["css", "legacy"], avoid: [".pdf-avoid", "svg", "tr"] },
+      pagebreak: {
+        mode: ["css", "legacy"],
+        before: [".pdf-page-break"],
+        avoid: [".pdf-avoid", "svg", "tr"],
+      },
     } as any).from(ref.current).save();
   };
 
