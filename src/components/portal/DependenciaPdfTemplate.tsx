@@ -190,19 +190,32 @@ function Kpi({ label, value, foot, color, footColor, explain }: {
   );
 }
 
+/**
+ * Etiqueta PDF deliberadamente simple: dos cajas block, sin flex interno,
+ * altura fija ni line-height heredado. html2canvas recorta glifos en pills
+ * inline/flex; esta estructura deja espacio real arriba y abajo del texto.
+ */
+function PdfLabel({ text, color }: { text: string; color: string }) {
+  return (
+    <div style={{
+      display: "block", width: "max-content", maxWidth: "100%",
+      boxSizing: "border-box", background: color, borderRadius: 4,
+      padding: "5px 10px 6px", overflow: "visible",
+    }}>
+      <div style={{
+        display: "block", color: "#ffffff", fontFamily: "Arial, sans-serif",
+        fontSize: 8, lineHeight: "12px", letterSpacing: 0,
+        textTransform: "uppercase", fontWeight: 700, whiteSpace: "nowrap",
+      }}>
+        {text}
+      </div>
+    </div>
+  );
+}
+
 function ScopeChip({ scope }: { scope: ScopeKey | "conjunto" }) {
   const s = SCOPE[scope];
-  return (
-    <span style={{
-      display: "inline-block", boxSizing: "border-box",
-      background: s.main, color: "#ffffff", borderRadius: 4,
-      padding: "3px 8px 4px", lineHeight: 1.4, fontSize: 7.5,
-      letterSpacing: 0, textTransform: "uppercase", fontWeight: 700,
-      whiteSpace: "nowrap", flexShrink: 0,
-    }}>
-      {s.tag}
-    </span>
-  );
+  return <PdfLabel text={s.tag} color={s.main} />;
 }
 
 /** Bloque didáctico: explica qué es una sección y por qué importa. */
@@ -304,12 +317,8 @@ function Header({ title, subtitle, periodo, scope }: {
           {subtitle && <div style={{ color: "#475569", fontSize: 11, lineHeight: 1.3, overflowWrap: "anywhere" }}>{subtitle}</div>}
           <div style={{ color: MUTED, fontSize: 10.5, marginTop: 3 }}>{periodo}</div>
           {scope && (
-            <div style={{
-              marginTop: 5, display: "inline-block", background: INK, color: "#ffffff", borderRadius: 4,
-              padding: "3px 8px 4px", fontSize: 7.5, lineHeight: 1.4, letterSpacing: 0, textTransform: "uppercase", fontWeight: 700,
-              maxWidth: "100%", overflowWrap: "anywhere",
-            }}>
-              {scope}
+            <div style={{ marginTop: 6 }}>
+              <PdfLabel text={scope} color={INK} />
             </div>
           )}
         </div>
@@ -350,15 +359,15 @@ function BlockSection({ b, compacto }: { b: ScopeBlock; compacto: boolean }) {
       {/* Encabezado del bloque */}
       <div className="pdf-avoid" style={{
         background: s.soft, border: `1px solid ${s.border}`, borderLeft: `4px solid ${s.main}`,
-        borderRadius: 8, padding: "7px 10px", marginBottom: 8,
-        display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", alignItems: "start", columnGap: 12, rowGap: 4,
+        borderRadius: 8, padding: "9px 10px", marginBottom: 8,
+        display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", alignItems: "start", columnGap: 12,
       }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap", minWidth: 0 }}>
-            <ScopeChip scope={b.key} />
-            <span style={{ flex: "1 1 180px", minWidth: 0, fontSize: 12.5, fontWeight: 700, lineHeight: 1.25, display: "block", overflowWrap: "anywhere" }}>{b.label}</span>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "max-content minmax(0, 1fr)", alignItems: "center", columnGap: 9, minWidth: 0 }}>
+            <div><ScopeChip scope={b.key} /></div>
+            <div style={{ minWidth: 0, fontSize: 12.5, fontWeight: 700, lineHeight: "17px", overflowWrap: "anywhere" }}>{b.label}</div>
           </div>
-          <div style={{ fontSize: 9.5, color: "#475569", marginTop: 4, lineHeight: 1.3, overflowWrap: "anywhere" }}>{b.sujeto}</div>
+          <div style={{ fontSize: 9.5, color: "#475569", marginTop: 5, lineHeight: "14px", overflowWrap: "anywhere" }}>{b.sujeto}</div>
         </div>
         <div style={{ maxWidth: 205, fontSize: 8.8, color: MUTED, textAlign: "right", lineHeight: 1.3, overflowWrap: "anywhere" }}>
           {b.cuentas.length} cuenta{b.cuentas.length === 1 ? "" : "s"}<br />{b.publicaciones} publicaciones en el periodo
