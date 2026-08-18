@@ -1,5 +1,5 @@
 import { forwardRef } from "react";
-import kimediaLogo from "@/assets/kimedia-logo.png";
+import kimediaLogo from "@/assets/kimedia-logo-pdf.png.asset.json";
 
 /* ------------------------------------------------------------------ */
 /* Tipos                                                               */
@@ -146,7 +146,7 @@ function Logo({ height = 26 }: { height?: number }) {
   const width = Math.round(height * 1.83);
   return (
     <img
-      src={kimediaLogo}
+      src={kimediaLogo.url}
       alt="KiMedia"
       crossOrigin="anonymous"
       style={{
