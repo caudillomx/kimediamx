@@ -1,4 +1,5 @@
 import { forwardRef } from "react";
+import kimediaLogo from "@/assets/kimedia-logo.png";
 
 /* ------------------------------------------------------------------ */
 /* Tipos                                                               */
@@ -142,15 +143,20 @@ const td: React.CSSProperties = {
 };
 
 function Logo({ height = 26 }: { height?: number }) {
-  const fontSize = Math.max(10, Math.round(height * 0.72));
+  const width = Math.round(height * 1.83);
   return (
-    <span style={{
-      display: "inline-block", color: INK, fontFamily: "Arial, sans-serif",
-      fontSize, fontWeight: 800, lineHeight: `${height}px`, height,
-      letterSpacing: 0, whiteSpace: "nowrap",
-    }} aria-label="KiMedia">
-      ki<span style={{ color: "#ef6a4d" }}>media</span>
-    </span>
+    <img
+      src={kimediaLogo}
+      alt="KiMedia"
+      crossOrigin="anonymous"
+      style={{
+        display: "block",
+        width,
+        height,
+        objectFit: "contain",
+        flexShrink: 0,
+      }}
+    />
   );
 }
 
@@ -341,7 +347,7 @@ function Header({ title, subtitle, periodo, scope }: {
           )}
         </div>
         <div style={{ textAlign: "right", flexShrink: 0 }}>
-          <Logo height={24} />
+          <Logo height={42} />
           <div style={{ fontSize: 8.5, color: "#94a3b8", marginTop: 3 }}>
             {new Date().toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" })}
           </div>
@@ -354,7 +360,7 @@ function Header({ title, subtitle, periodo, scope }: {
 function Footer() {
   return (
     <div className="pdf-avoid" style={{ marginTop: 10, paddingTop: 6, borderTop: `1px solid ${LINE}`, display: "flex", justifyContent: "flex-end" }}>
-      <Logo height={12} />
+      <Logo height={18} />
     </div>
   );
 }
