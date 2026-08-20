@@ -61,6 +61,7 @@ export function useClientsData() {
         logo_url: payload.logo_url ?? null,
         website_url: payload.website_url ?? null,
         notes: payload.notes ?? null,
+        services: payload.services ?? [],
       })
       .select()
       .single();
