@@ -10,6 +10,8 @@ import { LogOut, ShieldAlert, Sun, Moon, CalendarDays, Workflow, Megaphone, Film
 import type { ClientPortalConfig } from "@/lib/clientPortal";
 import { SERVICE_MAP, type ServiceKey } from "@/lib/services";
 import PortalParrilla from "@/components/portal/PortalParrilla";
+import PortalParrillaNotion from "@/components/portal/PortalParrillaNotion";
+
 import PortalActivos from "@/components/portal/PortalActivos";
 import PortalAdsModule from "@/components/portal/PortalAdsModule";
 import { Link } from "react-router-dom";
