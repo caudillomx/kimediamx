@@ -33,8 +33,8 @@ const STAGES = [
 ];
 
 const STATUS_CLASS: Record<string, string> = {
-  activo: "bg-mint/15 text-mint border-mint/30",
-  "en construcción": "bg-amber/15 text-amber border-amber/30",
+  activo: "bg-lime/15 text-lime border-lime/30",
+  "en construcción": "bg-cyan/15 text-cyan border-cyan/30",
   pausado: "bg-muted text-muted-foreground border-border",
   propuesto: "bg-electric/15 text-electric border-electric/30",
 };

@@ -215,7 +215,7 @@ export default function PortalAdsModule({ clientId }: { clientId: string }) {
                 <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
                 <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12 }} />
                 <Line type="monotone" dataKey="spend" name="Inversión" stroke="hsl(var(--coral))" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="conversions" name="Conversiones" stroke="hsl(var(--mint))" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="conversions" name="Conversiones" stroke="hsl(var(--lime))" strokeWidth={2} dot={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>

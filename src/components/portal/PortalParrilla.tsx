@@ -41,9 +41,9 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 const STATUS_CLASS: Record<string, string> = {
-  approved: "bg-mint/15 text-mint border-mint/30",
-  published: "bg-mint/15 text-mint border-mint/30",
-  review: "bg-amber/15 text-amber border-amber/30",
+  approved: "bg-lime/15 text-lime border-lime/30",
+  published: "bg-lime/15 text-lime border-lime/30",
+  review: "bg-cyan/15 text-cyan border-cyan/30",
   draft: "bg-muted text-muted-foreground border-border",
   rejected: "bg-coral/15 text-coral border-coral/30",
 };
