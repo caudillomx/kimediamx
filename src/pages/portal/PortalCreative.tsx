@@ -10,6 +10,8 @@ import { LogOut, ShieldAlert, Sun, Moon, CalendarDays, Workflow, Megaphone, Film
 import type { ClientPortalConfig } from "@/lib/clientPortal";
 import { SERVICE_MAP, type ServiceKey } from "@/lib/services";
 import PortalParrilla from "@/components/portal/PortalParrilla";
+import PortalParrillaNotion from "@/components/portal/PortalParrillaNotion";
+
 import PortalActivos from "@/components/portal/PortalActivos";
 import PortalAdsModule from "@/components/portal/PortalAdsModule";
 import { Link } from "react-router-dom";
@@ -160,8 +162,20 @@ export default function PortalCreative({ portal }: { portal: ClientPortalConfig 
               {services.includes("estrategia") && (
                 <>
                   <TabsContent value="parrilla" className="mt-0">
-                    <PortalParrilla clientId={portal.clientId} clientName={portal.clientName} />
+                    <Tabs defaultValue="notion" className="space-y-4">
+                      <TabsList className="glass h-auto p-1">
+                        <TabsTrigger value="notion">Calendario (Notion)</TabsTrigger>
+                        <TabsTrigger value="ciclos">Ciclos KiMedia</TabsTrigger>
+                      </TabsList>
+                      <TabsContent value="notion" className="mt-0">
+                        <PortalParrillaNotion clientId={portal.clientId} clientName={portal.clientName} canSync={isAdmin} />
+                      </TabsContent>
+                      <TabsContent value="ciclos" className="mt-0">
+                        <PortalParrilla clientId={portal.clientId} clientName={portal.clientName} />
+                      </TabsContent>
+                    </Tabs>
                   </TabsContent>
+
                   <TabsContent value="activos" className="mt-0">
                     <PortalActivos clientId={portal.clientId} canEdit={isAdmin} />
                   </TabsContent>

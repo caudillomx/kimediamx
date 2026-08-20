@@ -3366,6 +3366,122 @@ export type Database = {
           },
         ]
       }
+      notion_parrilla_items: {
+        Row: {
+          account: string | null
+          client_id: string | null
+          format: string | null
+          id: string
+          network: string | null
+          notion_page_id: string
+          notion_url: string | null
+          objective: string | null
+          raw: Json
+          responsible: string | null
+          scheduled_date: string | null
+          source_id: string | null
+          status: string | null
+          synced_at: string
+          theme: string | null
+          title: string | null
+        }
+        Insert: {
+          account?: string | null
+          client_id?: string | null
+          format?: string | null
+          id?: string
+          network?: string | null
+          notion_page_id: string
+          notion_url?: string | null
+          objective?: string | null
+          raw?: Json
+          responsible?: string | null
+          scheduled_date?: string | null
+          source_id?: string | null
+          status?: string | null
+          synced_at?: string
+          theme?: string | null
+          title?: string | null
+        }
+        Update: {
+          account?: string | null
+          client_id?: string | null
+          format?: string | null
+          id?: string
+          network?: string | null
+          notion_page_id?: string
+          notion_url?: string | null
+          objective?: string | null
+          raw?: Json
+          responsible?: string | null
+          scheduled_date?: string | null
+          source_id?: string | null
+          status?: string | null
+          synced_at?: string
+          theme?: string | null
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notion_parrilla_items_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notion_parrilla_items_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "notion_parrilla_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notion_parrilla_sources: {
+        Row: {
+          account_map: Json
+          active: boolean
+          created_at: string
+          default_client_id: string | null
+          id: string
+          label: string
+          last_synced_at: string | null
+          multi_client: boolean
+          notion_database_id: string
+        }
+        Insert: {
+          account_map?: Json
+          active?: boolean
+          created_at?: string
+          default_client_id?: string | null
+          id?: string
+          label: string
+          last_synced_at?: string | null
+          multi_client?: boolean
+          notion_database_id: string
+        }
+        Update: {
+          account_map?: Json
+          active?: boolean
+          created_at?: string
+          default_client_id?: string | null
+          id?: string
+          label?: string
+          last_synced_at?: string | null
+          multi_client?: boolean
+          notion_database_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notion_parrilla_sources_default_client_id_fkey"
+            columns: ["default_client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       participants: {
         Row: {
           access_code_used: string
