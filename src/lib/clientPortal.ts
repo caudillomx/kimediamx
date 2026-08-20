@@ -25,7 +25,36 @@ export const CLIENT_PORTALS: Record<string, ClientPortalConfig> = {
     displayName: "Gobierno de Guanajuato",
     tagline: "Portal privado de análisis y prensa diaria",
   },
+  padresada: {
+    slug: "padresada",
+    clientId: "e982a96c-123f-43f7-b8b0-cf788c2980ab",
+    clientName: "Padre Sada",
+    displayName: "Padre Sada",
+    tagline: "Portal privado de estrategia digital",
+  },
+  falcon: {
+    slug: "falcon",
+    clientId: "63fac67f-50e9-4086-8258-5f0d8a49d341",
+    clientName: "Falcon",
+    displayName: "Falcon",
+    tagline: "Portal privado de estrategia digital",
+  },
+  eldiluvio: {
+    slug: "eldiluvio",
+    clientId: "8e48b515-2b96-4d19-aed8-f11bb17cfa83",
+    clientName: "El Diluvio",
+    displayName: "El Diluvio",
+    tagline: "Portal privado de estrategia digital",
+  },
+  mariodoria: {
+    slug: "mariodoria",
+    clientId: "21c1595b-988f-47d0-bd97-02021aaf7147",
+    clientName: "Mario Doria",
+    displayName: "Mario Doria",
+    tagline: "Portal privado de estrategia digital",
+  },
 };
+
 
 /** Returns the active portal slug based on subdomain or ?portal= override, or null. */
 export function detectClientPortal(): ClientPortalConfig | null {
