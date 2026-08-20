@@ -2068,6 +2068,7 @@ export type Database = {
           name: string
           notes: string | null
           portal_modules: Json
+          services: string[]
           updated_at: string
           website_url: string | null
         }
@@ -2083,6 +2084,7 @@ export type Database = {
           name: string
           notes?: string | null
           portal_modules?: Json
+          services?: string[]
           updated_at?: string
           website_url?: string | null
         }
@@ -2098,6 +2100,7 @@ export type Database = {
           name?: string
           notes?: string | null
           portal_modules?: Json
+          services?: string[]
           updated_at?: string
           website_url?: string | null
         }

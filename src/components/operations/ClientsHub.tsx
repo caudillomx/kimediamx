@@ -13,6 +13,7 @@ import { isPast, parseISO } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import WeeklyHealthView from "./WeeklyHealthView";
 import { Button } from "@/components/ui/button";
+import { SERVICES, SERVICE_MAP, ServiceKey } from "@/lib/services";
 
 interface Props {
   items: ActionItem[];
@@ -22,21 +23,22 @@ interface Props {
   onOpenClient: (name: string) => void;
 }
 
-type ClientRow = { id: string; name: string; is_active: boolean };
+type ClientRow = { id: string; name: string; is_active: boolean; services: string[] };
 
 const ClientsHub = ({ items, deals, objectives, interactions, onOpenClient }: Props) => {
   const navigate = useNavigate();
   const [clients, setClients] = useState<ClientRow[]>([]);
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<"resumen" | "salud">("resumen");
+  const [serviceFilter, setServiceFilter] = useState<ServiceKey | null>(null);
 
   const fetchClients = useCallback(() => {
     return supabase
       .from("clients")
-      .select("id, name, is_active")
+      .select("id, name, is_active, services")
       .eq("is_active", true)
       .order("name")
-      .then(({ data }) => setClients((data as ClientRow[]) || []));
+      .then(({ data }) => setClients(((data as any[]) || []).map(c => ({ ...c, services: c.services || [] })) as ClientRow[]));
   }, []);
 
   useEffect(() => {
@@ -95,7 +97,10 @@ const ClientsHub = ({ items, deals, objectives, interactions, onOpenClient }: Pr
     return map;
   }, [clients, items, deals, objectives, interactions]);
 
-  const filtered = clients.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
+  const filtered = clients.filter(c =>
+    c.name.toLowerCase().includes(search.toLowerCase()) &&
+    (!serviceFilter || (c.services || []).includes(serviceFilter))
+  );
 
   return (
     <div className="space-y-4">
@@ -137,6 +142,31 @@ const ClientsHub = ({ items, deals, objectives, interactions, onOpenClient }: Pr
         <span className="text-sm text-muted-foreground ml-auto">{filtered.length} clientes activos</span>
       </div>
 
+      <div className="flex flex-wrap items-center gap-1.5">
+        <button
+          onClick={() => setServiceFilter(null)}
+          className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+            serviceFilter === null ? "bg-foreground text-background border-foreground" : "border-border text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Todos
+        </button>
+        {SERVICES.map(sv => {
+          const count = clients.filter(c => (c.services || []).includes(sv.key)).length;
+          return (
+            <button
+              key={sv.key}
+              onClick={() => setServiceFilter(serviceFilter === sv.key ? null : sv.key)}
+              className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                serviceFilter === sv.key ? sv.badgeClass : "border-border text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {sv.short} <span className="opacity-60">{count}</span>
+            </button>
+          );
+        })}
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
         {filtered.map((c, idx) => {
           const s = stats.get(c.name)!;
@@ -158,6 +188,19 @@ const ClientsHub = ({ items, deals, objectives, interactions, onOpenClient }: Pr
                     <Badge variant="destructive" className="text-[10px]">
                       <AlertTriangle className="w-3 h-3 mr-0.5" />{s.overdue}
                     </Badge>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-1 mb-3">
+                  {(c.services || []).length === 0 ? (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded border border-dashed border-border text-muted-foreground">
+                      Sin servicios definidos
+                    </span>
+                  ) : (
+                    (c.services || []).map(sv => (
+                      <span key={sv} className={`text-[10px] px-1.5 py-0.5 rounded border ${SERVICE_MAP[sv]?.badgeClass || "bg-muted text-muted-foreground border-border"}`}>
+                        {SERVICE_MAP[sv]?.short || sv}
+                      </span>
+                    ))
                   )}
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-xs">

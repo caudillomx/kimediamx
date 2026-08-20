@@ -13,6 +13,8 @@ export type Client = {
   website_url: string | null;
   notes: string | null;
   aliases: string[];
+  /** Servicios contratados: analisis | estrategia | ads | audiovisual */
+  services: string[];
   created_at: string;
 };
 
@@ -59,6 +61,7 @@ export function useClientsData() {
         logo_url: payload.logo_url ?? null,
         website_url: payload.website_url ?? null,
         notes: payload.notes ?? null,
+        services: payload.services ?? [],
       })
       .select()
       .single();

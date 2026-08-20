@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Plus, Pencil, Power, Merge, X, Save, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { CLIENT_TYPE_META } from "@/hooks/useClientsData";
+import { SERVICES, SERVICE_MAP } from "@/lib/services";
 
 const TYPE_OPTIONS = ["activo", "probono", "prospecto", "inactivo"] as const;
 
@@ -17,6 +18,7 @@ interface Client {
   notes: string | null;
   client_type?: string;
   is_probono?: boolean;
+  services?: string[];
 }
 
 export default function ClientsManager() {
@@ -58,6 +60,7 @@ export default function ClientsManager() {
       notes: editing.notes,
       client_type: editing.client_type || "activo",
       is_probono: !!editing.is_probono,
+      services: editing.services || [],
     };
     if (isNew) {
       const { error } = await supabase.from("clients").insert(payload);
@@ -120,7 +123,7 @@ export default function ClientsManager() {
           <h2 className="font-display text-xl font-bold text-foreground">Catálogo de clientes</h2>
           <p className="text-xs text-muted-foreground">Activos aparecen en filtros y selectores. Inactivos se conservan para historial.</p>
         </div>
-        <Button onClick={() => { setIsNew(true); setEditing({ id: "", name: "", is_active: true, aliases: [], notes: "", client_type: "activo", is_probono: false }); }} className="bg-gradient-coral text-primary-foreground">
+        <Button onClick={() => { setIsNew(true); setEditing({ id: "", name: "", is_active: true, aliases: [], notes: "", client_type: "activo", is_probono: false, services: [] }); }} className="bg-gradient-coral text-primary-foreground">
           <Plus className="w-4 h-4 mr-1.5" /> Nuevo
         </Button>
       </div>
@@ -146,6 +149,19 @@ export default function ClientsManager() {
                       <span className="text-[10px] px-1.5 py-0.5 rounded border bg-blue-500/15 text-blue-600 border-blue-500/30">PRO BONO</span>
                     )}
                     {!c.is_active && <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">inactivo</span>}
+                  </div>
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    {(c.services || []).length === 0 ? (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded border border-dashed border-border text-muted-foreground">
+                        Sin servicios definidos
+                      </span>
+                    ) : (
+                      (c.services || []).map(sv => (
+                        <span key={sv} className={`text-[10px] px-1.5 py-0.5 rounded border ${SERVICE_MAP[sv]?.badgeClass || "bg-muted text-muted-foreground border-border"}`}>
+                          {SERVICE_MAP[sv]?.short || sv}
+                        </span>
+                      ))
+                    )}
                   </div>
                   {c.aliases.length > 0 && (
                     <p className="text-xs text-muted-foreground mt-1">Apodos: {c.aliases.join(", ")}</p>
@@ -175,7 +191,7 @@ export default function ClientsManager() {
       {/* Edit/New modal */}
       {editing && (
         <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => { setEditing(null); setIsNew(false); }}>
-          <Card className="w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
+          <Card className="w-full max-w-md p-6 max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-foreground">{isNew ? "Nuevo cliente" : "Editar cliente"}</h3>
               <Button size="icon" variant="ghost" onClick={() => { setEditing(null); setIsNew(false); }}><X className="w-4 h-4" /></Button>
@@ -209,6 +225,33 @@ export default function ClientsManager() {
                     <option key={t} value={t}>{CLIENT_TYPE_META[t]?.label || t}</option>
                   ))}
                 </select>
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Servicios contratados</label>
+                <div className="mt-1.5 space-y-1.5">
+                  {SERVICES.map(sv => {
+                    const active = (editing.services || []).includes(sv.key);
+                    return (
+                      <label key={sv.key} className="flex items-start gap-2 text-sm cursor-pointer">
+                        <input
+                          type="checkbox"
+                          className="mt-1"
+                          checked={active}
+                          onChange={e => setEditing({
+                            ...editing,
+                            services: e.target.checked
+                              ? [...(editing.services || []), sv.key]
+                              : (editing.services || []).filter(x => x !== sv.key),
+                          })}
+                        />
+                        <span>
+                          <span className="font-medium text-foreground">{sv.label}</span>
+                          <span className="block text-[11px] text-muted-foreground leading-snug">{sv.description}</span>
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
               </div>
               <label className="flex items-center gap-2 text-sm">
                 <input type="checkbox" checked={!!editing.is_probono} onChange={e => setEditing({ ...editing, is_probono: e.target.checked })} />
