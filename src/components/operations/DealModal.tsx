@@ -6,7 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Deal, DEAL_STAGES } from "@/hooks/useDealsData";
-import { TeamMember, CLIENTS } from "@/hooks/useOperationsData";
+import { TeamMember } from "@/hooks/useOperationsData";
+import { useClientNames } from "@/hooks/useClientsData";
 import { Save } from "lucide-react";
 
 interface DealModalProps {
@@ -20,6 +21,7 @@ interface DealModalProps {
 }
 
 const DealModal = ({ deal, teamMembers, open, onClose, onSave, onCreate, isNew }: DealModalProps) => {
+  const CLIENTS = useClientNames();
   const [form, setForm] = useState({
     name: "",
     client_name: "",

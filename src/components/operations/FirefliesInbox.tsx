@@ -14,7 +14,7 @@ import {
   Sparkles, Shield, Plus, Trash2, Loader2, Eye,
 } from "lucide-react";
 import { toast } from "sonner";
-import { CLIENTS } from "@/hooks/useOperationsData";
+import { useClientNames } from "@/hooks/useClientsData";
 import { addCorpusEntryIfNew } from "@/hooks/useClientCorpus";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
@@ -57,6 +57,7 @@ const RULE_LABELS: Record<string, string> = {
 };
 
 const FirefliesInbox = ({ onImported }: { onImported?: () => void }) => {
+  const CLIENTS = useClientNames();
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [rules, setRules] = useState<Rule[]>([]);
   const [loading, setLoading] = useState(true);

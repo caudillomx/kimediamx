@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
-import { ActionItem, CLIENTS } from "@/hooks/useOperationsData";
+import { ActionItem } from "@/hooks/useOperationsData";
+import { useClientNames } from "@/hooks/useClientsData";
 import { Deal } from "@/hooks/useDealsData";
 import { CheckCircle2, Clock, AlertTriangle, DollarSign, Briefcase } from "lucide-react";
 import { isPast } from "date-fns";
@@ -12,6 +13,7 @@ interface ClientViewProps {
 }
 
 const ClientView = ({ items, deals, onSelectItem, onFilterByClient }: ClientViewProps) => {
+  const CLIENTS = useClientNames();
   // Get all unique clients from items + deals + CLIENTS list
   const allClients = Array.from(new Set([
     ...CLIENTS,

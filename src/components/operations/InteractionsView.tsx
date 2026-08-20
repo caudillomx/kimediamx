@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Interaction, INTERACTION_TYPES } from "@/hooks/useInteractionsData";
-import { CLIENTS } from "@/hooks/useOperationsData";
+import { useClientNames } from "@/hooks/useClientsData";
 import { format, isAfter, isBefore, startOfDay } from "date-fns";
 import { es } from "date-fns/locale";
 import {
@@ -23,6 +23,7 @@ interface InteractionsViewProps {
 }
 
 const InteractionsView = ({ interactions, onSelectInteraction, onNewInteraction, onToggleFollowUp }: InteractionsViewProps) => {
+  const CLIENTS = useClientNames();
   const [search, setSearch] = useState("");
   const [filterClient, setFilterClient] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<string | null>(null);

@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Interaction, INTERACTION_TYPES } from "@/hooks/useInteractionsData";
-import { CLIENTS } from "@/hooks/useOperationsData";
+import { useClientNames } from "@/hooks/useClientsData";
 import { Save, Phone, Mail, Users, MessageCircle, Handshake } from "lucide-react";
 
 const iconMap: Record<string, any> = { Phone, Mail, Users, MessageCircle, Handshake };
@@ -22,6 +22,7 @@ interface InteractionModalProps {
 }
 
 const InteractionModal = ({ interaction, open, onClose, onSave, onCreate, isNew, contactSuggestions = [] }: InteractionModalProps) => {
+  const CLIENTS = useClientNames();
   const [form, setForm] = useState({
     contact_name: "",
     client_name: "",
