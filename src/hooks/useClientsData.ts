@@ -80,3 +80,30 @@ export function useClientsData() {
 
   return { clients, loading, createClient, updateClient, refetch, getClientNames };
 }
+/** Nombres de clientes activos, en vivo desde el catálogo. Reemplaza la constante CLIENTS. */
+export function useClientNames(): string[] {
+  const [names, setNames] = useState<string[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = () =>
+      supabase
+        .from("clients")
+        .select("name, is_active")
+        .eq("is_active", true)
+        .order("name")
+        .then(({ data }) => {
+          if (!cancelled) setNames(((data as { name: string }[]) || []).map(c => c.name));
+        });
+
+    load();
+    const channel = supabase
+      .channel("client_names_realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "clients" }, () => { load(); })
+      .subscribe();
+
+    return () => { cancelled = true; supabase.removeChannel(channel); };
+  }, []);
+
+  return names;
+}

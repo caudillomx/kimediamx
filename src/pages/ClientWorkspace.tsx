@@ -20,6 +20,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { useAdsProposals } from "@/hooks/useAdsProposals";
 import { AdsProposalBuilder } from "@/components/ads/AdsProposalBuilder";
+import { SERVICE_MAP, SERVICES, hasService } from "@/lib/services";
 
 const TYPE_META: Record<string, { label: string; icon: any }> = {
   nota:       { label: "Nota",       icon: Notebook },
@@ -94,6 +95,16 @@ const ClientWorkspace = () => {
   }
 
   const typeMeta = CLIENT_TYPE_META[client.client_type] || CLIENT_TYPE_META.activo;
+  const svcs = client.services || [];
+  const showEstrategia = hasService(svcs, "estrategia");
+  const showAds = hasService(svcs, "ads");
+  const showAnalisis = hasService(svcs, "analisis");
+  const tabs = [
+    { value: "corpus", label: "Corpus" },
+    ...(showEstrategia ? [{ value: "profile", label: "Perfil editorial" }] : []),
+    { value: "activity", label: "Actividad reciente" },
+    ...(showAds ? [{ value: "ads", label: "Campañas de Ads" }] : []),
+  ];
 
   return (
     <div className="min-h-screen bg-background">
@@ -105,9 +116,16 @@ const ClientWorkspace = () => {
           <div className="ml-auto flex items-center gap-2">
             <Badge variant="outline" className={typeMeta.badgeClass}>{typeMeta.label}</Badge>
             {client.is_probono && <Badge variant="outline" className="bg-blue-500/15 text-blue-600 border-blue-500/30">Pro bono</Badge>}
-            <Button variant="outline" size="sm" onClick={() => navigate(`/admin/cliente/${client.id}/portal`)}>
-              <Globe className="w-4 h-4 mr-1" /> Portal cliente
-            </Button>
+            {svcs.map(sv => (
+              <Badge key={sv} variant="outline" className={SERVICE_MAP[sv]?.badgeClass}>
+                {SERVICE_MAP[sv]?.short || sv}
+              </Badge>
+            ))}
+            {(showAnalisis || showEstrategia) && (
+              <Button variant="outline" size="sm" onClick={() => navigate(`/admin/cliente/${client.id}/portal`)}>
+                <Globe className="w-4 h-4 mr-1" /> Portal cliente
+              </Button>
+            )}
           </div>
         </div>
       </header>
@@ -137,12 +155,32 @@ const ClientWorkspace = () => {
             </div>
 
             <div className="space-y-2">
-              <Button variant="outline" className="w-full justify-between" onClick={() => navigate(`/parrilla`)}>
-                Ver parrilla <ExternalLink className="w-3 h-3" />
-              </Button>
+              {showEstrategia && (
+                <Button variant="outline" className="w-full justify-between" onClick={() => navigate(`/parrilla`)}>
+                  Ver parrilla <ExternalLink className="w-3 h-3" />
+                </Button>
+              )}
               <Button variant="outline" className="w-full justify-between" onClick={() => navigate(`/admin/operaciones`)}>
                 Ver tareas <ExternalLink className="w-3 h-3" />
               </Button>
+            </div>
+
+            <div className="mt-4 pt-4 border-t border-border">
+              <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-2">Servicios contratados</p>
+              {svcs.length === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  Sin servicios definidos. Configúralos en Operaciones → Clientes → Catálogo para ver solo los módulos que aplican.
+                </p>
+              ) : (
+                <ul className="space-y-1.5">
+                  {SERVICES.filter(sv => svcs.includes(sv.key)).map(sv => (
+                    <li key={sv.key} className="text-xs">
+                      <span className="font-medium text-foreground">{sv.label}</span>
+                      <span className="block text-[11px] text-muted-foreground leading-snug">{sv.description}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
 
             {client.notes && (
@@ -153,12 +191,11 @@ const ClientWorkspace = () => {
 
         {/* RIGHT */}
         <section className="lg:col-span-2">
-          <Tabs defaultValue="corpus">
+          <Tabs defaultValue={tabs[0].value}>
             <TabsList>
-              <TabsTrigger value="corpus">Corpus</TabsTrigger>
-              <TabsTrigger value="profile">Perfil editorial</TabsTrigger>
-              <TabsTrigger value="activity">Actividad reciente</TabsTrigger>
-              <TabsTrigger value="ads">Campañas de Ads</TabsTrigger>
+              {tabs.map(t => (
+                <TabsTrigger key={t.value} value={t.value}>{t.label}</TabsTrigger>
+              ))}
             </TabsList>
 
             <TabsContent value="corpus" className="space-y-3">
@@ -171,6 +208,7 @@ const ClientWorkspace = () => {
               />
             </TabsContent>
 
+            {showEstrategia && (
             <TabsContent value="profile">
               {profile ? (
                 <Card className="p-5 space-y-3 text-sm">
@@ -190,6 +228,7 @@ const ClientWorkspace = () => {
                 </Card>
               )}
             </TabsContent>
+            )}
 
             <TabsContent value="activity" className="space-y-3">
               <Card className="p-4">
@@ -216,6 +255,7 @@ const ClientWorkspace = () => {
               </Card>
             </TabsContent>
 
+            {showAds && (
             <TabsContent value="ads" className="space-y-3">
               <div className="flex items-center justify-between">
                 <p className="text-sm text-muted-foreground">
@@ -256,6 +296,7 @@ const ClientWorkspace = () => {
                 </div>
               )}
             </TabsContent>
+            )}
           </Tabs>
         </section>
       </main>

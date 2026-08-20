@@ -31,7 +31,8 @@ import {
   Users, Building2, CalendarDays, TrendingUp, MessageSquare, Sun, Moon, Target,
   Inbox, BookUser, Home, Briefcase, Settings,
 } from "lucide-react";
-import { CATEGORIES, CLIENTS } from "@/hooks/useOperationsData";
+import { CATEGORIES } from "@/hooks/useOperationsData";
+import { useClientNames } from "@/hooks/useClientsData";
 
 type Section = "hoy" | "trabajo" | "clientes" | "entradas";
 type WorkView = "kanban" | "list" | "person" | "calendar" | "pipeline" | "interactions";
@@ -68,6 +69,8 @@ const OperationsDashboard = () => {
   const { objectives, refetch: refetchObjectives, toggleMilestone } = useObjectivesData();
   const [session, setSession] = useState<any>(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
+
+  const CLIENTS = useClientNames();
 
   const [section, setSection] = useState<Section>("hoy");
   const [workView, setWorkView] = useState<WorkView>("kanban");

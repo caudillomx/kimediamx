@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ActionItem, TeamMember, CATEGORIES, STATUSES, PRIORITIES, CLIENTS } from "@/hooks/useOperationsData";
+import { ActionItem, TeamMember, CATEGORIES, STATUSES, PRIORITIES } from "@/hooks/useOperationsData";
+import { useClientNames } from "@/hooks/useClientsData";
 import { CalendarIcon, Save, Trash2 } from "lucide-react";
 
 interface ActionItemModalProps {
@@ -20,6 +21,7 @@ interface ActionItemModalProps {
 }
 
 const ActionItemModal = ({ item, teamMembers, open, onClose, onSave, onCreate, isNew, prefillClient }: ActionItemModalProps) => {
+  const CLIENTS = useClientNames();
   const [form, setForm] = useState({
     description: "",
     responsible_id: "" as string | null,
