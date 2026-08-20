@@ -754,6 +754,65 @@ export type Database = {
           },
         ]
       }
+      client_portal_assets: {
+        Row: {
+          channel: string | null
+          client_id: string
+          created_at: string
+          id: string
+          metric_label: string | null
+          metric_value: string | null
+          name: string
+          notes: string | null
+          owner: string | null
+          sort_order: number
+          stage: string
+          status: string
+          updated_at: string
+          url: string | null
+        }
+        Insert: {
+          channel?: string | null
+          client_id: string
+          created_at?: string
+          id?: string
+          metric_label?: string | null
+          metric_value?: string | null
+          name: string
+          notes?: string | null
+          owner?: string | null
+          sort_order?: number
+          stage?: string
+          status?: string
+          updated_at?: string
+          url?: string | null
+        }
+        Update: {
+          channel?: string | null
+          client_id?: string
+          created_at?: string
+          id?: string
+          metric_label?: string | null
+          metric_value?: string | null
+          name?: string
+          notes?: string | null
+          owner?: string | null
+          sort_order?: number
+          stage?: string
+          status?: string
+          updated_at?: string
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_portal_assets_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_portal_attachments: {
         Row: {
           created_at: string
