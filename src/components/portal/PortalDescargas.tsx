@@ -592,7 +592,7 @@ export default function PortalDescargas({
     const prev = aggregate(prevPeriods.map((p) => p.id));
     const depName = new Map(dependencias.map((d) => [d.id, d.nombre]));
     const ranking = Array.from(curr.entries())
-      .filter(([, v]) => (v.engagement ?? 0) > 0 || v.followers > 0)
+      .filter(([, v]) => v.engagement != null || v.followers > 0)
       .sort((a, b) => (b[1].engagement ?? 0) - (a[1].engagement ?? 0))
       .map(([id, v]) => ({ nombre: depName.get(id) ?? "—", engagement: v.engagement, seguidores: v.followers }));
     const moves = Array.from(curr.entries()).map(([id, v]) => {
