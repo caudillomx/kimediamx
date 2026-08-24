@@ -425,8 +425,9 @@ export default function PortalDescargas({
 
     // Seguidores del periodo previo por cuenta/red: segundo fallback de crecimiento.
     const prevFollowers = new Map<string, number>();
-    for (const m of metrics) {
-      if (!prevIds.includes(m.period_id)) continue;
+    for (const m of uniqueMetrics(prevIds)) {
+      if (!compById.has(m.competitor_id)) continue;
+
       if (!compById.has(m.competitor_id)) continue;
       if (Number.isFinite(Number(m.followers))) prevFollowers.set(`${m.competitor_id}|${m.network}`, Number(m.followers));
     }
