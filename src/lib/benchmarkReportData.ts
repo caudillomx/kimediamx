@@ -65,12 +65,17 @@ const metricCompleteness = (metric: BenchmarkMetric) => [
 ].filter((value) => value != null && Number.isFinite(Number(value))).length;
 
 /** One snapshot per real account/network; never add duplicate imported rows. */
-export function uniqueMetricsForPeriods<T extends BenchmarkMetric>(metrics: T[], periodIds: string[]): T[] {
+export function uniqueMetricsForPeriods<T extends BenchmarkMetric>(
+  metrics: T[],
+  periodIds: string[],
+  accountIdentity?: ReadonlyMap<string, string>,
+): T[] {
   const ids = new Set(periodIds);
   const byAccount = new Map<string, T>();
   for (const metric of metrics) {
     if (!ids.has(metric.period_id)) continue;
-    const key = `${metric.competitor_id}|${metric.network.toLowerCase()}`;
+    const accountKey = accountIdentity?.get(metric.competitor_id) ?? metric.competitor_id;
+    const key = `${accountKey}|${metric.network.toLowerCase()}`;
     const previous = byAccount.get(key);
     if (!previous) {
       byAccount.set(key, metric);

@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { mxDay, mxRangeBounds } from "@/lib/tz";
 import { uniqueMetricsForPeriods } from "@/lib/benchmarkReportData";
 import { benchmarkPostKey, resolveGabineteMention, weightedRate } from "@/lib/gabineteReportUtils";
-import { titularAccountIds } from "@/lib/benchmarkAccountIdentity";
+import { benchmarkAccountKey, titularAccountIds } from "@/lib/benchmarkAccountIdentity";
 
 export type Dependencia = {
   id: string; nombre: string; nombre_corto?: string | null; tipo: string | null;
@@ -329,10 +329,15 @@ export function useGabineteData(clientId: string, pressDays = 30) {
     return m;
   }, [competitors, validCompetitorIds]);
 
+  const accountIdentity = useMemo(
+    () => new Map(competitors.map((c) => [c.id, benchmarkAccountKey(c)])),
+    [competitors],
+  );
+
   /** Agregado por dependencia para un conjunto de periodos y un enfoque de cuentas. */
   const aggregate = useCallback((periodIds: string[], enfoque: Enfoque) => {
     const acc = new Map<string, { followers: number; eng: { rate: number | null; weight: number | null }[]; posts: number[]; cuentas: Set<string> }>();
-    for (const m of uniqueMetricsForPeriods(metrics, periodIds)) {
+    for (const m of uniqueMetricsForPeriods(metrics, periodIds, accountIdentity)) {
       const dep = depOfCompetitor.get(m.competitor_id);
       if (!dep) continue;
       const tipo = typeOfCompetitor.get(m.competitor_id) ?? "institucional";
@@ -353,7 +358,7 @@ export function useGabineteData(clientId: string, pressDays = 30) {
       cuentas: v.cuentas.size,
     }));
     return out;
-  }, [metrics, depOfCompetitor, typeOfCompetitor]);
+  }, [metrics, depOfCompetitor, typeOfCompetitor, accountIdentity]);
 
   /**
    * Agregado por dependencia a partir de las publicaciones fechadas dentro de una
