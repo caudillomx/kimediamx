@@ -27,11 +27,13 @@ import InteractionModal from "@/components/operations/InteractionModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import {
   LayoutGrid, List, Plus, Search, LogOut, RefreshCw, Filter, X,
   Users, Building2, CalendarDays, TrendingUp, MessageSquare, Sun, Moon, Target,
-  Inbox, BookUser, Home, Briefcase, Settings,
+  Inbox, BookUser, Home, Briefcase, Settings, ChevronDown, ChevronLeft,
 } from "lucide-react";
+
 import { CATEGORIES } from "@/hooks/useOperationsData";
 import { useClientNames } from "@/hooks/useClientsData";
 import { useOpsRole } from "@/hooks/useOpsRole";
