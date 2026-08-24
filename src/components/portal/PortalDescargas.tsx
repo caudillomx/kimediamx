@@ -150,18 +150,22 @@ export default function PortalDescargas({
   );
   const activePeriods = useMemo(
     () => cut === "semanal"
-      ? selectLatestPeriodCohort(periods, { onOrBefore: weekTo })
-      : selectLatestPeriodCohort(periods, { label: periodLabel }),
+      // Un corte semanal necesita el snapshot más reciente disponible de CADA
+      // cuenta al cierre de la semana. Las cargas de instituciones y titulares
+      // no siempre comparten exactamente el mismo rango, así que limitarse a una
+      // sola cohorte puede borrar un ámbito completo aunque sí tenga datos.
+      ? periods.filter((p) => p.period_end <= weekTo)
+      : periods.filter((p) => p.period_label === periodLabel),
     [periods, periodLabel, cut, weekTo],
   );
   const prevPeriods = useMemo(
     () => cut === "semanal"
-      ? selectPreviousPeriodCohort(periods, activePeriods)
+      ? periods.filter((p) => p.period_end < weekFrom)
       : (() => {
           const idx = periodLabels.indexOf(periodLabel);
-          return idx > 0 ? selectLatestPeriodCohort(periods, { label: periodLabels[idx - 1] }) : [];
+          return idx > 0 ? periods.filter((p) => p.period_label === periodLabels[idx - 1]) : [];
         })(),
-    [periods, periodLabels, periodLabel, cut, activePeriods],
+    [periods, periodLabels, periodLabel, cut, weekFrom],
   );
 
 
@@ -342,9 +346,10 @@ export default function PortalDescargas({
     const depComps = allDepComps.filter((c) => matchesEnfoque(c.account_type));
     const compById = new Map(depComps.map((c) => [c.id, c]));
 
-    const periodo0 = activePeriods[0];
-    const winFrom = cut === "semanal" ? weekFrom : (periodo0?.period_start ?? pressFrom);
-    const winTo = cut === "semanal" ? weekTo : (periodo0?.period_end ?? pressTo);
+    const monthlyStarts = activePeriods.map((p) => p.period_start).sort();
+    const monthlyEnds = activePeriods.map((p) => p.period_end).sort();
+    const winFrom = cut === "semanal" ? weekFrom : (monthlyStarts[0] ?? pressFrom);
+    const winTo = cut === "semanal" ? weekTo : (monthlyEnds[monthlyEnds.length - 1] ?? pressTo);
     const winDays = Math.max(
       1,
       Math.round((new Date(winTo + "T00:00:00").getTime() - new Date(winFrom + "T00:00:00").getTime()) / 86_400_000) + 1,
@@ -374,13 +379,18 @@ export default function PortalDescargas({
       if (Number.isFinite(Number(m.followers))) prevFollowers.set(`${m.competitor_id}|${m.network}`, Number(m.followers));
     }
 
-    // Publicaciones del periodo: se consultan aquí para no depender del cache global (que viene truncado).
+    // Publicaciones del rango: se consultan por fecha real en todos los cortes
+    // que se solapan con la ventana. Un post del día 17 puede vivir en la carga
+    // 1–17 y otro del 20 en la carga 20–24; ambos pertenecen al reporte 17–23.
     let depPosts: Post[] = [];
-    if (depComps.length && periodIds.length) {
+    const postPeriodIds = periods
+      .filter((p) => p.period_start <= winTo && p.period_end >= winFrom)
+      .map((p) => p.id);
+    if (depComps.length && postPeriodIds.length) {
       depPosts = await fetchAllPages<Post>((from, to) =>
         supabase.from("client_portal_benchmark_posts")
           .select("period_id,competitor_id,network,profile_name,posted_at,message,interactions,link")
-          .in("period_id", periodIds)
+          .in("period_id", postPeriodIds)
           .in("competitor_id", depComps.map((c) => c.id))
           .order("interactions", { ascending: false })
           .order("id")
@@ -399,8 +409,7 @@ export default function PortalDescargas({
     const postsCount = new Map<string, number>();
     for (const p of depPosts) {
       if (!p.competitor_id || !compById.has(p.competitor_id)) continue;
-      if (!periodIds.includes(p.period_id)) continue;
-       if (!inMxRange(p.posted_at, winFrom, winTo)) continue;
+      if (!inMxRange(p.posted_at, winFrom, winTo)) continue;
       const k = `${p.competitor_id}|${p.network}`;
       postsCount.set(k, (postsCount.get(k) ?? 0) + 1);
     }
@@ -473,7 +482,7 @@ export default function PortalDescargas({
     };
 
     const postsDe = (scope: ScopeKey) => depPosts
-      .filter((p) => periodIds.includes(p.period_id) && p.competitor_id && compById.has(p.competitor_id))
+      .filter((p) => p.competitor_id && compById.has(p.competitor_id))
       .filter((p) => (compById.get(p.competitor_id!)?.account_type ?? "institucional") === scope)
       .filter((p) => inMxRange(p.posted_at, winFrom, winTo))
       .sort((a, b) => (b.interactions ?? 0) - (a.interactions ?? 0))
