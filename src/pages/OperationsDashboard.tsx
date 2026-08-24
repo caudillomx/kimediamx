@@ -27,41 +27,41 @@ import InteractionModal from "@/components/operations/InteractionModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import {
   LayoutGrid, List, Plus, Search, LogOut, RefreshCw, Filter, X,
   Users, Building2, CalendarDays, TrendingUp, MessageSquare, Sun, Moon, Target,
-  Inbox, BookUser, Home, Briefcase, Settings,
+  Inbox, BookUser, Home, Briefcase, Settings, ChevronDown, ChevronLeft,
 } from "lucide-react";
+
 import { CATEGORIES } from "@/hooks/useOperationsData";
 import { useClientNames } from "@/hooks/useClientsData";
 import { useOpsRole } from "@/hooks/useOpsRole";
 
-type Section = "hoy" | "trabajo" | "clientes" | "entradas" | "accesos";
-type WorkView = "kanban" | "list" | "person" | "calendar" | "pipeline" | "interactions";
-type ClientesView = "hub" | "objectives" | "catalog";
+type Section = "hoy" | "trabajo" | "clientes" | "entradas" | "accesos" | "comercial" | "objetivos" | "catalogo";
+type WorkView = "kanban" | "calendar";
+type ClientesView = "hub";
 
+// Navegación principal: solo 3 secciones. El resto vive en el menú "Más".
 const SECTION_TABS: { value: Section; label: string; icon: any }[] = [
   { value: "hoy", label: "Hoy", icon: Home },
   { value: "trabajo", label: "Trabajo", icon: Briefcase },
   { value: "clientes", label: "Clientes", icon: Users },
-  { value: "entradas", label: "Entradas", icon: Inbox },
-  { value: "accesos", label: "Equipo y permisos", icon: Settings },
+];
+
+const SECONDARY_SECTIONS: { value: Section; label: string; icon: any; adminOnly?: boolean }[] = [
+  { value: "entradas", label: "Entradas (minutas y Fireflies)", icon: Inbox },
+  { value: "objetivos", label: "Objetivos 2026", icon: Target },
+  { value: "comercial", label: "Comercial (pipeline e interacciones)", icon: TrendingUp, adminOnly: true },
+  { value: "catalogo", label: "Catálogo de clientes", icon: BookUser },
+  { value: "accesos", label: "Equipo y permisos", icon: Settings, adminOnly: true },
 ];
 
 const WORK_VIEWS: { value: WorkView; label: string; icon: any }[] = [
   { value: "kanban", label: "Kanban", icon: LayoutGrid },
-  { value: "list", label: "Lista", icon: List },
-  { value: "person", label: "Por persona", icon: Users },
   { value: "calendar", label: "Calendario", icon: CalendarDays },
-  { value: "pipeline", label: "Pipeline", icon: TrendingUp },
-  { value: "interactions", label: "Interacciones", icon: MessageSquare },
 ];
 
-const CLIENTES_VIEWS: { value: ClientesView; label: string; icon: any }[] = [
-  { value: "hub", label: "Lista", icon: Building2 },
-  { value: "objectives", label: "Objetivos 2026", icon: Target },
-  { value: "catalog", label: "Catálogo", icon: BookUser },
-];
 
 const OperationsDashboard = () => {
   const navigate = useNavigate();
@@ -163,8 +163,10 @@ const OperationsDashboard = () => {
     );
   }
 
-  const showWorkFilters = section === "trabajo" && ["kanban", "list", "calendar"].includes(workView);
+  const showWorkFilters = section === "trabajo";
   const activeFilters = [filterMember, filterCategory, filterClient, searchQuery].filter(Boolean).length;
+  const isSecondary = SECONDARY_SECTIONS.some(s => s.value === section);
+
 
   return (
     <div className="min-h-screen bg-background relative">
@@ -190,9 +192,9 @@ const OperationsDashboard = () => {
           </div>
         </motion.div>
 
-        {/* Section tabs (top-level navigation) */}
+        {/* Navegación principal: 3 secciones + menú "Más" */}
         <div className="flex items-center gap-2 border-b border-border">
-          {SECTION_TABS.filter(t => t.value !== "accesos" || isAdmin).map(tab => (
+          {SECTION_TABS.map(tab => (
             <button
               key={tab.value}
               onClick={() => setSection(tab.value)}
@@ -204,20 +206,55 @@ const OperationsDashboard = () => {
             >
               <tab.icon className="w-4 h-4" />
               {tab.label}
-              {tab.value === "entradas" && firefliesPending > 0 && (
-                <span className="ml-1 text-[10px] bg-coral text-primary-foreground px-1.5 py-0.5 rounded-full">
-                  {firefliesPending}
-                </span>
-              )}
             </button>
           ))}
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-all ${
+                  isSecondary ? "border-coral text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Settings className="w-4 h-4" />
+                Más
+                {firefliesPending > 0 && (
+                  <span className="text-[10px] bg-coral text-primary-foreground px-1.5 py-0.5 rounded-full">{firefliesPending}</span>
+                )}
+                <ChevronDown className="w-3.5 h-3.5" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-64">
+              {SECONDARY_SECTIONS.filter(s => !s.adminOnly || isAdmin).map(s => (
+                <DropdownMenuItem key={s.value} onClick={() => setSection(s.value)} className="gap-2">
+                  <s.icon className="w-4 h-4" />
+                  <span className="flex-1">{s.label}</span>
+                  {s.value === "entradas" && firefliesPending > 0 && (
+                    <span className="text-[10px] bg-coral text-primary-foreground px-1.5 py-0.5 rounded-full">{firefliesPending}</span>
+                  )}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
-        {/* Sub-views per section */}
+        {/* Encabezado de sección secundaria */}
+        {isSecondary && (
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="sm" onClick={() => setSection("hoy")}>
+              <ChevronLeft className="w-4 h-4 mr-1" /> Volver
+            </Button>
+            <span className="text-sm font-semibold text-foreground">
+              {SECONDARY_SECTIONS.find(s => s.value === section)?.label}
+            </span>
+          </div>
+        )}
+
+        {/* Sub-vistas de Trabajo */}
         {section === "trabajo" && (
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center bg-secondary rounded-lg p-1 gap-0.5">
-              {WORK_VIEWS.filter(v => v.value !== "pipeline" || isAdmin).map(v => (
+              {WORK_VIEWS.map(v => (
                 <button
                   key={v.value}
                   onClick={() => setWorkView(v.value)}
@@ -230,7 +267,7 @@ const OperationsDashboard = () => {
                 </button>
               ))}
             </div>
-            {canEdit && !["pipeline", "interactions"].includes(workView) && (
+            {canEdit && (
               <Button onClick={() => openNewItem()} className="bg-gradient-coral text-primary-foreground font-semibold ml-auto">
                 <Plus className="w-4 h-4 mr-1.5" /> Nueva tarea
               </Button>
@@ -244,22 +281,6 @@ const OperationsDashboard = () => {
           </div>
         )}
 
-
-        {section === "clientes" && (
-          <div className="flex items-center bg-secondary rounded-lg p-1 gap-0.5 w-fit">
-            {CLIENTES_VIEWS.map(v => (
-              <button
-                key={v.value}
-                onClick={() => setClientesView(v.value)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                  clientesView === v.value ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <v.icon className="w-3.5 h-3.5" /> {v.label}
-              </button>
-            ))}
-          </div>
-        )}
 
         {/* Filters only for task views */}
         {showWorkFilters && (
@@ -318,27 +339,30 @@ const OperationsDashboard = () => {
           ) : section === "trabajo" ? (
             <motion.div key={`trabajo-${workView}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               {workView === "kanban" && <KanbanBoard items={filteredItems} teamMembers={teamMembers} onUpdateItem={updateActionItem} onSelectItem={(i) => { setSelectedItem(i); setIsNewItem(false); }} />}
-              {workView === "list" && <ListView items={filteredItems} teamMembers={teamMembers} onSelectItem={(i) => { setSelectedItem(i); setIsNewItem(false); }} onUpdateItem={updateActionItem} />}
-              {workView === "person" && <PersonView items={actionItems} teamMembers={teamMembers} onSelectItem={(i) => { setSelectedItem(i); setIsNewItem(false); }} />}
               {workView === "calendar" && <CalendarView items={filteredItems} teamMembers={teamMembers} onSelectItem={(i) => { setSelectedItem(i); setIsNewItem(false); }} />}
-              {workView === "pipeline" && <PipelineBoard deals={deals} teamMembers={teamMembers} onSelectDeal={(d) => { setSelectedDeal(d); setIsNewDeal(false); }} onUpdateDeal={updateDeal} onNewDeal={() => openNewDeal()} />}
-              {workView === "interactions" && <InteractionsView interactions={interactions} onSelectInteraction={(i) => { setSelectedInteraction(i); setIsNewInteraction(false); }} onNewInteraction={() => openNewInteraction()} onToggleFollowUp={(id, done) => updateInteraction(id, { follow_up_done: done })} />}
             </motion.div>
           ) : section === "clientes" ? (
-            <motion.div key={`clientes-${clientesView}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              {clientesView === "hub" && (
-                <ClientsHub
-                  items={actionItems}
-                  deals={deals}
-                  objectives={objectives}
-                  interactions={interactions}
-                  onOpenClient={setOpenClient}
-                />
-              )}
-              {clientesView === "objectives" && (
-                <ObjectivesView objectives={objectives} actionItems={actionItems} onToggleMilestone={toggleMilestone} onSelectItem={(i) => { setSelectedItem(i); setIsNewItem(false); }} />
-              )}
-              {clientesView === "catalog" && <ClientsManager />}
+            <motion.div key="clientes" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <ClientsHub
+                items={actionItems}
+                deals={deals}
+                objectives={objectives}
+                interactions={interactions}
+                onOpenClient={setOpenClient}
+              />
+            </motion.div>
+          ) : section === "objetivos" ? (
+            <motion.div key="objetivos" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <ObjectivesView objectives={objectives} actionItems={actionItems} onToggleMilestone={toggleMilestone} onSelectItem={(i) => { setSelectedItem(i); setIsNewItem(false); }} />
+            </motion.div>
+          ) : section === "catalogo" ? (
+            <motion.div key="catalogo" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <ClientsManager />
+            </motion.div>
+          ) : section === "comercial" ? (
+            <motion.div key="comercial" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-6">
+              <PipelineBoard deals={deals} teamMembers={teamMembers} onSelectDeal={(d) => { setSelectedDeal(d); setIsNewDeal(false); }} onUpdateDeal={updateDeal} onNewDeal={() => openNewDeal()} />
+              <InteractionsView interactions={interactions} onSelectInteraction={(i) => { setSelectedInteraction(i); setIsNewInteraction(false); }} onNewInteraction={() => openNewInteraction()} onToggleFollowUp={(id, done) => updateInteraction(id, { follow_up_done: done })} />
             </motion.div>
           ) : section === "entradas" ? (
             <motion.div key="entradas" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-4">
@@ -350,6 +374,7 @@ const OperationsDashboard = () => {
               <AccessManager />
             </motion.div>
           ) : null}
+
         </AnimatePresence>
 
         {/* Client detail dialog */}
