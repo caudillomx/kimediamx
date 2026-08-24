@@ -323,9 +323,16 @@ export function useGabineteData(clientId: string, pressDays = 30) {
   /** Agregado por dependencia para un conjunto de periodos y un enfoque de cuentas. */
   const aggregate = useCallback((periodIds: string[], enfoque: Enfoque) => {
     const ids = new Set(periodIds);
-    const acc = new Map<string, { followers: number; eng: number[]; posts: number[]; cuentas: Set<string> }>();
+    // Una sola fila por cuenta+red: si el mismo corte se cargó varias veces, no se suma dos veces.
+    const byKey = new Map<string, Metric>();
     for (const m of metrics) {
       if (!ids.has(m.period_id)) continue;
+      const k = `${m.competitor_id}|${m.network}`;
+      const prev = byKey.get(k);
+      if (!prev || (Number(m.followers) || 0) > (Number(prev.followers) || 0)) byKey.set(k, m);
+    }
+    const acc = new Map<string, { followers: number; eng: number[]; posts: number[]; cuentas: Set<string> }>();
+    for (const m of byKey.values()) {
       const dep = depOfCompetitor.get(m.competitor_id);
       if (!dep) continue;
       const tipo = typeOfCompetitor.get(m.competitor_id) ?? "institucional";
@@ -337,6 +344,7 @@ export function useGabineteData(clientId: string, pressDays = 30) {
       e.cuentas.add(m.competitor_id);
       acc.set(dep, e);
     }
+
     const out = new Map<string, DepAgg>();
     acc.forEach((v, k) => out.set(k, {
       followers: v.followers,
@@ -355,10 +363,16 @@ export function useGabineteData(clientId: string, pressDays = 30) {
   const aggregateActivity = useCallback((from: string, to: string, enfoque: Enfoque, source?: Post[]) => {
     const dias = daysInWindow(from, to);
     const acc = new Map<string, { n: number; sum: number; mejor: Post | null }>();
+    const seen = new Set<string>();
     for (const p of (source ?? posts)) {
       if (!p.posted_at || !p.competitor_id) continue;
       const fecha = mxDay(p.posted_at);
       if (!fecha || fecha < from || fecha > to) continue;
+      // Misma publicación cargada en varios cortes: se cuenta una sola vez.
+      const pk = `${p.competitor_id}|${p.network}|${p.posted_at}|${String((p as any).message ?? "").slice(0, 120)}`;
+      if (seen.has(pk)) continue;
+      seen.add(pk);
+
       const dep = depOfCompetitor.get(p.competitor_id);
       if (!dep) continue;
       const tipo = typeOfCompetitor.get(p.competitor_id) ?? "institucional";

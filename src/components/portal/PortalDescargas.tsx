@@ -151,16 +151,29 @@ export default function PortalDescargas({
     const cand = periods.filter((p) => p.period_start <= weekTo);
     return cand.length ? cand[cand.length - 1].period_label : (periodLabels[periodLabels.length - 1] ?? "");
   }, [periods, periodLabels, weekTo]);
+  /**
+   * Un mismo corte puede tener varias cargas (re-importaciones) con la misma etiqueta.
+   * Se conserva SOLO la más reciente para no sumar seguidores ni publicaciones dos veces.
+   */
+  const latestOfLabel = (label: string): Period[] => {
+    const same = periods.filter((p) => p.period_label === label);
+    if (same.length <= 1) return same;
+    const winner = same.slice().sort((a, b) =>
+      a.period_end === b.period_end ? a.id.localeCompare(b.id) : a.period_end.localeCompare(b.period_end),
+    ).pop()!;
+    return [winner];
+  };
   const activePeriods = useMemo(
-    () => periods.filter((p) => p.period_label === (cut === "semanal" ? semanalLabel : periodLabel)),
+    () => latestOfLabel(cut === "semanal" ? semanalLabel : periodLabel),
     [periods, periodLabel, cut, semanalLabel],
   );
   const prevPeriods = useMemo(() => {
     const ref = cut === "semanal" ? activePeriods[0]?.period_label ?? "" : periodLabel;
     const idx = periodLabels.indexOf(ref);
     if (idx <= 0) return [];
-    return periods.filter((p) => p.period_label === periodLabels[idx - 1]);
+    return latestOfLabel(periodLabels[idx - 1]);
   }, [periods, periodLabels, periodLabel, cut, activePeriods]);
+
 
   /** Etiqueta del corte activo y ventana de fechas para prensa/publicaciones. */
   const cutLabel = cut === "semanal"
@@ -192,11 +205,24 @@ export default function PortalDescargas({
     titular: "Solo cuentas del titular",
   };
 
+  /** Una sola métrica por cuenta+red (evita duplicados por cargas repetidas del mismo corte). */
+  const uniqueMetrics = (periodIds: string[]) => {
+    const byKey = new Map<string, Metric>();
+    for (const m of metrics) {
+      if (!periodIds.includes(m.period_id)) continue;
+      const k = `${m.competitor_id}|${m.network}`;
+      const prev = byKey.get(k);
+      // Ante empate, gana la fila con más datos (seguidores reportados).
+      if (!prev || (Number(m.followers) || 0) > (Number(prev.followers) || 0)) byKey.set(k, m);
+    }
+    return Array.from(byKey.values());
+  };
+
   /** Agregado por dependencia para un conjunto de periodos y un ámbito. */
   const aggregate = (periodIds: string[], scope: "combinado" | ScopeKey = enfoque) => {
     const acc = new Map<string, { followers: number; eng: number[]; posts: number[] }>();
-    for (const m of metrics) {
-      if (!periodIds.includes(m.period_id)) continue;
+    for (const m of uniqueMetrics(periodIds)) {
+
       const dep = depOfCompetitor.get(m.competitor_id);
       if (!dep) continue;
       if (!matchesScope(typeOfCompetitor.get(m.competitor_id), scope)) continue;
@@ -399,9 +425,9 @@ export default function PortalDescargas({
 
     // Seguidores del periodo previo por cuenta/red: segundo fallback de crecimiento.
     const prevFollowers = new Map<string, number>();
-    for (const m of metrics) {
-      if (!prevIds.includes(m.period_id)) continue;
+    for (const m of uniqueMetrics(prevIds)) {
       if (!compById.has(m.competitor_id)) continue;
+
       if (Number.isFinite(Number(m.followers))) prevFollowers.set(`${m.competitor_id}|${m.network}`, Number(m.followers));
     }
 
@@ -417,6 +443,15 @@ export default function PortalDescargas({
           .range(from, to), 1000, 8000);
     }
 
+    // Publicaciones idénticas (misma cuenta, red, fecha y texto) cargadas más de una vez no se cuentan doble.
+    const seenPost = new Set<string>();
+    depPosts = depPosts.filter((p) => {
+      const k = `${p.competitor_id}|${p.network}|${p.posted_at ?? ""}|${(p.message ?? "").slice(0, 120)}`;
+      if (seenPost.has(k)) return false;
+      seenPost.add(k);
+      return true;
+    });
+
     const postsCount = new Map<string, number>();
     for (const p of depPosts) {
       if (!p.competitor_id || !compById.has(p.competitor_id)) continue;
@@ -426,8 +461,9 @@ export default function PortalDescargas({
       postsCount.set(k, (postsCount.get(k) ?? 0) + 1);
     }
 
-    const cuentas: DepAccountRow[] = metrics
-      .filter((m) => periodIds.includes(m.period_id) && compById.has(m.competitor_id))
+    const cuentas: DepAccountRow[] = uniqueMetrics(periodIds)
+      .filter((m) => compById.has(m.competitor_id))
+
       .map((m) => {
         const c = compById.get(m.competitor_id)!;
         const k = `${m.competitor_id}|${m.network}`;
