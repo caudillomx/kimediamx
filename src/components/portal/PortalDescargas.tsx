@@ -428,7 +428,6 @@ export default function PortalDescargas({
     for (const m of uniqueMetrics(prevIds)) {
       if (!compById.has(m.competitor_id)) continue;
 
-      if (!compById.has(m.competitor_id)) continue;
       if (Number.isFinite(Number(m.followers))) prevFollowers.set(`${m.competitor_id}|${m.network}`, Number(m.followers));
     }
 
