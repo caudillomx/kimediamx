@@ -363,10 +363,16 @@ export function useGabineteData(clientId: string, pressDays = 30) {
   const aggregateActivity = useCallback((from: string, to: string, enfoque: Enfoque, source?: Post[]) => {
     const dias = daysInWindow(from, to);
     const acc = new Map<string, { n: number; sum: number; mejor: Post | null }>();
+    const seen = new Set<string>();
     for (const p of (source ?? posts)) {
       if (!p.posted_at || !p.competitor_id) continue;
       const fecha = mxDay(p.posted_at);
       if (!fecha || fecha < from || fecha > to) continue;
+      // Misma publicación cargada en varios cortes: se cuenta una sola vez.
+      const pk = `${p.competitor_id}|${p.network}|${p.posted_at}|${String((p as any).message ?? "").slice(0, 120)}`;
+      if (seen.has(pk)) continue;
+      seen.add(pk);
+
       const dep = depOfCompetitor.get(p.competitor_id);
       if (!dep) continue;
       const tipo = typeOfCompetitor.get(p.competitor_id) ?? "institucional";
