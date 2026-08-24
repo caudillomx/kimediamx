@@ -5,7 +5,9 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
 
-type Action = 'list' | 'grant_admin' | 'revoke_admin' | 'invite' | 'set_password';
+type Action = 'list' | 'grant_admin' | 'revoke_admin' | 'set_role' | 'invite' | 'set_password';
+
+const OPS_ROLES = ['admin', 'editor', 'viewer'] as const;
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -81,11 +83,33 @@ Deno.serve(async (req) => {
       return json({ ok: true, users: await loadList() });
     }
 
+    if (action === 'set_role') {
+      const user_id = String(body.user_id ?? '');
+      const role = String(body.role ?? 'none');
+      if (!user_id) return json({ error: 'user_id requerido' }, 400);
+      if (role !== 'none' && !OPS_ROLES.includes(role as any)) return json({ error: 'Rol inválido' }, 400);
+      if (user_id === userData.user.id && role !== 'admin') {
+        return json({ error: 'No puedes cambiar tu propio rol de administrador' }, 400);
+      }
+      const { error: delErr } = await admin
+        .from('user_roles')
+        .delete()
+        .eq('user_id', user_id)
+        .in('role', OPS_ROLES as unknown as string[]);
+      if (delErr) throw delErr;
+      if (role !== 'none') {
+        const { error } = await admin.from('user_roles').insert({ user_id, role });
+        if (error && !String(error.message).includes('duplicate')) throw error;
+      }
+      return json({ ok: true, users: await loadList() });
+    }
+
     if (action === 'invite') {
+
       const email = String(body.email ?? '').trim().toLowerCase();
       const password = String(body.password ?? '');
       const full_name = String(body.full_name ?? '').trim();
-      const makeAdmin = body.make_admin !== false;
+      const inviteRole = OPS_ROLES.includes(body.role) ? String(body.role) : (body.make_admin === false ? 'none' : 'admin');
       if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return json({ error: 'Correo inválido' }, 400);
       if (password.length < 8) return json({ error: 'Contraseña mín 8 caracteres' }, 400);
 
@@ -109,8 +133,9 @@ Deno.serve(async (req) => {
       if (full_name) {
         await admin.from('profiles').upsert({ id: uid, full_name, email }, { onConflict: 'id' });
       }
-      if (makeAdmin) {
-        const { error } = await admin.from('user_roles').insert({ user_id: uid, role: 'admin' });
+      if (inviteRole !== 'none') {
+        await admin.from('user_roles').delete().eq('user_id', uid).in('role', OPS_ROLES as unknown as string[]);
+        const { error } = await admin.from('user_roles').insert({ user_id: uid, role: inviteRole });
         if (error && !String(error.message).includes('duplicate')) throw error;
       }
       return json({ ok: true, user_id: uid, users: await loadList() });

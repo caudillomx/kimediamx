@@ -34,6 +34,7 @@ import {
 } from "lucide-react";
 import { CATEGORIES } from "@/hooks/useOperationsData";
 import { useClientNames } from "@/hooks/useClientsData";
+import { useOpsRole } from "@/hooks/useOpsRole";
 
 type Section = "hoy" | "trabajo" | "clientes" | "entradas" | "accesos";
 type WorkView = "kanban" | "list" | "person" | "calendar" | "pipeline" | "interactions";
@@ -73,6 +74,8 @@ const OperationsDashboard = () => {
   const [checkingAuth, setCheckingAuth] = useState(true);
 
   const CLIENTS = useClientNames();
+  const { isAdmin, canEdit, role: opsRole } = useOpsRole();
+
 
   const [section, setSection] = useState<Section>("hoy");
   const [workView, setWorkView] = useState<WorkView>("kanban");
@@ -189,7 +192,7 @@ const OperationsDashboard = () => {
 
         {/* Section tabs (top-level navigation) */}
         <div className="flex items-center gap-2 border-b border-border">
-          {SECTION_TABS.map(tab => (
+          {SECTION_TABS.filter(t => t.value !== "accesos" || isAdmin).map(tab => (
             <button
               key={tab.value}
               onClick={() => setSection(tab.value)}
@@ -214,7 +217,7 @@ const OperationsDashboard = () => {
         {section === "trabajo" && (
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center bg-secondary rounded-lg p-1 gap-0.5">
-              {WORK_VIEWS.map(v => (
+              {WORK_VIEWS.filter(v => v.value !== "pipeline" || isAdmin).map(v => (
                 <button
                   key={v.value}
                   onClick={() => setWorkView(v.value)}
@@ -227,13 +230,20 @@ const OperationsDashboard = () => {
                 </button>
               ))}
             </div>
-            {!["pipeline", "interactions"].includes(workView) && (
+            {canEdit && !["pipeline", "interactions"].includes(workView) && (
               <Button onClick={() => openNewItem()} className="bg-gradient-coral text-primary-foreground font-semibold ml-auto">
                 <Plus className="w-4 h-4 mr-1.5" /> Nueva tarea
               </Button>
             )}
           </div>
         )}
+
+        {opsRole === "viewer" && (
+          <div className="mb-4 px-3 py-2 rounded-lg border border-border bg-muted/50 text-xs text-muted-foreground">
+            Estás en modo <strong>solo lectura</strong>: puedes consultar la operación, pero no crear ni editar registros.
+          </div>
+        )}
+
 
         {section === "clientes" && (
           <div className="flex items-center bg-secondary rounded-lg p-1 gap-0.5 w-fit">
