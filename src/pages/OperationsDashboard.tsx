@@ -45,7 +45,7 @@ const SECTION_TABS: { value: Section; label: string; icon: any }[] = [
   { value: "trabajo", label: "Trabajo", icon: Briefcase },
   { value: "clientes", label: "Clientes", icon: Users },
   { value: "entradas", label: "Entradas", icon: Inbox },
-  { value: "accesos", label: "Accesos", icon: Settings },
+  { value: "accesos", label: "Equipo y permisos", icon: Settings },
 ];
 
 const WORK_VIEWS: { value: WorkView; label: string; icon: any }[] = [

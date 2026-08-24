@@ -5,7 +5,7 @@ export type OpsRole = "admin" | "editor" | "viewer" | null;
 
 /**
  * Rol del usuario dentro de Operación.
- * admin  → todo (incluye Accesos y Pipeline comercial)
+ * admin  → todo (incluye Equipo y permisos y Pipeline comercial)
  * editor → ver y editar operación, sin Accesos ni Pipeline
  * viewer → solo lectura
  */
