@@ -241,9 +241,9 @@ export default function AccessManager() {
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-display font-bold text-foreground">Accesos a Operación</h2>
+          <h2 className="text-lg font-display font-bold text-foreground">Equipo y permisos internos</h2>
           <p className="text-sm text-muted-foreground">
-            Cada cuenta necesita un rol para ver datos. Sin rol, el panel se ve vacío.
+            Administra aquí al equipo que entra a Operaciones. Los usuarios de portales se asignan dentro de cada cliente.
           </p>
         </div>
         <div className="flex items-center gap-2">
