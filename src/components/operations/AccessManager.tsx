@@ -9,8 +9,9 @@ import { Badge } from "@/components/ui/badge";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  ShieldCheck, ShieldOff, UserPlus, RefreshCw, KeyRound, Mail, Building2,
+  UserPlus, RefreshCw, KeyRound, Mail, Building2, ShieldCheck, Pencil, Eye,
 } from "lucide-react";
 
 type AccessUser = {
@@ -24,8 +25,38 @@ type AccessUser = {
   is_portal_user: boolean;
 };
 
+type RoleValue = "admin" | "editor" | "viewer" | "none";
+
+const ROLE_META: Record<Exclude<RoleValue, "none">, { label: string; hint: string; icon: any; cls: string }> = {
+  admin: {
+    label: "Admin",
+    hint: "Acceso total: operación, pipeline comercial y gestión de accesos.",
+    icon: ShieldCheck,
+    cls: "bg-gradient-coral text-primary-foreground",
+  },
+  editor: {
+    label: "Editor",
+    hint: "Ve y edita la operación (tareas, clientes, parrillas, activos, minutas). Sin pipeline ni accesos.",
+    icon: Pencil,
+    cls: "bg-blue-500/15 text-blue-600 dark:text-blue-300",
+  },
+  viewer: {
+    label: "Viewer",
+    hint: "Solo lectura de la operación. No puede crear ni editar nada.",
+    icon: Eye,
+    cls: "bg-muted text-muted-foreground",
+  },
+};
+
+const roleOf = (u: AccessUser): RoleValue =>
+  u.roles.includes("admin") ? "admin"
+  : u.roles.includes("editor") ? "editor"
+  : u.roles.includes("viewer") ? "viewer"
+  : "none";
+
 const fmt = (d: string | null) =>
   d ? new Date(d).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" }) : "—";
+
 
 export default function AccessManager() {
   const [users, setUsers] = useState<AccessUser[]>([]);
