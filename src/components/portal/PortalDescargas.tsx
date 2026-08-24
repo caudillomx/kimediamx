@@ -10,12 +10,10 @@ import { toast } from "sonner";
 import { Download, FileText, FileSpreadsheet, Building2, Newspaper, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import {
-  selectLatestPeriodCohort,
-  selectPreviousPeriodCohort,
   uniqueMetricsForPeriods,
 } from "@/lib/benchmarkReportData";
 import { benchmarkPostKey, resolveGabineteMention, weightedRate } from "@/lib/gabineteReportUtils";
-import { titularAccountIds } from "@/lib/benchmarkAccountIdentity";
+import { benchmarkAccountKey, titularAccountIds } from "@/lib/benchmarkAccountIdentity";
 import {
   DependenciaPdfTemplate, GabinetePdfTemplate,
   type DependenciaReportData, type GabineteReportData, type DepPressRow,
@@ -187,6 +185,11 @@ export default function PortalDescargas({
     return m;
   }, [competitors]);
 
+  const accountIdentity = useMemo(
+    () => new Map(competitors.map((c) => [c.id, benchmarkAccountKey(c)])),
+    [competitors],
+  );
+
   const matchesEnfoque = (accountType: string | null | undefined) =>
     enfoque === "combinado" ? true : (accountType ?? "institucional") === enfoque;
 
@@ -201,7 +204,7 @@ export default function PortalDescargas({
 
   /** Una sola métrica por cuenta+red (evita duplicados por cargas repetidas del mismo corte). */
   const uniqueMetrics = (periodIds: string[]) => {
-    return uniqueMetricsForPeriods(metrics, periodIds);
+    return uniqueMetricsForPeriods(metrics, periodIds, accountIdentity);
   };
 
   /** Agregado por dependencia para un conjunto de periodos y un ámbito. */

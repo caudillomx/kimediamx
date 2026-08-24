@@ -34,4 +34,15 @@ describe("benchmark report snapshots", () => {
     expect(unique[0].engagement_rate).toBe(0.03);
     expect(unique.reduce((sum, metric) => sum + (metric.followers ?? 0), 0)).toBe(100);
   });
+
+  it("consolidates aliases that represent the same platform account", () => {
+    const metrics = [
+      { period_id: "aug-old-tit", competitor_id: "display-name", network: "x", followers: 1200, follower_growth_rate: null, engagement_rate: 0.01, posts_per_day: 1, created_at: "2026-08-17" },
+      { period_id: "aug-tit", competitor_id: "handle", network: "x", followers: 1280, follower_growth_rate: 0.02, engagement_rate: 0.03, posts_per_day: 2, created_at: "2026-08-20" },
+    ];
+    const identity = new Map([["display-name", "x|id:366724889"], ["handle", "x|id:366724889"]]);
+    const unique = uniqueMetricsForPeriods(metrics, ["aug-old-tit", "aug-tit"], identity);
+    expect(unique).toHaveLength(1);
+    expect(unique[0].followers).toBe(1280);
+  });
 });
