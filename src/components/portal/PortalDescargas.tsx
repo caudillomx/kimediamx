@@ -15,6 +15,7 @@ import {
   selectPreviousPeriodCohort,
   uniqueMetricsForPeriods,
 } from "@/lib/benchmarkReportData";
+import { benchmarkPostKey, resolveGabineteMention, weightedRate } from "@/lib/gabineteReportUtils";
 import {
   DependenciaPdfTemplate, GabinetePdfTemplate,
   type DependenciaReportData, type GabineteReportData, type DepPressRow,
@@ -24,8 +25,8 @@ import {
 type Dependencia = { id: string; nombre: string; tipo: string | null; titular: string | null; titular_cargo: string | null; sort_order: number | null };
 type Competitor = { id: string; name: string; network: string; dependencia_id: string | null; account_type: string | null };
 type Period = { id: string; period_label: string; period_start: string; period_end: string; created_at?: string | null };
-type Metric = { period_id: string; competitor_id: string; network: string; followers: number | null; follower_growth_rate: number | null; engagement_rate: number | null; posts_per_day: number | null };
-type Post = { period_id: string; competitor_id: string | null; network: string; profile_name: string; posted_at: string | null; message: string | null; interactions: number | null };
+type Metric = { period_id: string; competitor_id: string; network: string; followers: number | null; follower_growth_rate: number | null; engagement_rate: number | null; posts_per_day: number | null; created_at?: string | null };
+type Post = { period_id: string; competitor_id: string | null; network: string; profile_name: string; posted_at: string | null; message: string | null; interactions: number | null; link?: string | null };
 type Report = { id: string; title: string; report_date: string; type: string };
 
 const RATE_AVG = (vals: number[]) => (vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null);
@@ -39,7 +40,7 @@ async function fetchAllPages<T>(
   const out: T[] = [];
   for (let offset = 0; offset < maxRows; offset += pageSize) {
     const { data, error } = await run(offset, offset + pageSize - 1);
-    if (error) break;
+    if (error) throw error;
     const rows = (data ?? []) as T[];
     out.push(...rows);
     if (rows.length < pageSize) break;
@@ -132,11 +133,11 @@ export default function PortalDescargas({
           // omita filas entre páginas y desaparezcan cuentas del reporte.
           fetchAllPages<Metric>((from, to) =>
             supabase.from("client_portal_benchmark_metrics")
-              .select("period_id,competitor_id,network,followers,follower_growth_rate,engagement_rate,posts_per_day")
+              .select("period_id,competitor_id,network,followers,follower_growth_rate,engagement_rate,posts_per_day,created_at")
               .in("period_id", ids).order("period_id").order("id").range(from, to)),
           fetchAllPages<Post>((from, to) =>
             supabase.from("client_portal_benchmark_posts")
-              .select("period_id,competitor_id,network,profile_name,posted_at,message,interactions")
+              .select("period_id,competitor_id,network,profile_name,posted_at,message,interactions,link")
               .in("period_id", ids).order("interactions", { ascending: false }).order("id").range(from, to), 1000, 8000),
           supabase.from("client_portal_benchmark_narratives").select("profile_name,network,narratives").eq("client_id", clientId).limit(500),
         ]);
@@ -207,7 +208,7 @@ export default function PortalDescargas({
 
   /** Agregado por dependencia para un conjunto de periodos y un ámbito. */
   const aggregate = (periodIds: string[], scope: "combinado" | ScopeKey = enfoque) => {
-    const acc = new Map<string, { followers: number; eng: number[]; posts: number[] }>();
+    const acc = new Map<string, { followers: number; eng: { rate: number | null; weight: number | null }[]; posts: number[] }>();
     for (const m of uniqueMetrics(periodIds)) {
 
       const dep = depOfCompetitor.get(m.competitor_id);
@@ -215,14 +216,14 @@ export default function PortalDescargas({
       if (!matchesScope(typeOfCompetitor.get(m.competitor_id), scope)) continue;
       const e = acc.get(dep) ?? { followers: 0, eng: [], posts: [] };
       e.followers += Number(m.followers) || 0;
-      if (Number.isFinite(Number(m.engagement_rate))) e.eng.push(Number(m.engagement_rate));
+      if (Number.isFinite(Number(m.engagement_rate))) e.eng.push({ rate: Number(m.engagement_rate), weight: Number(m.followers) || null });
       if (Number.isFinite(Number(m.posts_per_day))) e.posts.push(Number(m.posts_per_day));
       acc.set(dep, e);
     }
     const out = new Map<string, { followers: number; engagement: number | null; postsDia: number | null }>();
     acc.forEach((v, k) => out.set(k, {
       followers: v.followers,
-      engagement: RATE_AVG(v.eng),
+      engagement: weightedRate(v.eng),
       postsDia: v.posts.length ? v.posts.reduce((a, b) => a + b, 0) : null,
     }));
     return out;
@@ -264,23 +265,7 @@ export default function PortalDescargas({
    * Exige coincidencia de frases contiguas (no bolsa de palabras) para evitar falsos positivos
    * del tipo "Salvador Sánchez Romero" ↔ "Luis Ignacio Sánchez Gómez".
    */
-  const resolveMention = (
-    haystack: string,
-  ): { dep: string | null; scope: ScopeKey | null; match: string | null } => {
-    const hay = ` ${nameTokens(haystack).join(" ")} `;
-    const has = (phrase: string) => phrase.length > 3 && hay.includes(` ${phrase} `);
-    for (const m of depMatchers) {
-      const hit = m.titPhrases.find(has);
-      if (hit) return { dep: m.id, scope: "titular", match: m.titular || hit };
-    }
-    for (const m of depMatchers) {
-      if (has(m.depPhrase)) return { dep: m.id, scope: "institucional", match: m.nombre };
-      if (m.depTokens.length >= 2 && m.depTokens.every((t) => hay.includes(` ${t} `))) {
-        return { dep: m.id, scope: "institucional", match: m.nombre };
-      }
-    }
-    return { dep: null, scope: null, match: null };
-  };
+  const resolveMention = (haystack: string) => resolveGabineteMention(haystack, dependencias);
   const resolveDep = (haystack: string): string | null => resolveMention(haystack).dep;
 
   const loadPress = async () => {
@@ -423,7 +408,7 @@ export default function PortalDescargas({
     if (depComps.length && periodIds.length) {
       depPosts = await fetchAllPages<Post>((from, to) =>
         supabase.from("client_portal_benchmark_posts")
-          .select("period_id,competitor_id,network,profile_name,posted_at,message,interactions")
+          .select("period_id,competitor_id,network,profile_name,posted_at,message,interactions,link")
           .in("period_id", periodIds)
           .in("competitor_id", depComps.map((c) => c.id))
           .order("interactions", { ascending: false })
@@ -434,7 +419,7 @@ export default function PortalDescargas({
     // Publicaciones idénticas (misma cuenta, red, fecha y texto) cargadas más de una vez no se cuentan doble.
     const seenPost = new Set<string>();
     depPosts = depPosts.filter((p) => {
-      const k = `${p.competitor_id}|${p.network}|${p.posted_at ?? ""}|${(p.message ?? "").slice(0, 120)}`;
+      const k = benchmarkPostKey(p);
       if (seenPost.has(k)) return false;
       seenPost.add(k);
       return true;
@@ -444,7 +429,7 @@ export default function PortalDescargas({
     for (const p of depPosts) {
       if (!p.competitor_id || !compById.has(p.competitor_id)) continue;
       if (!periodIds.includes(p.period_id)) continue;
-      if (cut === "semanal" && !inMxRange(p.posted_at, weekFrom, weekTo)) continue;
+       if (!inMxRange(p.posted_at, winFrom, winTo)) continue;
       const k = `${p.competitor_id}|${p.network}`;
       postsCount.set(k, (postsCount.get(k) ?? 0) + 1);
     }
@@ -519,7 +504,7 @@ export default function PortalDescargas({
     const postsDe = (scope: ScopeKey) => depPosts
       .filter((p) => periodIds.includes(p.period_id) && p.competitor_id && compById.has(p.competitor_id))
       .filter((p) => (compById.get(p.competitor_id!)?.account_type ?? "institucional") === scope)
-      .filter((p) => cut !== "semanal" || inMxRange(p.posted_at, weekFrom, weekTo))
+      .filter((p) => inMxRange(p.posted_at, winFrom, winTo))
       .sort((a, b) => (b.interactions ?? 0) - (a.interactions ?? 0))
       .slice(0, 3)
       .map((p) => ({

@@ -14,6 +14,7 @@ export type BenchmarkMetric = {
   follower_growth_rate: number | null;
   engagement_rate: number | null;
   posts_per_day: number | null;
+  created_at?: string | null;
 };
 
 const dateKey = (period: BenchmarkPeriod) => `${period.period_start}|${period.period_end}`;
@@ -71,7 +72,15 @@ export function uniqueMetricsForPeriods<T extends BenchmarkMetric>(metrics: T[],
     if (!ids.has(metric.period_id)) continue;
     const key = `${metric.competitor_id}|${metric.network.toLowerCase()}`;
     const previous = byAccount.get(key);
-    if (!previous || metricCompleteness(metric) > metricCompleteness(previous)) byAccount.set(key, metric);
+    if (!previous) {
+      byAccount.set(key, metric);
+      continue;
+    }
+    const metricTime = metric.created_at ?? "";
+    const previousTime = previous.created_at ?? "";
+    if (metricTime > previousTime || (metricTime === previousTime && metricCompleteness(metric) > metricCompleteness(previous))) {
+      byAccount.set(key, metric);
+    }
   }
   return Array.from(byAccount.values());
 }
