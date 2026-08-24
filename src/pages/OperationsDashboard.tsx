@@ -335,27 +335,30 @@ const OperationsDashboard = () => {
           ) : section === "trabajo" ? (
             <motion.div key={`trabajo-${workView}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               {workView === "kanban" && <KanbanBoard items={filteredItems} teamMembers={teamMembers} onUpdateItem={updateActionItem} onSelectItem={(i) => { setSelectedItem(i); setIsNewItem(false); }} />}
-              {workView === "list" && <ListView items={filteredItems} teamMembers={teamMembers} onSelectItem={(i) => { setSelectedItem(i); setIsNewItem(false); }} onUpdateItem={updateActionItem} />}
-              {workView === "person" && <PersonView items={actionItems} teamMembers={teamMembers} onSelectItem={(i) => { setSelectedItem(i); setIsNewItem(false); }} />}
               {workView === "calendar" && <CalendarView items={filteredItems} teamMembers={teamMembers} onSelectItem={(i) => { setSelectedItem(i); setIsNewItem(false); }} />}
-              {workView === "pipeline" && <PipelineBoard deals={deals} teamMembers={teamMembers} onSelectDeal={(d) => { setSelectedDeal(d); setIsNewDeal(false); }} onUpdateDeal={updateDeal} onNewDeal={() => openNewDeal()} />}
-              {workView === "interactions" && <InteractionsView interactions={interactions} onSelectInteraction={(i) => { setSelectedInteraction(i); setIsNewInteraction(false); }} onNewInteraction={() => openNewInteraction()} onToggleFollowUp={(id, done) => updateInteraction(id, { follow_up_done: done })} />}
             </motion.div>
           ) : section === "clientes" ? (
-            <motion.div key={`clientes-${clientesView}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              {clientesView === "hub" && (
-                <ClientsHub
-                  items={actionItems}
-                  deals={deals}
-                  objectives={objectives}
-                  interactions={interactions}
-                  onOpenClient={setOpenClient}
-                />
-              )}
-              {clientesView === "objectives" && (
-                <ObjectivesView objectives={objectives} actionItems={actionItems} onToggleMilestone={toggleMilestone} onSelectItem={(i) => { setSelectedItem(i); setIsNewItem(false); }} />
-              )}
-              {clientesView === "catalog" && <ClientsManager />}
+            <motion.div key="clientes" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <ClientsHub
+                items={actionItems}
+                deals={deals}
+                objectives={objectives}
+                interactions={interactions}
+                onOpenClient={setOpenClient}
+              />
+            </motion.div>
+          ) : section === "objetivos" ? (
+            <motion.div key="objetivos" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <ObjectivesView objectives={objectives} actionItems={actionItems} onToggleMilestone={toggleMilestone} onSelectItem={(i) => { setSelectedItem(i); setIsNewItem(false); }} />
+            </motion.div>
+          ) : section === "catalogo" ? (
+            <motion.div key="catalogo" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <ClientsManager />
+            </motion.div>
+          ) : section === "comercial" ? (
+            <motion.div key="comercial" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-6">
+              <PipelineBoard deals={deals} teamMembers={teamMembers} onSelectDeal={(d) => { setSelectedDeal(d); setIsNewDeal(false); }} onUpdateDeal={updateDeal} onNewDeal={() => openNewDeal()} />
+              <InteractionsView interactions={interactions} onSelectInteraction={(i) => { setSelectedInteraction(i); setIsNewInteraction(false); }} onNewInteraction={() => openNewInteraction()} onToggleFollowUp={(id, done) => updateInteraction(id, { follow_up_done: done })} />
             </motion.div>
           ) : section === "entradas" ? (
             <motion.div key="entradas" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-4">
@@ -367,6 +370,7 @@ const OperationsDashboard = () => {
               <AccessManager />
             </motion.div>
           ) : null}
+
         </AnimatePresence>
 
         {/* Client detail dialog */}
