@@ -189,7 +189,7 @@ const OperationsDashboard = () => {
 
         {/* Section tabs (top-level navigation) */}
         <div className="flex items-center gap-2 border-b border-border">
-          {SECTION_TABS.map(tab => (
+          {SECTION_TABS.filter(t => t.value !== "accesos" || isAdmin).map(tab => (
             <button
               key={tab.value}
               onClick={() => setSection(tab.value)}
