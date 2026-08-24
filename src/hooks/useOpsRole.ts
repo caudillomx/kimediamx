@@ -15,16 +15,23 @@ export function useOpsRole() {
 
   useEffect(() => {
     let alive = true;
+    let requestId = 0;
 
     const loadRoles = async (uid: string | undefined) => {
+      const currentRequest = ++requestId;
       if (!uid) {
-        if (alive) { setRole(null); setLoading(false); }
+        if (alive && currentRequest === requestId) { setRole(null); setLoading(false); }
         return;
       }
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", uid);
+      if (!alive || currentRequest !== requestId) return;
+      if (error) {
+        setLoading(false);
+        return;
+      }
       const roles = (data ?? []).map((r: any) => String(r.role));
       const resolved: OpsRole = roles.includes("admin")
         ? "admin"
@@ -33,15 +40,24 @@ export function useOpsRole() {
         : roles.includes("viewer")
         ? "viewer"
         : null;
-      if (alive) { setRole(resolved); setLoading(false); }
+      setRole(resolved);
+      setLoading(false);
     };
 
     // NOTE: never call supabase.auth.* inside onAuthStateChange — it deadlocks
     // the auth lock and every later request hangs. Use the session it hands us
     // and defer the data fetch out of the callback.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      const uid = session?.user?.id;
-      setTimeout(() => { loadRoles(uid); }, 0);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_OUT") {
+        requestId += 1;
+        setRole(null);
+        setLoading(false);
+        return;
+      }
+      // Ignore transient empty sessions emitted while auth storage hydrates.
+      // They must not overwrite a role already resolved by getSession().
+      if (!session?.user?.id) return;
+      setTimeout(() => { loadRoles(session.user.id); }, 0);
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
