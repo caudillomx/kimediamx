@@ -4102,6 +4102,8 @@ export type Database = {
         Args: { _client_id: string; _user_id: string }
         Returns: boolean
       }
+      has_ops_read: { Args: { _user_id: string }; Returns: boolean }
+      has_ops_write: { Args: { _user_id: string }; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -4112,7 +4114,13 @@ export type Database = {
       increment_code_usage: { Args: { code_text: string }; Returns: boolean }
     }
     Enums: {
-      app_role: "admin" | "user" | "client_viewer" | "executive"
+      app_role:
+        | "admin"
+        | "user"
+        | "client_viewer"
+        | "executive"
+        | "editor"
+        | "viewer"
       portal_dataset_source:
         | "fanpage_karma"
         | "meta_ads"
@@ -4248,7 +4256,14 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "user", "client_viewer", "executive"],
+      app_role: [
+        "admin",
+        "user",
+        "client_viewer",
+        "executive",
+        "editor",
+        "viewer",
+      ],
       portal_dataset_source: [
         "fanpage_karma",
         "meta_ads",
