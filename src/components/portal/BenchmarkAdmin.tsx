@@ -12,6 +12,7 @@ import {
   parseComparativa, parseSeguidores, parsePosts, detectType,
   type ComparativaRow, type FollowerDailyRow, type PostRow, type PeriodInfo,
 } from "@/lib/fanpageKarmaParser";
+import { benchmarkAccountKey } from "@/lib/benchmarkAccountIdentity";
 
 type Competitor = {
   id: string;
@@ -168,15 +169,19 @@ export default function BenchmarkAdmin({ clientId, clientName, scope = "general"
       // here so the preview does not incorrectly mark them as new.
       const { data: allClientCompetitors, error: competitorsError } = await supabase
         .from("client_portal_benchmark_competitors")
-        .select("name,network")
+        .select("id,name,network,profile_external_id,external_url")
         .eq("client_id", clientId);
       if (competitorsError) throw competitorsError;
       const existingKeys = new Set(
-        (allClientCompetitors ?? []).map((c) => `${c.name.toLowerCase()}|${c.network.toLowerCase()}`)
+        (allClientCompetitors ?? []).flatMap((c) => [
+          `${c.name.toLowerCase()}|${c.network.toLowerCase()}`,
+          benchmarkAccountKey(c),
+        ])
       );
       preview.profileKeys = Array.from(profileKeys.values()).map((k) => ({
         ...k,
-        isNew: !existingKeys.has(`${k.profile.toLowerCase()}|${k.network.toLowerCase()}`),
+        isNew: !existingKeys.has(`${k.profile.toLowerCase()}|${k.network.toLowerCase()}`)
+          && !existingKeys.has(benchmarkAccountKey({ id: "preview", name: k.profile, network: k.network, profile_external_id: k.externalId, external_url: k.externalUrl })),
       }));
       preview.label = defaultLabelForPeriod(preview.period);
       setParsedPreview(preview);
@@ -223,11 +228,16 @@ export default function BenchmarkAdmin({ clientId, clientName, scope = "general"
         .select("*")
         .eq("client_id", clientId);
       if (existingError) throw existingError;
-      const allExistingMap = new Map(
-        (allExisting ?? []).map((c: any) => [`${c.name.toLowerCase()}|${c.network.toLowerCase()}`, c])
-      );
+      const allExistingMap = new Map<string, any>();
+      (allExisting ?? []).forEach((c: any) => {
+        allExistingMap.set(`${c.name.toLowerCase()}|${c.network.toLowerCase()}`, c);
+        allExistingMap.set(benchmarkAccountKey(c), c);
+      });
+      const existingFor = (k: { profile: string; network: string; externalId: string | null; externalUrl: string | null }) =>
+        allExistingMap.get(benchmarkAccountKey({ id: "incoming", name: k.profile, network: k.network, profile_external_id: k.externalId, external_url: k.externalUrl }))
+        ?? allExistingMap.get(`${k.profile.toLowerCase()}|${k.network.toLowerCase()}`);
       const toCreate = parsedPreview.profileKeys.filter(
-        (k) => !allExistingMap.has(`${k.profile.toLowerCase()}|${k.network.toLowerCase()}`)
+        (k) => !existingFor(k)
       );
       let nextColor = competitors.length;
       if (toCreate.length > 0) {
@@ -252,7 +262,7 @@ export default function BenchmarkAdmin({ clientId, clientName, scope = "general"
       }
 
       const legacyIds = parsedPreview.profileKeys
-        .map((k) => allExistingMap.get(`${k.profile.toLowerCase()}|${k.network.toLowerCase()}`))
+        .map(existingFor)
         .filter((c: any) => c && c.scope !== scope)
         .map((c: any) => c.id as string);
       if (legacyIds.length > 0) {
@@ -269,12 +279,16 @@ export default function BenchmarkAdmin({ clientId, clientName, scope = "general"
         .select("*")
         .eq("client_id", clientId)
         .eq("scope", scope);
-      const compMap = new Map(
-        (refreshed ?? []).map((c: any) => [`${c.name.toLowerCase()}|${c.network.toLowerCase()}`, c.id as string])
-      );
+      const compMap = new Map<string, string>();
+      (refreshed ?? []).forEach((c: any) => {
+        compMap.set(`${c.name.toLowerCase()}|${c.network.toLowerCase()}`, c.id as string);
+        compMap.set(benchmarkAccountKey(c), c.id as string);
+      });
 
-      const findCompId = (profile: string, network: string) =>
-        compMap.get(`${profile.toLowerCase()}|${network.toLowerCase()}`) ?? null;
+      const findCompId = (profile: string, network: string, externalId?: string | null, externalUrl?: string | null) =>
+        compMap.get(benchmarkAccountKey({ id: "incoming", name: profile, network, profile_external_id: externalId ?? null, external_url: externalUrl ?? null }))
+        ?? compMap.get(`${profile.toLowerCase()}|${network.toLowerCase()}`)
+        ?? null;
 
       // 3) upsert upload registry (delete previous of same type)
       await supabase.from("client_portal_benchmark_uploads")
@@ -302,7 +316,7 @@ export default function BenchmarkAdmin({ clientId, clientName, scope = "general"
         await supabase.from("client_portal_benchmark_metrics").delete().eq("period_id", periodRow.id);
         const rows = parsedPreview.comparativa!
           .map((r) => {
-            const cid = findCompId(r.profile, r.network);
+            const cid = findCompId(r.profile, r.network, r.profileExternalId, r.externalUrl);
             if (!cid) return null;
             return {
               client_id: clientId,
@@ -328,7 +342,7 @@ export default function BenchmarkAdmin({ clientId, clientName, scope = "general"
         await supabase.from("client_portal_benchmark_follower_daily").delete().eq("period_id", periodRow.id);
         const rowMap = new Map<string, any>();
         for (const r of parsedPreview.seguidores!) {
-          const cid = findCompId(r.profile, r.network);
+            const cid = findCompId(r.profile, r.network, r.profileExternalId, r.externalUrl);
           if (!cid) continue;
           for (const d of r.days) {
             rowMap.set(`${cid}|${r.network}|${d.date}`, {
@@ -355,7 +369,7 @@ export default function BenchmarkAdmin({ clientId, clientName, scope = "general"
         const rows = parsedPreview.posts!.map((r) => ({
           client_id: clientId,
           period_id: periodRow.id,
-          competitor_id: findCompId(r.profile, r.network),
+          competitor_id: findCompId(r.profile, r.network, r.profileExternalId),
           network: r.network,
           profile_name: r.profile,
           message_external_id: r.messageExternalId,

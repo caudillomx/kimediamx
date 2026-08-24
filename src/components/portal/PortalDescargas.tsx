@@ -15,6 +15,7 @@ import {
   uniqueMetricsForPeriods,
 } from "@/lib/benchmarkReportData";
 import { benchmarkPostKey, resolveGabineteMention, weightedRate } from "@/lib/gabineteReportUtils";
+import { titularAccountIds } from "@/lib/benchmarkAccountIdentity";
 import {
   DependenciaPdfTemplate, GabinetePdfTemplate,
   type DependenciaReportData, type GabineteReportData, type DepPressRow,
@@ -22,7 +23,7 @@ import {
 } from "./DependenciaPdfTemplate";
 
 type Dependencia = { id: string; nombre: string; tipo: string | null; titular: string | null; titular_cargo: string | null; sort_order: number | null };
-type Competitor = { id: string; name: string; network: string; dependencia_id: string | null; account_type: string | null };
+type Competitor = { id: string; name: string; network: string; dependencia_id: string | null; account_type: string | null; profile_external_id: string | null; external_url: string | null };
 type Period = { id: string; period_label: string; period_start: string; period_end: string; created_at?: string | null };
 type Metric = { period_id: string; competitor_id: string; network: string; followers: number | null; follower_growth_rate: number | null; engagement_rate: number | null; posts_per_day: number | null; created_at?: string | null };
 type Post = { period_id: string; competitor_id: string | null; network: string; profile_name: string; posted_at: string | null; message: string | null; interactions: number | null; link?: string | null };
@@ -106,7 +107,7 @@ export default function PortalDescargas({
         supabase.from("client_portal_dependencias").select("*").eq("client_id", clientId).order("sort_order"),
         fetchAllPages<Competitor>((from, to) =>
           supabase.from("client_portal_benchmark_competitors")
-            .select("id,name,network,dependencia_id,account_type")
+            .select("id,name,network,dependencia_id,account_type,profile_external_id,external_url")
             .eq("client_id", clientId).eq("active", true)
             .order("id").range(from, to)),
         supabase.from("client_portal_benchmark_periods").select("id,period_label,period_start,period_end,created_at").eq("client_id", clientId).order("period_start"),
@@ -330,7 +331,14 @@ export default function PortalDescargas({
     if (!dep) return null;
     const periodIds = activePeriods.map((p) => p.id);
     const prevIds = prevPeriods.map((p) => p.id);
-    const allDepComps = competitors.filter((c) => c.dependencia_id === dep.id);
+    const assignedDepComps = competitors.filter((c) => c.dependencia_id === dep.id);
+    const validTitularIds = titularAccountIds(
+      assignedDepComps.filter((c) => c.account_type === "titular"),
+      dep.titular,
+    );
+    const allDepComps = assignedDepComps.filter(
+      (c) => c.account_type !== "titular" || validTitularIds.has(c.id),
+    );
     const depComps = allDepComps.filter((c) => matchesEnfoque(c.account_type));
     const compById = new Map(depComps.map((c) => [c.id, c]));
 
