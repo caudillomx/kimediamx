@@ -67,6 +67,8 @@ export default function AccessManager() {
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
   const [password, setPassword] = useState("");
+  const [inviteRole, setInviteRole] = useState<Exclude<RoleValue, "none">>("editor");
+
 
   const [pwUser, setPwUser] = useState<AccessUser | null>(null);
   const [newPw, setNewPw] = useState("");
