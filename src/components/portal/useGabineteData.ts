@@ -163,17 +163,22 @@ export function useGabineteData(clientId: string, pressDays = 30) {
         // cortes semanales/quincenales del Inicio.
         const desdeReciente = isoDaysAgo(150);
         const [m, poTop, poRec, nar, last] = await Promise.all([
+          // El desempate por `id` es obligatorio: paginar con un orden no único
+          // hace que PostgREST repita o se salte filas entre páginas y se
+          // pierdan cuentas enteras (p. ej. las institucionales de una secretaría).
           fetchAllPages<Metric>((from, to) =>
             supabase.from("client_portal_benchmark_metrics")
               .select("period_id,competitor_id,network,followers,follower_growth_rate,engagement_rate,posts_per_day")
               .in("period_id", ids)
               .order("period_id", { ascending: true })
+              .order("id", { ascending: true })
               .range(from, to)),
           fetchAllPages<Post>((from, to) =>
             supabase.from("client_portal_benchmark_posts")
               .select("period_id,competitor_id,network,profile_name,posted_at,message,interactions,link")
               .in("period_id", ids)
               .order("interactions", { ascending: false })
+              .order("id", { ascending: true })
               .range(from, to), 1000, 6000),
           fetchAllPages<Post>((from, to) =>
             supabase.from("client_portal_benchmark_posts")
@@ -181,6 +186,7 @@ export function useGabineteData(clientId: string, pressDays = 30) {
               .in("period_id", ids)
               .gte("posted_at", desdeReciente)
               .order("posted_at", { ascending: false })
+              .order("id", { ascending: true })
               .range(from, to), 1000, 8000),
           supabase.from("client_portal_benchmark_narratives")
             .select("profile_name,network,narratives").eq("client_id", clientId).limit(500),
