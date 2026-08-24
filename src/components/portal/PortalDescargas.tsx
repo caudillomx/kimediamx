@@ -205,11 +205,24 @@ export default function PortalDescargas({
     titular: "Solo cuentas del titular",
   };
 
+  /** Una sola métrica por cuenta+red (evita duplicados por cargas repetidas del mismo corte). */
+  const uniqueMetrics = (periodIds: string[]) => {
+    const byKey = new Map<string, Metric>();
+    for (const m of metrics) {
+      if (!periodIds.includes(m.period_id)) continue;
+      const k = `${m.competitor_id}|${m.network}`;
+      const prev = byKey.get(k);
+      // Ante empate, gana la fila con más datos (seguidores reportados).
+      if (!prev || (Number(m.followers) || 0) > (Number(prev.followers) || 0)) byKey.set(k, m);
+    }
+    return Array.from(byKey.values());
+  };
+
   /** Agregado por dependencia para un conjunto de periodos y un ámbito. */
   const aggregate = (periodIds: string[], scope: "combinado" | ScopeKey = enfoque) => {
     const acc = new Map<string, { followers: number; eng: number[]; posts: number[] }>();
-    for (const m of metrics) {
-      if (!periodIds.includes(m.period_id)) continue;
+    for (const m of uniqueMetrics(periodIds)) {
+
       const dep = depOfCompetitor.get(m.competitor_id);
       if (!dep) continue;
       if (!matchesScope(typeOfCompetitor.get(m.competitor_id), scope)) continue;
