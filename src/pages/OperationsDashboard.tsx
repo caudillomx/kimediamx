@@ -214,7 +214,7 @@ const OperationsDashboard = () => {
         {section === "trabajo" && (
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center bg-secondary rounded-lg p-1 gap-0.5">
-              {WORK_VIEWS.map(v => (
+              {WORK_VIEWS.filter(v => v.value !== "pipeline" || isAdmin).map(v => (
                 <button
                   key={v.value}
                   onClick={() => setWorkView(v.value)}
