@@ -303,6 +303,8 @@ export function useGabineteData(clientId: string, pressDays = 30) {
     return m;
   }, [competitors]);
 
+  const depById = useMemo(() => new Map(dependencias.map((d) => [d.id, d])), [dependencias]);
+
   const typeOfCompetitor = useMemo(() => {
     const m = new Map<string, string>();
     const byDep = new Map<string, Competitor[]>();
@@ -320,8 +322,6 @@ export function useGabineteData(clientId: string, pressDays = 30) {
     });
     return m;
   }, [competitors, depById]);
-
-  const depById = useMemo(() => new Map(dependencias.map((d) => [d.id, d])), [dependencias]);
 
   /** Agregado por dependencia para un conjunto de periodos y un enfoque de cuentas. */
   const aggregate = useCallback((periodIds: string[], enfoque: Enfoque) => {
