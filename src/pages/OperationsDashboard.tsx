@@ -230,13 +230,20 @@ const OperationsDashboard = () => {
                 </button>
               ))}
             </div>
-            {!["pipeline", "interactions"].includes(workView) && (
+            {canEdit && !["pipeline", "interactions"].includes(workView) && (
               <Button onClick={() => openNewItem()} className="bg-gradient-coral text-primary-foreground font-semibold ml-auto">
                 <Plus className="w-4 h-4 mr-1.5" /> Nueva tarea
               </Button>
             )}
           </div>
         )}
+
+        {opsRole === "viewer" && (
+          <div className="mb-4 px-3 py-2 rounded-lg border border-border bg-muted/50 text-xs text-muted-foreground">
+            Estás en modo <strong>solo lectura</strong>: puedes consultar la operación, pero no crear ni editar registros.
+          </div>
+        )}
+
 
         {section === "clientes" && (
           <div className="flex items-center bg-secondary rounded-lg p-1 gap-0.5 w-fit">
