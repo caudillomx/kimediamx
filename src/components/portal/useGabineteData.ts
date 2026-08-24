@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { mxDay, mxRangeBounds } from "@/lib/tz";
 import { nameTokens } from "@/lib/entityNames";
+import { uniqueMetricsForPeriods } from "@/lib/benchmarkReportData";
 
 export type Dependencia = {
   id: string; nombre: string; nombre_corto?: string | null; tipo: string | null;
@@ -328,17 +329,8 @@ export function useGabineteData(clientId: string, pressDays = 30) {
 
   /** Agregado por dependencia para un conjunto de periodos y un enfoque de cuentas. */
   const aggregate = useCallback((periodIds: string[], enfoque: Enfoque) => {
-    const ids = new Set(periodIds);
-    // Una sola fila por cuenta+red: si el mismo corte se cargó varias veces, no se suma dos veces.
-    const byKey = new Map<string, Metric>();
-    for (const m of metrics) {
-      if (!ids.has(m.period_id)) continue;
-      const k = `${m.competitor_id}|${m.network}`;
-      const prev = byKey.get(k);
-      if (!prev || (Number(m.followers) || 0) > (Number(prev.followers) || 0)) byKey.set(k, m);
-    }
     const acc = new Map<string, { followers: number; eng: number[]; posts: number[]; cuentas: Set<string> }>();
-    for (const m of byKey.values()) {
+    for (const m of uniqueMetricsForPeriods(metrics, periodIds)) {
       const dep = depOfCompetitor.get(m.competitor_id);
       if (!dep) continue;
       const tipo = typeOfCompetitor.get(m.competitor_id) ?? "institucional";

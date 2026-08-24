@@ -11,6 +11,11 @@ import { Download, FileText, FileSpreadsheet, Building2, Newspaper, Loader2 } fr
 import { Link } from "react-router-dom";
 import { nameTokens } from "@/lib/entityNames";
 import {
+  selectLatestPeriodCohort,
+  selectPreviousPeriodCohort,
+  uniqueMetricsForPeriods,
+} from "@/lib/benchmarkReportData";
+import {
   DependenciaPdfTemplate, GabinetePdfTemplate,
   type DependenciaReportData, type GabineteReportData, type DepPressRow,
   type ScopeBlock, type ScopeKey, type DepAccountRow,
@@ -18,7 +23,7 @@ import {
 
 type Dependencia = { id: string; nombre: string; tipo: string | null; titular: string | null; titular_cargo: string | null; sort_order: number | null };
 type Competitor = { id: string; name: string; network: string; dependencia_id: string | null; account_type: string | null };
-type Period = { id: string; period_label: string; period_start: string; period_end: string };
+type Period = { id: string; period_label: string; period_start: string; period_end: string; created_at?: string | null };
 type Metric = { period_id: string; competitor_id: string; network: string; followers: number | null; follower_growth_rate: number | null; engagement_rate: number | null; posts_per_day: number | null };
 type Post = { period_id: string; competitor_id: string | null; network: string; profile_name: string; posted_at: string | null; message: string | null; interactions: number | null };
 type Report = { id: string; title: string; report_date: string; type: string };
@@ -110,7 +115,7 @@ export default function PortalDescargas({
             .select("id,name,network,dependencia_id,account_type")
             .eq("client_id", clientId).eq("active", true)
             .order("id").range(from, to)),
-        supabase.from("client_portal_benchmark_periods").select("id,period_label,period_start,period_end").eq("client_id", clientId).order("period_start"),
+        supabase.from("client_portal_benchmark_periods").select("id,period_label,period_start,period_end,created_at").eq("client_id", clientId).order("period_start"),
         supabase.from("client_portal_reports").select("id,title,report_date,type").eq("client_id", clientId).order("report_date", { ascending: false }).limit(30),
       ]);
       const ps = (per.data ?? []) as Period[];
@@ -148,33 +153,21 @@ export default function PortalDescargas({
     () => Array.from(new Set(periods.map((p) => p.period_label))),
     [periods],
   );
-  /** En corte semanal las métricas provienen del último corte de datos disponible. */
-  const semanalLabel = useMemo(() => {
-    const cand = periods.filter((p) => p.period_start <= weekTo);
-    return cand.length ? cand[cand.length - 1].period_label : (periodLabels[periodLabels.length - 1] ?? "");
-  }, [periods, periodLabels, weekTo]);
-  /**
-   * Un mismo corte puede tener varias cargas (re-importaciones) con la misma etiqueta.
-   * Se conserva SOLO la más reciente para no sumar seguidores ni publicaciones dos veces.
-   */
-  const latestOfLabel = (label: string): Period[] => {
-    const same = periods.filter((p) => p.period_label === label);
-    if (same.length <= 1) return same;
-    const winner = same.slice().sort((a, b) =>
-      a.period_end === b.period_end ? a.id.localeCompare(b.id) : a.period_end.localeCompare(b.period_end),
-    ).pop()!;
-    return [winner];
-  };
   const activePeriods = useMemo(
-    () => latestOfLabel(cut === "semanal" ? semanalLabel : periodLabel),
-    [periods, periodLabel, cut, semanalLabel],
+    () => cut === "semanal"
+      ? selectLatestPeriodCohort(periods, { onOrBefore: weekTo })
+      : selectLatestPeriodCohort(periods, { label: periodLabel }),
+    [periods, periodLabel, cut, weekTo],
   );
-  const prevPeriods = useMemo(() => {
-    const ref = cut === "semanal" ? activePeriods[0]?.period_label ?? "" : periodLabel;
-    const idx = periodLabels.indexOf(ref);
-    if (idx <= 0) return [];
-    return latestOfLabel(periodLabels[idx - 1]);
-  }, [periods, periodLabels, periodLabel, cut, activePeriods]);
+  const prevPeriods = useMemo(
+    () => cut === "semanal"
+      ? selectPreviousPeriodCohort(periods, activePeriods)
+      : (() => {
+          const idx = periodLabels.indexOf(periodLabel);
+          return idx > 0 ? selectLatestPeriodCohort(periods, { label: periodLabels[idx - 1] }) : [];
+        })(),
+    [periods, periodLabels, periodLabel, cut, activePeriods],
+  );
 
 
   /** Etiqueta del corte activo y ventana de fechas para prensa/publicaciones. */
@@ -209,15 +202,7 @@ export default function PortalDescargas({
 
   /** Una sola métrica por cuenta+red (evita duplicados por cargas repetidas del mismo corte). */
   const uniqueMetrics = (periodIds: string[]) => {
-    const byKey = new Map<string, Metric>();
-    for (const m of metrics) {
-      if (!periodIds.includes(m.period_id)) continue;
-      const k = `${m.competitor_id}|${m.network}`;
-      const prev = byKey.get(k);
-      // Ante empate, gana la fila con más datos (seguidores reportados).
-      if (!prev || (Number(m.followers) || 0) > (Number(prev.followers) || 0)) byKey.set(k, m);
-    }
-    return Array.from(byKey.values());
+    return uniqueMetricsForPeriods(metrics, periodIds);
   };
 
   /** Agregado por dependencia para un conjunto de periodos y un ámbito. */
