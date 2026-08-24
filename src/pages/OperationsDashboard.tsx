@@ -73,6 +73,8 @@ const OperationsDashboard = () => {
   const [checkingAuth, setCheckingAuth] = useState(true);
 
   const CLIENTS = useClientNames();
+  const { isAdmin, canEdit, role: opsRole } = useOpsRole();
+
 
   const [section, setSection] = useState<Section>("hoy");
   const [workView, setWorkView] = useState<WorkView>("kanban");
