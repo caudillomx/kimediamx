@@ -34,6 +34,7 @@ import {
 } from "lucide-react";
 import { CATEGORIES } from "@/hooks/useOperationsData";
 import { useClientNames } from "@/hooks/useClientsData";
+import { useOpsRole } from "@/hooks/useOpsRole";
 
 type Section = "hoy" | "trabajo" | "clientes" | "entradas" | "accesos";
 type WorkView = "kanban" | "list" | "person" | "calendar" | "pipeline" | "interactions";
