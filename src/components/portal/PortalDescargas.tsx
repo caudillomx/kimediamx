@@ -443,6 +443,15 @@ export default function PortalDescargas({
           .range(from, to), 1000, 8000);
     }
 
+    // Publicaciones idénticas (misma cuenta, red, fecha y texto) cargadas más de una vez no se cuentan doble.
+    const seenPost = new Set<string>();
+    depPosts = depPosts.filter((p) => {
+      const k = `${p.competitor_id}|${p.network}|${p.posted_at ?? ""}|${(p.message ?? "").slice(0, 120)}`;
+      if (seenPost.has(k)) return false;
+      seenPost.add(k);
+      return true;
+    });
+
     const postsCount = new Map<string, number>();
     for (const p of depPosts) {
       if (!p.competitor_id || !compById.has(p.competitor_id)) continue;
@@ -452,8 +461,9 @@ export default function PortalDescargas({
       postsCount.set(k, (postsCount.get(k) ?? 0) + 1);
     }
 
-    const cuentas: DepAccountRow[] = metrics
-      .filter((m) => periodIds.includes(m.period_id) && compById.has(m.competitor_id))
+    const cuentas: DepAccountRow[] = uniqueMetrics(periodIds)
+      .filter((m) => compById.has(m.competitor_id))
+
       .map((m) => {
         const c = compById.get(m.competitor_id)!;
         const k = `${m.competitor_id}|${m.network}`;
