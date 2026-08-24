@@ -69,8 +69,10 @@ export function uniqueMetricsForPeriods<T extends BenchmarkMetric>(
   metrics: T[],
   periodIds: string[],
   accountIdentity?: ReadonlyMap<string, string>,
+  periods?: readonly BenchmarkPeriod[],
 ): T[] {
   const ids = new Set(periodIds);
+  const periodById = new Map((periods ?? []).map((period) => [period.id, period]));
   const byAccount = new Map<string, T>();
   for (const metric of metrics) {
     if (!ids.has(metric.period_id)) continue;
@@ -81,9 +83,17 @@ export function uniqueMetricsForPeriods<T extends BenchmarkMetric>(
       byAccount.set(key, metric);
       continue;
     }
+    const metricPeriod = periodById.get(metric.period_id);
+    const previousPeriod = periodById.get(previous.period_id);
+    const metricCut = `${metricPeriod?.period_end ?? ""}|${metricPeriod?.period_start ?? ""}`;
+    const previousCut = `${previousPeriod?.period_end ?? ""}|${previousPeriod?.period_start ?? ""}`;
     const metricTime = metric.created_at ?? "";
     const previousTime = previous.created_at ?? "";
-    if (metricTime > previousTime || (metricTime === previousTime && metricCompleteness(metric) > metricCompleteness(previous))) {
+    if (
+      metricCut > previousCut
+      || (metricCut === previousCut && metricTime > previousTime)
+      || (metricCut === previousCut && metricTime === previousTime && metricCompleteness(metric) > metricCompleteness(previous))
+    ) {
       byAccount.set(key, metric);
     }
   }

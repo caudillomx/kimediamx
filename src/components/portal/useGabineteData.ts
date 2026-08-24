@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { mxDay, mxRangeBounds } from "@/lib/tz";
 import { uniqueMetricsForPeriods } from "@/lib/benchmarkReportData";
 import { benchmarkPostKey, resolveGabineteMention, weightedRate } from "@/lib/gabineteReportUtils";
-import { benchmarkAccountKey, titularAccountIds } from "@/lib/benchmarkAccountIdentity";
+import { benchmarkAccountKey, buildValidCompetitorMaps } from "@/lib/benchmarkAccountIdentity";
 
 export type Dependencia = {
   id: string; nombre: string; nombre_corto?: string | null; tipo: string | null;
@@ -196,7 +196,7 @@ export function useGabineteData(clientId: string, pressDays = 30) {
         const vistos = new Set<string>();
         const po: Post[] = [];
         for (const p of [...poTop, ...poRec]) {
-          const k = benchmarkPostKey(p);
+          const k = benchmarkPostKey(p, new Map(((comp.data ?? []) as Competitor[]).map((c) => [c.id, benchmarkAccountKey(c)])));
           if (vistos.has(k)) continue;
           vistos.add(k);
           po.push(p);
@@ -299,35 +299,12 @@ export function useGabineteData(clientId: string, pressDays = 30) {
 
   const depById = useMemo(() => new Map(dependencias.map((d) => [d.id, d])), [dependencias]);
 
-  const validCompetitorIds = useMemo(() => {
-    const valid = new Set(competitors.filter((c) => c.account_type !== "titular").map((c) => c.id));
-    const byDep = new Map<string, Competitor[]>();
-    competitors.forEach((c) => {
-      if (!c.dependencia_id || c.account_type !== "titular") return;
-      byDep.set(c.dependencia_id, [...(byDep.get(c.dependencia_id) ?? []), c]);
-    });
-    byDep.forEach((accounts, depId) => {
-      titularAccountIds(accounts, depById.get(depId)?.titular ?? null).forEach((id) => valid.add(id));
-    });
-    return valid;
-  }, [competitors, depById]);
-
-  const depOfCompetitor = useMemo(() => {
-    const m = new Map<string, string>();
-    competitors.forEach((c) => {
-      if (c.dependencia_id && validCompetitorIds.has(c.id)) m.set(c.id, c.dependencia_id);
-    });
-    return m;
-  }, [competitors, validCompetitorIds]);
-
-  const typeOfCompetitor = useMemo(() => {
-    const m = new Map<string, string>();
-    competitors.forEach((c) => {
-      if (!validCompetitorIds.has(c.id)) return;
-      m.set(c.id, c.account_type ?? "institucional");
-    });
-    return m;
-  }, [competitors, validCompetitorIds]);
+  const competitorMaps = useMemo(
+    () => buildValidCompetitorMaps(competitors, dependencias),
+    [competitors, dependencias],
+  );
+  const depOfCompetitor = competitorMaps.depOfCompetitor;
+  const typeOfCompetitor = competitorMaps.typeOfCompetitor;
 
   const accountIdentity = useMemo(
     () => new Map(competitors.map((c) => [c.id, benchmarkAccountKey(c)])),
@@ -337,7 +314,7 @@ export function useGabineteData(clientId: string, pressDays = 30) {
   /** Agregado por dependencia para un conjunto de periodos y un enfoque de cuentas. */
   const aggregate = useCallback((periodIds: string[], enfoque: Enfoque) => {
     const acc = new Map<string, { followers: number; eng: { rate: number | null; weight: number | null }[]; posts: number[]; cuentas: Set<string> }>();
-    for (const m of uniqueMetricsForPeriods(metrics, periodIds, accountIdentity)) {
+    for (const m of uniqueMetricsForPeriods(metrics, periodIds, accountIdentity, periods)) {
       const dep = depOfCompetitor.get(m.competitor_id);
       if (!dep) continue;
       const tipo = typeOfCompetitor.get(m.competitor_id) ?? "institucional";
@@ -346,7 +323,7 @@ export function useGabineteData(clientId: string, pressDays = 30) {
       e.followers += Number(m.followers) || 0;
       if (Number.isFinite(Number(m.engagement_rate))) e.eng.push({ rate: Number(m.engagement_rate), weight: Number(m.followers) || null });
       if (Number.isFinite(Number(m.posts_per_day))) e.posts.push(Number(m.posts_per_day));
-      e.cuentas.add(m.competitor_id);
+      e.cuentas.add(accountIdentity.get(m.competitor_id) ?? m.competitor_id);
       acc.set(dep, e);
     }
 
@@ -358,7 +335,7 @@ export function useGabineteData(clientId: string, pressDays = 30) {
       cuentas: v.cuentas.size,
     }));
     return out;
-  }, [metrics, depOfCompetitor, typeOfCompetitor, accountIdentity]);
+  }, [metrics, depOfCompetitor, typeOfCompetitor, accountIdentity, periods]);
 
   /**
    * Agregado por dependencia a partir de las publicaciones fechadas dentro de una
@@ -374,7 +351,7 @@ export function useGabineteData(clientId: string, pressDays = 30) {
       const fecha = mxDay(p.posted_at);
       if (!fecha || fecha < from || fecha > to) continue;
       // Misma publicación cargada en varios cortes: se cuenta una sola vez.
-      const pk = benchmarkPostKey(p);
+      const pk = benchmarkPostKey(p, accountIdentity);
       if (seen.has(pk)) continue;
       seen.add(pk);
 
@@ -397,7 +374,7 @@ export function useGabineteData(clientId: string, pressDays = 30) {
       mejor: v.mejor,
     }));
     return out;
-  }, [posts, depOfCompetitor, typeOfCompetitor]);
+  }, [posts, depOfCompetitor, typeOfCompetitor, accountIdentity]);
 
   return {
     loading, pressLoading,
