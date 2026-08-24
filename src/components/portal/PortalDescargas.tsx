@@ -123,14 +123,16 @@ export default function PortalDescargas({
         setPeriodLabel(labels[labels.length - 1]);
         const ids = ps.map((p) => p.id);
         const [m, po, nar] = await Promise.all([
+          // `id` como desempate: paginar con un orden no único hace que PostgREST
+          // omita filas entre páginas y desaparezcan cuentas del reporte.
           fetchAllPages<Metric>((from, to) =>
             supabase.from("client_portal_benchmark_metrics")
               .select("period_id,competitor_id,network,followers,follower_growth_rate,engagement_rate,posts_per_day")
-              .in("period_id", ids).order("period_id").range(from, to)),
+              .in("period_id", ids).order("period_id").order("id").range(from, to)),
           fetchAllPages<Post>((from, to) =>
             supabase.from("client_portal_benchmark_posts")
               .select("period_id,competitor_id,network,profile_name,posted_at,message,interactions")
-              .in("period_id", ids).order("interactions", { ascending: false }).range(from, to), 1000, 8000),
+              .in("period_id", ids).order("interactions", { ascending: false }).order("id").range(from, to), 1000, 8000),
           supabase.from("client_portal_benchmark_narratives").select("profile_name,network,narratives").eq("client_id", clientId).limit(500),
         ]);
         setMetrics(m);
