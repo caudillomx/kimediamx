@@ -83,7 +83,29 @@ Deno.serve(async (req) => {
       return json({ ok: true, users: await loadList() });
     }
 
+    if (action === 'set_role') {
+      const user_id = String(body.user_id ?? '');
+      const role = String(body.role ?? 'none');
+      if (!user_id) return json({ error: 'user_id requerido' }, 400);
+      if (role !== 'none' && !OPS_ROLES.includes(role as any)) return json({ error: 'Rol inválido' }, 400);
+      if (user_id === userData.user.id && role !== 'admin') {
+        return json({ error: 'No puedes cambiar tu propio rol de administrador' }, 400);
+      }
+      const { error: delErr } = await admin
+        .from('user_roles')
+        .delete()
+        .eq('user_id', user_id)
+        .in('role', OPS_ROLES as unknown as string[]);
+      if (delErr) throw delErr;
+      if (role !== 'none') {
+        const { error } = await admin.from('user_roles').insert({ user_id, role });
+        if (error && !String(error.message).includes('duplicate')) throw error;
+      }
+      return json({ ok: true, users: await loadList() });
+    }
+
     if (action === 'invite') {
+
       const email = String(body.email ?? '').trim().toLowerCase();
       const password = String(body.password ?? '');
       const full_name = String(body.full_name ?? '').trim();
