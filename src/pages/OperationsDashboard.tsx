@@ -188,9 +188,9 @@ const OperationsDashboard = () => {
           </div>
         </motion.div>
 
-        {/* Section tabs (top-level navigation) */}
+        {/* Navegación principal: 3 secciones + menú "Más" */}
         <div className="flex items-center gap-2 border-b border-border">
-          {SECTION_TABS.filter(t => t.value !== "accesos" || isAdmin).map(tab => (
+          {SECTION_TABS.map(tab => (
             <button
               key={tab.value}
               onClick={() => setSection(tab.value)}
@@ -202,20 +202,55 @@ const OperationsDashboard = () => {
             >
               <tab.icon className="w-4 h-4" />
               {tab.label}
-              {tab.value === "entradas" && firefliesPending > 0 && (
-                <span className="ml-1 text-[10px] bg-coral text-primary-foreground px-1.5 py-0.5 rounded-full">
-                  {firefliesPending}
-                </span>
-              )}
             </button>
           ))}
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-all ${
+                  isSecondary ? "border-coral text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Settings className="w-4 h-4" />
+                Más
+                {firefliesPending > 0 && (
+                  <span className="text-[10px] bg-coral text-primary-foreground px-1.5 py-0.5 rounded-full">{firefliesPending}</span>
+                )}
+                <ChevronDown className="w-3.5 h-3.5" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-64">
+              {SECONDARY_SECTIONS.filter(s => !s.adminOnly || isAdmin).map(s => (
+                <DropdownMenuItem key={s.value} onClick={() => setSection(s.value)} className="gap-2">
+                  <s.icon className="w-4 h-4" />
+                  <span className="flex-1">{s.label}</span>
+                  {s.value === "entradas" && firefliesPending > 0 && (
+                    <span className="text-[10px] bg-coral text-primary-foreground px-1.5 py-0.5 rounded-full">{firefliesPending}</span>
+                  )}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
-        {/* Sub-views per section */}
+        {/* Encabezado de sección secundaria */}
+        {isSecondary && (
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="sm" onClick={() => setSection("hoy")}>
+              <ChevronLeft className="w-4 h-4 mr-1" /> Volver
+            </Button>
+            <span className="text-sm font-semibold text-foreground">
+              {SECONDARY_SECTIONS.find(s => s.value === section)?.label}
+            </span>
+          </div>
+        )}
+
+        {/* Sub-vistas de Trabajo */}
         {section === "trabajo" && (
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center bg-secondary rounded-lg p-1 gap-0.5">
-              {WORK_VIEWS.filter(v => v.value !== "pipeline" || isAdmin).map(v => (
+              {WORK_VIEWS.map(v => (
                 <button
                   key={v.value}
                   onClick={() => setWorkView(v.value)}
@@ -228,7 +263,7 @@ const OperationsDashboard = () => {
                 </button>
               ))}
             </div>
-            {canEdit && !["pipeline", "interactions"].includes(workView) && (
+            {canEdit && (
               <Button onClick={() => openNewItem()} className="bg-gradient-coral text-primary-foreground font-semibold ml-auto">
                 <Plus className="w-4 h-4 mr-1.5" /> Nueva tarea
               </Button>
@@ -242,22 +277,6 @@ const OperationsDashboard = () => {
           </div>
         )}
 
-
-        {section === "clientes" && (
-          <div className="flex items-center bg-secondary rounded-lg p-1 gap-0.5 w-fit">
-            {CLIENTES_VIEWS.map(v => (
-              <button
-                key={v.value}
-                onClick={() => setClientesView(v.value)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                  clientesView === v.value ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <v.icon className="w-3.5 h-3.5" /> {v.label}
-              </button>
-            ))}
-          </div>
-        )}
 
         {/* Filters only for task views */}
         {showWorkFilters && (
