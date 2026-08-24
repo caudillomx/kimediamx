@@ -15,9 +15,8 @@ export function useOpsRole() {
 
   useEffect(() => {
     let alive = true;
-    const load = async () => {
-      const { data: sess } = await supabase.auth.getSession();
-      const uid = sess.session?.user?.id;
+
+    const loadRoles = async (uid: string | undefined) => {
       if (!uid) {
         if (alive) { setRole(null); setLoading(false); }
         return;
@@ -36,10 +35,22 @@ export function useOpsRole() {
         : null;
       if (alive) { setRole(resolved); setLoading(false); }
     };
-    load();
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => load());
+
+    // NOTE: never call supabase.auth.* inside onAuthStateChange — it deadlocks
+    // the auth lock and every later request hangs. Use the session it hands us
+    // and defer the data fetch out of the callback.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      const uid = session?.user?.id;
+      setTimeout(() => { loadRoles(uid); }, 0);
+    });
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      loadRoles(session?.user?.id);
+    });
+
     return () => { alive = false; subscription.unsubscribe(); };
   }, []);
+
 
   return {
     role,
