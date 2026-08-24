@@ -36,32 +36,30 @@ import { CATEGORIES } from "@/hooks/useOperationsData";
 import { useClientNames } from "@/hooks/useClientsData";
 import { useOpsRole } from "@/hooks/useOpsRole";
 
-type Section = "hoy" | "trabajo" | "clientes" | "entradas" | "accesos";
-type WorkView = "kanban" | "list" | "person" | "calendar" | "pipeline" | "interactions";
-type ClientesView = "hub" | "objectives" | "catalog";
+type Section = "hoy" | "trabajo" | "clientes" | "entradas" | "accesos" | "comercial" | "objetivos" | "catalogo";
+type WorkView = "kanban" | "calendar";
+type ClientesView = "hub";
 
+// Navegación principal: solo 3 secciones. El resto vive en el menú "Más".
 const SECTION_TABS: { value: Section; label: string; icon: any }[] = [
   { value: "hoy", label: "Hoy", icon: Home },
   { value: "trabajo", label: "Trabajo", icon: Briefcase },
   { value: "clientes", label: "Clientes", icon: Users },
-  { value: "entradas", label: "Entradas", icon: Inbox },
-  { value: "accesos", label: "Equipo y permisos", icon: Settings },
+];
+
+const SECONDARY_SECTIONS: { value: Section; label: string; icon: any; adminOnly?: boolean }[] = [
+  { value: "entradas", label: "Entradas (minutas y Fireflies)", icon: Inbox },
+  { value: "objetivos", label: "Objetivos 2026", icon: Target },
+  { value: "comercial", label: "Comercial (pipeline e interacciones)", icon: TrendingUp, adminOnly: true },
+  { value: "catalogo", label: "Catálogo de clientes", icon: BookUser },
+  { value: "accesos", label: "Equipo y permisos", icon: Settings, adminOnly: true },
 ];
 
 const WORK_VIEWS: { value: WorkView; label: string; icon: any }[] = [
   { value: "kanban", label: "Kanban", icon: LayoutGrid },
-  { value: "list", label: "Lista", icon: List },
-  { value: "person", label: "Por persona", icon: Users },
   { value: "calendar", label: "Calendario", icon: CalendarDays },
-  { value: "pipeline", label: "Pipeline", icon: TrendingUp },
-  { value: "interactions", label: "Interacciones", icon: MessageSquare },
 ];
 
-const CLIENTES_VIEWS: { value: ClientesView; label: string; icon: any }[] = [
-  { value: "hub", label: "Lista", icon: Building2 },
-  { value: "objectives", label: "Objetivos 2026", icon: Target },
-  { value: "catalog", label: "Catálogo", icon: BookUser },
-];
 
 const OperationsDashboard = () => {
   const navigate = useNavigate();
