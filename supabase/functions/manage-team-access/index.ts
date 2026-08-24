@@ -133,8 +133,9 @@ Deno.serve(async (req) => {
       if (full_name) {
         await admin.from('profiles').upsert({ id: uid, full_name, email }, { onConflict: 'id' });
       }
-      if (makeAdmin) {
-        const { error } = await admin.from('user_roles').insert({ user_id: uid, role: 'admin' });
+      if (inviteRole !== 'none') {
+        await admin.from('user_roles').delete().eq('user_id', uid).in('role', OPS_ROLES as unknown as string[]);
+        const { error } = await admin.from('user_roles').insert({ user_id: uid, role: inviteRole });
         if (error && !String(error.message).includes('duplicate')) throw error;
       }
       return json({ ok: true, user_id: uid, users: await loadList() });
