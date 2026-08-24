@@ -297,31 +297,37 @@ export function useGabineteData(clientId: string, pressDays = 30) {
     return out;
   }, [periods]);
 
-  const depOfCompetitor = useMemo(() => {
-    const m = new Map<string, string>();
-    competitors.forEach((c) => { if (c.dependencia_id) m.set(c.id, c.dependencia_id); });
-    return m;
-  }, [competitors]);
-
   const depById = useMemo(() => new Map(dependencias.map((d) => [d.id, d])), [dependencias]);
 
-  const typeOfCompetitor = useMemo(() => {
-    const m = new Map<string, string>();
+  const validCompetitorIds = useMemo(() => {
+    const valid = new Set(competitors.filter((c) => c.account_type !== "titular").map((c) => c.id));
     const byDep = new Map<string, Competitor[]>();
     competitors.forEach((c) => {
       if (!c.dependencia_id || c.account_type !== "titular") return;
       byDep.set(c.dependencia_id, [...(byDep.get(c.dependencia_id) ?? []), c]);
     });
-    const validTitulares = new Set<string>();
     byDep.forEach((accounts, depId) => {
-      titularAccountIds(accounts, depById.get(depId)?.titular ?? null).forEach((id) => validTitulares.add(id));
+      titularAccountIds(accounts, depById.get(depId)?.titular ?? null).forEach((id) => valid.add(id));
     });
+    return valid;
+  }, [competitors, depById]);
+
+  const depOfCompetitor = useMemo(() => {
+    const m = new Map<string, string>();
     competitors.forEach((c) => {
-      if (c.account_type === "titular" && !validTitulares.has(c.id)) return;
+      if (c.dependencia_id && validCompetitorIds.has(c.id)) m.set(c.id, c.dependencia_id);
+    });
+    return m;
+  }, [competitors, validCompetitorIds]);
+
+  const typeOfCompetitor = useMemo(() => {
+    const m = new Map<string, string>();
+    competitors.forEach((c) => {
+      if (!validCompetitorIds.has(c.id)) return;
       m.set(c.id, c.account_type ?? "institucional");
     });
     return m;
-  }, [competitors, depById]);
+  }, [competitors, validCompetitorIds]);
 
   /** Agregado por dependencia para un conjunto de periodos y un enfoque de cuentas. */
   const aggregate = useCallback((periodIds: string[], enfoque: Enfoque) => {
