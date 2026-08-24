@@ -9,7 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { Download, FileText, FileSpreadsheet, Building2, Newspaper, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { nameTokens } from "@/lib/entityNames";
 import {
   selectLatestPeriodCohort,
   selectPreviousPeriodCohort,
@@ -64,12 +63,6 @@ function ultimaSemanaCompleta() {
 }
 
 const TONE_LABEL: Record<string, string> = { positivo: "Positivo", neutral: "Neutral", negativo: "Negativo", crisis: "Crisis" };
-
-/** Palabras genéricas del directorio que no sirven para identificar una dependencia. */
-const GENERIC = new Set([
-  "secretaria", "secretaría", "subsecretaria", "instituto", "organismo", "procuraduria", "coordinacion",
-  "direccion", "general", "estado", "estatal", "guanajuato", "gobierno", "sistema", "comision", "consejo", "unidad",
-]);
 
 export default function PortalDescargas({
   clientId, portalName,
@@ -230,36 +223,6 @@ export default function PortalDescargas({
   };
 
   // ---------- Menciones de prensa ----------
-  /** Frases (secuencias contiguas) que identifican de forma inequívoca a una persona. */
-  const personPhrases = (fullName: string): string[] => {
-    const t = nameTokens(fullName);
-    if (t.length < 2) return [];
-    const out = new Set<string>();
-    out.add(t.join(" "));                                   // nombre completo
-    if (t.length >= 3) {
-      out.add(`${t[0]} ${t[t.length - 2]} ${t[t.length - 1]}`); // nombre + ambos apellidos
-      out.add(`${t[t.length - 2]} ${t[t.length - 1]}`);          // apellido paterno + materno
-      out.add(`${t[0]} ${t[t.length - 2]}`);                     // nombre + apellido paterno
-    } else {
-      out.add(`${t[0]} ${t[1]}`);
-    }
-    return Array.from(out).filter((p) => p.split(" ").length >= 2);
-  };
-
-  const depMatchers = useMemo(() => {
-    return dependencias.map((d) => {
-      const depTokens = nameTokens(d.nombre).filter((t) => !GENERIC.has(t));
-      return {
-        id: d.id,
-        nombre: d.nombre,
-        depTokens,
-        depPhrase: nameTokens(d.nombre).join(" "),
-        titPhrases: d.titular ? personPhrases(d.titular) : [],
-        titular: d.titular ?? "",
-      };
-    });
-  }, [dependencias]);
-
   /**
    * Resuelve una mención a dependencia y distingue si apunta al titular o a la institución.
    * Exige coincidencia de frases contiguas (no bolsa de palabras) para evitar falsos positivos
@@ -274,7 +237,7 @@ export default function PortalDescargas({
     setPressLoading(false);
   };
 
-  useEffect(() => { loadPress(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [clientId, pressFrom, pressTo, depMatchers.length]);
+  useEffect(() => { loadPress(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [clientId, pressFrom, pressTo, dependencias.length]);
 
   const medios = useMemo(() => Array.from(new Set(pressAll.map((r) => r.medio))).sort().slice(0, 200), [pressAll]);
 

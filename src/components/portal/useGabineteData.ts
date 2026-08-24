@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { mxDay, mxRangeBounds } from "@/lib/tz";
-import { nameTokens } from "@/lib/entityNames";
 import { uniqueMetricsForPeriods } from "@/lib/benchmarkReportData";
 import { benchmarkPostKey, resolveGabineteMention, weightedRate } from "@/lib/gabineteReportUtils";
 
@@ -49,12 +48,6 @@ export function daysInWindow(from: string, to: string) {
 const RATE_AVG = (v: number[]) => (v.length ? v.reduce((a, b) => a + b, 0) / v.length : null);
 const isoDaysAgo = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString().slice(0, 10);
 const isoToday = () => new Date().toISOString().slice(0, 10);
-
-/** Palabras genéricas del directorio que no identifican a una dependencia. */
-const GENERIC = new Set([
-  "secretaria", "secretaría", "subsecretaria", "instituto", "organismo", "procuraduria", "coordinacion",
-  "direccion", "general", "estado", "estatal", "guanajuato", "gobierno", "sistema", "comision", "consejo", "unidad",
-]);
 
 export function pctDelta(a: number | null | undefined, b: number | null | undefined) {
   if (a == null || b == null || !b) return null;
