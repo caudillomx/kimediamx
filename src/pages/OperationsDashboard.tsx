@@ -20,6 +20,7 @@ import ObjectivesView from "@/components/operations/ObjectivesView";
 import FirefliesInbox from "@/components/operations/FirefliesInbox";
 import ClientsManager from "@/components/operations/ClientsManager";
 import MinuteUploader from "@/components/operations/MinuteUploader";
+import AccessManager from "@/components/operations/AccessManager";
 import ActionItemModal from "@/components/operations/ActionItemModal";
 import DealModal from "@/components/operations/DealModal";
 import InteractionModal from "@/components/operations/InteractionModal";
@@ -34,7 +35,7 @@ import {
 import { CATEGORIES } from "@/hooks/useOperationsData";
 import { useClientNames } from "@/hooks/useClientsData";
 
-type Section = "hoy" | "trabajo" | "clientes" | "entradas";
+type Section = "hoy" | "trabajo" | "clientes" | "entradas" | "accesos";
 type WorkView = "kanban" | "list" | "person" | "calendar" | "pipeline" | "interactions";
 type ClientesView = "hub" | "objectives" | "catalog";
 
@@ -43,6 +44,7 @@ const SECTION_TABS: { value: Section; label: string; icon: any }[] = [
   { value: "trabajo", label: "Trabajo", icon: Briefcase },
   { value: "clientes", label: "Clientes", icon: Users },
   { value: "entradas", label: "Entradas", icon: Inbox },
+  { value: "accesos", label: "Accesos", icon: Settings },
 ];
 
 const WORK_VIEWS: { value: WorkView; label: string; icon: any }[] = [
@@ -332,6 +334,10 @@ const OperationsDashboard = () => {
             <motion.div key="entradas" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-4">
               <MinuteUploader onUploaded={refetch} />
               <FirefliesInbox onImported={refetch} />
+            </motion.div>
+          ) : section === "accesos" ? (
+            <motion.div key="accesos" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <AccessManager />
             </motion.div>
           ) : null}
         </AnimatePresence>
