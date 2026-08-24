@@ -151,16 +151,29 @@ export default function PortalDescargas({
     const cand = periods.filter((p) => p.period_start <= weekTo);
     return cand.length ? cand[cand.length - 1].period_label : (periodLabels[periodLabels.length - 1] ?? "");
   }, [periods, periodLabels, weekTo]);
+  /**
+   * Un mismo corte puede tener varias cargas (re-importaciones) con la misma etiqueta.
+   * Se conserva SOLO la más reciente para no sumar seguidores ni publicaciones dos veces.
+   */
+  const latestOfLabel = (label: string): Period[] => {
+    const same = periods.filter((p) => p.period_label === label);
+    if (same.length <= 1) return same;
+    const winner = same.slice().sort((a, b) =>
+      a.period_end === b.period_end ? a.id.localeCompare(b.id) : a.period_end.localeCompare(b.period_end),
+    ).pop()!;
+    return [winner];
+  };
   const activePeriods = useMemo(
-    () => periods.filter((p) => p.period_label === (cut === "semanal" ? semanalLabel : periodLabel)),
+    () => latestOfLabel(cut === "semanal" ? semanalLabel : periodLabel),
     [periods, periodLabel, cut, semanalLabel],
   );
   const prevPeriods = useMemo(() => {
     const ref = cut === "semanal" ? activePeriods[0]?.period_label ?? "" : periodLabel;
     const idx = periodLabels.indexOf(ref);
     if (idx <= 0) return [];
-    return periods.filter((p) => p.period_label === periodLabels[idx - 1]);
+    return latestOfLabel(periodLabels[idx - 1]);
   }, [periods, periodLabels, periodLabel, cut, activePeriods]);
+
 
   /** Etiqueta del corte activo y ventana de fechas para prensa/publicaciones. */
   const cutLabel = cut === "semanal"
