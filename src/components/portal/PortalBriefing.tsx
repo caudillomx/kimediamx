@@ -234,7 +234,7 @@ export default function PortalBriefing({
   // ---------- Ranking y movimientos ----------
   const ranking = useMemo(
     () => Array.from(curr.entries())
-      .filter(([, v]) => (v.engagement ?? 0) > 0)
+      .filter(([, v]) => v.engagement != null)
       .sort((a, b) => (b[1].engagement ?? 0) - (a[1].engagement ?? 0)),
     [curr],
   );

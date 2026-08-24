@@ -45,4 +45,15 @@ describe("benchmark report snapshots", () => {
     expect(unique).toHaveLength(1);
     expect(unique[0].followers).toBe(1280);
   });
+
+  it("selects the newest real cut even when an older row was inserted later", () => {
+    const metrics = [
+      { period_id: "aug-old-inst", competitor_id: "account", network: "facebook", followers: 900, follower_growth_rate: null, engagement_rate: 0.01, posts_per_day: 1, created_at: "2026-08-25" },
+      { period_id: "aug-inst", competitor_id: "account", network: "facebook", followers: 1000, follower_growth_rate: 0.02, engagement_rate: 0.03, posts_per_day: 2, created_at: "2026-08-20" },
+    ];
+    const unique = uniqueMetricsForPeriods(metrics, ["aug-old-inst", "aug-inst"], undefined, periods);
+    expect(unique).toHaveLength(1);
+    expect(unique[0].period_id).toBe("aug-inst");
+    expect(unique[0].followers).toBe(1000);
+  });
 });

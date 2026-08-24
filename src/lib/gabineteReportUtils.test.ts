@@ -15,6 +15,12 @@ describe("gabinete report integrity", () => {
     expect(benchmarkPostKey(post)).toBe(benchmarkPostKey({ ...post, message: "Texto corregido" }));
   });
 
+  it("deduplicates the same post imported under account aliases", () => {
+    const identity = new Map([["display-name", "facebook|id:123"], ["handle", "facebook|id:123"]]);
+    const post = { competitor_id: "display-name", network: "Facebook", posted_at: "2026-08-20", message: "Mismo texto" };
+    expect(benchmarkPostKey(post, identity)).toBe(benchmarkPostKey({ ...post, competitor_id: "handle" }, identity));
+  });
+
   it("weights engagement by audience instead of inflating tiny accounts", () => {
     expect(weightedRate([{ rate: 0.01, weight: 500000 }, { rate: 0.4, weight: 200 }])).toBeCloseTo(0.01016, 4);
   });

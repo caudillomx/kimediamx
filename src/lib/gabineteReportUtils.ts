@@ -49,10 +49,13 @@ export function benchmarkPostKey(post: {
   posted_at: string | null;
   message: string | null;
   link?: string | null;
-}) {
+}, accountIdentity?: ReadonlyMap<string, string>) {
   const link = post.link?.trim().toLowerCase();
   if (link) return `link|${link}`;
-  return [post.competitor_id ?? "", post.network.toLowerCase(), post.posted_at ?? "", post.message?.trim() ?? ""].join("|");
+  const accountKey = post.competitor_id
+    ? accountIdentity?.get(post.competitor_id) ?? post.competitor_id
+    : "";
+  return [accountKey, post.network.toLowerCase(), post.posted_at ?? "", post.message?.trim() ?? ""].join("|");
 }
 
 export function weightedRate(rows: { rate: number | null; weight: number | null }[]): number | null {

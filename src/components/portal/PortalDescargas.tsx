@@ -13,7 +13,7 @@ import {
   uniqueMetricsForPeriods,
 } from "@/lib/benchmarkReportData";
 import { benchmarkPostKey, resolveGabineteMention, weightedRate } from "@/lib/gabineteReportUtils";
-import { benchmarkAccountKey, titularAccountIds } from "@/lib/benchmarkAccountIdentity";
+import { benchmarkAccountKey, buildValidCompetitorMaps, titularAccountIds } from "@/lib/benchmarkAccountIdentity";
 import {
   DependenciaPdfTemplate, GabinetePdfTemplate,
   type DependenciaReportData, type GabineteReportData, type DepPressRow,
@@ -102,7 +102,7 @@ export default function PortalDescargas({
     (async () => {
       setLoading(true);
       const [dep, comps, per, rep] = await Promise.all([
-        supabase.from("client_portal_dependencias").select("*").eq("client_id", clientId).order("sort_order"),
+        supabase.from("client_portal_dependencias").select("*").eq("client_id", clientId).eq("active", true).order("sort_order"),
         fetchAllPages<Competitor>((from, to) =>
           supabase.from("client_portal_benchmark_competitors")
             .select("id,name,network,dependencia_id,account_type,profile_external_id,external_url")
@@ -173,17 +173,12 @@ export default function PortalDescargas({
     : (periodLabel || "Periodo");
   const cutSlug = cut === "semanal" ? `semana-${weekFrom}` : (periodLabel || "reporte").replace(/\s+/g, "-").toLowerCase();
 
-  const depOfCompetitor = useMemo(() => {
-    const m = new Map<string, string>();
-    competitors.forEach((c) => { if (c.dependencia_id) m.set(c.id, c.dependencia_id); });
-    return m;
-  }, [competitors]);
-
-  const typeOfCompetitor = useMemo(() => {
-    const m = new Map<string, string>();
-    competitors.forEach((c) => m.set(c.id, c.account_type ?? "institucional"));
-    return m;
-  }, [competitors]);
+  const competitorMaps = useMemo(
+    () => buildValidCompetitorMaps(competitors, dependencias),
+    [competitors, dependencias],
+  );
+  const depOfCompetitor = competitorMaps.depOfCompetitor;
+  const typeOfCompetitor = competitorMaps.typeOfCompetitor;
 
   const accountIdentity = useMemo(
     () => new Map(competitors.map((c) => [c.id, benchmarkAccountKey(c)])),
@@ -204,7 +199,7 @@ export default function PortalDescargas({
 
   /** Una sola métrica por cuenta+red (evita duplicados por cargas repetidas del mismo corte). */
   const uniqueMetrics = (periodIds: string[]) => {
-    return uniqueMetricsForPeriods(metrics, periodIds, accountIdentity);
+    return uniqueMetricsForPeriods(metrics, periodIds, accountIdentity, periods);
   };
 
   /** Agregado por dependencia para un conjunto de periodos y un ámbito. */
@@ -348,6 +343,13 @@ export default function PortalDescargas({
     );
     const depComps = allDepComps.filter((c) => matchesEnfoque(c.account_type));
     const compById = new Map(depComps.map((c) => [c.id, c]));
+    const depIdentityKeys = new Set(depComps.map((c) => benchmarkAccountKey(c)));
+    const compByIdentity = new Map<string, Competitor>();
+    for (const c of depComps) {
+      const key = benchmarkAccountKey(c);
+      const current = compByIdentity.get(key);
+      if (!current || c.name.length > current.name.length) compByIdentity.set(key, c);
+    }
 
     const monthlyStarts = activePeriods.map((p) => p.period_start).sort();
     const monthlyEnds = activePeriods.map((p) => p.period_end).sort();
@@ -366,10 +368,13 @@ export default function PortalDescargas({
         .select("competitor_id,network,day,delta")
         .in("period_id", periodIds)
         .in("competitor_id", depComps.map((c) => c.id))
+        .gte("day", winFrom)
+        .lte("day", winTo)
+        .order("day", { ascending: true })
         .limit(20000);
       for (const r of (fd ?? []) as any[]) {
-        if (cut === "semanal" && (r.day < weekFrom || r.day > weekTo)) continue;
-        const k = `${r.competitor_id}|${r.network}`;
+        const identity = accountIdentity.get(r.competitor_id) ?? r.competitor_id;
+        const k = `${identity}|${String(r.network).toLowerCase()}`;
         growthByKey.set(k, [...(growthByKey.get(k) ?? []), Number(r.delta) || 0]);
       }
     }
@@ -379,7 +384,8 @@ export default function PortalDescargas({
     for (const m of uniqueMetrics(prevIds)) {
       if (!compById.has(m.competitor_id)) continue;
 
-      if (Number.isFinite(Number(m.followers))) prevFollowers.set(`${m.competitor_id}|${m.network}`, Number(m.followers));
+       const identity = accountIdentity.get(m.competitor_id) ?? m.competitor_id;
+       if (Number.isFinite(Number(m.followers))) prevFollowers.set(`${identity}|${m.network.toLowerCase()}`, Number(m.followers));
     }
 
     // Publicaciones del rango: se consultan por fecha real en todos los cortes
@@ -403,7 +409,7 @@ export default function PortalDescargas({
     // Publicaciones idénticas (misma cuenta, red, fecha y texto) cargadas más de una vez no se cuentan doble.
     const seenPost = new Set<string>();
     depPosts = depPosts.filter((p) => {
-      const k = benchmarkPostKey(p);
+      const k = benchmarkPostKey(p, accountIdentity);
       if (seenPost.has(k)) return false;
       seenPost.add(k);
       return true;
@@ -413,34 +419,38 @@ export default function PortalDescargas({
     for (const p of depPosts) {
       if (!p.competitor_id || !compById.has(p.competitor_id)) continue;
       if (!inMxRange(p.posted_at, winFrom, winTo)) continue;
-      const k = `${p.competitor_id}|${p.network}`;
+      const identity = accountIdentity.get(p.competitor_id) ?? p.competitor_id;
+      const k = `${identity}|${p.network.toLowerCase()}`;
       postsCount.set(k, (postsCount.get(k) ?? 0) + 1);
     }
 
-    const cuentas: DepAccountRow[] = uniqueMetrics(periodIds)
-      .filter((m) => compById.has(m.competitor_id))
-
-      .map((m) => {
-        const c = compById.get(m.competitor_id)!;
-        const k = `${m.competitor_id}|${m.network}`;
+    const latestMetricByIdentity = new Map(
+      uniqueMetrics(periodIds)
+        .filter((m) => depIdentityKeys.has(accountIdentity.get(m.competitor_id) ?? m.competitor_id))
+        .map((m) => [`${accountIdentity.get(m.competitor_id) ?? m.competitor_id}|${m.network.toLowerCase()}`, m]),
+    );
+    const cuentas: DepAccountRow[] = Array.from(compByIdentity.entries())
+      .map(([identity, c]) => {
+        const k = `${identity}|${c.network.toLowerCase()}`;
+        const m = latestMetricByIdentity.get(k);
         const deltas = growthByKey.get(k) ?? [];
         const avgDelta = deltas.length ? deltas.reduce((a, b) => a + b, 0) / deltas.length : null;
         const prevF = prevFollowers.get(k) ?? null;
-        const followers = Number.isFinite(Number(m.followers)) ? Number(m.followers) : null;
+        const followers = m?.followers != null && Number.isFinite(Number(m.followers)) ? Number(m.followers) : null;
         let crecimiento: number | null =
-          Number.isFinite(Number(m.follower_growth_rate)) && m.follower_growth_rate != null
+          m?.follower_growth_rate != null && Number.isFinite(Number(m.follower_growth_rate))
             ? Number(m.follower_growth_rate)
             : null;
         if (crecimiento == null && avgDelta != null && followers) crecimiento = avgDelta / followers;
         if (crecimiento == null && prevF && followers) crecimiento = (followers - prevF) / prevF / winDays;
         const publicaciones = postsCount.get(k) ?? null;
-        const postsDia = Number.isFinite(Number(m.posts_per_day)) && m.posts_per_day != null
+        const postsDia = m?.posts_per_day != null && Number.isFinite(Number(m.posts_per_day))
           ? Number(m.posts_per_day)
           : (publicaciones != null ? publicaciones / winDays : null);
-        const eng = Number.isFinite(Number(m.engagement_rate)) ? Number(m.engagement_rate) : null;
-        const sinDatos = !followers && !eng && !publicaciones;
+        const eng = m?.engagement_rate != null && Number.isFinite(Number(m.engagement_rate)) ? Number(m.engagement_rate) : null;
+        const sinDatos = followers == null && eng == null && publicaciones == null;
         return {
-          perfil: c.name, red: m.network, tipo: c.account_type ?? "institucional",
+          perfil: c.name, red: c.network, tipo: c.account_type ?? "institucional",
           seguidores: followers, crecimiento, engagement: eng, postsDia, publicaciones, sinDatos,
         };
       })
@@ -451,7 +461,7 @@ export default function PortalDescargas({
       const curr = aggregate(periodIds, scope);
       const prev = aggregate(prevIds, scope);
       const entries = Array.from(curr.entries())
-        .filter(([, v]) => v.engagement != null && v.engagement > 0)
+        .filter(([, v]) => v.engagement != null)
         .sort((a, b) => (b[1].engagement ?? 0) - (a[1].engagement ?? 0));
       const idx = entries.findIndex(([id]) => id === dep.id);
       return {
@@ -582,7 +592,7 @@ export default function PortalDescargas({
     const prev = aggregate(prevPeriods.map((p) => p.id));
     const depName = new Map(dependencias.map((d) => [d.id, d.nombre]));
     const ranking = Array.from(curr.entries())
-      .filter(([, v]) => (v.engagement ?? 0) > 0 || v.followers > 0)
+      .filter(([, v]) => v.engagement != null || v.followers > 0)
       .sort((a, b) => (b[1].engagement ?? 0) - (a[1].engagement ?? 0))
       .map(([id, v]) => ({ nombre: depName.get(id) ?? "—", engagement: v.engagement, seguidores: v.followers }));
     const moves = Array.from(curr.entries()).map(([id, v]) => {
