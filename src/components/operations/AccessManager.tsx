@@ -267,6 +267,18 @@ export default function AccessManager() {
               <Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="nombre@kimedia.mx" />
             </div>
             <div>
+              <Label>Rol</Label>
+              <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as Exclude<RoleValue, "none">)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="admin">Admin — acceso total</SelectItem>
+                  <SelectItem value="editor">Editor — opera sin pipeline ni accesos</SelectItem>
+                  <SelectItem value="viewer">Viewer — solo lectura</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">{ROLE_META[inviteRole].hint}</p>
+            </div>
+            <div>
               <Label>Contraseña temporal</Label>
               <Input type="text" value={password} onChange={e => setPassword(e.target.value)} placeholder="Mín. 8 caracteres" />
               <p className="text-xs text-muted-foreground mt-1">Compártela por un canal seguro; podrá cambiarla luego.</p>
@@ -275,8 +287,9 @@ export default function AccessManager() {
           <DialogFooter>
             <Button variant="ghost" onClick={() => setInviteOpen(false)}>Cancelar</Button>
             <Button onClick={invite} disabled={busy === "invite"} className="bg-gradient-coral text-primary-foreground">
-              {busy === "invite" ? "Creando..." : "Crear con acceso admin"}
+              {busy === "invite" ? "Creando..." : `Crear como ${ROLE_META[inviteRole].label}`}
             </Button>
+
           </DialogFooter>
         </DialogContent>
       </Dialog>
