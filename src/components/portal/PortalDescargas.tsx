@@ -146,23 +146,33 @@ export default function PortalDescargas({
     () => Array.from(new Set(periods.map((p) => p.period_label))),
     [periods],
   );
+  const selectActiveReportPeriods = (sourcePeriods: Period[]) => {
+    if (cut !== "semanal") return sourcePeriods.filter((p) => p.period_label === periodLabel);
+
+    // Un corte semanal necesita el snapshot más reciente disponible de CADA
+    // cuenta. Las cargas suelen cerrar en lunes o en cortes mixtos, así que se
+    // aceptan periodos que terminen antes de la semana o que se solapen con ella
+    // con una tolerancia breve de captura posterior. Esto evita reportes en cero
+    // cuando la base sí trae el corte nuevo, pero no permite jalar un mes futuro.
+    const lookaheadTo = shiftIso(weekTo, 2);
+    return sourcePeriods.filter((p) => (
+      p.period_end <= weekTo
+      || (p.period_start <= weekTo && p.period_end >= weekFrom && p.period_end <= lookaheadTo)
+    ));
+  };
+
+  const selectPreviousReportPeriods = (sourcePeriods: Period[], labels = periodLabels) => {
+    if (cut === "semanal") return sourcePeriods.filter((p) => p.period_end < weekFrom);
+    const idx = labels.indexOf(periodLabel);
+    return idx > 0 ? sourcePeriods.filter((p) => p.period_label === labels[idx - 1]) : [];
+  };
+
   const activePeriods = useMemo(
-    () => cut === "semanal"
-      // Un corte semanal necesita el snapshot más reciente disponible de CADA
-      // cuenta al cierre de la semana. Las cargas de instituciones y titulares
-      // no siempre comparten exactamente el mismo rango, así que limitarse a una
-      // sola cohorte puede borrar un ámbito completo aunque sí tenga datos.
-      ? periods.filter((p) => p.period_end <= weekTo)
-      : periods.filter((p) => p.period_label === periodLabel),
-    [periods, periodLabel, cut, weekTo],
+    () => selectActiveReportPeriods(periods),
+    [periods, periodLabel, cut, weekFrom, weekTo],
   );
   const prevPeriods = useMemo(
-    () => cut === "semanal"
-      ? periods.filter((p) => p.period_end < weekFrom)
-      : (() => {
-          const idx = periodLabels.indexOf(periodLabel);
-          return idx > 0 ? periods.filter((p) => p.period_label === periodLabels[idx - 1]) : [];
-        })(),
+    () => selectPreviousReportPeriods(periods),
     [periods, periodLabels, periodLabel, cut, weekFrom],
   );
 
@@ -331,9 +341,64 @@ export default function PortalDescargas({
   const buildDependenciaReport = async (): Promise<DependenciaReportData | null> => {
     const dep = dependencias.find((d) => d.id === depId);
     if (!dep) return null;
-    const periodIds = activePeriods.map((p) => p.id);
-    const prevIds = prevPeriods.map((p) => p.id);
-    const assignedDepComps = competitors.filter((c) => c.dependencia_id === dep.id);
+
+    // El PDF debe leerse contra la base actual, no contra el estado que pudo
+    // quedar abierto antes de una importación nueva.
+    const [freshPeriodsRes, freshCompetitors] = await Promise.all([
+      supabase.from("client_portal_benchmark_periods")
+        .select("id,period_label,period_start,period_end,created_at")
+        .eq("client_id", clientId)
+        .order("period_start"),
+      fetchAllPages<Competitor>((from, to) =>
+        supabase.from("client_portal_benchmark_competitors")
+          .select("id,name,network,dependencia_id,account_type,profile_external_id,external_url")
+          .eq("client_id", clientId).eq("active", true)
+          .order("id").range(from, to)),
+    ]);
+    const reportPeriods = ((freshPeriodsRes.data ?? []) as Period[]).length ? (freshPeriodsRes.data ?? []) as Period[] : periods;
+    const reportCompetitors = freshCompetitors.length ? freshCompetitors : competitors;
+    const reportLabels = Array.from(new Set(reportPeriods.map((p) => p.period_label)));
+    const reportActivePeriods = selectActiveReportPeriods(reportPeriods);
+    const reportPrevPeriods = selectPreviousReportPeriods(reportPeriods, reportLabels);
+    const periodIds = reportActivePeriods.map((p) => p.id);
+    const prevIds = reportPrevPeriods.map((p) => p.id);
+    const reportMetricIds = Array.from(new Set([...periodIds, ...prevIds]));
+    const freshMetrics = reportMetricIds.length
+      ? await fetchAllPages<Metric>((from, to) =>
+          supabase.from("client_portal_benchmark_metrics")
+            .select("period_id,competitor_id,network,followers,follower_growth_rate,engagement_rate,posts_per_day,created_at")
+            .in("period_id", reportMetricIds)
+            .order("period_id").order("id").range(from, to))
+      : [];
+    const reportMetrics = freshMetrics.length ? freshMetrics : metrics;
+    const reportAccountIdentity = new Map(reportCompetitors.map((c) => [c.id, benchmarkAccountKey(c)]));
+    const reportCompetitorMaps = buildValidCompetitorMaps(reportCompetitors, dependencias);
+    const reportUniqueMetrics = (ids: string[]) => uniqueMetricsForPeriods(reportMetrics, ids, reportAccountIdentity, reportPeriods);
+    const reportDepOfCompetitor = reportCompetitorMaps.depOfCompetitor;
+    const reportTypeOfCompetitor = reportCompetitorMaps.typeOfCompetitor;
+
+    const aggregateForReport = (ids: string[], scope: "combinado" | ScopeKey = enfoque) => {
+      const acc = new Map<string, { followers: number; eng: { rate: number | null; weight: number | null }[]; posts: number[] }>();
+      for (const m of reportUniqueMetrics(ids)) {
+        const targetDep = reportDepOfCompetitor.get(m.competitor_id);
+        if (!targetDep) continue;
+        if (!matchesScope(reportTypeOfCompetitor.get(m.competitor_id), scope)) continue;
+        const e = acc.get(targetDep) ?? { followers: 0, eng: [], posts: [] };
+        e.followers += Number(m.followers) || 0;
+        if (Number.isFinite(Number(m.engagement_rate))) e.eng.push({ rate: Number(m.engagement_rate), weight: Number(m.followers) || null });
+        if (Number.isFinite(Number(m.posts_per_day))) e.posts.push(Number(m.posts_per_day));
+        acc.set(targetDep, e);
+      }
+      const out = new Map<string, { followers: number; engagement: number | null; postsDia: number | null }>();
+      acc.forEach((v, k) => out.set(k, {
+        followers: v.followers,
+        engagement: weightedRate(v.eng),
+        postsDia: v.posts.length ? v.posts.reduce((a, b) => a + b, 0) : null,
+      }));
+      return out;
+    };
+
+    const assignedDepComps = reportCompetitors.filter((c) => c.dependencia_id === dep.id);
     const validTitularIds = titularAccountIds(
       assignedDepComps.filter((c) => c.account_type === "titular"),
       dep.titular,
@@ -351,8 +416,8 @@ export default function PortalDescargas({
       if (!current || c.name.length > current.name.length) compByIdentity.set(key, c);
     }
 
-    const monthlyStarts = activePeriods.map((p) => p.period_start).sort();
-    const monthlyEnds = activePeriods.map((p) => p.period_end).sort();
+    const monthlyStarts = reportActivePeriods.map((p) => p.period_start).sort();
+    const monthlyEnds = reportActivePeriods.map((p) => p.period_end).sort();
     const winFrom = cut === "semanal" ? weekFrom : (monthlyStarts[0] ?? pressFrom);
     const winTo = cut === "semanal" ? weekTo : (monthlyEnds[monthlyEnds.length - 1] ?? pressTo);
     const winDays = Math.max(
@@ -366,7 +431,7 @@ export default function PortalDescargas({
       const { data: fd } = await supabase
         .from("client_portal_benchmark_follower_daily")
         .select("competitor_id,network,day,delta")
-        .in("period_id", periodIds)
+          .in("period_id", periodIds)
         .in("competitor_id", depComps.map((c) => c.id))
         .gte("day", winFrom)
         .lte("day", winTo)
@@ -381,10 +446,10 @@ export default function PortalDescargas({
 
     // Seguidores del periodo previo por cuenta/red: segundo fallback de crecimiento.
     const prevFollowers = new Map<string, number>();
-    for (const m of uniqueMetrics(prevIds)) {
+    for (const m of reportUniqueMetrics(prevIds)) {
       if (!compById.has(m.competitor_id)) continue;
 
-       const identity = accountIdentity.get(m.competitor_id) ?? m.competitor_id;
+       const identity = reportAccountIdentity.get(m.competitor_id) ?? m.competitor_id;
        if (Number.isFinite(Number(m.followers))) prevFollowers.set(`${identity}|${m.network.toLowerCase()}`, Number(m.followers));
     }
 
@@ -392,7 +457,7 @@ export default function PortalDescargas({
     // que se solapan con la ventana. Un post del día 17 puede vivir en la carga
     // 1–17 y otro del 20 en la carga 20–24; ambos pertenecen al reporte 17–23.
     let depPosts: Post[] = [];
-    const postPeriodIds = periods
+    const postPeriodIds = reportPeriods
       .filter((p) => p.period_start <= winTo && p.period_end >= winFrom)
       .map((p) => p.id);
     if (depComps.length && postPeriodIds.length) {
@@ -409,7 +474,7 @@ export default function PortalDescargas({
     // Publicaciones idénticas (misma cuenta, red, fecha y texto) cargadas más de una vez no se cuentan doble.
     const seenPost = new Set<string>();
     depPosts = depPosts.filter((p) => {
-      const k = benchmarkPostKey(p, accountIdentity);
+      const k = benchmarkPostKey(p, reportAccountIdentity);
       if (seenPost.has(k)) return false;
       seenPost.add(k);
       return true;
@@ -419,15 +484,15 @@ export default function PortalDescargas({
     for (const p of depPosts) {
       if (!p.competitor_id || !compById.has(p.competitor_id)) continue;
       if (!inMxRange(p.posted_at, winFrom, winTo)) continue;
-      const identity = accountIdentity.get(p.competitor_id) ?? p.competitor_id;
+      const identity = reportAccountIdentity.get(p.competitor_id) ?? p.competitor_id;
       const k = `${identity}|${p.network.toLowerCase()}`;
       postsCount.set(k, (postsCount.get(k) ?? 0) + 1);
     }
 
     const latestMetricByIdentity = new Map(
-      uniqueMetrics(periodIds)
-        .filter((m) => depIdentityKeys.has(accountIdentity.get(m.competitor_id) ?? m.competitor_id))
-        .map((m) => [`${accountIdentity.get(m.competitor_id) ?? m.competitor_id}|${m.network.toLowerCase()}`, m]),
+      reportUniqueMetrics(periodIds)
+        .filter((m) => depIdentityKeys.has(reportAccountIdentity.get(m.competitor_id) ?? m.competitor_id))
+        .map((m) => [`${reportAccountIdentity.get(m.competitor_id) ?? m.competitor_id}|${m.network.toLowerCase()}`, m]),
     );
     const cuentas: DepAccountRow[] = Array.from(compByIdentity.entries())
       .map(([identity, c]) => {
@@ -458,8 +523,8 @@ export default function PortalDescargas({
 
     // Rankings del gabinete por ámbito.
     const rankingDe = (scope: "combinado" | ScopeKey) => {
-      const curr = aggregate(periodIds, scope);
-      const prev = aggregate(prevIds, scope);
+      const curr = aggregateForReport(periodIds, scope);
+      const prev = aggregateForReport(prevIds, scope);
       const entries = Array.from(curr.entries())
         .filter(([, v]) => v.engagement != null)
         .sort((a, b) => (b[1].engagement ?? 0) - (a[1].engagement ?? 0));
