@@ -9,7 +9,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { Download, FileText, FileSpreadsheet, Building2, Newspaper, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { nameTokens } from "@/lib/entityNames";
+import {
+  selectLatestPeriodCohort,
+  selectPreviousPeriodCohort,
+  uniqueMetricsForPeriods,
+} from "@/lib/benchmarkReportData";
+import { benchmarkPostKey, resolveGabineteMention, weightedRate } from "@/lib/gabineteReportUtils";
 import {
   DependenciaPdfTemplate, GabinetePdfTemplate,
   type DependenciaReportData, type GabineteReportData, type DepPressRow,
@@ -18,9 +23,9 @@ import {
 
 type Dependencia = { id: string; nombre: string; tipo: string | null; titular: string | null; titular_cargo: string | null; sort_order: number | null };
 type Competitor = { id: string; name: string; network: string; dependencia_id: string | null; account_type: string | null };
-type Period = { id: string; period_label: string; period_start: string; period_end: string };
-type Metric = { period_id: string; competitor_id: string; network: string; followers: number | null; follower_growth_rate: number | null; engagement_rate: number | null; posts_per_day: number | null };
-type Post = { period_id: string; competitor_id: string | null; network: string; profile_name: string; posted_at: string | null; message: string | null; interactions: number | null };
+type Period = { id: string; period_label: string; period_start: string; period_end: string; created_at?: string | null };
+type Metric = { period_id: string; competitor_id: string; network: string; followers: number | null; follower_growth_rate: number | null; engagement_rate: number | null; posts_per_day: number | null; created_at?: string | null };
+type Post = { period_id: string; competitor_id: string | null; network: string; profile_name: string; posted_at: string | null; message: string | null; interactions: number | null; link?: string | null };
 type Report = { id: string; title: string; report_date: string; type: string };
 
 const RATE_AVG = (vals: number[]) => (vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null);
@@ -34,7 +39,7 @@ async function fetchAllPages<T>(
   const out: T[] = [];
   for (let offset = 0; offset < maxRows; offset += pageSize) {
     const { data, error } = await run(offset, offset + pageSize - 1);
-    if (error) break;
+    if (error) throw error;
     const rows = (data ?? []) as T[];
     out.push(...rows);
     if (rows.length < pageSize) break;
@@ -58,12 +63,6 @@ function ultimaSemanaCompleta() {
 }
 
 const TONE_LABEL: Record<string, string> = { positivo: "Positivo", neutral: "Neutral", negativo: "Negativo", crisis: "Crisis" };
-
-/** Palabras genéricas del directorio que no sirven para identificar una dependencia. */
-const GENERIC = new Set([
-  "secretaria", "secretaría", "subsecretaria", "instituto", "organismo", "procuraduria", "coordinacion",
-  "direccion", "general", "estado", "estatal", "guanajuato", "gobierno", "sistema", "comision", "consejo", "unidad",
-]);
 
 export default function PortalDescargas({
   clientId, portalName,
@@ -110,7 +109,7 @@ export default function PortalDescargas({
             .select("id,name,network,dependencia_id,account_type")
             .eq("client_id", clientId).eq("active", true)
             .order("id").range(from, to)),
-        supabase.from("client_portal_benchmark_periods").select("id,period_label,period_start,period_end").eq("client_id", clientId).order("period_start"),
+        supabase.from("client_portal_benchmark_periods").select("id,period_label,period_start,period_end,created_at").eq("client_id", clientId).order("period_start"),
         supabase.from("client_portal_reports").select("id,title,report_date,type").eq("client_id", clientId).order("report_date", { ascending: false }).limit(30),
       ]);
       const ps = (per.data ?? []) as Period[];
@@ -127,11 +126,11 @@ export default function PortalDescargas({
           // omita filas entre páginas y desaparezcan cuentas del reporte.
           fetchAllPages<Metric>((from, to) =>
             supabase.from("client_portal_benchmark_metrics")
-              .select("period_id,competitor_id,network,followers,follower_growth_rate,engagement_rate,posts_per_day")
+              .select("period_id,competitor_id,network,followers,follower_growth_rate,engagement_rate,posts_per_day,created_at")
               .in("period_id", ids).order("period_id").order("id").range(from, to)),
           fetchAllPages<Post>((from, to) =>
             supabase.from("client_portal_benchmark_posts")
-              .select("period_id,competitor_id,network,profile_name,posted_at,message,interactions")
+              .select("period_id,competitor_id,network,profile_name,posted_at,message,interactions,link")
               .in("period_id", ids).order("interactions", { ascending: false }).order("id").range(from, to), 1000, 8000),
           supabase.from("client_portal_benchmark_narratives").select("profile_name,network,narratives").eq("client_id", clientId).limit(500),
         ]);
@@ -148,33 +147,21 @@ export default function PortalDescargas({
     () => Array.from(new Set(periods.map((p) => p.period_label))),
     [periods],
   );
-  /** En corte semanal las métricas provienen del último corte de datos disponible. */
-  const semanalLabel = useMemo(() => {
-    const cand = periods.filter((p) => p.period_start <= weekTo);
-    return cand.length ? cand[cand.length - 1].period_label : (periodLabels[periodLabels.length - 1] ?? "");
-  }, [periods, periodLabels, weekTo]);
-  /**
-   * Un mismo corte puede tener varias cargas (re-importaciones) con la misma etiqueta.
-   * Se conserva SOLO la más reciente para no sumar seguidores ni publicaciones dos veces.
-   */
-  const latestOfLabel = (label: string): Period[] => {
-    const same = periods.filter((p) => p.period_label === label);
-    if (same.length <= 1) return same;
-    const winner = same.slice().sort((a, b) =>
-      a.period_end === b.period_end ? a.id.localeCompare(b.id) : a.period_end.localeCompare(b.period_end),
-    ).pop()!;
-    return [winner];
-  };
   const activePeriods = useMemo(
-    () => latestOfLabel(cut === "semanal" ? semanalLabel : periodLabel),
-    [periods, periodLabel, cut, semanalLabel],
+    () => cut === "semanal"
+      ? selectLatestPeriodCohort(periods, { onOrBefore: weekTo })
+      : selectLatestPeriodCohort(periods, { label: periodLabel }),
+    [periods, periodLabel, cut, weekTo],
   );
-  const prevPeriods = useMemo(() => {
-    const ref = cut === "semanal" ? activePeriods[0]?.period_label ?? "" : periodLabel;
-    const idx = periodLabels.indexOf(ref);
-    if (idx <= 0) return [];
-    return latestOfLabel(periodLabels[idx - 1]);
-  }, [periods, periodLabels, periodLabel, cut, activePeriods]);
+  const prevPeriods = useMemo(
+    () => cut === "semanal"
+      ? selectPreviousPeriodCohort(periods, activePeriods)
+      : (() => {
+          const idx = periodLabels.indexOf(periodLabel);
+          return idx > 0 ? selectLatestPeriodCohort(periods, { label: periodLabels[idx - 1] }) : [];
+        })(),
+    [periods, periodLabels, periodLabel, cut, activePeriods],
+  );
 
 
   /** Etiqueta del corte activo y ventana de fechas para prensa/publicaciones. */
@@ -209,20 +196,12 @@ export default function PortalDescargas({
 
   /** Una sola métrica por cuenta+red (evita duplicados por cargas repetidas del mismo corte). */
   const uniqueMetrics = (periodIds: string[]) => {
-    const byKey = new Map<string, Metric>();
-    for (const m of metrics) {
-      if (!periodIds.includes(m.period_id)) continue;
-      const k = `${m.competitor_id}|${m.network}`;
-      const prev = byKey.get(k);
-      // Ante empate, gana la fila con más datos (seguidores reportados).
-      if (!prev || (Number(m.followers) || 0) > (Number(prev.followers) || 0)) byKey.set(k, m);
-    }
-    return Array.from(byKey.values());
+    return uniqueMetricsForPeriods(metrics, periodIds);
   };
 
   /** Agregado por dependencia para un conjunto de periodos y un ámbito. */
   const aggregate = (periodIds: string[], scope: "combinado" | ScopeKey = enfoque) => {
-    const acc = new Map<string, { followers: number; eng: number[]; posts: number[] }>();
+    const acc = new Map<string, { followers: number; eng: { rate: number | null; weight: number | null }[]; posts: number[] }>();
     for (const m of uniqueMetrics(periodIds)) {
 
       const dep = depOfCompetitor.get(m.competitor_id);
@@ -230,72 +209,26 @@ export default function PortalDescargas({
       if (!matchesScope(typeOfCompetitor.get(m.competitor_id), scope)) continue;
       const e = acc.get(dep) ?? { followers: 0, eng: [], posts: [] };
       e.followers += Number(m.followers) || 0;
-      if (Number.isFinite(Number(m.engagement_rate))) e.eng.push(Number(m.engagement_rate));
+      if (Number.isFinite(Number(m.engagement_rate))) e.eng.push({ rate: Number(m.engagement_rate), weight: Number(m.followers) || null });
       if (Number.isFinite(Number(m.posts_per_day))) e.posts.push(Number(m.posts_per_day));
       acc.set(dep, e);
     }
     const out = new Map<string, { followers: number; engagement: number | null; postsDia: number | null }>();
     acc.forEach((v, k) => out.set(k, {
       followers: v.followers,
-      engagement: RATE_AVG(v.eng),
+      engagement: weightedRate(v.eng),
       postsDia: v.posts.length ? v.posts.reduce((a, b) => a + b, 0) : null,
     }));
     return out;
   };
 
   // ---------- Menciones de prensa ----------
-  /** Frases (secuencias contiguas) que identifican de forma inequívoca a una persona. */
-  const personPhrases = (fullName: string): string[] => {
-    const t = nameTokens(fullName);
-    if (t.length < 2) return [];
-    const out = new Set<string>();
-    out.add(t.join(" "));                                   // nombre completo
-    if (t.length >= 3) {
-      out.add(`${t[0]} ${t[t.length - 2]} ${t[t.length - 1]}`); // nombre + ambos apellidos
-      out.add(`${t[t.length - 2]} ${t[t.length - 1]}`);          // apellido paterno + materno
-      out.add(`${t[0]} ${t[t.length - 2]}`);                     // nombre + apellido paterno
-    } else {
-      out.add(`${t[0]} ${t[1]}`);
-    }
-    return Array.from(out).filter((p) => p.split(" ").length >= 2);
-  };
-
-  const depMatchers = useMemo(() => {
-    return dependencias.map((d) => {
-      const depTokens = nameTokens(d.nombre).filter((t) => !GENERIC.has(t));
-      return {
-        id: d.id,
-        nombre: d.nombre,
-        depTokens,
-        depPhrase: nameTokens(d.nombre).join(" "),
-        titPhrases: d.titular ? personPhrases(d.titular) : [],
-        titular: d.titular ?? "",
-      };
-    });
-  }, [dependencias]);
-
   /**
    * Resuelve una mención a dependencia y distingue si apunta al titular o a la institución.
    * Exige coincidencia de frases contiguas (no bolsa de palabras) para evitar falsos positivos
    * del tipo "Salvador Sánchez Romero" ↔ "Luis Ignacio Sánchez Gómez".
    */
-  const resolveMention = (
-    haystack: string,
-  ): { dep: string | null; scope: ScopeKey | null; match: string | null } => {
-    const hay = ` ${nameTokens(haystack).join(" ")} `;
-    const has = (phrase: string) => phrase.length > 3 && hay.includes(` ${phrase} `);
-    for (const m of depMatchers) {
-      const hit = m.titPhrases.find(has);
-      if (hit) return { dep: m.id, scope: "titular", match: m.titular || hit };
-    }
-    for (const m of depMatchers) {
-      if (has(m.depPhrase)) return { dep: m.id, scope: "institucional", match: m.nombre };
-      if (m.depTokens.length >= 2 && m.depTokens.every((t) => hay.includes(` ${t} `))) {
-        return { dep: m.id, scope: "institucional", match: m.nombre };
-      }
-    }
-    return { dep: null, scope: null, match: null };
-  };
+  const resolveMention = (haystack: string) => resolveGabineteMention(haystack, dependencias);
   const resolveDep = (haystack: string): string | null => resolveMention(haystack).dep;
 
   const loadPress = async () => {
@@ -304,7 +237,7 @@ export default function PortalDescargas({
     setPressLoading(false);
   };
 
-  useEffect(() => { loadPress(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [clientId, pressFrom, pressTo, depMatchers.length]);
+  useEffect(() => { loadPress(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [clientId, pressFrom, pressTo, dependencias.length]);
 
   const medios = useMemo(() => Array.from(new Set(pressAll.map((r) => r.medio))).sort().slice(0, 200), [pressAll]);
 
@@ -438,7 +371,7 @@ export default function PortalDescargas({
     if (depComps.length && periodIds.length) {
       depPosts = await fetchAllPages<Post>((from, to) =>
         supabase.from("client_portal_benchmark_posts")
-          .select("period_id,competitor_id,network,profile_name,posted_at,message,interactions")
+          .select("period_id,competitor_id,network,profile_name,posted_at,message,interactions,link")
           .in("period_id", periodIds)
           .in("competitor_id", depComps.map((c) => c.id))
           .order("interactions", { ascending: false })
@@ -449,7 +382,7 @@ export default function PortalDescargas({
     // Publicaciones idénticas (misma cuenta, red, fecha y texto) cargadas más de una vez no se cuentan doble.
     const seenPost = new Set<string>();
     depPosts = depPosts.filter((p) => {
-      const k = `${p.competitor_id}|${p.network}|${p.posted_at ?? ""}|${(p.message ?? "").slice(0, 120)}`;
+      const k = benchmarkPostKey(p);
       if (seenPost.has(k)) return false;
       seenPost.add(k);
       return true;
@@ -459,7 +392,7 @@ export default function PortalDescargas({
     for (const p of depPosts) {
       if (!p.competitor_id || !compById.has(p.competitor_id)) continue;
       if (!periodIds.includes(p.period_id)) continue;
-      if (cut === "semanal" && !inMxRange(p.posted_at, weekFrom, weekTo)) continue;
+       if (!inMxRange(p.posted_at, winFrom, winTo)) continue;
       const k = `${p.competitor_id}|${p.network}`;
       postsCount.set(k, (postsCount.get(k) ?? 0) + 1);
     }
@@ -534,7 +467,7 @@ export default function PortalDescargas({
     const postsDe = (scope: ScopeKey) => depPosts
       .filter((p) => periodIds.includes(p.period_id) && p.competitor_id && compById.has(p.competitor_id))
       .filter((p) => (compById.get(p.competitor_id!)?.account_type ?? "institucional") === scope)
-      .filter((p) => cut !== "semanal" || inMxRange(p.posted_at, weekFrom, weekTo))
+      .filter((p) => inMxRange(p.posted_at, winFrom, winTo))
       .sort((a, b) => (b.interactions ?? 0) - (a.interactions ?? 0))
       .slice(0, 3)
       .map((p) => ({

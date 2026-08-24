@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { mxDay, mxRangeBounds } from "@/lib/tz";
-import { nameTokens } from "@/lib/entityNames";
+import { uniqueMetricsForPeriods } from "@/lib/benchmarkReportData";
+import { benchmarkPostKey, resolveGabineteMention, weightedRate } from "@/lib/gabineteReportUtils";
 
 export type Dependencia = {
   id: string; nombre: string; nombre_corto?: string | null; tipo: string | null;
@@ -12,6 +13,7 @@ export type Period = { id: string; period_label: string; period_start: string; p
 export type Metric = {
   period_id: string; competitor_id: string; network: string; followers: number | null;
   follower_growth_rate: number | null; engagement_rate: number | null; posts_per_day: number | null;
+  created_at?: string | null;
 };
 export type Post = {
   period_id: string; competitor_id: string | null; network: string; profile_name: string;
@@ -46,12 +48,6 @@ export function daysInWindow(from: string, to: string) {
 const RATE_AVG = (v: number[]) => (v.length ? v.reduce((a, b) => a + b, 0) / v.length : null);
 const isoDaysAgo = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString().slice(0, 10);
 const isoToday = () => new Date().toISOString().slice(0, 10);
-
-/** Palabras genéricas del directorio que no identifican a una dependencia. */
-const GENERIC = new Set([
-  "secretaria", "secretaría", "subsecretaria", "instituto", "organismo", "procuraduria", "coordinacion",
-  "direccion", "general", "estado", "estatal", "guanajuato", "gobierno", "sistema", "comision", "consejo", "unidad",
-]);
 
 export function pctDelta(a: number | null | undefined, b: number | null | undefined) {
   if (a == null || b == null || !b) return null;
@@ -96,7 +92,7 @@ async function fetchAllPages<T>(
   const out: T[] = [];
   for (let offset = 0; offset < maxRows; offset += pageSize) {
     const { data, error } = await run(offset, offset + pageSize - 1);
-    if (error) break;
+    if (error) throw error;
     const rows = (data ?? []) as T[];
     out.push(...rows);
     if (rows.length < pageSize) break;
@@ -168,7 +164,7 @@ export function useGabineteData(clientId: string, pressDays = 30) {
           // pierdan cuentas enteras (p. ej. las institucionales de una secretaría).
           fetchAllPages<Metric>((from, to) =>
             supabase.from("client_portal_benchmark_metrics")
-              .select("period_id,competitor_id,network,followers,follower_growth_rate,engagement_rate,posts_per_day")
+              .select("period_id,competitor_id,network,followers,follower_growth_rate,engagement_rate,posts_per_day,created_at")
               .in("period_id", ids)
               .order("period_id", { ascending: true })
               .order("id", { ascending: true })
@@ -199,7 +195,7 @@ export function useGabineteData(clientId: string, pressDays = 30) {
         const vistos = new Set<string>();
         const po: Post[] = [];
         for (const p of [...poTop, ...poRec]) {
-          const k = `${p.period_id}|${p.competitor_id ?? p.profile_name}|${p.posted_at ?? ""}|${(p.message ?? "").slice(0, 60)}`;
+          const k = benchmarkPostKey(p);
           if (vistos.has(k)) continue;
           vistos.add(k);
           po.push(p);
@@ -214,22 +210,10 @@ export function useGabineteData(clientId: string, pressDays = 30) {
     return () => { cancelled = true; };
   }, [clientId]);
 
-  const depMatchers = useMemo(() => dependencias.map((d) => ({
-    id: d.id,
-    nombre: d.nombre,
-    depTokens: nameTokens(d.nombre).filter((t) => !GENERIC.has(t)),
-    titTokens: d.titular ? nameTokens(d.titular) : [],
-  })), [dependencias]);
+  const depMatchers = useMemo(() => dependencias.map((d) => ({ id: d.id, nombre: d.nombre, titular: d.titular })), [dependencias]);
 
   const resolveDep = useCallback((haystack: string): string | null => {
-    const toks = new Set(nameTokens(haystack));
-    for (const m of depMatchers) {
-      if (m.titTokens.length >= 2 && m.titTokens.filter((t) => toks.has(t)).length >= 2) return m.id;
-    }
-    for (const m of depMatchers) {
-      if (m.depTokens.length && m.depTokens.every((t) => toks.has(t))) return m.id;
-    }
-    return null;
+    return resolveGabineteMention(haystack, depMatchers).dep;
   }, [depMatchers]);
 
   const fetchMentions = useCallback(async (from: string, to: string): Promise<Mention[]> => {
@@ -304,7 +288,7 @@ export function useGabineteData(clientId: string, pressDays = 30) {
         .lte("posted_at", mxRangeBounds(from, to).lte)
         .order("posted_at", { ascending: true })
         .range(offset, offset + PAGE - 1);
-      if (error) break;
+      if (error) throw error;
       const rows = (data ?? []) as Post[];
       out.push(...rows);
       if (rows.length < PAGE) break;
@@ -328,24 +312,15 @@ export function useGabineteData(clientId: string, pressDays = 30) {
 
   /** Agregado por dependencia para un conjunto de periodos y un enfoque de cuentas. */
   const aggregate = useCallback((periodIds: string[], enfoque: Enfoque) => {
-    const ids = new Set(periodIds);
-    // Una sola fila por cuenta+red: si el mismo corte se cargó varias veces, no se suma dos veces.
-    const byKey = new Map<string, Metric>();
-    for (const m of metrics) {
-      if (!ids.has(m.period_id)) continue;
-      const k = `${m.competitor_id}|${m.network}`;
-      const prev = byKey.get(k);
-      if (!prev || (Number(m.followers) || 0) > (Number(prev.followers) || 0)) byKey.set(k, m);
-    }
-    const acc = new Map<string, { followers: number; eng: number[]; posts: number[]; cuentas: Set<string> }>();
-    for (const m of byKey.values()) {
+    const acc = new Map<string, { followers: number; eng: { rate: number | null; weight: number | null }[]; posts: number[]; cuentas: Set<string> }>();
+    for (const m of uniqueMetricsForPeriods(metrics, periodIds)) {
       const dep = depOfCompetitor.get(m.competitor_id);
       if (!dep) continue;
       const tipo = typeOfCompetitor.get(m.competitor_id) ?? "institucional";
       if (enfoque !== "combinado" && tipo !== enfoque) continue;
       const e = acc.get(dep) ?? { followers: 0, eng: [], posts: [], cuentas: new Set<string>() };
       e.followers += Number(m.followers) || 0;
-      if (Number.isFinite(Number(m.engagement_rate))) e.eng.push(Number(m.engagement_rate));
+      if (Number.isFinite(Number(m.engagement_rate))) e.eng.push({ rate: Number(m.engagement_rate), weight: Number(m.followers) || null });
       if (Number.isFinite(Number(m.posts_per_day))) e.posts.push(Number(m.posts_per_day));
       e.cuentas.add(m.competitor_id);
       acc.set(dep, e);
@@ -354,7 +329,7 @@ export function useGabineteData(clientId: string, pressDays = 30) {
     const out = new Map<string, DepAgg>();
     acc.forEach((v, k) => out.set(k, {
       followers: v.followers,
-      engagement: RATE_AVG(v.eng),
+      engagement: weightedRate(v.eng),
       postsDia: v.posts.length ? v.posts.reduce((a, b) => a + b, 0) : null,
       cuentas: v.cuentas.size,
     }));
@@ -375,7 +350,7 @@ export function useGabineteData(clientId: string, pressDays = 30) {
       const fecha = mxDay(p.posted_at);
       if (!fecha || fecha < from || fecha > to) continue;
       // Misma publicación cargada en varios cortes: se cuenta una sola vez.
-      const pk = `${p.competitor_id}|${p.network}|${p.posted_at}|${String((p as any).message ?? "").slice(0, 120)}`;
+      const pk = benchmarkPostKey(p);
       if (seen.has(pk)) continue;
       seen.add(pk);
 
