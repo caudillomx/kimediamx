@@ -109,7 +109,7 @@ Deno.serve(async (req) => {
       const email = String(body.email ?? '').trim().toLowerCase();
       const password = String(body.password ?? '');
       const full_name = String(body.full_name ?? '').trim();
-      const makeAdmin = body.make_admin !== false;
+      const inviteRole = OPS_ROLES.includes(body.role) ? String(body.role) : (body.make_admin === false ? 'none' : 'admin');
       if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return json({ error: 'Correo inválido' }, 400);
       if (password.length < 8) return json({ error: 'Contraseña mín 8 caracteres' }, 400);
 
