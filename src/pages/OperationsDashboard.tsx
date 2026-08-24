@@ -163,8 +163,10 @@ const OperationsDashboard = () => {
     );
   }
 
-  const showWorkFilters = section === "trabajo" && ["kanban", "list", "calendar"].includes(workView);
+  const showWorkFilters = section === "trabajo";
   const activeFilters = [filterMember, filterCategory, filterClient, searchQuery].filter(Boolean).length;
+  const isSecondary = SECONDARY_SECTIONS.some(s => s.value === section);
+
 
   return (
     <div className="min-h-screen bg-background relative">
