@@ -442,6 +442,7 @@ export default function PortalDescargas({
           .in("period_id", periodIds)
           .in("competitor_id", depComps.map((c) => c.id))
           .order("interactions", { ascending: false })
+          .order("id")
           .range(from, to), 1000, 8000);
     }
 
