@@ -3,12 +3,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { mxDay, mxRangeBounds } from "@/lib/tz";
 import { uniqueMetricsForPeriods } from "@/lib/benchmarkReportData";
 import { benchmarkPostKey, resolveGabineteMention, weightedRate } from "@/lib/gabineteReportUtils";
+import { titularAccountIds } from "@/lib/benchmarkAccountIdentity";
 
 export type Dependencia = {
   id: string; nombre: string; nombre_corto?: string | null; tipo: string | null;
   titular: string | null; titular_cargo: string | null; sort_order: number | null;
 };
-export type Competitor = { id: string; name: string; network: string; dependencia_id: string | null; account_type: string | null };
+export type Competitor = { id: string; name: string; network: string; dependencia_id: string | null; account_type: string | null; profile_external_id: string | null; external_url: string | null };
 export type Period = { id: string; period_label: string; period_start: string; period_end: string };
 export type Metric = {
   period_id: string; competitor_id: string; network: string; followers: number | null;
@@ -140,7 +141,7 @@ export function useGabineteData(clientId: string, pressDays = 30) {
       setLoading(true);
       const [dep, comp, per] = await Promise.all([
         supabase.from("client_portal_dependencias").select("*").eq("client_id", clientId).eq("active", true).order("sort_order"),
-        supabase.from("client_portal_benchmark_competitors").select("id,name,network,dependencia_id,account_type").eq("client_id", clientId).eq("active", true).limit(2000),
+        supabase.from("client_portal_benchmark_competitors").select("id,name,network,dependencia_id,account_type,profile_external_id,external_url").eq("client_id", clientId).eq("active", true).limit(2000),
         supabase.from("client_portal_benchmark_periods").select("id,period_label,period_start,period_end").eq("client_id", clientId).order("period_start"),
       ]);
       if (cancelled) return;
@@ -296,19 +297,37 @@ export function useGabineteData(clientId: string, pressDays = 30) {
     return out;
   }, [periods]);
 
+  const depById = useMemo(() => new Map(dependencias.map((d) => [d.id, d])), [dependencias]);
+
+  const validCompetitorIds = useMemo(() => {
+    const valid = new Set(competitors.filter((c) => c.account_type !== "titular").map((c) => c.id));
+    const byDep = new Map<string, Competitor[]>();
+    competitors.forEach((c) => {
+      if (!c.dependencia_id || c.account_type !== "titular") return;
+      byDep.set(c.dependencia_id, [...(byDep.get(c.dependencia_id) ?? []), c]);
+    });
+    byDep.forEach((accounts, depId) => {
+      titularAccountIds(accounts, depById.get(depId)?.titular ?? null).forEach((id) => valid.add(id));
+    });
+    return valid;
+  }, [competitors, depById]);
+
   const depOfCompetitor = useMemo(() => {
     const m = new Map<string, string>();
-    competitors.forEach((c) => { if (c.dependencia_id) m.set(c.id, c.dependencia_id); });
+    competitors.forEach((c) => {
+      if (c.dependencia_id && validCompetitorIds.has(c.id)) m.set(c.id, c.dependencia_id);
+    });
     return m;
-  }, [competitors]);
+  }, [competitors, validCompetitorIds]);
 
   const typeOfCompetitor = useMemo(() => {
     const m = new Map<string, string>();
-    competitors.forEach((c) => m.set(c.id, c.account_type ?? "institucional"));
+    competitors.forEach((c) => {
+      if (!validCompetitorIds.has(c.id)) return;
+      m.set(c.id, c.account_type ?? "institucional");
+    });
     return m;
-  }, [competitors]);
-
-  const depById = useMemo(() => new Map(dependencias.map((d) => [d.id, d])), [dependencias]);
+  }, [competitors, validCompetitorIds]);
 
   /** Agregado por dependencia para un conjunto de periodos y un enfoque de cuentas. */
   const aggregate = useCallback((periodIds: string[], enfoque: Enfoque) => {
