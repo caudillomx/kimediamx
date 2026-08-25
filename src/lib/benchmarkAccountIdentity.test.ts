@@ -21,6 +21,12 @@ describe("benchmark account identity", () => {
     expect(titularAccountIds([typo], "María del Rosario Corona Amador")).toEqual(new Set(["rosario-typo"]));
   });
 
+  it("accepts known short-name variants only when they include a surname", () => {
+    const regis = { id: "regis", name: "Regis Trujillo", network: "instagram", profile_external_id: "694" };
+    const unrelated = { id: "unrelated", name: "Regis Martínez", network: "instagram", profile_external_id: "695" };
+    expect(titularAccountIds([regis, unrelated], "Alma Regina Trujillo Domínguez")).toEqual(new Set(["regis"]));
+  });
+
   it("does not use fuzzy matching for short or partial names", () => {
     const other = { id: "other", name: "Ricardo Martínez", network: "x", profile_external_id: "156" };
     expect(titularAccountIds([other], "Juan Mauro González Martínez")).toEqual(new Set());

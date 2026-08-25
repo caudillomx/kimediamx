@@ -438,7 +438,7 @@ export default function PortalDescargas({
         .order("day", { ascending: true })
         .limit(20000);
       for (const r of (fd ?? []) as any[]) {
-        const identity = accountIdentity.get(r.competitor_id) ?? r.competitor_id;
+        const identity = reportAccountIdentity.get(r.competitor_id) ?? r.competitor_id;
         const k = `${identity}|${String(r.network).toLowerCase()}`;
         growthByKey.set(k, [...(growthByKey.get(k) ?? []), Number(r.delta) || 0]);
       }
@@ -598,7 +598,6 @@ export default function PortalDescargas({
       const r = rankingDe(scope);
       const nar = narrativasDe(scope);
       const pr = prensaDe(scope);
-      const engs = rows.map((x) => x.engagement).filter((v): v is number => v != null && Number.isFinite(v) && v > 0);
       const pds = rows.map((x) => x.postsDia).filter((v): v is number => v != null && Number.isFinite(v));
       return {
         key: scope,
@@ -608,7 +607,7 @@ export default function PortalDescargas({
           : dep.nombre,
         cuentas: rows,
         seguidores: rows.reduce((a, x) => a + (x.seguidores ?? 0), 0),
-        engagement: RATE_AVG(engs),
+        engagement: weightedRate(rows.map((x) => ({ rate: x.engagement, weight: x.seguidores }))),
         postsDia: pds.length ? pds.reduce((a, b) => a + b, 0) : null,
         publicaciones: rows.reduce((a, x) => a + (x.publicaciones ?? 0), 0),
         variacionSeguidores: pctDelta(r.mine.followers, r.prevMine?.followers),
@@ -670,7 +669,7 @@ export default function PortalDescargas({
       ranking,
       suben: moves.slice().sort((a, b) => b.delta - a.delta).slice(0, 5),
       bajan: moves.slice().sort((a, b) => a.delta - b.delta).slice(0, 5),
-      promedioEngagement: RATE_AVG(ranking.map((r) => r.engagement).filter((v): v is number => v != null && v > 0)),
+      promedioEngagement: RATE_AVG(ranking.map((r) => r.engagement).filter((v): v is number => v != null && Number.isFinite(v))),
       dependencias: ranking.length,
     };
   };

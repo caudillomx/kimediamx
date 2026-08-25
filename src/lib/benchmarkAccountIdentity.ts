@@ -15,6 +15,26 @@ export type BenchmarkSubject = { id: string; titular?: string | null };
 const normalized = (value: string | null | undefined) =>
   (value ?? "").trim().toLowerCase().replace(/\/$/, "");
 
+const GIVEN_NAME_ALIASES = new Map<string, string[]>([
+  ["regis", ["regina"]],
+]);
+
+const tokenMatches = (actual: string, expected: string) => {
+  if (actual === expected) return true;
+  return (GIVEN_NAME_ALIASES.get(actual) ?? []).includes(expected)
+    || (GIVEN_NAME_ALIASES.get(expected) ?? []).includes(actual);
+};
+
+function hasGivenNameAndSurname(actual: string[], expected: string[]): boolean {
+  if (expected.length < 3) return false;
+  const surnameStart = Math.max(1, expected.length - 2);
+  const givenNames = expected.slice(0, surnameStart);
+  const surnames = expected.slice(surnameStart);
+  const hasGiven = actual.some((token) => givenNames.some((expectedToken) => tokenMatches(token, expectedToken)));
+  const hasSurname = actual.some((token) => surnames.some((expectedToken) => tokenMatches(token, expectedToken)));
+  return hasGiven && hasSurname;
+}
+
 function oneEditApart(a: string, b: string): boolean {
   if (a === b) return true;
   if (Math.abs(a.length - b.length) > 1) return false;
@@ -51,7 +71,9 @@ export function titularAccountIds(accounts: BenchmarkAccount[], titular: string 
   const directlyNamed = accounts.filter((account) => {
     const actual = nameTokens(account.name);
     if (actual.length < 2) return false;
-    if (actual.every((token) => expected.has(token))) return actual.length >= 3 || actual.length === expected.size;
+    if (actual.every((token) => expectedTokens.some((expectedToken) => tokenMatches(token, expectedToken)))) {
+      return actual.length >= 3 || actual.length === expected.size || hasGivenNameAndSurname(actual, expectedTokens);
+    }
     // Tolera un único error tipográfico de una letra sólo en nombres completos
     // de 3+ tokens; nunca una coincidencia parcial por apellido.
     if (actual.length < 3) return false;
