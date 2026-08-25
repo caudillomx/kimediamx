@@ -57,4 +57,16 @@ describe("apodos y diminutivos", () => {
     expect(ids.has("2")).toBe(true);
     expect(ids.has("3")).toBe(false);
   });
+
+  it("reconoce 'Poncho Borja' como titular de José Alfonso Borja Pimentel", () => {
+    const accounts = [
+      { id: "1", name: "Poncho Borja", network: "x", account_type: "titular" },
+      { id: "2", name: "Poncho Borja Pimentel", network: "facebook", account_type: "titular" },
+      { id: "3", name: "Poncho Ramírez", network: "x", account_type: "titular" },
+    ];
+    const ids = titularAccountIds(accounts, "José Alfonso Borja Pimentel");
+    expect(ids.has("1")).toBe(true);
+    expect(ids.has("2")).toBe(true);
+    expect(ids.has("3")).toBe(false);
+  });
 });
