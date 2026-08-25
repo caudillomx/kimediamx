@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { selectLatestPeriodCohort, selectPreviousPeriodCohort, uniqueMetricsForPeriods } from "./benchmarkReportData";
+import { periodMatchesDisplayLabel, periodMonthLabel, periodRangeForDisplayLabel, selectLatestPeriodCohort, selectPreviousPeriodCohort, uniqueMetricsForPeriods } from "./benchmarkReportData";
 
 const periods = [
   { id: "jul-inst", period_label: "Julio 2026", period_start: "2026-07-01", period_end: "2026-07-31" },
@@ -55,5 +55,12 @@ describe("benchmark report snapshots", () => {
     expect(unique).toHaveLength(1);
     expect(unique[0].period_id).toBe("aug-inst");
     expect(unique[0].followers).toBe(1000);
+  });
+
+  it("maps accumulated cuts to the month where the export closes", () => {
+    const accumulated = { id: "cofoce", period_label: "1 jun 2026 – 25 ago 2026", period_start: "2026-06-01", period_end: "2026-08-25" };
+    expect(periodMonthLabel(accumulated)).toBe("Agosto 2026");
+    expect(periodMatchesDisplayLabel(accumulated, "Agosto 2026")).toBe(true);
+    expect(periodRangeForDisplayLabel("Agosto 2026", [...periods, accumulated])).toEqual({ from: "2026-08-01", to: "2026-08-25" });
   });
 });

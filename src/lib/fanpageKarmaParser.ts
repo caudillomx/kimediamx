@@ -83,6 +83,12 @@ function toNum(v: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+function toRate(v: unknown): number | null {
+  const n = toNum(v);
+  if (n == null) return null;
+  return Math.abs(n) > 1 ? n / 100 : n;
+}
+
 function toStr(v: unknown): string | null {
   if (v == null || v === "") return null;
   return String(v).trim() || null;
@@ -196,11 +202,11 @@ export async function parseComparativa(file: File): Promise<ParsedFile<Comparati
       imageUrl: toStr(r["Image Link"]),
       performanceIndex: toNum(r["Índice de Rendimiento de la Página"] ?? r["Índice de Rendimiento de la página"] ?? r["Índice de Rendimiento"] ?? r["Performance Index"]),
       followers: toNum(r["Seguidor"] ?? r["Seguidores"] ?? r["Followers"]),
-      followerGrowthRate: toNum(r["Crecimiento de seguidores (en %)"] ?? r["Crecimiento de seguidores por día en %"] ?? r["Crecimiento de seguidores"]),
-      engagementRate: toNum(r["Tasa de interacción de las publicaciones"] ?? r["Engagement Rate"]),
+      followerGrowthRate: toRate(r["Crecimiento de seguidores (en %)"] ?? r["Crecimiento de seguidores por día en %"] ?? r["Crecimiento de seguidores"]),
+      engagementRate: toRate(r["Tasa de interacción de las publicaciones"] ?? r["Engagement Rate"]),
       postsPerDay: toNum(r["Publicaciones por día"] ?? r["Posts per day"]),
       reachPerDay: toNum(r["Alcance por día"] ?? r["Reach per day"]),
-      interactionPerImpression: toNum(r["Interacción por impresión/visualizacion"] ?? r["Interacción por impresión/visualización"]),
+      interactionPerImpression: toRate(r["Interacción por impresión/visualizacion"] ?? r["Interacción por impresión/visualización"]),
       raw: r,
     });
   }
@@ -262,9 +268,9 @@ export async function parsePosts(file: File): Promise<ParsedFile<PostRow>> {
       likes: toNum(r["Número de Me gusta"] ?? r["Likes"]),
       comments: toNum(r["Número de comentarios"] ?? r["Comments"]),
       interactions: toNum(r["Reacciones, Comentarios y Compartidos"] ?? r["Interactions"]),
-      engagementRate: toNum(r["Tasa de interacción de las publicaciones"] ?? r["Engagement Rate"]),
+      engagementRate: toRate(r["Tasa de interacción de las publicaciones"] ?? r["Engagement Rate"]),
       reach: toNum(r["Alcance por publicación"] ?? r["Reach"]),
-      interactionPerImpression: toNum(r["Interacción por impresión/visualizacion"] ?? r["Interacción por impresión/visualización"]),
+      interactionPerImpression: toRate(r["Interacción por impresión/visualizacion"] ?? r["Interacción por impresión/visualización"]),
       link: toStr(r["Link"]),
       imageLink: toStr(r["Image Link"]),
       raw: r,
