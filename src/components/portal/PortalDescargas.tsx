@@ -51,6 +51,31 @@ const isoDaysAgo = (n: number) => new Date(Date.now() - n * 86_400_000).toISOStr
 const shiftIso = (d: string, n: number) =>
   new Date(new Date(d + "T00:00:00").getTime() + n * 86_400_000).toISOString().slice(0, 10);
 const fmtDia = (d: string) => new Date(d + "T00:00:00").toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" });
+const MONTHS = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+
+/** Una carga acumulada (p. ej. 1 jun–25 ago) debe aparecer dentro del mes de corte. */
+const monthLabelOf = (period: Period) => {
+  const end = new Date(period.period_end + "T00:00:00");
+  if (Number.isNaN(end.getTime())) return period.period_label;
+  return `${MONTHS[end.getMonth()]} ${end.getFullYear()}`;
+};
+
+const monthRangeFromLabel = (label: string, sourcePeriods: Period[]) => {
+  const sample = sourcePeriods.find((p) => p.period_label === label);
+  if (!sample) return null;
+  const end = new Date(sample.period_end + "T00:00:00");
+  if (Number.isNaN(end.getTime())) return null;
+  const y = end.getFullYear();
+  const m = end.getMonth();
+  const from = new Date(y, m, 1).toISOString().slice(0, 10);
+  const monthEnd = new Date(y, m + 1, 0).toISOString().slice(0, 10);
+  const latestLoaded = sourcePeriods
+    .filter((p) => p.period_label === label)
+    .map((p) => p.period_end)
+    .sort()
+    .at(-1);
+  return { from, to: latestLoaded && latestLoaded < monthEnd ? latestLoaded : monthEnd };
+};
 
 /** Última semana completa lunes→domingo. */
 function ultimaSemanaCompleta() {
@@ -111,7 +136,7 @@ export default function PortalDescargas({
         supabase.from("client_portal_benchmark_periods").select("id,period_label,period_start,period_end,created_at").eq("client_id", clientId).order("period_start"),
         supabase.from("client_portal_reports").select("id,title,report_date,type").eq("client_id", clientId).order("report_date", { ascending: false }).limit(30),
       ]);
-      const ps = (per.data ?? []) as Period[];
+      const ps = ((per.data ?? []) as Period[]).map((p) => ({ ...p, period_label: monthLabelOf(p) }));
       setDependencias((dep.data ?? []) as Dependencia[]);
       setCompetitors(comps);
       setPeriods(ps);
@@ -355,7 +380,9 @@ export default function PortalDescargas({
           .eq("client_id", clientId).eq("active", true)
           .order("id").range(from, to)),
     ]);
-    const reportPeriods = ((freshPeriodsRes.data ?? []) as Period[]).length ? (freshPeriodsRes.data ?? []) as Period[] : periods;
+    const reportPeriods = ((freshPeriodsRes.data ?? []) as Period[]).length
+      ? ((freshPeriodsRes.data ?? []) as Period[]).map((p) => ({ ...p, period_label: monthLabelOf(p) }))
+      : periods;
     const reportCompetitors = freshCompetitors.length ? freshCompetitors : competitors;
     const reportLabels = Array.from(new Set(reportPeriods.map((p) => p.period_label)));
     const reportActivePeriods = selectActiveReportPeriods(reportPeriods);
@@ -416,10 +443,11 @@ export default function PortalDescargas({
       if (!current || c.name.length > current.name.length) compByIdentity.set(key, c);
     }
 
+    const monthlyRange = cut === "semanal" ? null : monthRangeFromLabel(periodLabel, reportActivePeriods);
     const monthlyStarts = reportActivePeriods.map((p) => p.period_start).sort();
     const monthlyEnds = reportActivePeriods.map((p) => p.period_end).sort();
-    const winFrom = cut === "semanal" ? weekFrom : (monthlyStarts[0] ?? pressFrom);
-    const winTo = cut === "semanal" ? weekTo : (monthlyEnds[monthlyEnds.length - 1] ?? pressTo);
+    const winFrom = cut === "semanal" ? weekFrom : (monthlyRange?.from ?? monthlyStarts[0] ?? pressFrom);
+    const winTo = cut === "semanal" ? weekTo : (monthlyRange?.to ?? monthlyEnds[monthlyEnds.length - 1] ?? pressTo);
     const winDays = Math.max(
       1,
       Math.round((new Date(winTo + "T00:00:00").getTime() - new Date(winFrom + "T00:00:00").getTime()) / 86_400_000) + 1,
