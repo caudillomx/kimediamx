@@ -17,7 +17,35 @@ export type BenchmarkMetric = {
   created_at?: string | null;
 };
 
+const MONTHS_ES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+
 const dateKey = (period: BenchmarkPeriod) => `${period.period_start}|${period.period_end}`;
+
+/** Display month of the data cut. Accumulated exports (1 jun–25 ago) live in the month they close. */
+export function periodMonthLabel(period: Pick<BenchmarkPeriod, "period_end" | "period_label">): string {
+  const end = new Date(`${period.period_end}T00:00:00`);
+  if (Number.isNaN(end.getTime())) return period.period_label;
+  return `${MONTHS_ES[end.getMonth()]} ${end.getFullYear()}`;
+}
+
+/** A period may match the visible month even when its raw import label is accumulated. */
+export function periodMatchesDisplayLabel(period: BenchmarkPeriod, label: string): boolean {
+  return period.period_label === label || periodMonthLabel(period) === label;
+}
+
+export function periodRangeForDisplayLabel(label: string, periods: BenchmarkPeriod[]): { from: string; to: string } | null {
+  const matching = periods.filter((period) => periodMatchesDisplayLabel(period, label));
+  if (!matching.length) return null;
+  const latestEnd = matching.map((period) => period.period_end).sort().at(-1);
+  if (!latestEnd) return null;
+  const end = new Date(`${latestEnd}T00:00:00`);
+  if (Number.isNaN(end.getTime())) return null;
+  const y = end.getFullYear();
+  const m = end.getMonth();
+  const from = new Date(y, m, 1).toISOString().slice(0, 10);
+  const monthEnd = new Date(y, m + 1, 0).toISOString().slice(0, 10);
+  return { from, to: latestEnd < monthEnd ? latestEnd : monthEnd };
+}
 
 /**
  * A data cut may be split across several imports (for example, institutional

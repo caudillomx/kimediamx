@@ -1,5 +1,4 @@
 import { forwardRef } from "react";
-import { KIMEDIA_LOGO_PDF_DATA_URI } from "@/assets/kimediaLogoPdf";
 
 /* ------------------------------------------------------------------ */
 /* Tipos                                                               */
@@ -141,25 +140,6 @@ const td: React.CSSProperties = {
   borderBottom: `1px solid #f1f5f9`,
   verticalAlign: "top",
 };
-
-function Logo({ height = 26 }: { height?: number }) {
-  const width = Math.round(height * 1.83);
-  return (
-    <img
-      src={KIMEDIA_LOGO_PDF_DATA_URI}
-      alt="KiMedia"
-      width={width}
-      height={height}
-      style={{
-        display: "block",
-        width,
-        height,
-        objectFit: "contain",
-        flexShrink: 0,
-      }}
-    />
-  );
-}
 
 /** html2canvas no rasteriza emojis: se eliminan para evitar cadenas de "?". */
 export function stripEmoji(text: string): string {
@@ -347,11 +327,8 @@ function Header({ title, subtitle, periodo, scope }: {
             </div>
           )}
         </div>
-        <div style={{ textAlign: "right", flexShrink: 0 }}>
-          <Logo height={42} />
-          <div style={{ fontSize: 8.5, color: "#94a3b8", marginTop: 3 }}>
+        <div style={{ textAlign: "right", flexShrink: 0, fontSize: 8.5, color: "#94a3b8" }}>
             {new Date().toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" })}
-          </div>
         </div>
       </div>
     </div>
@@ -360,9 +337,7 @@ function Header({ title, subtitle, periodo, scope }: {
 
 function Footer() {
   return (
-    <div className="pdf-avoid" style={{ marginTop: 10, paddingTop: 6, borderTop: `1px solid ${LINE}`, display: "flex", justifyContent: "flex-end" }}>
-      <Logo height={18} />
-    </div>
+    <div className="pdf-avoid" style={{ marginTop: 10, paddingTop: 6, borderTop: `1px solid ${LINE}` }} />
   );
 }
 

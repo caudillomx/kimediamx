@@ -10,6 +10,9 @@ import { toast } from "sonner";
 import { Download, FileText, FileSpreadsheet, Building2, Newspaper, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import {
+  periodMatchesDisplayLabel,
+  periodMonthLabel,
+  periodRangeForDisplayLabel,
   uniqueMetricsForPeriods,
 } from "@/lib/benchmarkReportData";
 import { benchmarkPostKey, resolveGabineteMention, weightedRate } from "@/lib/gabineteReportUtils";
@@ -51,31 +54,8 @@ const isoDaysAgo = (n: number) => new Date(Date.now() - n * 86_400_000).toISOStr
 const shiftIso = (d: string, n: number) =>
   new Date(new Date(d + "T00:00:00").getTime() + n * 86_400_000).toISOString().slice(0, 10);
 const fmtDia = (d: string) => new Date(d + "T00:00:00").toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" });
-const MONTHS = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-
 /** Una carga acumulada (p. ej. 1 jun–25 ago) debe aparecer dentro del mes de corte. */
-const monthLabelOf = (period: Period) => {
-  const end = new Date(period.period_end + "T00:00:00");
-  if (Number.isNaN(end.getTime())) return period.period_label;
-  return `${MONTHS[end.getMonth()]} ${end.getFullYear()}`;
-};
-
-const monthRangeFromLabel = (label: string, sourcePeriods: Period[]) => {
-  const sample = sourcePeriods.find((p) => p.period_label === label);
-  if (!sample) return null;
-  const end = new Date(sample.period_end + "T00:00:00");
-  if (Number.isNaN(end.getTime())) return null;
-  const y = end.getFullYear();
-  const m = end.getMonth();
-  const from = new Date(y, m, 1).toISOString().slice(0, 10);
-  const monthEnd = new Date(y, m + 1, 0).toISOString().slice(0, 10);
-  const latestLoaded = sourcePeriods
-    .filter((p) => p.period_label === label)
-    .map((p) => p.period_end)
-    .sort()
-    .at(-1);
-  return { from, to: latestLoaded && latestLoaded < monthEnd ? latestLoaded : monthEnd };
-};
+const monthLabelOf = periodMonthLabel;
 
 /** Última semana completa lunes→domingo. */
 function ultimaSemanaCompleta() {
@@ -172,7 +152,7 @@ export default function PortalDescargas({
     [periods],
   );
   const selectActiveReportPeriods = (sourcePeriods: Period[]) => {
-    if (cut !== "semanal") return sourcePeriods.filter((p) => p.period_label === periodLabel);
+    if (cut !== "semanal") return sourcePeriods.filter((p) => periodMatchesDisplayLabel(p, periodLabel));
 
     // Un corte semanal necesita el snapshot más reciente disponible de CADA
     // cuenta. Las cargas suelen cerrar en lunes o en cortes mixtos, así que se
@@ -189,7 +169,7 @@ export default function PortalDescargas({
   const selectPreviousReportPeriods = (sourcePeriods: Period[], labels = periodLabels) => {
     if (cut === "semanal") return sourcePeriods.filter((p) => p.period_end < weekFrom);
     const idx = labels.indexOf(periodLabel);
-    return idx > 0 ? sourcePeriods.filter((p) => p.period_label === labels[idx - 1]) : [];
+    return idx > 0 ? sourcePeriods.filter((p) => periodMatchesDisplayLabel(p, labels[idx - 1])) : [];
   };
 
   const activePeriods = useMemo(
@@ -443,7 +423,7 @@ export default function PortalDescargas({
       if (!current || c.name.length > current.name.length) compByIdentity.set(key, c);
     }
 
-    const monthlyRange = cut === "semanal" ? null : monthRangeFromLabel(periodLabel, reportActivePeriods);
+    const monthlyRange = cut === "semanal" ? null : periodRangeForDisplayLabel(periodLabel, reportPeriods);
     const monthlyStarts = reportActivePeriods.map((p) => p.period_start).sort();
     const monthlyEnds = reportActivePeriods.map((p) => p.period_end).sort();
     const winFrom = cut === "semanal" ? weekFrom : (monthlyRange?.from ?? monthlyStarts[0] ?? pressFrom);
@@ -530,11 +510,11 @@ export default function PortalDescargas({
         const avgDelta = deltas.length ? deltas.reduce((a, b) => a + b, 0) / deltas.length : null;
         const prevF = prevFollowers.get(k) ?? null;
         const followers = m?.followers != null && Number.isFinite(Number(m.followers)) ? Number(m.followers) : null;
-        let crecimiento: number | null =
-          m?.follower_growth_rate != null && Number.isFinite(Number(m.follower_growth_rate))
-            ? Number(m.follower_growth_rate)
-            : null;
-        if (crecimiento == null && avgDelta != null && followers) crecimiento = avgDelta / followers;
+        let crecimiento: number | null = avgDelta != null && followers ? avgDelta / followers : null;
+        if (crecimiento == null && m?.follower_growth_rate != null && Number.isFinite(Number(m.follower_growth_rate))) {
+          const rawGrowth = Number(m.follower_growth_rate);
+          crecimiento = Math.abs(rawGrowth) > 1 ? rawGrowth / 100 : rawGrowth;
+        }
         if (crecimiento == null && prevF && followers) crecimiento = (followers - prevF) / prevF / winDays;
         const publicaciones = postsCount.get(k) ?? null;
         const postsDia = m?.posts_per_day != null && Number.isFinite(Number(m.posts_per_day))
