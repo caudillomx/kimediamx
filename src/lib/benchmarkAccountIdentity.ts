@@ -15,9 +15,42 @@ export type BenchmarkSubject = { id: string; titular?: string | null };
 const normalized = (value: string | null | undefined) =>
   (value ?? "").trim().toLowerCase().replace(/\/$/, "");
 
+/**
+ * Diminutivos y apodos frecuentes en cuentas oficiales mexicanas: el nombre
+ * registrado es formal ("María Guadalupe") pero la cuenta usa el familiar
+ * ("Lupita"). La comparación es bidireccional.
+ */
 const GIVEN_NAME_ALIASES = new Map<string, string[]>([
   ["regis", ["regina"]],
+  ["lupita", ["guadalupe", "lupe"]],
+  ["lupe", ["guadalupe", "lupita"]],
+  ["guadalupe", ["lupita", "lupe"]],
+  ["pepe", ["jose"]],
+  ["chema", ["jose"]],
+  ["paco", ["francisco"]],
+  ["pancho", ["francisco"]],
+  ["memo", ["guillermo"]],
+  ["toño", ["antonio"]],
+  ["tono", ["antonio"]],
+  ["beto", ["alberto", "roberto", "humberto"]],
+  ["chuy", ["jesus"]],
+  ["lalo", ["eduardo"]],
+  ["nacho", ["ignacio"]],
+  ["checo", ["sergio"]],
+  ["tere", ["teresa"]],
+  ["mari", ["maria"]],
+  ["maru", ["maria"]],
+  ["pati", ["patricia"]],
+  ["fer", ["fernando", "fernanda"]],
+  ["ale", ["alejandro", "alejandra"]],
+  ["alex", ["alejandro", "alejandra"]],
+  ["gabo", ["gabriel"]],
+  ["gaby", ["gabriela"]],
+  ["rafa", ["rafael"]],
+  ["moni", ["monica"]],
+  ["rocio", ["rocío"]],
 ]);
+
 
 const tokenMatches = (actual: string, expected: string) => {
   if (actual === expected) return true;
