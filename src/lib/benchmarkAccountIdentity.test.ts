@@ -45,3 +45,16 @@ describe("benchmark account identity", () => {
     expect(mapped.depOfCompetitor.has("ricardo")).toBe(false);
   });
 });
+describe("apodos y diminutivos", () => {
+  it("reconoce 'Lupita Robles León' como titular de María Guadalupe Robles León", () => {
+    const accounts = [
+      { id: "1", name: "Lupita Robles León", network: "facebook", account_type: "titular" },
+      { id: "2", name: "Lupita Robles", network: "x", account_type: "titular" },
+      { id: "3", name: "Juan Pérez López", network: "x", account_type: "titular" },
+    ];
+    const ids = titularAccountIds(accounts, "María Guadalupe Robles León");
+    expect(ids.has("1")).toBe(true);
+    expect(ids.has("2")).toBe(true);
+    expect(ids.has("3")).toBe(false);
+  });
+});
