@@ -598,7 +598,9 @@ const UaemPdf = () => (
             Auditamos, medimos y priorizamos dónde de verdad está la conversación.
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 18 }}>
-            <img src={KIMEDIA_LOGO_PDF_DATA_URI} alt="KiMedia" style={{ height: 26, objectFit: "contain" }} />
+            <div style={{ background: "#FFFFFF", borderRadius: 8, padding: "6px 10px" }}>
+              <img src={KIMEDIA_LOGO_PDF_DATA_URI} alt="KiMedia" style={{ height: 20, objectFit: "contain", display: "block" }} />
+            </div>
             <span style={{ fontSize: 9, color: "#FFFFFF99" }}>hola@kimedia.mx · kimedia.mx</span>
           </div>
         </div>
