@@ -949,7 +949,32 @@ const AuditoriaUAEM = () => {
         </div>
       </section>
 
-      {/* 9. Conclusión / CTA */}
+      {/* 9. Recomendaciones */}
+      <section className="border-b border-border bg-surface-elevated/40">
+        <div className="container mx-auto max-w-5xl px-6 py-14">
+          <motion.div {...fadeUp}>
+            <h2 className="font-display text-2xl font-bold md:text-3xl">Recomendaciones</h2>
+            <p className="mt-3 max-w-2xl text-muted-foreground">
+              A partir de estos hallazgos, así es como recomendamos priorizar los próximos meses.
+            </p>
+            <div className="mt-8 grid gap-4 md:grid-cols-2">
+              {recomendaciones.map((r, i) => (
+                <Card key={r.titulo} className="border-border bg-card p-5">
+                  <div className="flex items-start gap-4">
+                    <span className="font-display text-lg font-bold text-coral">{String(i + 1).padStart(2, "0")}</span>
+                    <div>
+                      <h3 className="font-display text-base font-bold">{r.titulo}</h3>
+                      <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{r.detalle}</p>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* 10. Conclusión / CTA */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-mesh" />
         <div className="container relative mx-auto max-w-4xl px-6 py-16 text-center md:py-24">
@@ -960,13 +985,19 @@ const AuditoriaUAEM = () => {
             <p className="mx-auto mt-5 max-w-2xl text-lg text-muted-foreground">
               Auditamos, medimos y priorizamos dónde de verdad está la conversación.
             </p>
-            <Button size="lg" className="mt-10" onClick={downloadPdf} disabled={downloading}>
-              {downloading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-              Descarga el reporte en PDF
-            </Button>
+            <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
+              <Button size="lg" asChild>
+                <a href="/#contacto">Habla con nosotros</a>
+              </Button>
+              <Button size="lg" variant="outline" onClick={downloadPdf} disabled={downloading}>
+                {downloading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                Descarga el reporte en PDF
+              </Button>
+            </div>
           </motion.div>
         </div>
       </section>
+
     </div>
   );
 };
