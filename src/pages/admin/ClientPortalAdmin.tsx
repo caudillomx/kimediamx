@@ -584,7 +584,7 @@ export default function ClientPortalAdmin() {
           </TabsList>
 
           <TabsContent value="datos" className="space-y-4">
-            {clientId && <PortalDataAdmin clientId={clientId} clientName={clientName} />}
+            {clientId && <PortalDataAdmin clientId={clientId} />}
           </TabsContent>
 
 
