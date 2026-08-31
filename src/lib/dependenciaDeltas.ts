@@ -39,7 +39,18 @@ const num = (v: number | null | undefined) =>
 
 const nf = (n: number) => n.toLocaleString("es-MX", { maximumFractionDigits: 0 });
 const pct = (n: number, d = 2) => `${(n * 100).toFixed(d)}%`;
+/**
+ * Decimales mínimos (2 a 4) para que dos tasas distintas no se impriman iguales.
+ * Evita frases como "pasó de 0.06% a 0.06% (+15.0%)".
+ */
+const pctDecimals = (a: number, b: number) => {
+  for (let d = 2; d <= 4; d++) {
+    if ((a * 100).toFixed(d) !== (b * 100).toFixed(d)) return d;
+  }
+  return 4;
+};
 const signedPct = (n: number) => `${n >= 0 ? "+" : "−"}${Math.abs(n * 100).toFixed(1)}%`;
+
 
 const rel = (a: number, b: number) => (b === 0 ? null : (a - b) / Math.abs(b));
 const dirOf = (delta: number, umbral = 0.005): DeltaDir =>
