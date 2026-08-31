@@ -81,6 +81,8 @@ const App = () => {
           <Route path="/curso/ia-gobierno-gto/entregables" element={<CursoGtoEntregables />} />
           <Route path="/reto-influenser" element={<RetoInfluenSER />} />
           <Route path="/resultados/icatalyze" element={<ResultadosICatalyze />} />
+          <Route path="/casos/uaem" element={<AuditoriaUAEM />} />
+
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
