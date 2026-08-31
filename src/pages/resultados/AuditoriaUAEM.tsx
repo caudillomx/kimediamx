@@ -230,164 +230,382 @@ const PostsTooltip = ({ active, payload, label }: any) => {
   );
 };
 
-/* ---------------- PDF template (inline styles, light) ---------------- */
+/* ---------------- PDF template · look and feel KiMedia ---------------- */
+
+const CORAL = "#F2540E";
+const CORAL_2 = "#F59E1B";
+const INK = "#0C0D12";
+const MUTED = "#5B6070";
+const LINE = "#E8E6E3";
+const PAPER = "#FBF9F7";
+
+const DISPLAY = "'Space Grotesk', system-ui, sans-serif";
+const BODY = "Inter, system-ui, sans-serif";
 
 const pdfCell: React.CSSProperties = {
-  padding: "6px 8px",
-  fontSize: 10,
-  borderBottom: "1px solid #e5e7eb",
-  color: "#111827",
+  padding: "8px 10px",
+  fontSize: 9.5,
+  borderBottom: `1px solid ${LINE}`,
+  color: INK,
+  fontFamily: BODY,
 };
 
-const UaemPdf = () => (
-  <div
-    style={{
-      width: 794,
-      padding: "32px 40px",
-      background: "#ffffff",
-      fontFamily: "Inter, system-ui, sans-serif",
-      color: "#111827",
-    }}
-  >
-    <div style={{ fontSize: 10, letterSpacing: 2, textTransform: "uppercase", color: "#F26A4B", fontWeight: 700 }}>
-      Auditoría de redes sociales
-    </div>
-    <h1 style={{ fontSize: 26, fontWeight: 800, margin: "6px 0 4px" }}>UAEM · Universidad Autónoma del Estado de Morelos</h1>
-    <div style={{ fontSize: 12, color: "#6b7280" }}>
-      Periodo analizado: agosto 2025 – agosto 2026 (13 meses) · 5 plataformas · 3,171 publicaciones
-    </div>
-
-    <h2 style={{ fontSize: 14, fontWeight: 700, margin: "22px 0 8px" }}>Cifras destacadas</h2>
-    <table style={{ width: "100%", borderCollapse: "collapse" }}>
-      <tbody>
-        {stats.map((s) => (
-          <tr key={s.value}>
-            <td style={{ ...pdfCell, width: 110, fontWeight: 800, fontSize: 13 }}>{s.value}</td>
-            <td style={{ ...pdfCell, color: "#4b5563" }}>{s.label}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-
-    <h2 style={{ fontSize: 14, fontWeight: 700, margin: "22px 0 8px" }}>Panorama por plataforma (13 meses)</h2>
-    <table style={{ width: "100%", borderCollapse: "collapse" }}>
-      <thead>
-        <tr style={{ background: "#f3f4f6" }}>
-          {[
-            "Plataforma",
-            "Seguidores",
-            "Publicaciones",
-            "Posts/día",
-            "Interacciones",
-            "Int./post",
-            "Int./seguidor",
-            "Tasa",
-          ].map((h) => (
-            <th key={h} style={{ ...pdfCell, fontWeight: 700, textAlign: "left", fontSize: 9 }}>
-              {h}
-            </th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {platformTable.map((r) => (
-          <tr key={r.plataforma}>
-            <td style={{ ...pdfCell, fontWeight: 700 }}>{r.plataforma}</td>
-            <td style={pdfCell}>{r.seguidores}</td>
-            <td style={pdfCell}>{r.publicaciones}</td>
-            <td style={pdfCell}>{r.postsDia}</td>
-            <td style={pdfCell}>{r.interacciones}</td>
-            <td style={pdfCell}>{r.intPost}</td>
-            <td style={pdfCell}>{r.intSeguidor}</td>
-            <td style={{ ...pdfCell, fontWeight: 700 }}>{r.tasa}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-
-    <h2 style={{ fontSize: 14, fontWeight: 700, margin: "22px 0 8px" }}>Volumen mensual de publicaciones</h2>
-    <table style={{ width: "100%", borderCollapse: "collapse" }}>
-      <tbody>
-        <tr>
-          {monthlyVolume.map((m) => (
-            <td key={m.mes} style={{ ...pdfCell, fontSize: 8, textAlign: "center", color: "#6b7280" }}>
-              {m.mes}
-            </td>
-          ))}
-        </tr>
-        <tr>
-          {monthlyVolume.map((m) => (
-            <td key={m.mes} style={{ ...pdfCell, fontSize: 10, textAlign: "center", fontWeight: 700 }}>
-              {m.posts}
-            </td>
-          ))}
-        </tr>
-      </tbody>
-    </table>
-    <p style={{ fontSize: 10, color: "#4b5563", marginTop: 8, lineHeight: 1.5 }}>
-      La caída pronunciada de marzo a julio 2026 coincide con una coyuntura institucional interna que redujo la
-      capacidad de producción de contenido del equipo; agosto 2026 muestra recuperación clara de cadencia.
-    </p>
-
-    <div className="pdf-page-break" style={{ pageBreakBefore: "always" }} />
-
-    <h2 style={{ fontSize: 14, fontWeight: 700, margin: "22px 0 8px" }}>El contenido con personas gana</h2>
-    <p style={{ fontSize: 10.5, color: "#4b5563", lineHeight: 1.6 }}>
-      Dentro de la muestra con datos comparables, el contenido que muestra personas reales — estudiantes, autoridades,
-      comunidad universitaria — genera 2.6 veces más interacción que el contenido institucional genérico.
-    </p>
-    <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 8 }}>
-      <tbody>
-        {peopleVsInstitutional.map((p) => (
-          <tr key={p.tipo}>
-            <td style={pdfCell}>{p.tipo}</td>
-            <td style={{ ...pdfCell, fontWeight: 800, width: 80 }}>{p.tasa}%</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-
-    <h2 style={{ fontSize: 14, fontWeight: 700, margin: "22px 0 8px" }}>
-      Formato de contenido (Facebook, año completo)
-    </h2>
-    <table style={{ width: "100%", borderCollapse: "collapse" }}>
-      <tbody>
-        {formatData.map((f) => (
-          <tr key={f.formato}>
-            <td style={pdfCell}>{f.formato}</td>
-            <td style={{ ...pdfCell, fontWeight: 800, width: 80 }}>{f.tasa}%</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-    <p style={{ fontSize: 10, color: "#4b5563", marginTop: 8, lineHeight: 1.5 }}>
-      Reel y video casi duplican la tasa de interacción del post estático, y aun así representan solo el 11% del volumen
-      total publicado.
-    </p>
-
-    <h2 style={{ fontSize: 14, fontWeight: 700, margin: "22px 0 8px" }}>Ejemplos reales</h2>
-    <table style={{ width: "100%", borderCollapse: "collapse" }}>
-      <tbody>
-        {examples.map((e) => (
-          <tr key={e.liga}>
-            <td style={{ ...pdfCell, width: 80, fontWeight: 700 }}>{e.plataforma}</td>
-            <td style={{ ...pdfCell, width: 60 }}>{e.formato}</td>
-            <td style={{ ...pdfCell, width: 70, color: "#6b7280" }}>{e.fecha}</td>
-            <td style={{ ...pdfCell, color: "#4b5563" }}>
-              {e.porque}
-              <div style={{ fontSize: 8, color: "#F26A4B", wordBreak: "break-all" }}>{e.liga}</div>
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-
-    <p style={{ fontSize: 11, color: "#111827", marginTop: 20, lineHeight: 1.6, fontWeight: 600 }}>
-      Los datos no mienten: el tamaño de audiencia no siempre indica el canal correcto. Auditamos, medimos y priorizamos
-      dónde de verdad está la conversación.
-    </p>
+const SectionTitle = ({ children, kicker }: { children: React.ReactNode; kicker?: string }) => (
+  <div style={{ margin: "26px 0 12px" }}>
+    {kicker && (
+      <div style={{ fontSize: 8, letterSpacing: 2, textTransform: "uppercase", color: CORAL, fontWeight: 700, fontFamily: BODY }}>
+        {kicker}
+      </div>
+    )}
+    <div style={{ fontFamily: DISPLAY, fontSize: 16, fontWeight: 700, color: INK, marginTop: 3 }}>{children}</div>
+    <div style={{ height: 3, width: 38, background: `linear-gradient(90deg, ${CORAL}, ${CORAL_2})`, borderRadius: 2, marginTop: 8 }} />
   </div>
 );
+
+const BarRow = ({ label, value, max, suffix = "%", highlight }: { label: string; value: number; max: number; suffix?: string; highlight?: boolean }) => (
+  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 7 }}>
+    <div style={{ width: 170, fontSize: 9.5, color: MUTED, fontFamily: BODY }}>{label}</div>
+    <div style={{ flex: 1, height: 14, background: "#EFEDEA", borderRadius: 7, overflow: "hidden" }}>
+      <div
+        style={{
+          width: `${Math.max((value / max) * 100, 1.5)}%`,
+          height: "100%",
+          borderRadius: 7,
+          background: highlight ? `linear-gradient(90deg, ${CORAL}, ${CORAL_2})` : "#C9C5C0",
+        }}
+      />
+    </div>
+    <div style={{ width: 60, textAlign: "right", fontFamily: DISPLAY, fontSize: 11, fontWeight: 700, color: highlight ? CORAL : INK }}>
+      {value}
+      {suffix}
+    </div>
+  </div>
+);
+
+const PageFooter = ({ n }: { n: number }) => (
+  <div
+    style={{
+      marginTop: 26,
+      paddingTop: 10,
+      borderTop: `1px solid ${LINE}`,
+      display: "flex",
+      justifyContent: "space-between",
+      fontSize: 8,
+      color: MUTED,
+      fontFamily: BODY,
+      letterSpacing: 0.6,
+    }}
+  >
+    <span>KIMEDIA · AUDITORÍA DE REDES SOCIALES · UAEM</span>
+    <span>AGO 2025 – AGO 2026 · {n}</span>
+  </div>
+);
+
+const pdfPage: React.CSSProperties = {
+  width: 794,
+  minHeight: 1050,
+  padding: "34px 44px 26px",
+  background: PAPER,
+  color: INK,
+  fontFamily: BODY,
+  boxSizing: "border-box",
+};
+
+const maxMonthly = Math.max(...monthlyVolume.map((m) => m.posts));
+
+const UaemPdf = () => (
+  <div style={{ background: PAPER }}>
+    {/* -------- Página 1 -------- */}
+    <div style={pdfPage}>
+      {/* Hero */}
+      <div
+        style={{
+          background: INK,
+          borderRadius: 18,
+          padding: "28px 30px",
+          position: "relative",
+          overflow: "hidden",
+        }}
+      >
+        <div
+          style={{
+            position: "absolute",
+            top: -70,
+            right: -50,
+            width: 220,
+            height: 220,
+            borderRadius: "50%",
+            background: `radial-gradient(circle, ${CORAL}66, transparent 70%)`,
+          }}
+        />
+        <div style={{ position: "relative", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <div>
+            <div style={{ fontSize: 8, letterSpacing: 2.4, textTransform: "uppercase", color: CORAL_2, fontWeight: 700 }}>
+              Auditoría de redes sociales
+            </div>
+            <div style={{ fontFamily: DISPLAY, fontSize: 30, fontWeight: 700, color: "#FFFFFF", lineHeight: 1.1, marginTop: 8 }}>
+              UAEM
+            </div>
+            <div style={{ fontFamily: DISPLAY, fontSize: 14, color: "#FFFFFFCC", marginTop: 4 }}>
+              Universidad Autónoma del Estado de Morelos
+            </div>
+            <div style={{ fontSize: 10, color: "#FFFFFF99", marginTop: 12, lineHeight: 1.6 }}>
+              13 meses de datos, 5 plataformas, un hallazgo que cambia la estrategia.
+              <br />
+              Periodo analizado: agosto 2025 – agosto 2026 · 3,171 publicaciones
+            </div>
+          </div>
+          <img src={KIMEDIA_LOGO_PDF_DATA_URI} alt="KiMedia" style={{ height: 34, objectFit: "contain" }} />
+        </div>
+      </div>
+
+      {/* Stat cards */}
+      <SectionTitle kicker="Panorama general">Cifras destacadas</SectionTitle>
+      <div style={{ display: "flex", gap: 10 }}>
+        {stats.map((s) => (
+          <div
+            key={s.value}
+            style={{
+              flex: 1,
+              border: `1px solid ${LINE}`,
+              borderTop: `3px solid ${CORAL}`,
+              borderRadius: 12,
+              padding: "14px 12px",
+              background: "#FFFFFF",
+            }}
+          >
+            <div style={{ fontFamily: DISPLAY, fontSize: 20, fontWeight: 700, color: INK }}>{s.value}</div>
+            <div style={{ fontSize: 8.5, color: MUTED, marginTop: 6, lineHeight: 1.45 }}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Tasa por plataforma */}
+      <SectionTitle kicker="Rendimiento">Tasa de interacción por plataforma</SectionTitle>
+      <div>
+        {engagementByPlatform.map((p) => (
+          <BarRow key={p.plataforma} label={p.plataforma} value={p.tasa} max={4.6} highlight={p.top} />
+        ))}
+      </div>
+
+      {/* Tabla */}
+      <SectionTitle kicker="Detalle">Panorama por plataforma (13 meses)</SectionTitle>
+      <table style={{ width: "100%", borderCollapse: "collapse", background: "#FFFFFF", borderRadius: 10, overflow: "hidden" }}>
+        <thead>
+          <tr style={{ background: INK }}>
+            {["Plataforma", "Seguidores", "Publicaciones", "Posts/día", "Interacciones", "Int./post", "Int./seg.", "Tasa"].map((h) => (
+              <th
+                key={h}
+                style={{
+                  padding: "8px 10px",
+                  fontSize: 8,
+                  letterSpacing: 0.8,
+                  textTransform: "uppercase",
+                  fontWeight: 700,
+                  textAlign: "left",
+                  color: "#FFFFFFCC",
+                  fontFamily: BODY,
+                }}
+              >
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {platformTable.map((r) => (
+            <tr key={r.plataforma} style={r.destacada ? { background: "#F2540E12" } : undefined}>
+              <td style={{ ...pdfCell, fontWeight: 700, fontFamily: DISPLAY }}>{r.plataforma}</td>
+              <td style={{ ...pdfCell, color: MUTED }}>{r.seguidores}</td>
+              <td style={{ ...pdfCell, color: MUTED }}>{r.publicaciones}</td>
+              <td style={{ ...pdfCell, color: MUTED }}>{r.postsDia}</td>
+              <td style={{ ...pdfCell, color: MUTED }}>{r.interacciones}</td>
+              <td style={{ ...pdfCell, color: MUTED }}>{r.intPost}</td>
+              <td style={{ ...pdfCell, color: MUTED }}>{r.intSeguidor}</td>
+              <td style={{ ...pdfCell, fontWeight: 700, fontFamily: DISPLAY, color: r.destacada ? CORAL : INK }}>{r.tasa}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <PageFooter n={1} />
+    </div>
+
+    {/* -------- Página 2 -------- */}
+    <div className="pdf-page-break" style={{ ...pdfPage, pageBreakBefore: "always" }}>
+      <SectionTitle kicker="Cadencia">Volumen mensual de publicaciones</SectionTitle>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-end",
+          gap: 8,
+          height: 180,
+          padding: "0 4px 0",
+          borderBottom: `1px solid ${LINE}`,
+        }}
+      >
+        {monthlyVolume.map((m) => (
+          <div key={m.mes} style={{ flex: 1, textAlign: "center" }}>
+            <div style={{ fontFamily: DISPLAY, fontSize: 9, fontWeight: 700, color: INK, marginBottom: 4 }}>{m.posts}</div>
+            <div
+              style={{
+                height: Math.round((m.posts / maxMonthly) * 140),
+                borderRadius: "5px 5px 0 0",
+                background: `linear-gradient(180deg, ${CORAL}, ${CORAL_2})`,
+              }}
+            />
+          </div>
+        ))}
+      </div>
+      <div style={{ display: "flex", gap: 8, padding: "6px 4px 0" }}>
+        {monthlyVolume.map((m) => (
+          <div key={m.mes} style={{ flex: 1, textAlign: "center", fontSize: 7.5, color: MUTED }}>
+            {m.mes}
+          </div>
+        ))}
+      </div>
+      <div
+        style={{
+          marginTop: 14,
+          background: "#FFFFFF",
+          border: `1px solid ${LINE}`,
+          borderLeft: `3px solid ${CORAL}`,
+          borderRadius: 10,
+          padding: "12px 14px",
+          fontSize: 9.5,
+          color: MUTED,
+          lineHeight: 1.6,
+        }}
+      >
+        La caída pronunciada de <strong style={{ color: INK }}>marzo a julio 2026</strong> coincide con una coyuntura
+        institucional interna que redujo la capacidad de producción de contenido del equipo;{" "}
+        <strong style={{ color: INK }}>agosto 2026</strong> muestra recuperación clara de cadencia.
+      </div>
+
+      <SectionTitle kicker="Hallazgo">El contenido con personas gana</SectionTitle>
+      <div
+        style={{
+          background: INK,
+          borderRadius: 14,
+          padding: "18px 20px",
+          color: "#FFFFFF",
+          fontFamily: DISPLAY,
+          fontSize: 15,
+          fontWeight: 700,
+          lineHeight: 1.35,
+        }}
+      >
+        El contenido que muestra personas reales genera{" "}
+        <span style={{ color: CORAL_2 }}>2.6 veces más interacción</span>
+      </div>
+      <p style={{ fontSize: 9.5, color: MUTED, lineHeight: 1.6, marginTop: 10 }}>
+        Dentro de la muestra con datos comparables, el contenido que muestra personas reales — estudiantes, autoridades,
+        comunidad universitaria — genera 2.6 veces más interacción que el contenido institucional genérico.
+      </p>
+      <div style={{ marginTop: 12 }}>
+        {peopleVsInstitutional.map((p) => (
+          <BarRow key={p.tipo} label={p.tipo} value={p.tasa} max={5.8} highlight={p.top} />
+        ))}
+      </div>
+
+      <SectionTitle kicker="Formato · Facebook, año completo">Reel y video vs. post estático</SectionTitle>
+      <div>
+        {formatData.map((f) => (
+          <BarRow key={f.formato} label={f.formato} value={f.tasa} max={0.157} highlight={f.top} />
+        ))}
+      </div>
+      <p style={{ fontSize: 9.5, color: MUTED, lineHeight: 1.6, marginTop: 10 }}>
+        Reel y video casi duplican la tasa de interacción del post estático, y aun así representan solo el{" "}
+        <strong style={{ color: INK }}>11% del volumen total publicado</strong>.
+      </p>
+
+      <PageFooter n={2} />
+    </div>
+
+    {/* -------- Página 3 -------- */}
+    <div className="pdf-page-break" style={{ ...pdfPage, pageBreakBefore: "always" }}>
+      <SectionTitle kicker="Buenas prácticas">Ejemplos reales en acción</SectionTitle>
+      <p style={{ fontSize: 9.5, color: MUTED, lineHeight: 1.6, marginBottom: 12 }}>
+        Así se ve en la práctica lo que muestran los datos. Estas son publicaciones reales de la cuenta de UAEM que
+        ejemplifican los formatos y el enfoque que mejor funcionan.
+      </p>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+        {examples.map((e) => (
+          <div
+            key={e.liga}
+            style={{
+              width: "calc(50% - 5px)",
+              boxSizing: "border-box",
+              border: `1px solid ${LINE}`,
+              borderRadius: 12,
+              background: "#FFFFFF",
+              padding: "12px 14px",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontFamily: DISPLAY, fontSize: 9.5, fontWeight: 700, color: INK }}>{e.plataforma}</span>
+              <span
+                style={{
+                  fontSize: 7.5,
+                  textTransform: "uppercase",
+                  letterSpacing: 0.8,
+                  color: CORAL,
+                  border: `1px solid ${CORAL}55`,
+                  borderRadius: 20,
+                  padding: "2px 8px",
+                  fontWeight: 700,
+                }}
+              >
+                {e.formato}
+              </span>
+            </div>
+            <div style={{ fontSize: 8, color: MUTED, marginTop: 6 }}>{e.fecha}</div>
+            <div style={{ fontSize: 9, color: INK, lineHeight: 1.5, marginTop: 6 }}>{e.porque}</div>
+            <div style={{ fontSize: 7.5, color: CORAL, marginTop: 8, wordBreak: "break-all" }}>{e.liga}</div>
+          </div>
+        ))}
+      </div>
+
+      <div
+        style={{
+          marginTop: 24,
+          background: INK,
+          borderRadius: 16,
+          padding: "24px 26px",
+          position: "relative",
+          overflow: "hidden",
+        }}
+      >
+        <div
+          style={{
+            position: "absolute",
+            bottom: -80,
+            left: -40,
+            width: 200,
+            height: 200,
+            borderRadius: "50%",
+            background: `radial-gradient(circle, ${CORAL}55, transparent 70%)`,
+          }}
+        />
+        <div style={{ position: "relative" }}>
+          <div style={{ fontFamily: DISPLAY, fontSize: 16, fontWeight: 700, color: "#FFFFFF", lineHeight: 1.35 }}>
+            Los datos no mienten: el tamaño de audiencia no siempre indica el canal correcto.
+          </div>
+          <div style={{ fontSize: 10, color: "#FFFFFFAA", marginTop: 10, lineHeight: 1.6 }}>
+            Auditamos, medimos y priorizamos dónde de verdad está la conversación.
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 18 }}>
+            <img src={KIMEDIA_LOGO_PDF_DATA_URI} alt="KiMedia" style={{ height: 26, objectFit: "contain" }} />
+            <span style={{ fontSize: 9, color: "#FFFFFF99" }}>hola@kimedia.mx · kimedia.mx</span>
+          </div>
+        </div>
+      </div>
+
+      <PageFooter n={3} />
+    </div>
+  </div>
+);
+
 
 /* ---------------- Page ---------------- */
 
