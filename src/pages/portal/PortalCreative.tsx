@@ -162,6 +162,12 @@ export default function PortalCreative({ portal }: { portal: ClientPortalConfig 
                 ))}
               </TabsList>
 
+              <TabsContent value="resumen" className="mt-0">
+                <PortalResumen clientId={portal.clientId} clientName={portal.displayName} />
+              </TabsContent>
+
+
+
               {services.includes("estrategia") && (
                 <>
                   <TabsContent value="parrilla" className="mt-0">
