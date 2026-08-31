@@ -649,15 +649,6 @@ const UaemPdf = () => (
           overflow: "hidden",
         }}
       >
-
-          marginTop: 24,
-          background: INK,
-          borderRadius: 16,
-          padding: "24px 26px",
-          position: "relative",
-          overflow: "hidden",
-        }}
-      >
         <div
           style={{
             position: "absolute",
