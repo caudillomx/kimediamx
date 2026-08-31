@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { parseWhatsappTxt } from "@/lib/whatsappParser";
 import { CLIENT_PORTALS } from "@/lib/clientPortal";
 import BenchmarkAdmin from "@/components/portal/BenchmarkAdmin";
+import PortalDataAdmin from "@/components/portal/PortalDataAdmin";
 
 type Report = {
   id: string;
