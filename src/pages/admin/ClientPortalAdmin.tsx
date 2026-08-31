@@ -578,8 +578,14 @@ export default function ClientPortalAdmin() {
             <TabsTrigger value="listening"><MessageSquare className="w-4 h-4 mr-2" /> Listening</TabsTrigger>
             <TabsTrigger value="benchmark"><Target className="w-4 h-4 mr-2" /> Benchmark</TabsTrigger>
             <TabsTrigger value="creds"><KeyRound className="w-4 h-4 mr-2" /> Credenciales</TabsTrigger>
+            <TabsTrigger value="datos"><Target className="w-4 h-4 mr-2" /> Datos del portal</TabsTrigger>
             <TabsTrigger value="accesos"><Users className="w-4 h-4 mr-2" /> Usuarios del portal</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="datos" className="space-y-4">
+            {clientId && <PortalDataAdmin clientId={clientId} clientName={clientName} />}
+          </TabsContent>
+
 
           <TabsContent value="reportes" className="space-y-4">
             <div className="flex justify-end">
