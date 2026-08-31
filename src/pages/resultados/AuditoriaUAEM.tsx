@@ -204,12 +204,45 @@ const examples = [
   },
 ];
 
+const recomendaciones = [
+  {
+    titulo: "Rebalancear el formato en Facebook",
+    detalle:
+      "Reducir el post estático (hoy 88% del volumen) y aumentar reel/video, que casi duplican la tasa de interacción.",
+  },
+  {
+    titulo: "Priorizar contenido con rostro humano",
+    detalle:
+      "Estudiantes, autoridades y comunidad universitaria generan más del doble de interacción que el contenido institucional genérico.",
+  },
+  {
+    titulo: "Escalar TikTok",
+    detalle:
+      "Es el canal con mejor retorno por publicación después de Instagram, y el más subutilizado: hoy recibe menos de 2 publicaciones al mes.",
+  },
+  {
+    titulo: "Simplificar el uso de hashtags",
+    detalle: "Publicaciones con 1-2 hashtags rinden mejor que las que usan 5 o más.",
+  },
+  {
+    titulo: "Mantener presencia mínima en canales de bajo retorno",
+    detalle:
+      "X/Twitter y YouTube sin inversión de producción original adicional, mientras no muestren señales de recuperación.",
+  },
+  {
+    titulo: "Sostener el ritmo de recuperación de agosto 2026",
+    detalle:
+      "Con un calendario de contenido planeado, en lugar de volver al volumen disperso previo a la caída de producción.",
+  },
+];
+
 const stats = [
   { icon: Users, value: "221,935", label: "seguidores combinados en 5 plataformas" },
   { icon: FileText, value: "3,171", label: "publicaciones analizadas" },
   { icon: Zap, value: "4.60%", label: "tasa de interacción en el canal top (Instagram) vs. 0.086% en Facebook" },
   { icon: Instagram, value: "18.7x", label: "más interacción por seguidor en Instagram que en Facebook" },
 ];
+
 
 const RateTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
