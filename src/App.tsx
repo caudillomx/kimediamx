@@ -28,6 +28,7 @@ import ClientWorkspace from "./pages/ClientWorkspace";
 import AdsProposalView from "./pages/AdsProposalView";
 import RetoInfluenSER from "./pages/RetoInfluenSER";
 import ResultadosICatalyze from "./pages/resultados/ResultadosICatalyze";
+import AuditoriaUAEM from "./pages/resultados/AuditoriaUAEM";
 import ClientPortalAdmin from "./pages/admin/ClientPortalAdmin";
 import PortalRouter from "./pages/portal/PortalRouter";
 import { detectClientPortal } from "./lib/clientPortal";
@@ -80,6 +81,8 @@ const App = () => {
           <Route path="/curso/ia-gobierno-gto/entregables" element={<CursoGtoEntregables />} />
           <Route path="/reto-influenser" element={<RetoInfluenSER />} />
           <Route path="/resultados/icatalyze" element={<ResultadosICatalyze />} />
+          <Route path="/casos/uaem" element={<AuditoriaUAEM />} />
+
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
