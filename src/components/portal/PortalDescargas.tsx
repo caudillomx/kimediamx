@@ -17,6 +17,8 @@ import {
 } from "@/lib/benchmarkReportData";
 import { benchmarkPostKey, resolveGabineteMention, weightedRate } from "@/lib/gabineteReportUtils";
 import { benchmarkAccountKey, buildValidCompetitorMaps, titularAccountIds } from "@/lib/benchmarkAccountIdentity";
+import { buildDeltaLines } from "@/lib/dependenciaDeltas";
+
 import {
   DependenciaPdfTemplate, GabinetePdfTemplate,
   type DependenciaReportData, type GabineteReportData, type DepPressRow,
@@ -461,12 +463,22 @@ export default function PortalDescargas({
        if (Number.isFinite(Number(m.followers))) prevFollowers.set(`${identity}|${m.network.toLowerCase()}`, Number(m.followers));
     }
 
+    // Ventana del corte anterior: sirve para el bloque "Lo que cambió".
+    const prevStarts = reportPrevPeriods.map((p) => p.period_start).sort();
+    const prevEnds = reportPrevPeriods.map((p) => p.period_end).sort();
+    const prevFrom = cut === "semanal"
+      ? shiftIso(winFrom, -7)
+      : (prevStarts[0] ?? shiftIso(winFrom, -winDays));
+    const prevTo = cut === "semanal"
+      ? shiftIso(winFrom, -1)
+      : (prevEnds[prevEnds.length - 1] ?? shiftIso(winFrom, -1));
+
     // Publicaciones del rango: se consultan por fecha real en todos los cortes
     // que se solapan con la ventana. Un post del día 17 puede vivir en la carga
     // 1–17 y otro del 20 en la carga 20–24; ambos pertenecen al reporte 17–23.
     let depPosts: Post[] = [];
     const postPeriodIds = reportPeriods
-      .filter((p) => p.period_start <= winTo && p.period_end >= winFrom)
+      .filter((p) => p.period_start <= winTo && p.period_end >= prevFrom)
       .map((p) => p.id);
     if (depComps.length && postPeriodIds.length) {
       depPosts = await fetchAllPages<Post>((from, to) =>
@@ -489,13 +501,19 @@ export default function PortalDescargas({
     });
 
     const postsCount = new Map<string, number>();
+    const prevPostsByScope = new Map<string, number>();
     for (const p of depPosts) {
       if (!p.competitor_id || !compById.has(p.competitor_id)) continue;
-      if (!inMxRange(p.posted_at, winFrom, winTo)) continue;
       const identity = reportAccountIdentity.get(p.competitor_id) ?? p.competitor_id;
       const k = `${identity}|${p.network.toLowerCase()}`;
-      postsCount.set(k, (postsCount.get(k) ?? 0) + 1);
+      if (inMxRange(p.posted_at, winFrom, winTo)) {
+        postsCount.set(k, (postsCount.get(k) ?? 0) + 1);
+      } else if (inMxRange(p.posted_at, prevFrom, prevTo)) {
+        const tipo = compById.get(p.competitor_id)?.account_type ?? "institucional";
+        prevPostsByScope.set(tipo, (prevPostsByScope.get(tipo) ?? 0) + 1);
+      }
     }
+
 
     const latestMetricByIdentity = new Map(
       reportUniqueMetrics(periodIds)
@@ -533,18 +551,24 @@ export default function PortalDescargas({
     const rankingDe = (scope: "combinado" | ScopeKey) => {
       const curr = aggregateForReport(periodIds, scope);
       const prev = aggregateForReport(prevIds, scope);
-      const entries = Array.from(curr.entries())
+      const order = (map: typeof curr) => Array.from(map.entries())
         .filter(([, v]) => v.engagement != null)
         .sort((a, b) => (b[1].engagement ?? 0) - (a[1].engagement ?? 0));
+      const entries = order(curr);
+      const prevEntries = order(prev);
       const idx = entries.findIndex(([id]) => id === dep.id);
+      const prevIdx = prevEntries.findIndex(([id]) => id === dep.id);
       return {
         mine: curr.get(dep.id) ?? { followers: 0, engagement: null, postsDia: null },
         prevMine: prev.get(dep.id) ?? null,
         rank: idx >= 0 ? idx + 1 : null,
+        prevRank: prevIdx >= 0 ? prevIdx + 1 : null,
         total: entries.length,
         promedio: RATE_AVG(entries.map(([, v]) => v.engagement as number)),
+        prevPromedio: RATE_AVG(prevEntries.map(([, v]) => v.engagement as number)),
       };
     };
+
 
     const pctDelta = (a: number | null | undefined, b: number | null | undefined) =>
       a == null || b == null || !b ? null : (a - b) / Math.abs(b);
@@ -579,7 +603,12 @@ export default function PortalDescargas({
       }));
 
     // Prensa separada: menciones al titular vs a la institución.
-    const mentions = (await fetchMentions(winFrom, winTo)).filter((r) => r.dep === dep.id);
+    const [mentionsRaw, prevMentionsRaw] = await Promise.all([
+      fetchMentions(winFrom, winTo),
+      fetchMentions(prevFrom, prevTo),
+    ]);
+    const mentions = mentionsRaw.filter((r) => r.dep === dep.id);
+    const prevMentions = prevMentionsRaw.filter((r) => r.dep === dep.id);
     const prensaDe = (scope: ScopeKey) => {
       const rows = mentions
         .filter((r) => (r.scope ?? "institucional") === scope)
@@ -600,13 +629,37 @@ export default function PortalDescargas({
         },
       };
     };
+    const prensaPreviaDe = (scope: ScopeKey) => {
+      const rows = prevMentions.filter((r) => (r.scope ?? "institucional") === scope);
+      return {
+        total: rows.length,
+        negativa: rows.filter((r) => r.tono === "negativo" || r.tono === "crisis").length,
+      };
+    };
 
     const bloqueDe = (scope: ScopeKey): ScopeBlock => {
       const rows = cuentas.filter((c) => (c.tipo ?? "institucional") === scope);
       const r = rankingDe(scope);
       const nar = narrativasDe(scope);
       const pr = prensaDe(scope);
+      const prPrev = prensaPreviaDe(scope);
       const pds = rows.map((x) => x.postsDia).filter((v): v is number => v != null && Number.isFinite(v));
+      const publicaciones = rows.reduce((a, x) => a + (x.publicaciones ?? 0), 0);
+
+      // Seguidores por red, actual vs previo, para señalar la red que más se movió.
+      const redes = Array.from(new Set(rows.map((x) => x.red.toLowerCase()))).map((red) => {
+        const actual = rows.filter((x) => x.red.toLowerCase() === red)
+          .reduce((a, x) => a + (x.seguidores ?? 0), 0);
+        let previo = 0; let hayPrevio = false;
+        compByIdentity.forEach((c, identity) => {
+          if ((c.account_type ?? "institucional") !== scope) return;
+          if (c.network.toLowerCase() !== red) return;
+          const v = prevFollowers.get(`${identity}|${red}`);
+          if (v != null) { previo += v; hayPrevio = true; }
+        });
+        return { red, seguidores: actual || null, prevSeguidores: hayPrevio ? previo : null };
+      });
+
       return {
         key: scope,
         label: scope === "titular" ? "Comunicación del titular" : "Comunicación institucional",
@@ -617,7 +670,7 @@ export default function PortalDescargas({
         seguidores: rows.reduce((a, x) => a + (x.seguidores ?? 0), 0),
         engagement: weightedRate(rows.map((x) => ({ rate: x.engagement, weight: x.seguidores }))),
         postsDia: pds.length ? pds.reduce((a, b) => a + b, 0) : null,
-        publicaciones: rows.reduce((a, x) => a + (x.publicaciones ?? 0), 0),
+        publicaciones,
         variacionSeguidores: pctDelta(r.mine.followers, r.prevMine?.followers),
         rank: r.rank,
         rankTotal: r.total,
@@ -625,9 +678,29 @@ export default function PortalDescargas({
         topPosts: postsDe(scope),
         narrativas: nar.axes,
         narrativasFuentes: nar.fuentes,
+        cambios: buildDeltaLines({
+          scope,
+          seguidores: r.mine.followers || null,
+          prevSeguidores: r.prevMine?.followers ?? null,
+          engagement: r.mine.engagement,
+          prevEngagement: r.prevMine?.engagement ?? null,
+          promedioGabinete: r.promedio,
+          prevPromedioGabinete: r.prevPromedio,
+          publicaciones,
+          prevPublicaciones: prevPostsByScope.get(scope) ?? (prevMentions.length || prevIds.length ? 0 : null),
+          rank: r.rank,
+          prevRank: r.prevRank,
+          rankTotal: r.total,
+          prensaTotal: pr.prensaTotal,
+          prevPrensaTotal: prPrev.total,
+          prensaNegativa: pr.prensaTono.negativo,
+          prevPrensaNegativa: prPrev.negativa,
+          redes,
+        }),
         ...pr,
       };
     };
+
 
     const bloques: ScopeBlock[] =
       enfoque === "combinado" ? [bloqueDe("institucional"), bloqueDe("titular")]
@@ -646,6 +719,54 @@ export default function PortalDescargas({
         }
       : null;
 
+    // Recomendaciones con IA: se piden con el corte ya calculado. Si fallan, el
+    // reporte se entrega igual (sin la sección) en vez de romper la descarga.
+    let recomendaciones: DependenciaReportData["recomendaciones"] = null;
+    if (conRecomendaciones) {
+      try {
+        const contexto = {
+          dependencia: dep.nombre,
+          titular: dep.titular,
+          periodo: cutLabel,
+          enfoque: ENFOQUE_LABEL[enfoque],
+          bloques: bloques.map((b) => ({
+            ambito: b.label,
+            sujeto: b.sujeto,
+            seguidores: b.seguidores,
+            interaccion: b.engagement,
+            promedio_gabinete: b.promedioGabinete,
+            lugar_en_gabinete: b.rank,
+            total_dependencias: b.rankTotal,
+            publicaciones: b.publicaciones,
+            cambios: (b.cambios ?? []).map((c) => c.texto),
+            temas: b.narrativas.map((n) => n.name),
+            mejores_publicaciones: b.topPosts.map((p) => ({
+              red: p.red, fecha: p.fecha, interacciones: p.interacciones, texto: (p.texto || "").slice(0, 220),
+            })),
+            prensa_total: b.prensaTotal,
+            prensa_tono: b.prensaTono,
+            prensa: b.prensa.slice(0, 8).map((p) => ({ fecha: p.fecha, medio: p.medio, titular: p.titular, tono: p.tono })),
+          })),
+        };
+        const { data, error } = await supabase.functions.invoke("generate-dependencia-recommendations", {
+          body: {
+            client_id: clientId,
+            dependencia_id: dep.id,
+            range_start: winFrom,
+            range_end: winTo,
+            enfoque,
+            contexto,
+          },
+        });
+        if (error) throw error;
+        const items = Array.isArray(data?.payload?.recomendaciones) ? data.payload.recomendaciones : [];
+        if (items.length) recomendaciones = { lectura: data?.payload?.lectura, items };
+      } catch (e) {
+        console.error("recomendaciones", e);
+        toast.message("El reporte se generó sin la sección de recomendaciones.");
+      }
+    }
+
     return {
       dependencia: dep.nombre,
       tipo: dep.tipo,
@@ -656,8 +777,10 @@ export default function PortalDescargas({
       enfoqueLabel: ENFOQUE_LABEL[enfoque],
       bloques,
       conjunto,
+      recomendaciones,
     };
   };
+
 
   const buildGabineteReport = (): GabineteReportData => {
     const curr = aggregate(activePeriods.map((p) => p.id));
