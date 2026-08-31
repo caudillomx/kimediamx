@@ -1403,6 +1403,45 @@ export type Database = {
           },
         ]
       }
+      client_portal_dep_recommendations: {
+        Row: {
+          client_id: string
+          created_at: string
+          dependencia_id: string
+          enfoque: string
+          generated_at: string
+          id: string
+          model: string | null
+          payload: Json
+          range_end: string
+          range_start: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          dependencia_id: string
+          enfoque: string
+          generated_at?: string
+          id?: string
+          model?: string | null
+          payload: Json
+          range_end: string
+          range_start: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          dependencia_id?: string
+          enfoque?: string
+          generated_at?: string
+          id?: string
+          model?: string | null
+          payload?: Json
+          range_end?: string
+          range_start?: string
+        }
+        Relationships: []
+      }
       client_portal_dependencias: {
         Row: {
           active: boolean

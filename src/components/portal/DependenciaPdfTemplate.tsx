@@ -1,4 +1,6 @@
 import { forwardRef } from "react";
+import type { DeltaLine } from "@/lib/dependenciaDeltas";
+
 
 /* ------------------------------------------------------------------ */
 /* Tipos                                                               */
@@ -58,7 +60,12 @@ export type ScopeBlock = {
   prensaTotal: number;
   prensaTono: { positivo: number; neutral: number; negativo: number };
   prensaMedios: { medio: string; n: number }[];
+  /** Frases de "lo que cambió" contra el corte anterior. */
+  cambios?: DeltaLine[];
 };
+
+export type DepRecomendacion = { accion: string; porque: string; prioridad?: string };
+
 
 export type DependenciaReportData = {
   dependencia: string;
@@ -78,7 +85,10 @@ export type DependenciaReportData = {
     rank: number | null;
     rankTotal: number;
   } | null;
+  /** Recomendaciones generadas con IA a partir del corte y la prensa del periodo. */
+  recomendaciones?: { lectura?: string; items: DepRecomendacion[] } | null;
 };
+
 
 export type GabineteReportData = {
   periodoLabel: string;
@@ -234,6 +244,84 @@ function Explainer({ text, color }: { text: string; color: string }) {
     </div>
   );
 }
+
+const DIR_COLOR: Record<string, string> = { up: "#059669", down: "#dc2626", flat: MUTED };
+const DIR_MARK: Record<string, string> = { up: "▲", down: "▼", flat: "=" };
+
+/** "Lo que cambió": comparativo contra el corte anterior, en frases cortas. */
+function CambiosBlock({ cambios, color, scope }: { cambios: DeltaLine[]; color: string; scope: ScopeKey }) {
+  return (
+    <div className="pdf-avoid" style={{ marginBottom: 10 }}>
+      <SectionTitle
+        text="Lo que cambió frente al corte anterior"
+        color={color}
+        hint="Comparativo directo contra el periodo inmediato anterior. Solo aparecen los indicadores con dato en ambos cortes."
+      />
+      {cambios.length === 0 ? (
+        <div style={{ color: MUTED, fontSize: 10 }}>
+          Primer corte con datos comparables para {scope === "titular" ? "el titular" : "la dependencia"}: aún no hay periodo previo con el que contrastar.
+        </div>
+      ) : (
+        <div style={{ border: `1px solid ${LINE}`, borderRadius: 8, overflow: "hidden" }}>
+          {cambios.map((c, i) => (
+            <div key={i} style={{
+              display: "grid", gridTemplateColumns: "16px 108px minmax(0, 1fr)", gap: 8, alignItems: "start",
+              padding: "5px 9px", background: i % 2 ? "#f8fafc" : "#ffffff",
+              borderTop: i ? `1px solid ${LINE}` : undefined, fontSize: 9.6,
+            }}>
+              <span style={{ color: DIR_COLOR[c.dir], fontWeight: 700, fontSize: 9 }}>{DIR_MARK[c.dir]}</span>
+              <span style={{ fontWeight: 700, color: INK, overflowWrap: "anywhere" }}>{c.label}</span>
+              <span style={{ color: "#334155", overflowWrap: "anywhere" }}>{c.texto}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** "Qué hacer ahora": recomendaciones accionables generadas del corte y la prensa. */
+function RecomendacionesBlock({ data }: { data: { lectura?: string; items: DepRecomendacion[] } }) {
+  if (!data.items?.length) return null;
+  return (
+    <div style={{ marginTop: 4, marginBottom: 10 }}>
+      <SectionTitle
+        text="Qué hacer ahora"
+        color={SCOPE.conjunto.main}
+        hint="Acciones sugeridas a partir de los cambios del periodo, el contenido publicado y las menciones de prensa detectadas."
+      />
+      {data.lectura && (
+        <Explainer color={SCOPE.conjunto.main} text={stripEmoji(data.lectura)} />
+      )}
+      {data.items.slice(0, 5).map((r, i) => (
+        <div className="pdf-avoid" key={i} style={{
+          border: `1px solid ${LINE}`,
+          borderLeft: `3px solid ${r.prioridad === "alta" ? SCOPE.titular.main : SCOPE.institucional.main}`,
+          borderRadius: 7, padding: "6px 9px", marginBottom: 5, background: "#ffffff",
+        }}>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start" }}>
+            <div style={{ fontSize: 10.2, fontWeight: 700, color: INK, overflowWrap: "anywhere" }}>
+              {i + 1}. {stripEmoji(r.accion)}
+            </div>
+            {r.prioridad && (
+              <span style={{
+                fontSize: 8.2, textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 700,
+                color: r.prioridad === "alta" ? SCOPE.titular.main : SCOPE.institucional.main, whiteSpace: "nowrap",
+              }}>
+                {r.prioridad}
+              </span>
+            )}
+          </div>
+          <div style={{ fontSize: 9.4, color: "#475569", marginTop: 2, overflowWrap: "anywhere" }}>
+            <b style={{ color: MUTED }}>Porque:</b> {stripEmoji(r.porque)}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+
 
 const GLOSARIO: { termino: string; que: string; porque: string }[] = [
   {
@@ -399,7 +487,11 @@ function BlockSection({ b, compacto }: { b: ScopeBlock; compacto: boolean }) {
              explain="Cobertura de medios monitoreados. El tono anticipa riesgos y temas que requieren respuesta." />
       </div>
 
+      {/* Lo que cambió */}
+      <CambiosBlock cambios={b.cambios ?? []} color={s.main} scope={b.key} />
+
       {/* Cuentas */}
+
       <div className="pdf-avoid" style={{ marginBottom: 10 }}>
         <SectionTitle
           text={b.key === "titular" ? "Cuentas del titular" : "Cuentas institucionales"}
@@ -627,7 +719,10 @@ export const DependenciaPdfTemplate = forwardRef<HTMLDivElement, { data: Depende
         <BlockSection key={b.key} b={b} compacto={combinado} />
       ))}
 
+      {data.recomendaciones && <RecomendacionesBlock data={data.recomendaciones} />}
+
       <Glosario />
+
 
       <Footer />
     </div>
