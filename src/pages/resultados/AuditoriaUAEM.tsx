@@ -14,6 +14,7 @@ import {
   LabelList,
 } from "recharts";
 import { Card } from "@/components/ui/card";
+import { KIMEDIA_LOGO_PDF_DATA_URI } from "@/assets/kimediaLogoPdf";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
