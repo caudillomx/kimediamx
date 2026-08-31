@@ -89,6 +89,8 @@ export default function PortalDescargas({
   const [weekFrom, setWeekFrom] = useState(ultimaSemanaCompleta().from);
   const [weekTo, setWeekTo] = useState(ultimaSemanaCompleta().to);
   const [busy, setBusy] = useState<string | null>(null);
+  const [conRecomendaciones, setConRecomendaciones] = useState(true);
+
 
   // Prensa
   const [pressFrom, setPressFrom] = useState(isoDaysAgo(29));
