@@ -69,7 +69,9 @@ export default function PortalCreative({ portal }: { portal: ClientPortalConfig 
   }, [portal.clientId]);
 
   const tabs = useMemo(() => {
-    const list: { key: string; label: string; icon: any }[] = [];
+    const list: { key: string; label: string; icon: any }[] = [
+      { key: "resumen", label: "Resumen", icon: LayoutDashboard },
+    ];
     if (services.includes("estrategia")) {
       list.push({ key: "parrilla", label: "Parrilla editorial", icon: CalendarDays });
       list.push({ key: "activos", label: "Funnel y activos", icon: Workflow });
@@ -80,7 +82,7 @@ export default function PortalCreative({ portal }: { portal: ClientPortalConfig 
     return list;
   }, [services]);
 
-  const [tab, setTab] = useState<string>("parrilla");
+  const [tab, setTab] = useState<string>("resumen");
   useEffect(() => {
     if (tabs.length && !tabs.some((t) => t.key === tab)) setTab(tabs[0].key);
   }, [tabs, tab]);
