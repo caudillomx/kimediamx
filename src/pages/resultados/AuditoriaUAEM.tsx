@@ -602,8 +602,54 @@ const UaemPdf = () => (
         ))}
       </div>
 
+      <PageFooter n={3} />
+    </div>
+
+    {/* -------- Página 4 -------- */}
+    <div className="pdf-page-break" style={{ ...pdfPage, pageBreakBefore: "always" }}>
+      <SectionTitle kicker="Hacia adelante">Recomendaciones</SectionTitle>
+      <p style={{ fontSize: 9.5, color: MUTED, lineHeight: 1.6, marginBottom: 12 }}>
+        A partir de estos hallazgos, así es como recomendamos priorizar los próximos meses.
+      </p>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+        {recomendaciones.map((r, i) => (
+          <div
+            key={r.titulo}
+            style={{
+              width: "calc(50% - 5px)",
+              boxSizing: "border-box",
+              border: `1px solid ${LINE}`,
+              borderRadius: 12,
+              background: "#FFFFFF",
+              padding: "12px 14px",
+            }}
+          >
+            <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+              <span style={{ fontFamily: DISPLAY, fontSize: 12, fontWeight: 700, color: CORAL }}>
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              <div>
+                <div style={{ fontFamily: DISPLAY, fontSize: 10, fontWeight: 700, color: INK, lineHeight: 1.3 }}>
+                  {r.titulo}
+                </div>
+                <div style={{ fontSize: 9, color: MUTED, lineHeight: 1.55, marginTop: 5 }}>{r.detalle}</div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
       <div
         style={{
+          marginTop: 24,
+          background: INK,
+          borderRadius: 16,
+          padding: "24px 26px",
+          position: "relative",
+          overflow: "hidden",
+        }}
+      >
+
           marginTop: 24,
           background: INK,
           borderRadius: 16,
