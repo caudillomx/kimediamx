@@ -39,7 +39,18 @@ const num = (v: number | null | undefined) =>
 
 const nf = (n: number) => n.toLocaleString("es-MX", { maximumFractionDigits: 0 });
 const pct = (n: number, d = 2) => `${(n * 100).toFixed(d)}%`;
+/**
+ * Decimales mínimos (2 a 4) para que dos tasas distintas no se impriman iguales.
+ * Evita frases como "pasó de 0.06% a 0.06% (+15.0%)".
+ */
+const pctDecimals = (a: number, b: number) => {
+  for (let d = 2; d <= 4; d++) {
+    if ((a * 100).toFixed(d) !== (b * 100).toFixed(d)) return d;
+  }
+  return 4;
+};
 const signedPct = (n: number) => `${n >= 0 ? "+" : "−"}${Math.abs(n * 100).toFixed(1)}%`;
+
 
 const rel = (a: number, b: number) => (b === 0 ? null : (a - b) / Math.abs(b));
 const dirOf = (delta: number, umbral = 0.005): DeltaDir =>
@@ -79,20 +90,25 @@ export function buildDeltaLines(input: DeltaInput): DeltaLine[] {
     if (d != null) {
       const prom = num(input.promedioGabinete);
       const prevProm = num(input.prevPromedioGabinete);
+      const dec = pctDecimals(eng, prevEng);
       let cola = "";
       if (prom != null) {
         const brecha = eng - prom;
         const prevBrecha = prevEng != null && prevProm != null ? prevEng - prevProm : null;
         const acerco = prevBrecha != null ? Math.abs(brecha) < Math.abs(prevBrecha) : null;
-        cola = ` Está ${brecha >= 0 ? "por encima" : "por debajo"} del promedio del gabinete (${pct(prom)})`
+        cola = ` Está ${brecha >= 0 ? "por encima" : "por debajo"} del promedio del gabinete (${pct(prom, dec)})`
           + (acerco == null ? "." : acerco ? " y se acercó a él." : brecha >= 0 ? " y se despegó todavía más." : " y se alejó más.");
       }
+      const dir = dirOf(d, 0.02);
       out.push({
         label: "Interacción",
-        dir: dirOf(d, 0.02),
+        dir,
         peso: Math.abs(d) * 2.5,
-        texto: `La interacción pasó de ${pct(prevEng)} a ${pct(eng)} (${signedPct(d)}).${cola}`,
+        texto: dir === "flat"
+          ? `La interacción se mantuvo prácticamente igual: ${pct(eng, dec)} frente a ${pct(prevEng, dec)} del corte anterior.${cola}`
+          : `La interacción pasó de ${pct(prevEng, dec)} a ${pct(eng, dec)} (${signedPct(d)}).${cola}`,
       });
+
     }
   }
 
