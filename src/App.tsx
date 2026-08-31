@@ -28,6 +28,7 @@ import ClientWorkspace from "./pages/ClientWorkspace";
 import AdsProposalView from "./pages/AdsProposalView";
 import RetoInfluenSER from "./pages/RetoInfluenSER";
 import ResultadosICatalyze from "./pages/resultados/ResultadosICatalyze";
+import AuditoriaUAEM from "./pages/resultados/AuditoriaUAEM";
 import ClientPortalAdmin from "./pages/admin/ClientPortalAdmin";
 import PortalRouter from "./pages/portal/PortalRouter";
 import { detectClientPortal } from "./lib/clientPortal";
