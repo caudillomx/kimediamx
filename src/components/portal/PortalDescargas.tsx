@@ -185,6 +185,14 @@ export default function PortalDescargas({
     [periods, periodLabels, periodLabel, cut, weekFrom],
   );
 
+  /** Corte de datos realmente usado en semanal: el snapshot más reciente disponible. */
+  const latestActivePeriodLabel = useMemo(() => {
+    if (activePeriods.length === 0) return null;
+    return activePeriods.reduce((a, b) => (b.period_end > a.period_end ? b : a)).period_label;
+  }, [activePeriods]);
+
+
+
 
   /** Etiqueta del corte activo y ventana de fechas para prensa/publicaciones. */
   const cutLabel = cut === "semanal"
