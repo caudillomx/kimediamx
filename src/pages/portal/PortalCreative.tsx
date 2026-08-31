@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
-import { LogOut, ShieldAlert, Sun, Moon, CalendarDays, Workflow, Megaphone, Film, FileText } from "lucide-react";
+import { LogOut, ShieldAlert, Sun, Moon, CalendarDays, Workflow, Megaphone, Film, FileText, LayoutDashboard } from "lucide-react";
 import type { ClientPortalConfig } from "@/lib/clientPortal";
 import { SERVICE_MAP, type ServiceKey } from "@/lib/services";
 import PortalParrilla from "@/components/portal/PortalParrilla";
@@ -14,6 +14,7 @@ import PortalParrillaNotion from "@/components/portal/PortalParrillaNotion";
 
 import PortalActivos from "@/components/portal/PortalActivos";
 import PortalAdsModule from "@/components/portal/PortalAdsModule";
+import PortalResumen from "@/components/portal/PortalResumen";
 import { Link } from "react-router-dom";
 
 type Report = { id: string; report_date: string; title: string; type: string; summary_md: string | null };
