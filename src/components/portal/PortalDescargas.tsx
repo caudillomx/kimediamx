@@ -912,6 +912,16 @@ export default function PortalDescargas({
               </SelectContent>
             </Select>
           </div>
+          <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
+            <input
+              type="checkbox"
+              className="accent-primary w-4 h-4"
+              checked={conRecomendaciones}
+              onChange={(e) => setConRecomendaciones(e.target.checked)}
+            />
+            Incluir recomendaciones
+          </label>
+
           <Button onClick={downloadDepPdf} disabled={busy !== null || !depId}>
             {busy === "dep" ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <FileText className="w-4 h-4 mr-1" />}
             Descargar reporte
