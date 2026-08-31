@@ -356,7 +356,9 @@ const UaemPdf = () => (
               Periodo analizado: agosto 2025 – agosto 2026 · 3,171 publicaciones
             </div>
           </div>
-          <img src={KIMEDIA_LOGO_PDF_DATA_URI} alt="KiMedia" style={{ height: 34, objectFit: "contain" }} />
+          <div style={{ background: "#FFFFFF", borderRadius: 10, padding: "8px 12px" }}>
+            <img src={KIMEDIA_LOGO_PDF_DATA_URI} alt="KiMedia" style={{ height: 26, objectFit: "contain", display: "block" }} />
+          </div>
         </div>
       </div>
 
