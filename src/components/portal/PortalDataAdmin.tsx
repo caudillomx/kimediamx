@@ -90,11 +90,15 @@ export default function PortalDataAdmin({ clientId }: { clientId: string }) {
   const [accountName, setAccountName] = useState("");
   const [platform, setPlatform] = useState<AdPlatform>("meta");
   const [autoMonths, setAutoMonths] = useState(true);
+  const [metaNetwork, setMetaNetwork] = useState("facebook");
+  const [metaAccount, setMetaAccount] = useState("");
 
 
   const socialRef = useRef<HTMLInputElement>(null);
   const webRef = useRef<HTMLInputElement>(null);
   const adsRef = useRef<HTMLInputElement>(null);
+  const metaRef = useRef<HTMLInputElement>(null);
+
 
   const load = useCallback(async () => {
     const [s, w, a] = await Promise.all([
