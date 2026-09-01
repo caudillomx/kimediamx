@@ -83,6 +83,8 @@ export default function ClientPortalAdmin() {
   const [checking, setChecking] = useState(true);
   const [clientName, setClientName] = useState("");
   const [portalModules, setPortalModules] = useState<Record<string, boolean>>({});
+  const [services, setServices] = useState<string[]>([]);
+  const [tab, setTab] = useState<string>("datos");
   const [reports, setReports] = useState<Report[]>([]);
   const [access, setAccess] = useState<AccessRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -212,7 +214,7 @@ export default function ClientPortalAdmin() {
   const load = async () => {
     setLoading(true);
     const [c, r, a, w, cr, ls] = await Promise.all([
-      supabase.from("clients").select("name, portal_modules").eq("id", clientId).maybeSingle(),
+      supabase.from("clients").select("name, portal_modules, services").eq("id", clientId).maybeSingle(),
       supabase
         .from("client_portal_reports")
         .select("id, report_date, title, type, summary_md, created_at")
@@ -242,6 +244,7 @@ export default function ClientPortalAdmin() {
     ]);
     setClientName(c.data?.name ?? "");
     setPortalModules((((c.data as any)?.portal_modules) ?? {}) as Record<string, boolean>);
+    setServices((((c.data as any)?.services) ?? []) as string[]);
     setReports((r.data ?? []) as Report[]);
     setAccess((a.data ?? []) as AccessRow[]);
     setRecs((w.data ?? []) as WeeklyRec[]);
