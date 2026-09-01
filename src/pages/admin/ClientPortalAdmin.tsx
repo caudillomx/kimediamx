@@ -575,16 +575,17 @@ export default function ClientPortalAdmin() {
           </div>
         </div>
 
-        <Tabs defaultValue="reportes">
+        <Tabs value={tab} onValueChange={setTab}>
           <TabsList>
-            <TabsTrigger value="reportes"><FileText className="w-4 h-4 mr-2" /> Reportes</TabsTrigger>
-            <TabsTrigger value="recs"><Lightbulb className="w-4 h-4 mr-2" /> Recomendaciones</TabsTrigger>
-            <TabsTrigger value="listening"><MessageSquare className="w-4 h-4 mr-2" /> Listening</TabsTrigger>
-            <TabsTrigger value="benchmark"><Target className="w-4 h-4 mr-2" /> Benchmark</TabsTrigger>
+            <TabsTrigger value="datos"><BarChart3 className="w-4 h-4 mr-2" /> Datos del portal</TabsTrigger>
+            {hasAnalisis && <TabsTrigger value="listening"><MessageSquare className="w-4 h-4 mr-2" /> Listening</TabsTrigger>}
+            {hasAnalisis && <TabsTrigger value="benchmark"><Target className="w-4 h-4 mr-2" /> Benchmark</TabsTrigger>}
+            {hasAnalisis && <TabsTrigger value="reportes"><FileText className="w-4 h-4 mr-2" /> Reportes</TabsTrigger>}
+            {hasAnalisis && <TabsTrigger value="recs"><Lightbulb className="w-4 h-4 mr-2" /> Recomendaciones</TabsTrigger>}
             <TabsTrigger value="creds"><KeyRound className="w-4 h-4 mr-2" /> Credenciales</TabsTrigger>
-            <TabsTrigger value="datos"><Target className="w-4 h-4 mr-2" /> Datos del portal</TabsTrigger>
             <TabsTrigger value="accesos"><Users className="w-4 h-4 mr-2" /> Usuarios del portal</TabsTrigger>
           </TabsList>
+
 
           <TabsContent value="datos" className="space-y-4">
             {clientId && <PortalDataAdmin clientId={clientId} />}
