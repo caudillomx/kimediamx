@@ -78,9 +78,9 @@ export default function PortalCreative({ portal }: { portal: ClientPortalConfig 
     }
     if (services.includes("ads")) list.push({ key: "ads", label: "Ads", icon: Megaphone });
     if (services.includes("audiovisual")) list.push({ key: "audiovisual", label: "Audiovisual", icon: Film });
-    list.push({ key: "reportes", label: "Reportes", icon: FileText });
+    if (reports.length) list.push({ key: "reportes", label: "Reportes", icon: FileText });
     return list;
-  }, [services]);
+  }, [services, reports.length]);
 
   const [tab, setTab] = useState<string>("resumen");
   useEffect(() => {
