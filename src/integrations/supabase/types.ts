@@ -754,6 +754,95 @@ export type Database = {
           },
         ]
       }
+      client_portal_ads_metrics: {
+        Row: {
+          campaign_key: string
+          campaign_name: string
+          clicks: number | null
+          client_id: string
+          conversions: number | null
+          cost_per_result: number | null
+          cpc: number | null
+          cpm: number | null
+          created_at: string
+          created_by: string | null
+          ctr: number | null
+          id: string
+          impressions: number | null
+          objective: string | null
+          period_end: string
+          period_label: string | null
+          period_start: string
+          platform: string
+          raw: Json
+          reach: number | null
+          result_type: string | null
+          results: number | null
+          spend: number | null
+          updated_at: string
+        }
+        Insert: {
+          campaign_key: string
+          campaign_name: string
+          clicks?: number | null
+          client_id: string
+          conversions?: number | null
+          cost_per_result?: number | null
+          cpc?: number | null
+          cpm?: number | null
+          created_at?: string
+          created_by?: string | null
+          ctr?: number | null
+          id?: string
+          impressions?: number | null
+          objective?: string | null
+          period_end: string
+          period_label?: string | null
+          period_start: string
+          platform: string
+          raw?: Json
+          reach?: number | null
+          result_type?: string | null
+          results?: number | null
+          spend?: number | null
+          updated_at?: string
+        }
+        Update: {
+          campaign_key?: string
+          campaign_name?: string
+          clicks?: number | null
+          client_id?: string
+          conversions?: number | null
+          cost_per_result?: number | null
+          cpc?: number | null
+          cpm?: number | null
+          created_at?: string
+          created_by?: string | null
+          ctr?: number | null
+          id?: string
+          impressions?: number | null
+          objective?: string | null
+          period_end?: string
+          period_label?: string | null
+          period_start?: string
+          platform?: string
+          raw?: Json
+          reach?: number | null
+          result_type?: string | null
+          results?: number | null
+          spend?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_portal_ads_metrics_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_portal_assets: {
         Row: {
           channel: string | null
@@ -1749,6 +1838,92 @@ export type Database = {
           },
         ]
       }
+      client_portal_social_metrics: {
+        Row: {
+          account_handle: string | null
+          account_key: string
+          account_name: string
+          client_id: string
+          created_at: string
+          created_by: string | null
+          engagement_rate: number | null
+          follower_growth: number | null
+          follower_growth_rate: number | null
+          followers: number | null
+          id: string
+          impressions: number | null
+          interactions: number | null
+          network: string
+          performance_index: number | null
+          period_end: string
+          period_label: string | null
+          period_start: string
+          posts: number | null
+          raw: Json
+          reach: number | null
+          source: string
+          updated_at: string
+        }
+        Insert: {
+          account_handle?: string | null
+          account_key: string
+          account_name: string
+          client_id: string
+          created_at?: string
+          created_by?: string | null
+          engagement_rate?: number | null
+          follower_growth?: number | null
+          follower_growth_rate?: number | null
+          followers?: number | null
+          id?: string
+          impressions?: number | null
+          interactions?: number | null
+          network: string
+          performance_index?: number | null
+          period_end: string
+          period_label?: string | null
+          period_start: string
+          posts?: number | null
+          raw?: Json
+          reach?: number | null
+          source?: string
+          updated_at?: string
+        }
+        Update: {
+          account_handle?: string | null
+          account_key?: string
+          account_name?: string
+          client_id?: string
+          created_at?: string
+          created_by?: string | null
+          engagement_rate?: number | null
+          follower_growth?: number | null
+          follower_growth_rate?: number | null
+          followers?: number | null
+          id?: string
+          impressions?: number | null
+          interactions?: number | null
+          network?: string
+          performance_index?: number | null
+          period_end?: string
+          period_label?: string | null
+          period_start?: string
+          posts?: number | null
+          raw?: Json
+          reach?: number | null
+          source?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_portal_social_metrics_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_portal_strategy_reports: {
         Row: {
           client_id: string
@@ -1875,6 +2050,77 @@ export type Database = {
             columns: ["focus_dependencia_id"]
             isOneToOne: false
             referencedRelation: "client_portal_dependencias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_portal_web_analytics: {
+        Row: {
+          avg_session_seconds: number | null
+          bounce_rate: number | null
+          channels: Json
+          client_id: string
+          conversions: number | null
+          created_at: string
+          created_by: string | null
+          id: string
+          new_users: number | null
+          notes: string | null
+          pageviews: number | null
+          period_end: string
+          period_label: string | null
+          period_start: string
+          raw: Json
+          sessions: number | null
+          updated_at: string
+          users: number | null
+        }
+        Insert: {
+          avg_session_seconds?: number | null
+          bounce_rate?: number | null
+          channels?: Json
+          client_id: string
+          conversions?: number | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          new_users?: number | null
+          notes?: string | null
+          pageviews?: number | null
+          period_end: string
+          period_label?: string | null
+          period_start: string
+          raw?: Json
+          sessions?: number | null
+          updated_at?: string
+          users?: number | null
+        }
+        Update: {
+          avg_session_seconds?: number | null
+          bounce_rate?: number | null
+          channels?: Json
+          client_id?: string
+          conversions?: number | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          new_users?: number | null
+          notes?: string | null
+          pageviews?: number | null
+          period_end?: string
+          period_label?: string | null
+          period_start?: string
+          raw?: Json
+          sessions?: number | null
+          updated_at?: string
+          users?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_portal_web_analytics_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
             referencedColumns: ["id"]
           },
         ]
