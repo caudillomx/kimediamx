@@ -321,6 +321,37 @@ export default function PortalDataAdmin({ clientId }: { clientId: string }) {
             </Button>
           </Card>
 
+          <Card className="p-4 space-y-3">
+            <div className="text-sm font-semibold">Estadísticas de Meta Business (Facebook / Instagram)</div>
+            <p className="text-xs text-muted-foreground">
+              Sube de golpe los CSV diarios que exporta Meta (Seguidores, Visualizaciones, Interacciones, Visitas, Clics,
+              Espectadores y Público). Se suman por mes y se guardan como cortes mensuales de la cuenta que indiques.
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1">
+                <Label className="text-xs">Red (si el archivo no la indica)</Label>
+                <Select value={metaNetwork} onValueChange={setMetaNetwork}>
+                  <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="facebook">Facebook</SelectItem>
+                    <SelectItem value="instagram">Instagram</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Nombre de la cuenta</Label>
+                <Input className="h-9" placeholder="Ej. El Diluvio" value={metaAccount} onChange={(e) => setMetaAccount(e.target.value)} />
+              </div>
+            </div>
+            <input ref={metaRef} type="file" accept=".csv" multiple className="hidden"
+              onChange={(e) => { const fs = Array.from(e.target.files ?? []); if (fs.length) handleMeta(fs); }} />
+            <Button size="sm" variant="outline" onClick={() => metaRef.current?.click()} disabled={busy === "meta"}>
+              {busy === "meta" ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
+              Subir CSV de Meta
+            </Button>
+          </Card>
+
+
           {socialGrouped.map(([label, rows]) => (
             <Card key={label} className="p-4 space-y-2">
               <div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
