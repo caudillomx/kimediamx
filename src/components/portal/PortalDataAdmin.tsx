@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
@@ -17,6 +18,8 @@ import {
   normalizeKey,
   parseAdsFile,
   parseSocialFile,
+  parseSocialFileByMonth,
+
   parseWebFile,
   periodLabel,
   type AdPlatform,
@@ -86,6 +89,8 @@ export default function PortalDataAdmin({ clientId }: { clientId: string }) {
   const [network, setNetwork] = useState("linkedin");
   const [accountName, setAccountName] = useState("");
   const [platform, setPlatform] = useState<AdPlatform>("meta");
+  const [autoMonths, setAutoMonths] = useState(true);
+
 
   const socialRef = useRef<HTMLInputElement>(null);
   const webRef = useRef<HTMLInputElement>(null);
@@ -110,35 +115,50 @@ export default function PortalDataAdmin({ clientId }: { clientId: string }) {
   const handleSocial = async (file: File) => {
     setBusy("social");
     try {
-      const rows = await parseSocialFile(file, network, accountName || undefined);
-      if (!rows.length) { toast.error("No encontré filas con cuentas en ese archivo"); return; }
-      const payload = rows.map((r) => ({
-        client_id: clientId,
-        network: r.network,
-        account_key: accountKeyOf(r.account_name, r.account_handle),
-        account_name: r.account_name,
-        account_handle: r.account_handle,
-        period_start: period.start,
-        period_end: period.end,
-        period_label: period.label,
-        source: r.network === "linkedin" ? "linkedin" : "fanpage_karma",
-        followers: r.followers,
-        follower_growth: r.follower_growth,
-        follower_growth_rate: r.follower_growth_rate,
-        posts: r.posts,
-        interactions: r.interactions,
-        engagement_rate: r.engagement_rate,
-        impressions: r.impressions,
-        reach: r.reach,
-        performance_index: r.performance_index,
-        raw: r.raw as any,
-        created_by: uid.current,
-      }));
-      const { error } = await supabase
-        .from("client_portal_social_metrics")
-        .upsert(payload, { onConflict: "client_id,network,account_key,period_start,period_end" });
-      if (error) throw error;
-      toast.success(`${payload.length} cuentas actualizadas`);
+      const groups = autoMonths
+        ? await parseSocialFileByMonth(file, network, accountName || undefined)
+        : [{ ym: null as string | null, rows: await parseSocialFile(file, network, accountName || undefined) }];
+      const usable = groups.filter((g) => g.rows.length);
+      if (!usable.length) { toast.error("No encontré filas con cuentas en ese archivo"); return; }
+
+      let total = 0;
+      const labels: string[] = [];
+      for (const g of usable) {
+        const p = g.ym ? monthBounds(g.ym) : period;
+        labels.push(p.label);
+        const payload = g.rows.map((r) => ({
+          client_id: clientId,
+          network: r.network,
+          account_key: accountKeyOf(r.account_name, r.account_handle),
+          account_name: r.account_name,
+          account_handle: r.account_handle,
+          period_start: p.start,
+          period_end: p.end,
+          period_label: p.label,
+          source: r.network === "linkedin" ? "linkedin" : "fanpage_karma",
+          followers: r.followers,
+          follower_growth: r.follower_growth,
+          follower_growth_rate: r.follower_growth_rate,
+          posts: r.posts,
+          interactions: r.interactions,
+          engagement_rate: r.engagement_rate,
+          impressions: r.impressions,
+          reach: r.reach,
+          performance_index: r.performance_index,
+          raw: r.raw as any,
+          created_by: uid.current,
+        }));
+        const { error } = await supabase
+          .from("client_portal_social_metrics")
+          .upsert(payload, { onConflict: "client_id,network,account_key,period_start,period_end" });
+        if (error) throw error;
+        total += payload.length;
+      }
+      toast.success(
+        usable.length > 1
+          ? `${total} registros en ${usable.length} periodos: ${labels.join(", ")}`
+          : `${total} cuentas actualizadas · ${labels[0]}`
+      );
       load();
     } catch (e: any) {
       toast.error(e.message ?? "No se pudo importar");
@@ -147,6 +167,7 @@ export default function PortalDataAdmin({ clientId }: { clientId: string }) {
       if (socialRef.current) socialRef.current.value = "";
     }
   };
+
 
   const handleWeb = async (file: File) => {
     setBusy("web");
@@ -281,6 +302,17 @@ export default function PortalDataAdmin({ clientId }: { clientId: string }) {
                 <Input className="h-9" placeholder="Ej. Falcon" value={accountName} onChange={(e) => setAccountName(e.target.value)} />
               </div>
             </div>
+            <div className="flex items-start gap-3 rounded-lg border border-border/60 bg-muted/30 p-3">
+              <Switch id="auto-months" checked={autoMonths} onCheckedChange={setAutoMonths} />
+              <div className="space-y-0.5">
+                <Label htmlFor="auto-months" className="text-xs font-medium">Detectar meses dentro del archivo</Label>
+                <p className="text-[11px] text-muted-foreground">
+                  Si el export trae varios meses (columnas tipo “Seguidores 06/2026” o una columna de fecha), crea un corte por
+                  cada mes automáticamente. Si se apaga, todo se guarda en el periodo seleccionado arriba.
+                </p>
+              </div>
+            </div>
+
             <input ref={socialRef} type="file" accept=".xlsx,.xls,.csv" className="hidden"
               onChange={(e) => { const f = e.target.files?.[0]; if (f) handleSocial(f); }} />
             <Button size="sm" onClick={() => socialRef.current?.click()} disabled={busy === "social"}>
