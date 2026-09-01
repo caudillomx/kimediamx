@@ -88,6 +88,8 @@ export default function PortalDataAdmin({ clientId }: { clientId: string }) {
   const [network, setNetwork] = useState("linkedin");
   const [accountName, setAccountName] = useState("");
   const [platform, setPlatform] = useState<AdPlatform>("meta");
+  const [autoMonths, setAutoMonths] = useState(true);
+
 
   const socialRef = useRef<HTMLInputElement>(null);
   const webRef = useRef<HTMLInputElement>(null);
