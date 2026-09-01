@@ -170,6 +170,35 @@ export type SocialRow = {
   raw: Record<string, unknown>;
 };
 
+function socialRowFrom(
+  r: Record<string, unknown>,
+  fallbackNetwork?: string,
+  fallbackAccount?: string
+): SocialRow | null {
+  const name =
+    str(pick(r, ["Profile", "Perfil", "Página", "Page", "Cuenta", "Account", "Nombre"])) ??
+    fallbackAccount ??
+    null;
+  if (!name) return null;
+  const netRaw = pick(r, ["Network", "Red", "Plataforma", "Platform"]);
+  const network = netRaw ? normalizeNetwork(netRaw) : normalizeNetwork(fallbackNetwork ?? "linkedin");
+  return {
+    network,
+    account_name: name,
+    account_handle: str(pick(r, ["Handle", "Usuario", "Username", "External Links", "URL"])),
+    followers: num(pick(r, ["Seguidores", "Seguidor", "Followers", "Total de seguidores", "Total followers"])),
+    follower_growth: num(pick(r, ["Nuevos seguidores", "New followers", "Crecimiento de seguidores absoluto"])),
+    follower_growth_rate: rate(pick(r, ["Crecimiento de seguidores (en %)", "Crecimiento de seguidores", "Follower growth"])),
+    posts: num(pick(r, ["Publicaciones", "Posts", "Número de publicaciones", "Publicaciones por día"])),
+    interactions: num(pick(r, ["Interacciones", "Interactions", "Reacciones, Comentarios y Compartidos", "Reacciones"])),
+    engagement_rate: rate(pick(r, ["Tasa de interacción", "Engagement Rate", "Tasa de participación", "Engagement rate"])),
+    impressions: num(pick(r, ["Impresiones", "Impressions"])),
+    reach: num(pick(r, ["Alcance", "Reach", "Alcance por día"])),
+    performance_index: num(pick(r, ["Índice de Rendimiento", "Performance Index"])),
+    raw: r,
+  };
+}
+
 export async function parseSocialFile(
   file: File,
   fallbackNetwork?: string,
@@ -178,31 +207,137 @@ export async function parseSocialFile(
   const { rows } = await loadTable(file);
   const out: SocialRow[] = [];
   for (const r of rows) {
-    const name =
-      str(pick(r, ["Profile", "Perfil", "Página", "Page", "Cuenta", "Account", "Nombre"])) ??
-      fallbackAccount ??
-      null;
-    if (!name) continue;
-    const netRaw = pick(r, ["Network", "Red", "Plataforma", "Platform"]);
-    const network = netRaw ? normalizeNetwork(netRaw) : normalizeNetwork(fallbackNetwork ?? "linkedin");
-    out.push({
-      network,
-      account_name: name,
-      account_handle: str(pick(r, ["Handle", "Usuario", "Username", "External Links", "URL"])),
-      followers: num(pick(r, ["Seguidores", "Seguidor", "Followers", "Total de seguidores", "Total followers"])),
-      follower_growth: num(pick(r, ["Nuevos seguidores", "New followers", "Crecimiento de seguidores absoluto"])),
-      follower_growth_rate: rate(pick(r, ["Crecimiento de seguidores (en %)", "Crecimiento de seguidores", "Follower growth"])),
-      posts: num(pick(r, ["Publicaciones", "Posts", "Número de publicaciones", "Publicaciones por día"])),
-      interactions: num(pick(r, ["Interacciones", "Interactions", "Reacciones, Comentarios y Compartidos", "Reacciones"])),
-      engagement_rate: rate(pick(r, ["Tasa de interacción", "Engagement Rate", "Tasa de participación", "Engagement rate"])),
-      impressions: num(pick(r, ["Impresiones", "Impressions"])),
-      reach: num(pick(r, ["Alcance", "Reach", "Alcance por día"])),
-      performance_index: num(pick(r, ["Índice de Rendimiento", "Performance Index"])),
-      raw: r,
-    });
+    const s = socialRowFrom(r, fallbackNetwork, fallbackAccount);
+    if (s) out.push(s);
   }
   return out;
 }
+
+/* ------------------------------------------------------------------ */
+/* Multi-month detection (wide exports with one column set per month)  */
+/* ------------------------------------------------------------------ */
+
+const MONTH_NAMES: Record<string, number> = {
+  ene: 1, enero: 1, jan: 1, january: 1,
+  feb: 2, febrero: 2, february: 2,
+  mar: 3, marzo: 3, march: 3,
+  abr: 4, abril: 4, apr: 4, april: 4,
+  may: 5, mayo: 5,
+  jun: 6, junio: 6, june: 6,
+  jul: 7, julio: 7, july: 7,
+  ago: 8, agosto: 8, aug: 8, august: 8,
+  sep: 9, sept: 9, septiembre: 9, september: 9,
+  oct: 10, octubre: 10, october: 10,
+  nov: 11, noviembre: 11, november: 11,
+  dic: 12, diciembre: 12, dec: 12, december: 12,
+};
+
+/** Extracts a YYYY-MM token from a header/cell, plus the text with the token removed. */
+export function extractMonthToken(value: unknown): { ym: string; rest: string } | null {
+  const raw = String(value ?? "").trim();
+  if (!raw) return null;
+
+  // ISO date / 2026-06 / 2026/06
+  let m = raw.match(/(20\d{2})[-/.](\d{1,2})(?:[-/.]\d{1,2})?/);
+  if (m) {
+    const mo = Number(m[2]);
+    if (mo >= 1 && mo <= 12) return { ym: `${m[1]}-${String(mo).padStart(2, "0")}`, rest: raw.replace(m[0], " ").trim() };
+  }
+  // 06/2026 or 30/06/2026
+  m = raw.match(/(?:(\d{1,2})[-/.])?(\d{1,2})[-/.](20\d{2})/);
+  if (m) {
+    const mo = Number(m[2]);
+    if (mo >= 1 && mo <= 12) return { ym: `${m[3]}-${String(mo).padStart(2, "0")}`, rest: raw.replace(m[0], " ").trim() };
+  }
+  // "junio 2026" / "Jun-26" / "Aug 2026"
+  const norm = normalizeKey(raw);
+  m = norm.match(/\b([a-z]{3,10})\b[ ]?(20\d{2}|\d{2})\b/);
+  if (m && MONTH_NAMES[m[1]]) {
+    const yr = m[2].length === 2 ? `20${m[2]}` : m[2];
+    const token = new RegExp(`${m[1]}[a-z]*[^a-z0-9]*${m[2]}`, "i");
+    return { ym: `${yr}-${String(MONTH_NAMES[m[1]]).padStart(2, "0")}`, rest: raw.replace(token, " ").trim() };
+  }
+  return null;
+}
+
+export type MonthGroup = { ym: string | null; rows: SocialRow[] };
+
+function cleanBase(s: string): string {
+  return s.replace(/[\s·–—:_-]+$/g, "").replace(/^[\s·–—:_-]+/g, "").replace(/\(\s*\)/g, "").trim();
+}
+
+/**
+ * Splits a social export into one group per month when possible:
+ *  a) a per-row date/month column ("Fecha", "Mes", "Periodo"), or
+ *  b) wide columns carrying a month token ("Seguidores 06/2026").
+ * Falls back to a single group with ym = null (caller uses the selected period).
+ */
+export async function parseSocialFileByMonth(
+  file: File,
+  fallbackNetwork?: string,
+  fallbackAccount?: string
+): Promise<MonthGroup[]> {
+  const { header, rows } = await loadTable(file);
+  if (!rows.length) return [];
+
+  // (a) per-row date column
+  const dateCol = header.find((h) => ["fecha", "mes", "periodo", "period", "date", "month"].includes(normalizeKey(h)));
+  if (dateCol) {
+    const byMonth = new Map<string, Record<string, unknown>[]>();
+    let matched = 0;
+    for (const r of rows) {
+      const tok = extractMonthToken(r[dateCol]);
+      if (!tok) continue;
+      matched++;
+      byMonth.set(tok.ym, [...(byMonth.get(tok.ym) ?? []), r]);
+    }
+    if (matched >= rows.length * 0.6 && byMonth.size > 0) {
+      return [...byMonth.entries()]
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .map(([ym, rs]) => ({
+          ym,
+          rows: rs.map((r) => socialRowFrom(r, fallbackNetwork, fallbackAccount)).filter(Boolean) as SocialRow[],
+        }))
+        .filter((g) => g.rows.length > 0);
+    }
+  }
+
+  // (b) wide month columns
+  const monthCols = new Map<string, { col: string; base: string }[]>();
+  const staticCols: string[] = [];
+  for (const h of header) {
+    if (!h) continue;
+    const tok = extractMonthToken(h);
+    const base = tok ? cleanBase(tok.rest) : "";
+    if (tok && base) {
+      monthCols.set(tok.ym, [...(monthCols.get(tok.ym) ?? []), { col: h, base }]);
+    } else {
+      staticCols.push(h);
+    }
+  }
+  if (monthCols.size > 1) {
+    return [...monthCols.entries()]
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([ym, cols]) => {
+        const out: SocialRow[] = [];
+        for (const r of rows) {
+          const flat: Record<string, unknown> = {};
+          staticCols.forEach((c) => { flat[c] = r[c]; });
+          cols.forEach(({ col, base }) => { flat[base] = r[col]; });
+          const s = socialRowFrom(flat, fallbackNetwork, fallbackAccount);
+          if (s) out.push(s);
+        }
+        return { ym, rows: out };
+      })
+      .filter((g) => g.rows.length > 0);
+  }
+
+  // fallback: single period
+  const single = rows.map((r) => socialRowFrom(r, fallbackNetwork, fallbackAccount)).filter(Boolean) as SocialRow[];
+  return single.length ? [{ ym: null, rows: single }] : [];
+}
+
+
 
 /* ------------------------------------------------------------------ */
 /* Web analytics (GA4)                                                 */
