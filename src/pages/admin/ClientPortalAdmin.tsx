@@ -83,6 +83,8 @@ export default function ClientPortalAdmin() {
   const [checking, setChecking] = useState(true);
   const [clientName, setClientName] = useState("");
   const [portalModules, setPortalModules] = useState<Record<string, boolean>>({});
+  const [services, setServices] = useState<string[]>([]);
+  const [tab, setTab] = useState<string>("datos");
   const [reports, setReports] = useState<Report[]>([]);
   const [access, setAccess] = useState<AccessRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -209,10 +211,16 @@ export default function ClientPortalAdmin() {
     load();
   }, [checking, clientId]);
 
+  const hasAnalisis = services.includes("analisis");
+
+  useEffect(() => {
+    if (!hasAnalisis && ["listening", "benchmark", "reportes", "recs"].includes(tab)) setTab("datos");
+  }, [hasAnalisis, tab]);
+
   const load = async () => {
     setLoading(true);
     const [c, r, a, w, cr, ls] = await Promise.all([
-      supabase.from("clients").select("name, portal_modules").eq("id", clientId).maybeSingle(),
+      supabase.from("clients").select("name, portal_modules, services").eq("id", clientId).maybeSingle(),
       supabase
         .from("client_portal_reports")
         .select("id, report_date, title, type, summary_md, created_at")
@@ -242,6 +250,7 @@ export default function ClientPortalAdmin() {
     ]);
     setClientName(c.data?.name ?? "");
     setPortalModules((((c.data as any)?.portal_modules) ?? {}) as Record<string, boolean>);
+    setServices((((c.data as any)?.services) ?? []) as string[]);
     setReports((r.data ?? []) as Report[]);
     setAccess((a.data ?? []) as AccessRow[]);
     setRecs((w.data ?? []) as WeeklyRec[]);
@@ -572,16 +581,17 @@ export default function ClientPortalAdmin() {
           </div>
         </div>
 
-        <Tabs defaultValue="reportes">
+        <Tabs value={tab} onValueChange={setTab}>
           <TabsList>
-            <TabsTrigger value="reportes"><FileText className="w-4 h-4 mr-2" /> Reportes</TabsTrigger>
-            <TabsTrigger value="recs"><Lightbulb className="w-4 h-4 mr-2" /> Recomendaciones</TabsTrigger>
-            <TabsTrigger value="listening"><MessageSquare className="w-4 h-4 mr-2" /> Listening</TabsTrigger>
-            <TabsTrigger value="benchmark"><Target className="w-4 h-4 mr-2" /> Benchmark</TabsTrigger>
+            <TabsTrigger value="datos"><BarChart3 className="w-4 h-4 mr-2" /> Datos del portal</TabsTrigger>
+            {hasAnalisis && <TabsTrigger value="listening"><MessageSquare className="w-4 h-4 mr-2" /> Listening</TabsTrigger>}
+            {hasAnalisis && <TabsTrigger value="benchmark"><Target className="w-4 h-4 mr-2" /> Benchmark</TabsTrigger>}
+            {hasAnalisis && <TabsTrigger value="reportes"><FileText className="w-4 h-4 mr-2" /> Reportes</TabsTrigger>}
+            {hasAnalisis && <TabsTrigger value="recs"><Lightbulb className="w-4 h-4 mr-2" /> Recomendaciones</TabsTrigger>}
             <TabsTrigger value="creds"><KeyRound className="w-4 h-4 mr-2" /> Credenciales</TabsTrigger>
-            <TabsTrigger value="datos"><Target className="w-4 h-4 mr-2" /> Datos del portal</TabsTrigger>
             <TabsTrigger value="accesos"><Users className="w-4 h-4 mr-2" /> Usuarios del portal</TabsTrigger>
           </TabsList>
+
 
           <TabsContent value="datos" className="space-y-4">
             {clientId && <PortalDataAdmin clientId={clientId} />}
