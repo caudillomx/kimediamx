@@ -272,6 +272,62 @@ export default function PortalResumen({ clientId, clientName }: { clientId: stri
         </Card>
       )}
 
+      {metaExtras && (
+        <Card className="glass border-border/50 p-5 space-y-4">
+          <div className="flex items-center gap-2">
+            <Users className="w-4 h-4 text-lime" />
+            <div className="text-sm font-semibold">Perfil y audiencia (Meta)</div>
+          </div>
+          <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
+            <div><div className="text-[11px] text-muted-foreground">Visitas al perfil</div><div className="text-lg font-semibold">{nf(metaExtras.visits)}</div></div>
+            <div><div className="text-[11px] text-muted-foreground">Clics al enlace</div><div className="text-lg font-semibold">{nf(metaExtras.clicks)}</div></div>
+          </div>
+          {metaExtras.audience && (
+            <div className="grid gap-5 md:grid-cols-3">
+              {!!metaExtras.audience.age_gender?.length && (
+                <div className="space-y-1.5">
+                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Edad y género</div>
+                  {metaExtras.audience.age_gender.map((a: any) => (
+                    <div key={a.bucket} className="flex items-center gap-2 text-xs">
+                      <span className="w-12 text-muted-foreground">{a.bucket}</span>
+                      <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden flex">
+                        <div className="h-full bg-cyan/70" style={{ width: `${(a.men ?? 0) * 2}%` }} />
+                        <div className="h-full bg-magenta/70" style={{ width: `${(a.women ?? 0) * 2}%` }} />
+                      </div>
+                      <span className="w-24 text-right text-muted-foreground">{nf(a.men, 1)}% H · {nf(a.women, 1)}% M</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {!!metaExtras.audience.cities?.length && (
+                <div className="space-y-1.5">
+                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Principales ciudades</div>
+                  {metaExtras.audience.cities.slice(0, 6).map((c: any) => (
+                    <div key={c.name} className="flex items-center justify-between gap-2 text-xs">
+                      <span className="truncate">{c.name}</span>
+                      <span className="text-muted-foreground">{nf(c.share, 1)}%</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {!!metaExtras.audience.countries?.length && (
+                <div className="space-y-1.5">
+                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Principales países</div>
+                  {metaExtras.audience.countries.slice(0, 6).map((c: any) => (
+                    <div key={c.name} className="flex items-center justify-between gap-2 text-xs">
+                      <span className="truncate">{c.name}</span>
+                      <span className="text-muted-foreground">{nf(c.share, 1)}%</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </Card>
+      )}
+
+
+
       {wCur && (
         <Card className="glass border-border/50 p-5 space-y-4">
           <div className="flex items-center gap-2">
