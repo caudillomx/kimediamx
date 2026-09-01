@@ -14,6 +14,7 @@ type SocialRow = {
   id: string; network: string; account_name: string; period_start: string; period_end: string; period_label: string | null;
   followers: number | null; follower_growth: number | null; follower_growth_rate: number | null; posts: number | null;
   interactions: number | null; engagement_rate: number | null; impressions: number | null; reach: number | null;
+  raw?: any;
 };
 type WebRow = {
   id: string; period_start: string; period_end: string; period_label: string | null;
