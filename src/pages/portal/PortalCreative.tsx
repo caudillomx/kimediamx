@@ -23,6 +23,8 @@ export default function PortalCreative({ portal }: { portal: ClientPortalConfig 
   const [logoUrl, setLogoUrl] = useState<string | null>(portal.logoUrl ?? null);
   const [services, setServices] = useState<ServiceKey[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
+  const [counts, setCounts] = useState({ parrilla: 0, activos: 0, ads: 0 });
+
   const [loading, setLoading] = useState(true);
   const [denied, setDenied] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
