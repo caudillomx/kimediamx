@@ -154,6 +154,18 @@ export default function PortalResumen({ clientId, clientName }: { clientId: stri
 
   const hasAny = sCur.length || wCur || aCur.length;
 
+  const metaExtras = useMemo(() => {
+    const rows = sCur
+      .map((r) => ({ row: r, mb: r.raw?.meta_business as any }))
+      .filter((x) => x.mb);
+    if (!rows.length) return null;
+    const visits = sum(rows.map((x) => x.mb.visits));
+    const clicks = sum(rows.map((x) => x.mb.link_clicks));
+    const audience = rows.find((x) => x.mb.audience)?.mb.audience ?? null;
+    return { visits, clicks, audience };
+  }, [sCur]);
+
+
   const download = async () => {
     if (!pdfRef.current) return;
     setDownloading(true);
