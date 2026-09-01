@@ -301,6 +301,17 @@ export default function PortalDataAdmin({ clientId }: { clientId: string }) {
                 <Input className="h-9" placeholder="Ej. Falcon" value={accountName} onChange={(e) => setAccountName(e.target.value)} />
               </div>
             </div>
+            <div className="flex items-start gap-3 rounded-lg border border-border/60 bg-muted/30 p-3">
+              <Switch id="auto-months" checked={autoMonths} onCheckedChange={setAutoMonths} />
+              <div className="space-y-0.5">
+                <Label htmlFor="auto-months" className="text-xs font-medium">Detectar meses dentro del archivo</Label>
+                <p className="text-[11px] text-muted-foreground">
+                  Si el export trae varios meses (columnas tipo “Seguidores 06/2026” o una columna de fecha), crea un corte por
+                  cada mes automáticamente. Si se apaga, todo se guarda en el periodo seleccionado arriba.
+                </p>
+              </div>
+            </div>
+
             <input ref={socialRef} type="file" accept=".xlsx,.xls,.csv" className="hidden"
               onChange={(e) => { const f = e.target.files?.[0]; if (f) handleSocial(f); }} />
             <Button size="sm" onClick={() => socialRef.current?.click()} disabled={busy === "social"}>
