@@ -172,6 +172,78 @@ export default function PortalDataAdmin({ clientId }: { clientId: string }) {
     }
   };
 
+  const handleMeta = async (files: File[]) => {
+    const account = metaAccount.trim() || accountName.trim();
+    if (!account) { toast.error("Escribe el nombre de la cuenta antes de subir"); if (metaRef.current) metaRef.current.value = ""; return; }
+    setBusy("meta");
+    try {
+      const parsed = await parseMetaBusinessFiles(files, metaNetwork);
+      if (!parsed.months.length && !parsed.audience) {
+        toast.error("No reconocí ningún export de Meta en esos archivos");
+        return;
+      }
+      const network = parsed.network;
+      const account_key = accountKeyOf(account);
+
+      const { data: existing } = await supabase
+        .from("client_portal_social_metrics")
+        .select("period_start,period_end,followers,posts,raw")
+        .eq("client_id", clientId)
+        .eq("network", network)
+        .eq("account_key", account_key);
+
+      const payload = parsed.months.map((m) => {
+        const p = monthBounds(m.ym);
+        const prev = (existing ?? []).find((r: any) => r.period_start === p.start && r.period_end === p.end);
+        const engagement =
+          m.interactions != null && m.impressions ? Number(((m.interactions / m.impressions) * 100).toFixed(2)) : null;
+        return {
+          client_id: clientId,
+          network,
+          account_key,
+          account_name: account,
+          period_start: p.start,
+          period_end: p.end,
+          period_label: p.label,
+          source: "meta_business",
+          followers: prev?.followers ?? null,
+          follower_growth: m.follower_growth,
+          follower_growth_rate: null,
+          posts: prev?.posts ?? null,
+          interactions: m.interactions,
+          engagement_rate: engagement,
+          impressions: m.impressions,
+          reach: m.reach,
+          raw: {
+            ...(prev?.raw as any ?? {}),
+            meta_business: {
+              days: m.days,
+              visits: m.visits,
+              link_clicks: m.link_clicks,
+              audience: parsed.audience,
+            },
+          } as any,
+          created_by: uid.current,
+        };
+      });
+
+      if (payload.length) {
+        const { error } = await supabase
+          .from("client_portal_social_metrics")
+          .upsert(payload, { onConflict: "client_id,network,account_key,period_start,period_end" });
+        if (error) throw error;
+      }
+      const ignoredNote = parsed.ignored.length ? ` · sin usar: ${parsed.ignored.join(", ")}` : "";
+      toast.success(`${payload.length} meses actualizados de ${account} (${NETWORK_LABELS[network] ?? network})${ignoredNote}`);
+      load();
+    } catch (e: any) {
+      toast.error(e.message ?? "No se pudo importar");
+    } finally {
+      setBusy(null);
+      if (metaRef.current) metaRef.current.value = "";
+    }
+  };
+
 
   const handleWeb = async (file: File) => {
     setBusy("web");
