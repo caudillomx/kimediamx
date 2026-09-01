@@ -42,7 +42,8 @@ export default function PortalCreative({ portal }: { portal: ClientPortalConfig 
       const { data: auth } = await supabase.auth.getUser();
       const uid = auth.user?.id;
 
-      const [{ data: client }, { data: rep }, { data: roles }, { data: access }] = await Promise.all([
+      const [{ data: client }, { data: rep }, { data: roles }, { data: access }, parrilla, activos, ads] =
+        await Promise.all([
         supabase.from("clients").select("logo_url, services").eq("id", portal.clientId).maybeSingle(),
         supabase
           .from("client_portal_reports")
@@ -54,6 +55,18 @@ export default function PortalCreative({ portal }: { portal: ClientPortalConfig 
         uid
           ? supabase.from("client_access").select("id").eq("client_id", portal.clientId).eq("user_id", uid).limit(1)
           : Promise.resolve({ data: [] as any[] }),
+        supabase
+          .from("notion_parrilla_items")
+          .select("id", { count: "exact", head: true })
+          .eq("client_id", portal.clientId),
+        supabase
+          .from("client_portal_assets")
+          .select("id", { count: "exact", head: true })
+          .eq("client_id", portal.clientId),
+        supabase
+          .from("client_portal_ads_metrics")
+          .select("id", { count: "exact", head: true })
+          .eq("client_id", portal.clientId),
       ]);
 
       if (!alive) return;
@@ -63,6 +76,11 @@ export default function PortalCreative({ portal }: { portal: ClientPortalConfig 
       setLogoUrl((client as any)?.logo_url ?? null);
       setServices((((client as any)?.services ?? []) as ServiceKey[]));
       setReports((rep ?? []) as Report[]);
+      setCounts({
+        parrilla: parrilla.count ?? 0,
+        activos: activos.count ?? 0,
+        ads: ads.count ?? 0,
+      });
       setLoading(false);
     })();
     return () => { alive = false; };
@@ -72,15 +90,21 @@ export default function PortalCreative({ portal }: { portal: ClientPortalConfig 
     const list: { key: string; label: string; icon: any }[] = [
       { key: "resumen", label: "Resumen", icon: LayoutDashboard },
     ];
-    if (services.includes("estrategia")) {
+    // Un módulo solo se muestra si el servicio está contratado Y ya hay datos
+    // cargados (los admins siempre lo ven para poder alimentarlo).
+    const show = (service: ServiceKey, hasData: boolean) => services.includes(service) && (hasData || isAdmin);
+    if (show("estrategia", counts.parrilla > 0)) {
       list.push({ key: "parrilla", label: "Parrilla editorial", icon: CalendarDays });
+    }
+    if (show("estrategia", counts.activos > 0)) {
       list.push({ key: "activos", label: "Funnel y activos", icon: Workflow });
     }
-    if (services.includes("ads")) list.push({ key: "ads", label: "Ads", icon: Megaphone });
-    if (services.includes("audiovisual")) list.push({ key: "audiovisual", label: "Audiovisual", icon: Film });
+    if (show("ads", counts.ads > 0)) list.push({ key: "ads", label: "Ads", icon: Megaphone });
+    if (show("audiovisual", counts.activos > 0)) list.push({ key: "audiovisual", label: "Audiovisual", icon: Film });
     if (reports.length) list.push({ key: "reportes", label: "Reportes", icon: FileText });
     return list;
-  }, [services, reports.length]);
+  }, [services, reports.length, counts, isAdmin]);
+
 
   const [tab, setTab] = useState<string>("resumen");
   useEffect(() => {
