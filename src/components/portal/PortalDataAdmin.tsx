@@ -19,6 +19,8 @@ import {
   parseAdsFile,
   parseSocialFile,
   parseSocialFileByMonth,
+  parseMetaBusinessFiles,
+
 
   parseWebFile,
   periodLabel,
@@ -90,11 +92,15 @@ export default function PortalDataAdmin({ clientId }: { clientId: string }) {
   const [accountName, setAccountName] = useState("");
   const [platform, setPlatform] = useState<AdPlatform>("meta");
   const [autoMonths, setAutoMonths] = useState(true);
+  const [metaNetwork, setMetaNetwork] = useState("facebook");
+  const [metaAccount, setMetaAccount] = useState("");
 
 
   const socialRef = useRef<HTMLInputElement>(null);
   const webRef = useRef<HTMLInputElement>(null);
   const adsRef = useRef<HTMLInputElement>(null);
+  const metaRef = useRef<HTMLInputElement>(null);
+
 
   const load = useCallback(async () => {
     const [s, w, a] = await Promise.all([
@@ -165,6 +171,78 @@ export default function PortalDataAdmin({ clientId }: { clientId: string }) {
     } finally {
       setBusy(null);
       if (socialRef.current) socialRef.current.value = "";
+    }
+  };
+
+  const handleMeta = async (files: File[]) => {
+    const account = metaAccount.trim() || accountName.trim();
+    if (!account) { toast.error("Escribe el nombre de la cuenta antes de subir"); if (metaRef.current) metaRef.current.value = ""; return; }
+    setBusy("meta");
+    try {
+      const parsed = await parseMetaBusinessFiles(files, metaNetwork);
+      if (!parsed.months.length && !parsed.audience) {
+        toast.error("No reconocí ningún export de Meta en esos archivos");
+        return;
+      }
+      const network = parsed.network;
+      const account_key = accountKeyOf(account);
+
+      const { data: existing } = await supabase
+        .from("client_portal_social_metrics")
+        .select("period_start,period_end,followers,posts,raw")
+        .eq("client_id", clientId)
+        .eq("network", network)
+        .eq("account_key", account_key);
+
+      const payload = parsed.months.map((m) => {
+        const p = monthBounds(m.ym);
+        const prev = (existing ?? []).find((r: any) => r.period_start === p.start && r.period_end === p.end);
+        const engagement =
+          m.interactions != null && m.impressions ? Number(((m.interactions / m.impressions) * 100).toFixed(2)) : null;
+        return {
+          client_id: clientId,
+          network,
+          account_key,
+          account_name: account,
+          period_start: p.start,
+          period_end: p.end,
+          period_label: p.label,
+          source: "meta_business",
+          followers: prev?.followers ?? null,
+          follower_growth: m.follower_growth,
+          follower_growth_rate: null,
+          posts: prev?.posts ?? null,
+          interactions: m.interactions,
+          engagement_rate: engagement,
+          impressions: m.impressions,
+          reach: m.reach,
+          raw: {
+            ...(prev?.raw as any ?? {}),
+            meta_business: {
+              days: m.days,
+              visits: m.visits,
+              link_clicks: m.link_clicks,
+              audience: parsed.audience,
+            },
+          } as any,
+          created_by: uid.current,
+        };
+      });
+
+      if (payload.length) {
+        const { error } = await supabase
+          .from("client_portal_social_metrics")
+          .upsert(payload, { onConflict: "client_id,network,account_key,period_start,period_end" });
+        if (error) throw error;
+      }
+      const ignoredNote = parsed.ignored.length ? ` · sin usar: ${parsed.ignored.join(", ")}` : "";
+      toast.success(`${payload.length} meses actualizados de ${account} (${NETWORK_LABELS[network] ?? network})${ignoredNote}`);
+      load();
+    } catch (e: any) {
+      toast.error(e.message ?? "No se pudo importar");
+    } finally {
+      setBusy(null);
+      if (metaRef.current) metaRef.current.value = "";
     }
   };
 
@@ -320,6 +398,37 @@ export default function PortalDataAdmin({ clientId }: { clientId: string }) {
               Subir archivo
             </Button>
           </Card>
+
+          <Card className="p-4 space-y-3">
+            <div className="text-sm font-semibold">Estadísticas de Meta Business (Facebook / Instagram)</div>
+            <p className="text-xs text-muted-foreground">
+              Sube de golpe los CSV diarios que exporta Meta (Seguidores, Visualizaciones, Interacciones, Visitas, Clics,
+              Espectadores y Público). Se suman por mes y se guardan como cortes mensuales de la cuenta que indiques.
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1">
+                <Label className="text-xs">Red (si el archivo no la indica)</Label>
+                <Select value={metaNetwork} onValueChange={setMetaNetwork}>
+                  <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="facebook">Facebook</SelectItem>
+                    <SelectItem value="instagram">Instagram</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Nombre de la cuenta</Label>
+                <Input className="h-9" placeholder="Ej. El Diluvio" value={metaAccount} onChange={(e) => setMetaAccount(e.target.value)} />
+              </div>
+            </div>
+            <input ref={metaRef} type="file" accept=".csv" multiple className="hidden"
+              onChange={(e) => { const fs = Array.from(e.target.files ?? []); if (fs.length) handleMeta(fs); }} />
+            <Button size="sm" variant="outline" onClick={() => metaRef.current?.click()} disabled={busy === "meta"}>
+              {busy === "meta" ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
+              Subir CSV de Meta
+            </Button>
+          </Card>
+
 
           {socialGrouped.map(([label, rows]) => (
             <Card key={label} className="p-4 space-y-2">

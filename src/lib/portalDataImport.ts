@@ -487,6 +487,178 @@ export async function parseAdsFile(file: File): Promise<{ platform: AdPlatform |
 }
 
 /* ------------------------------------------------------------------ */
+/* Meta Business Suite (exports diarios de Estadísticas)               */
+/* ------------------------------------------------------------------ */
+
+export type MetaAudience = {
+  age_gender: { bucket: string; men: number | null; women: number | null }[];
+  cities: { name: string; share: number | null }[];
+  countries: { name: string; share: number | null }[];
+};
+
+export type MetaMonth = {
+  ym: string;
+  days: number;
+  follower_growth: number | null;
+  impressions: number | null;
+  reach: number | null;
+  interactions: number | null;
+  visits: number | null;
+  link_clicks: number | null;
+};
+
+export type MetaBusinessParse = {
+  network: string;
+  months: MetaMonth[];
+  audience: MetaAudience | null;
+  recognized: { file: string; metric: string; network: string | null }[];
+  ignored: string[];
+};
+
+/** Meta exporta CSV en UTF-16 con una primera línea `sep=,`. */
+async function readMetaText(file: File): Promise<string> {
+  const buf = await file.arrayBuffer();
+  const bytes = new Uint8Array(buf);
+  const looksUtf16 =
+    (bytes[0] === 0xff && bytes[1] === 0xfe) ||
+    (bytes.length > 4 && bytes[1] === 0 && bytes[3] === 0);
+  const text = new TextDecoder(looksUtf16 ? "utf-16le" : "utf-8").decode(bytes);
+  return text.replace(/^\uFEFF/, "").replace(/^sep=.*\r?\n/i, "");
+}
+
+function parseCsvLines(text: string): string[][] {
+  return text
+    .split(/\r?\n/)
+    .map((line) => {
+      const cells: string[] = [];
+      let cur = "";
+      let quoted = false;
+      for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (ch === '"') {
+          if (quoted && line[i + 1] === '"') { cur += '"'; i++; }
+          else quoted = !quoted;
+        } else if (ch === "," && !quoted) { cells.push(cur); cur = ""; }
+        else cur += ch;
+      }
+      cells.push(cur);
+      return cells.map((c) => c.trim());
+    });
+}
+
+type MetaMetricKey = "follower_growth" | "impressions" | "reach" | "interactions" | "visits" | "link_clicks";
+
+/** Traduce el título del export (o el nombre del archivo) a una métrica conocida. */
+function metaMetricOf(title: string): MetaMetricKey | null {
+  const k = normalizeKey(title);
+  if (k.includes("seguidores")) return "follower_growth";
+  if (k.includes("visualizaciones") || k.includes("views") || k.includes("impresiones")) return "impressions";
+  if (k.includes("espectadores") || k.includes("alcance") || k.includes("personas alcanzadas") || k.includes("reach")) return "reach";
+  if (k.includes("interacciones")) return "interactions";
+  if (k.includes("visitas") || k.includes("visits")) return "visits";
+  if (k.includes("clics")) return "link_clicks";
+  return null;
+}
+
+function metaNetworkOf(title: string): string | null {
+  const k = normalizeKey(title);
+  if (k.includes("instagram")) return "instagram";
+  if (k.includes("facebook")) return "facebook";
+  return null;
+}
+
+function parseAudience(lines: string[][]): MetaAudience | null {
+  const out: MetaAudience = { age_gender: [], cities: [], countries: [] };
+  let section: "age" | "cities" | "countries" | null = null;
+  let pendingNames: string[] | null = null;
+
+  for (const row of lines) {
+    const first = normalizeKey(row[0] ?? "");
+    const isTitle = row.filter((c) => c !== "").length === 1;
+    if (isTitle) {
+      if (first.includes("edad")) section = "age";
+      else if (first.includes("ciudades")) { section = "cities"; pendingNames = null; }
+      else if (first.includes("paises")) { section = "countries"; pendingNames = null; }
+      else section = null;
+      continue;
+    }
+    if (!section || row.every((c) => c === "")) continue;
+
+    if (section === "age") {
+      if (!/\d/.test(row[0] ?? "")) continue; // fila de encabezado "", Hombres, Mujeres
+      out.age_gender.push({ bucket: row[0], men: num(row[1]), women: num(row[2]) });
+      continue;
+    }
+    const numeric = row.every((c) => c === "" || num(c) != null);
+    if (!numeric) { pendingNames = row.filter((c) => c !== ""); continue; }
+    if (pendingNames) {
+      const values = row.filter((c) => c !== "");
+      const list = pendingNames.map((name, i) => ({ name, share: num(values[i]) }));
+      if (section === "cities") out.cities = list;
+      else out.countries = list;
+      pendingNames = null;
+    }
+  }
+  return out.age_gender.length || out.cities.length || out.countries.length ? out : null;
+}
+
+/**
+ * Lee uno o varios exports diarios de Meta Business (Seguidores, Visualizaciones,
+ * Interacciones, Visitas, Clics, Espectadores, Público) y los agrega por mes.
+ */
+export async function parseMetaBusinessFiles(
+  files: File[],
+  fallbackNetwork = "facebook"
+): Promise<MetaBusinessParse> {
+  const byMonth = new Map<string, MetaMonth>();
+  const recognized: MetaBusinessParse["recognized"] = [];
+  const ignored: string[] = [];
+  let audience: MetaAudience | null = null;
+  let network: string | null = null;
+
+  for (const file of files) {
+    const lines = parseCsvLines(await readMetaText(file)).filter((r) => r.some((c) => c !== ""));
+    if (!lines.length) { ignored.push(file.name); continue; }
+
+    const title = lines[0]?.[0] ?? "";
+    const isSeries = lines.some((r) => /^20\d{2}-\d{2}-\d{2}/.test(r[0] ?? ""));
+
+    if (!isSeries) {
+      const aud = parseAudience(lines);
+      if (aud) { audience = aud; recognized.push({ file: file.name, metric: "Público", network: null }); }
+      else ignored.push(file.name);
+      continue;
+    }
+
+    const metric = metaMetricOf(title) ?? metaMetricOf(file.name);
+    if (!metric) { ignored.push(file.name); continue; }
+    network = network ?? metaNetworkOf(title) ?? metaNetworkOf(file.name);
+
+    for (const row of lines) {
+      const m = (row[0] ?? "").match(/^(20\d{2})-(\d{2})-\d{2}/);
+      if (!m) continue;
+      const value = num(row[1]);
+      if (value == null) continue;
+      const ym = `${m[1]}-${m[2]}`;
+      const bucket =
+        byMonth.get(ym) ??
+        { ym, days: 0, follower_growth: null, impressions: null, reach: null, interactions: null, visits: null, link_clicks: null };
+      bucket[metric] = (bucket[metric] ?? 0) + value;
+      if (metric === "impressions") bucket.days += 1;
+      byMonth.set(ym, bucket);
+    }
+    recognized.push({ file: file.name, metric: title || file.name, network: metaNetworkOf(title) });
+  }
+
+  return {
+    network: network ?? normalizeNetwork(fallbackNetwork),
+    months: [...byMonth.values()].sort((a, b) => a.ym.localeCompare(b.ym)),
+    audience,
+    recognized,
+    ignored,
+  };
+}
+/* ------------------------------------------------------------------ */
 /* Period helpers                                                      */
 /* ------------------------------------------------------------------ */
 
