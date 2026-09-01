@@ -211,6 +211,12 @@ export default function ClientPortalAdmin() {
     load();
   }, [checking, clientId]);
 
+  const hasAnalisis = services.includes("analisis");
+
+  useEffect(() => {
+    if (!hasAnalisis && ["listening", "benchmark", "reportes", "recs"].includes(tab)) setTab("datos");
+  }, [hasAnalisis, tab]);
+
   const load = async () => {
     setLoading(true);
     const [c, r, a, w, cr, ls] = await Promise.all([
