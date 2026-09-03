@@ -301,21 +301,24 @@ export default function PortalDescargas({
   };
 
   // ---------- PDFs ----------
-  const renderPdf = async (ref: React.RefObject<HTMLDivElement>, filename: string) => {
+  const renderPdf = async (ref: React.RefObject<HTMLDivElement>, filename: string, landscape = false) => {
     if (!ref.current) return;
     const { default: html2pdf } = await import("html2pdf.js");
+    const width = landscape ? 1123 : 794;
     await html2pdf().set({
-      margin: [8, 0, 8, 0],
+      margin: landscape ? [8, 0, 8, 0] : [8, 0, 8, 0],
       filename,
-      html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff", windowWidth: 794, scrollX: 0, scrollY: 0 },
-      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+      html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff", windowWidth: width, scrollX: 0, scrollY: 0 },
+      jsPDF: { unit: "mm", format: "a4", orientation: landscape ? "landscape" : "portrait" },
       pagebreak: {
         mode: ["css", "legacy"],
         before: [".pdf-page-break"],
+        after: [".pdf-page-break-after"],
         avoid: [".pdf-avoid", "svg", "tr"],
       },
     } as any).from(ref.current).save();
   };
+
 
   /** Menciones (media + social) de un rango, resueltas a dependencia. */
   const fetchMentions = async (from: string, to: string) => {
