@@ -961,18 +961,64 @@ export default function PortalDescargas({
     } finally { setBusy(null); }
   };
 
+  /** Interpretación con IA del panorama, con los datos exactos del corte. */
+  const fetchGabineteReading = async (g: GabineteReportData) => {
+    const contexto = {
+      periodo: g.periodoLabel,
+      dependencias_con_datos: g.dependencias,
+      cuentas_medidas: g.cuentas,
+      audiencia_total: g.seguidoresTotales,
+      publicaciones_del_periodo: g.publicacionesTotales,
+      interaccion_ponderada_pct: g.interaccionPonderada == null ? null : Number((g.interaccionPonderada * 100).toFixed(3)),
+      interaccion_mediana_pct: g.interaccionMediana == null ? null : Number((g.interaccionMediana * 100).toFixed(3)),
+      dependencias_comparables: g.comparables,
+      crecieron: g.suben.map((m) => ({ dependencia: m.nombre, variacion_pct: Number((m.delta * 100).toFixed(2)), detalle: m.detalle })),
+      retrocedieron: g.bajan.map((m) => ({ dependencia: m.nombre, variacion_pct: Number((m.delta * 100).toFixed(2)), detalle: m.detalle })),
+      ranking_por_tamano: g.tiers.map((t) => ({
+        categoria: t.label,
+        dependencias: t.rows.slice(0, 8).map((r) => ({
+          nombre: r.nombre,
+          seguidores: r.seguidores,
+          interaccion_pct: r.engagement == null ? null : Number((r.engagement * 100).toFixed(3)),
+          publicaciones: r.publicaciones,
+          variacion_audiencia_pct: r.comparable && r.deltaSeguidores != null ? Number((r.deltaSeguidores * 100).toFixed(2)) : "no comparable",
+          lugar_previo: r.lugarPrevio,
+        })),
+      })),
+      dependencias_sin_datos: g.sinDatos,
+      nota_metodologica: g.nota,
+    };
+    const { data, error } = await supabase.functions.invoke("generate-gabinete-reading", { body: { contexto } });
+    if (error) throw error;
+    if ((data as any)?.error) throw new Error((data as any).error);
+    return (data as any)?.payload as GabineteReportData["interpretacion"];
+  };
+
   const downloadGabPdf = async () => {
     setBusy("gab");
-    setGabData(buildGabineteReport());
+    const base = buildGabineteReport();
+    setGabData(base);
     toast.loading("Generando panorama…", { id: "gab-pdf" });
     try {
-      await new Promise((r) => setTimeout(r, 350));
+      if (conRecomendaciones) {
+        try {
+          const interpretacion = await fetchGabineteReading(base);
+          if (interpretacion?.lectura || interpretacion?.hallazgos?.length) {
+            setGabData({ ...base, interpretacion });
+          }
+        } catch (e) {
+          console.error("lectura gabinete", e);
+          toast.message("El panorama se generó sin la interpretación con IA.");
+        }
+      }
+      await new Promise((r) => setTimeout(r, 400));
       await renderPdf(gabPdfRef, `gabinete-${enfoque}-${cutSlug}.pdf`);
       toast.success("Panorama descargado", { id: "gab-pdf" });
     } catch {
       toast.error("No se pudo generar el PDF", { id: "gab-pdf" });
     } finally { setBusy(null); }
   };
+
 
   if (loading) return <Card className="p-8 text-center text-sm text-muted-foreground">Cargando centro de descargas…</Card>;
 
