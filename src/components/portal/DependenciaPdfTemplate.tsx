@@ -801,7 +801,13 @@ function MoveList({ rows, color, titulo, hint }: { rows: GabineteMoveRow[]; colo
       ) : rows.map((r, i) => (
         <div key={i} style={{ padding: "4px 0", borderBottom: "1px solid #f1f5f9" }}>
           <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-            <span style={{ fontWeight: 600 }}>{r.nombre}</span>
+            <span style={{ fontWeight: 600 }}>
+              {r.nombre}
+              <span style={{ color: r.tipo === "titular" ? SCOPE.titular.main : SCOPE.institucional.main, fontSize: 8.2, fontWeight: 700 }}>
+                {" "}· {r.tipo === "titular" ? "titular" : "institución"}
+              </span>
+            </span>
+
             <span style={{ color, fontWeight: 700 }}>{df(r.delta)}</span>
           </div>
           <div style={{ fontSize: 8.6, color: MUTED }}>{r.detalle}</div>
