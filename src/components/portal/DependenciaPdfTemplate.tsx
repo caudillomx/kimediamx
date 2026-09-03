@@ -899,22 +899,80 @@ function RankTable({ rows, color, mostrarLugarPrevio, indiceInicial = 0, ocultar
   );
 }
 
-export const GabinetePdfTemplate = forwardRef<HTMLDivElement, { data: GabineteReportData | null; portalName: string }>(({ data, portalName }, ref) => {
-  if (!data) return <div ref={ref} style={page} />;
-  
-  return (
-    <div ref={ref} style={page}>
-      <Header title={portalName} subtitle="Panorama de comunicación digital del gabinete" periodo={data.periodoLabel} />
+/* ------------------------------------------------------------------ */
+/* Gabinete: formato presentación 16:9 (horizontal)                    */
+/* ------------------------------------------------------------------ */
 
-      {(() => {
-        const tit = data.titulares ?? [];
-        const hayTitulares = tit.length > 0;
-        const segTit = data.seguidoresTitulares ?? 0;
-        const segInst = Math.max(0, data.seguidoresTotales - segTit);
-        const pubTit = data.publicacionesTitulares ?? null;
-        const pubInst = data.publicacionesTotales == null ? null : Math.max(0, data.publicacionesTotales - (pubTit ?? 0));
-        return (
-          <div className="pdf-avoid" style={{ display: "grid", gridTemplateColumns: `repeat(${hayTitulares ? 5 : 4}, 1fr)`, gap: 8, marginBottom: 12 }}>
+const SLIDE_W = 1123;
+const SLIDE_H = 726;
+
+const slide: React.CSSProperties = {
+  width: SLIDE_W,
+  height: SLIDE_H,
+  boxSizing: "border-box",
+  padding: "26px 44px 20px",
+  background: "#ffffff",
+  color: INK,
+  fontFamily: "'Inter', system-ui, sans-serif",
+  fontSize: 10.5,
+  lineHeight: 1.45,
+  overflow: "hidden",
+  position: "relative",
+  display: "flex",
+  flexDirection: "column",
+};
+
+function Slide({ children, last, kicker, title, hint }: {
+  children: React.ReactNode; last?: boolean; kicker?: string; title?: string; hint?: string;
+}) {
+  return (
+    <div
+      className={last ? "pdf-avoid" : "pdf-avoid pdf-page-break-after"}
+      style={{ ...slide, breakAfter: last ? "auto" : "page", pageBreakAfter: last ? "auto" : "always" }}
+    >
+      {title && (
+        <div style={{ marginBottom: 14, borderBottom: `2px solid ${INK}`, paddingBottom: 8 }}>
+          {kicker && (
+            <div style={{ fontSize: 8.6, letterSpacing: "0.18em", textTransform: "uppercase", color: MUTED }}>{kicker}</div>
+          )}
+          <div style={{ fontSize: 21, fontWeight: 700, marginTop: 2, letterSpacing: "-0.01em" }}>{title}</div>
+          {hint && <div style={{ fontSize: 9.4, color: MUTED, marginTop: 3 }}>{hint}</div>}
+        </div>
+      )}
+      <div style={{ flex: 1, minHeight: 0 }}>{children}</div>
+    </div>
+  );
+}
+
+export const GabinetePdfTemplate = forwardRef<HTMLDivElement, { data: GabineteReportData | null; portalName: string }>(({ data, portalName }, ref) => {
+  if (!data) return <div ref={ref} style={{ ...slide }} />;
+
+  const tit = data.titulares ?? [];
+  const hayTitulares = tit.length > 0;
+  const segTit = data.seguidoresTitulares ?? 0;
+  const segInst = Math.max(0, data.seguidoresTotales - segTit);
+  const pubTit = data.publicacionesTitulares ?? null;
+  const pubInst = data.publicacionesTotales == null ? null : Math.max(0, data.publicacionesTotales - (pubTit ?? 0));
+  const hallazgos = (data.interpretacion?.hallazgos ?? []).slice(0, 4);
+  const recos = data.interpretacion?.recomendaciones ?? [];
+  const titularTiers = data.titularTiers ?? [];
+
+  return (
+    <div ref={ref} style={{ width: SLIDE_W, background: "#ffffff" }}>
+      {/* 1 — Portada e indicadores */}
+      <Slide>
+        <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+          <div style={{ borderBottom: `3px solid ${SCOPE.titular.main}`, paddingBottom: 14, marginBottom: 18 }}>
+            <div style={{ fontSize: 9.4, letterSpacing: "0.2em", textTransform: "uppercase", color: MUTED }}>
+              Panorama de comunicación digital del gabinete
+            </div>
+            <h1 style={{ fontSize: 38, fontWeight: 700, margin: "8px 0 4px", letterSpacing: "-0.02em", lineHeight: 1.1 }}>
+              {portalName}
+            </h1>
+            <div style={{ fontSize: 14, color: "#475569" }}>{data.periodoLabel}</div>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: `repeat(${hayTitulares ? 5 : 4}, 1fr)`, gap: 12, marginBottom: 18 }}>
             <Kpi label="Dependencias con datos" value={String(data.dependencias)} color={SCOPE.institucional.main}
                  foot={`${Math.max(0, data.cuentas - (data.cuentasTitulares ?? 0))} cuentas institucionales`}
                  explain="Sólo se cuentan dependencias con al menos una cuenta institucional con datos en el corte." />
@@ -936,96 +994,133 @@ export const GabinetePdfTemplate = forwardRef<HTMLDivElement, { data: GabineteRe
                  foot={hayTitulares && pubInst != null ? `Instituciones ${nf(pubInst)} · Titulares ${pubTit == null ? "s/d" : nf(pubTit)}` : "Contenido publicado por el gabinete"}
                  explain="Publicaciones registradas en el corte, sin duplicados entre cargas." />
           </div>
-        );
-      })()}
 
-      <div className="pdf-avoid" style={{
-        border: `1px solid ${LINE}`, borderLeft: `3px solid ${SCOPE.institucional.main}`,
-        borderRadius: 6, padding: "7px 10px", marginBottom: 14, fontSize: 9, color: MUTED, background: "#f8fafc",
-      }}>
-        <strong style={{ color: INK }}>Cómo leer este reporte. </strong>
-        El panorama separa dos ámbitos: las <b style={{ color: SCOPE.institucional.main }}>cuentas institucionales</b> de cada dependencia y las{" "}
-        <b style={{ color: SCOPE.titular.main }}>cuentas personales de los titulares</b>. Cada indicador y cada tabla indica a cuál de los dos corresponde;
-        cuando la cifra es del conjunto, el desglose aparece debajo del número. {data.nota}
-      </div>
+          <div style={{
+            border: `1px solid ${LINE}`, borderLeft: `3px solid ${SCOPE.institucional.main}`,
+            borderRadius: 8, padding: "12px 14px", fontSize: 10, color: MUTED, background: "#f8fafc",
+          }}>
+            <strong style={{ color: INK }}>Cómo leer esta presentación. </strong>
+            El panorama separa dos ámbitos: las <b style={{ color: SCOPE.institucional.main }}>cuentas institucionales</b> de cada dependencia y las{" "}
+            <b style={{ color: SCOPE.titular.main }}>cuentas personales de los titulares</b>. Cada indicador y cada tabla indica a cuál de los dos corresponde;
+            cuando la cifra es del conjunto, el desglose aparece debajo del número. {data.nota}
+          </div>
 
-
-      {data.interpretacion?.lectura && (
-        <div className="pdf-avoid" style={{ marginBottom: 14 }}>
-          <SectionTitle text="Qué significa este corte" color={SCOPE.conjunto.main}
-                        hint="Interpretación de las cifras del periodo: qué está pasando y por qué importa." />
-          <Explainer color={SCOPE.conjunto.main} text={stripEmoji(data.interpretacion.lectura)} />
-          {(data.interpretacion.hallazgos ?? []).slice(0, 4).map((h, i) => (
-            <div className="pdf-avoid" key={i} style={{
-              border: `1px solid ${LINE}`, borderLeft: `3px solid ${SCOPE.conjunto.main}`,
-              borderRadius: 7, padding: "6px 9px", marginBottom: 5, background: "#ffffff",
-            }}>
-              <div style={{ fontSize: 10.2, fontWeight: 700, color: INK, overflowWrap: "anywhere" }}>
-                {i + 1}. {stripEmoji(h.titulo)}
-              </div>
-              <div style={{ fontSize: 9.4, color: "#475569", marginTop: 2, overflowWrap: "anywhere" }}>
-                {stripEmoji(h.que_pasa)}
-              </div>
-              <div style={{ fontSize: 9.4, color: "#334155", marginTop: 2, overflowWrap: "anywhere" }}>
-                <b style={{ color: MUTED }}>Por qué importa:</b> {stripEmoji(h.por_que_importa)}
-              </div>
-            </div>
-          ))}
+          <div style={{ marginTop: "auto", paddingTop: 12, fontSize: 8.6, color: "#94a3b8", textAlign: "right" }}>
+            {new Date().toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" })}
+          </div>
         </div>
+      </Slide>
+
+      {/* 2 — Interpretación */}
+      {(data.interpretacion?.lectura || hallazgos.length > 0) && (
+        <Slide kicker="Lectura del corte" title="Qué significa este corte"
+               hint="Interpretación de las cifras del periodo: qué está pasando y por qué importa.">
+          {data.interpretacion?.lectura && (
+            <div style={{
+              background: "#f8fafc", borderLeft: `3px solid ${SCOPE.conjunto.main}`, borderRadius: "0 8px 8px 0",
+              padding: "10px 14px", marginBottom: 14, fontSize: 10.6, color: "#334155", lineHeight: 1.5,
+            }}>
+              {stripEmoji(data.interpretacion.lectura)}
+            </div>
+          )}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            {hallazgos.map((h, i) => (
+              <div key={i} style={{
+                border: `1px solid ${LINE}`, borderLeft: `3px solid ${SCOPE.conjunto.main}`,
+                borderRadius: 8, padding: "10px 12px", background: "#ffffff",
+              }}>
+                <div style={{ fontSize: 11.4, fontWeight: 700, color: INK, overflowWrap: "anywhere" }}>
+                  {i + 1}. {stripEmoji(h.titulo)}
+                </div>
+                <div style={{ fontSize: 9.8, color: "#475569", marginTop: 4, overflowWrap: "anywhere" }}>
+                  {stripEmoji(h.que_pasa)}
+                </div>
+                <div style={{ fontSize: 9.8, color: "#334155", marginTop: 4, overflowWrap: "anywhere" }}>
+                  <b style={{ color: MUTED }}>Por qué importa:</b> {stripEmoji(h.por_que_importa)}
+                </div>
+              </div>
+            ))}
+          </div>
+        </Slide>
       )}
 
-
-      <div className="pdf-avoid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 16 }}>
-        <MoveList rows={data.suben} color="#059669" titulo="Quién creció" hint="Dependencias y titulares; sólo variaciones reales, comparando las mismas cuentas" />
-        <MoveList rows={data.bajan} color="#dc2626" titulo="Quién retrocedió" hint="Dependencias y titulares con caídas de audiencia frente al corte anterior" />
-      </div>
-
-      <div className="pdf-avoid" style={{ marginBottom: 4 }}>
-        <SectionTitle text="Dependencias por tamaño de audiencia" color={SCOPE.institucional.main}
-                      hint="Cuentas institucionales, agrupadas para comparar entre iguales." />
-      </div>
-      {data.tiers.map((t) => (
-        <div className="pdf-avoid" key={t.label} style={{ marginBottom: 12 }}>
-          <SectionTitle text={t.label} color={SCOPE.institucional.main}
-                        hint={t.rows.length > 5 ? `${t.nota} · se muestran las 5 primeras de ${t.rows.length}` : t.nota} />
-          <RankTable rows={t.rows.slice(0, 5)} color={SCOPE.institucional.main} mostrarLugarPrevio />
+      {/* 3 — Movimientos */}
+      <Slide kicker="Movimientos del periodo" title="Quién creció y quién retrocedió"
+             hint="Instituciones y titulares; sólo variaciones reales, comparando las mismas cuentas contra el corte anterior.">
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 22 }}>
+          <MoveList rows={data.suben} color="#059669" titulo="Quién creció" hint="Hasta 3 instituciones y 3 titulares" />
+          <MoveList rows={data.bajan} color="#dc2626" titulo="Quién retrocedió" hint="Hasta 3 instituciones y 3 titulares" />
         </div>
-      ))}
+      </Slide>
 
-      {(data.titularTiers ?? []).length > 0 && (
-        <>
-          <div className="pdf-avoid" style={{ marginBottom: 4 }}>
-            <SectionTitle text="Titulares por tamaño de audiencia" color={SCOPE.titular.main}
-                          hint={`Cuentas personales de los funcionarios${data.titularesInteraccion != null ? ` · interacción ponderada ${pf(data.titularesInteraccion)}` : ""}`} />
+      {/* 4 — Dependencias por tamaño */}
+      <Slide kicker="Instituciones" title="Dependencias por tamaño de audiencia"
+             hint="Cuentas institucionales, agrupadas para comparar entre iguales."
+             last={titularTiers.length === 0 && recos.length === 0}>
+        {data.tiers.map((t) => (
+          <div key={t.label} style={{ marginBottom: 10 }}>
+            <SectionTitle text={t.label} color={SCOPE.institucional.main}
+                          hint={t.rows.length > 5 ? `${t.nota} · se muestran las 5 primeras de ${t.rows.length}` : t.nota} />
+            <RankTable rows={t.rows.slice(0, 5)} color={SCOPE.institucional.main} mostrarLugarPrevio />
           </div>
-          {(data.titularTiers ?? []).map((t) => (
-            <div className="pdf-avoid" key={t.label} style={{ marginBottom: 12 }}>
+        ))}
+      </Slide>
+
+      {/* 5 — Titulares por tamaño */}
+      {titularTiers.length > 0 && (
+        <Slide kicker="Titulares" title="Titulares por tamaño de audiencia"
+               hint={`Cuentas personales de los funcionarios${data.titularesInteraccion != null ? ` · interacción ponderada ${pf(data.titularesInteraccion)}` : ""}`}
+               last={recos.length === 0}>
+          {titularTiers.map((t) => (
+            <div key={t.label} style={{ marginBottom: 10 }}>
               <SectionTitle text={t.label} color={SCOPE.titular.main}
                             hint={t.rows.length > 5 ? `${t.nota} · se muestran los 5 primeros de ${t.rows.length}` : t.nota} />
               <TitularTable rows={t.rows.slice(0, 5)} />
             </div>
           ))}
-        </>
+          {data.sinDatos.length > 0 && (
+            <div style={{ marginTop: 6, fontSize: 8.6, color: MUTED }}>
+              <strong style={{ color: INK }}>Sin datos en este corte: </strong>{data.sinDatos.join(" · ")}
+            </div>
+          )}
+        </Slide>
       )}
 
-
-
-      {data.sinDatos.length > 0 && (
-        <div className="pdf-avoid" style={{ marginTop: 8, fontSize: 8.8, color: MUTED }}>
-          <strong style={{ color: INK }}>Sin datos en este corte: </strong>{data.sinDatos.join(" · ")}
-        </div>
+      {/* 6 — Recomendaciones */}
+      {recos.length > 0 && (
+        <Slide kicker="Siguientes pasos" title="Qué hacer ahora"
+               hint="Acciones sugeridas a partir de los cambios del periodo, el contenido publicado y las menciones de prensa detectadas."
+               last>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            {recos.slice(0, 6).map((r, i) => (
+              <div key={i} style={{
+                border: `1px solid ${LINE}`,
+                borderLeft: `3px solid ${r.prioridad === "alta" ? SCOPE.titular.main : SCOPE.institucional.main}`,
+                borderRadius: 8, padding: "10px 12px", background: "#ffffff",
+              }}>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "flex-start" }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: INK, overflowWrap: "anywhere" }}>
+                    {i + 1}. {stripEmoji(r.accion)}
+                  </div>
+                  {r.prioridad && (
+                    <span style={{
+                      fontSize: 8, textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 700,
+                      color: r.prioridad === "alta" ? SCOPE.titular.main : SCOPE.institucional.main, whiteSpace: "nowrap",
+                    }}>
+                      {r.prioridad}
+                    </span>
+                  )}
+                </div>
+                <div style={{ fontSize: 9.6, color: "#475569", marginTop: 4, overflowWrap: "anywhere" }}>
+                  <b style={{ color: MUTED }}>Porque:</b> {stripEmoji(r.porque)}
+                </div>
+              </div>
+            ))}
+          </div>
+        </Slide>
       )}
-
-      {(data.interpretacion?.recomendaciones ?? []).length > 0 && (
-        <div className="pdf-page-break" style={{ breakBefore: "page", pageBreakBefore: "always", paddingTop: 8 }}>
-          <RecomendacionesBlock data={{ items: data.interpretacion!.recomendaciones! }} />
-        </div>
-      )}
-
-      <Footer />
-
     </div>
   );
-
 });
 GabinetePdfTemplate.displayName = "GabinetePdfTemplate";
+
