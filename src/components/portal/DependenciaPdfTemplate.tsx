@@ -762,64 +762,118 @@ DependenciaPdfTemplate.displayName = "DependenciaPdfTemplate";
 /* Reporte de gabinete                                                 */
 /* ------------------------------------------------------------------ */
 
+function MoveList({ rows, color, titulo, hint }: { rows: GabineteMoveRow[]; color: string; titulo: string; hint: string }) {
+  return (
+    <div className="pdf-avoid">
+      <SectionTitle text={titulo} color={color} hint={hint} />
+      {rows.length === 0 ? (
+        <div style={{ color: MUTED, fontSize: 9.5 }}>Sin movimientos relevantes en el corte.</div>
+      ) : rows.map((r, i) => (
+        <div key={i} style={{ padding: "4px 0", borderBottom: "1px solid #f1f5f9" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+            <span style={{ fontWeight: 600 }}>{r.nombre}</span>
+            <span style={{ color, fontWeight: 700 }}>{df(r.delta)}</span>
+          </div>
+          <div style={{ fontSize: 8.6, color: MUTED }}>{r.detalle}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function RankTable({ rows, color, mostrarLugarPrevio }: { rows: GabineteRankRow[]; color: string; mostrarLugarPrevio?: boolean }) {
+  return (
+    <table style={{ width: "100%", borderCollapse: "collapse", border: `1px solid ${LINE}`, marginBottom: 10 }}>
+      <thead>
+        <tr style={{ background: color }}>
+          <th style={{ ...th, width: 24 }}>#</th>
+          <th style={th}>Dependencia</th>
+          <th style={{ ...th, textAlign: "right", width: 66 }}>Seguidores</th>
+          <th style={{ ...th, textAlign: "right", width: 62 }}>Var. audiencia</th>
+          <th style={{ ...th, textAlign: "right", width: 58 }}>Interacción</th>
+          <th style={{ ...th, textAlign: "right", width: 48 }}>Publicac.</th>
+          {mostrarLugarPrevio && <th style={{ ...th, textAlign: "right", width: 46 }}>Lugar previo</th>}
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((r, i) => (
+          <tr key={i} style={{ background: i % 2 ? "#f8fafc" : "#ffffff" }}>
+            <td style={{ ...td, fontWeight: 700, color: MUTED }}>{i + 1}</td>
+            <td style={td}>
+              {r.nombre}
+              <span style={{ color: "#94a3b8", fontSize: 8.4 }}> · {r.cuentas} cuenta{r.cuentas === 1 ? "" : "s"}</span>
+            </td>
+            <td style={{ ...td, textAlign: "right" }}>{nf(r.seguidores)}</td>
+            <td style={{ ...td, textAlign: "right", color: r.comparable ? deltaColor(r.deltaSeguidores) : MUTED }}>
+              {r.comparable ? df(r.deltaSeguidores) : "nuevo"}
+            </td>
+            <td style={{ ...td, textAlign: "right" }}>{pf(r.engagement)}</td>
+            <td style={{ ...td, textAlign: "right" }}>{r.publicaciones == null ? "s/d" : nf(r.publicaciones)}</td>
+            {mostrarLugarPrevio && (
+              <td style={{ ...td, textAlign: "right", color: MUTED }}>{r.lugarPrevio ? `#${r.lugarPrevio}` : "—"}</td>
+            )}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
 export const GabinetePdfTemplate = forwardRef<HTMLDivElement, { data: GabineteReportData | null; portalName: string }>(({ data, portalName }, ref) => {
   if (!data) return <div ref={ref} style={page} />;
+  const lider = data.tiers.flatMap((t) => t.rows).length ? data.tiers[0]?.rows[0] : null;
   return (
     <div ref={ref} style={page}>
       <Header title={portalName} subtitle="Panorama de comunicación digital del gabinete" periodo={data.periodoLabel} />
 
-      <div className="pdf-avoid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 9, marginBottom: 18 }}>
-        <Kpi label="Dependencias con datos" value={String(data.dependencias)} color={SCOPE.institucional.main} />
-        <Kpi label="Interacción promedio" value={pf(data.promedioEngagement)} color={SCOPE.conjunto.main} />
-        <Kpi label="Líder del periodo" value={data.ranking[0]?.nombre ?? "s/d"} color={SCOPE.titular.main}
-             foot={pf(data.ranking[0]?.engagement ?? null)} />
+      <div className="pdf-avoid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 12 }}>
+        <Kpi label="Dependencias con datos" value={String(data.dependencias)} color={SCOPE.institucional.main}
+             foot={`${data.cuentas} cuentas medidas`}
+             explain="Sólo se cuentan dependencias con al menos una cuenta con datos en el corte." />
+        <Kpi label="Audiencia del gabinete" value={nf(data.seguidoresTotales)} color={SCOPE.conjunto.main}
+             foot="Seguidores sumados sin duplicar cuentas"
+             explain="Cada cuenta se cuenta una sola vez, aunque aparezca en varias cargas del mes." />
+        <Kpi label="Interacción del gabinete" value={pf(data.interaccionPonderada)} color={SCOPE.titular.main}
+             foot={`Mediana por dependencia: ${pf(data.interaccionMediana)}`}
+             explain="Ponderada por audiencia: las cuentas grandes pesan más que las pequeñas." />
+        <Kpi label="Publicaciones del periodo" value={data.publicacionesTotales == null ? "s/d" : nf(data.publicacionesTotales)}
+             color={INK} foot="Contenido publicado por el gabinete"
+             explain="Publicaciones registradas en el corte, sin duplicados entre cargas." />
       </div>
 
-      <div className="pdf-avoid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 18 }}>
-        <div>
-          <SectionTitle text="Quién sube" color="#059669" />
-          {data.suben.length === 0 ? <div style={{ color: MUTED }}>Sin comparativo disponible.</div> : data.suben.map((r, i) => (
-            <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: "1px solid #f1f5f9" }}>
-              <span>{r.nombre}</span><span style={{ color: "#059669", fontWeight: 600 }}>{df(r.delta)}</span>
-            </div>
-          ))}
-        </div>
-        <div>
-          <SectionTitle text="Quién baja" color="#dc2626" />
-          {data.bajan.length === 0 ? <div style={{ color: MUTED }}>Sin comparativo disponible.</div> : data.bajan.map((r, i) => (
-            <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: "1px solid #f1f5f9" }}>
-              <span>{r.nombre}</span><span style={{ color: "#dc2626", fontWeight: 600 }}>{df(r.delta)}</span>
-            </div>
-          ))}
-        </div>
+      <div className="pdf-avoid" style={{
+        border: `1px solid ${LINE}`, borderLeft: `3px solid ${SCOPE.institucional.main}`,
+        borderRadius: 6, padding: "7px 10px", marginBottom: 14, fontSize: 9, color: MUTED, background: "#f8fafc",
+      }}>
+        <strong style={{ color: INK }}>Cómo leer este reporte. </strong>{data.nota}
       </div>
 
-      <div>
-        <SectionTitle text="Ranking del gabinete" color={SCOPE.institucional.main} />
-        <table style={{ width: "100%", borderCollapse: "collapse", border: `1px solid ${LINE}` }}>
-          <thead>
-            <tr style={{ background: SCOPE.institucional.main }}>
-              <th style={{ ...th, width: 30 }}>#</th>
-              <th style={th}>Dependencia</th>
-              <th style={{ ...th, textAlign: "right" }}>Interacción</th>
-              <th style={{ ...th, textAlign: "right" }}>Seguidores</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.ranking.map((r, i) => (
-              <tr key={i} style={{ background: i % 2 ? "#f8fafc" : "#ffffff" }}>
-                <td style={{ ...td, fontWeight: 700, color: MUTED }}>{i + 1}</td>
-                <td style={td}>{r.nombre}</td>
-                <td style={{ ...td, textAlign: "right" }}>{pf(r.engagement)}</td>
-                <td style={{ ...td, textAlign: "right" }}>{nf(r.seguidores)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="pdf-avoid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 16 }}>
+        <MoveList rows={data.suben} color="#059669" titulo="Quién creció" hint="Sólo variaciones reales, comparando las mismas cuentas" />
+        <MoveList rows={data.bajan} color="#dc2626" titulo="Quién retrocedió" hint="Caídas de audiencia frente al corte anterior" />
       </div>
+
+      {data.tiers.map((t) => (
+        <div key={t.label} style={{ marginBottom: 12 }}>
+          <SectionTitle text={t.label} color={SCOPE.institucional.main} hint={t.nota} />
+          <RankTable rows={t.rows} color={SCOPE.institucional.main} mostrarLugarPrevio />
+        </div>
+      ))}
+
+      <div className="pdf-page-break" />
+      <SectionTitle text="Tabla completa del gabinete" color={SCOPE.conjunto.main}
+                    hint="Ordenada por tamaño de audiencia; la interacción no es comparable entre cuentas de escala muy distinta." />
+      <RankTable rows={data.ranking} color={SCOPE.conjunto.main} />
+
+      {data.sinDatos.length > 0 && (
+        <div className="pdf-avoid" style={{ marginTop: 8, fontSize: 8.8, color: MUTED }}>
+          <strong style={{ color: INK }}>Sin datos en este corte: </strong>{data.sinDatos.join(" · ")}
+        </div>
+      )}
 
       <Footer />
     </div>
   );
+
 });
 GabinetePdfTemplate.displayName = "GabinetePdfTemplate";
