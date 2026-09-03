@@ -788,24 +788,33 @@ function MoveList({ rows, color, titulo, hint }: { rows: GabineteMoveRow[]; colo
   );
 }
 
-function RankTable({ rows, color, mostrarLugarPrevio }: { rows: GabineteRankRow[]; color: string; mostrarLugarPrevio?: boolean }) {
+function RankTable({ rows, color, mostrarLugarPrevio, indiceInicial = 0, ocultarEncabezado, continua }: {
+  rows: GabineteRankRow[]; color: string; mostrarLugarPrevio?: boolean; indiceInicial?: number; ocultarEncabezado?: boolean; continua?: boolean;
+}) {
   return (
-    <table style={{ width: "100%", borderCollapse: "collapse", border: `1px solid ${LINE}`, marginBottom: 10 }}>
-      <thead>
-        <tr style={{ background: color }}>
-          <th style={{ ...th, width: 24 }}>#</th>
-          <th style={th}>Dependencia</th>
-          <th style={{ ...th, textAlign: "right", width: 66 }}>Seguidores</th>
-          <th style={{ ...th, textAlign: "right", width: 62 }}>Var. audiencia</th>
-          <th style={{ ...th, textAlign: "right", width: 58 }}>Interacción</th>
-          <th style={{ ...th, textAlign: "right", width: 48 }}>Publicac.</th>
-          {mostrarLugarPrevio && <th style={{ ...th, textAlign: "right", width: 46 }}>Lugar previo</th>}
-        </tr>
-      </thead>
+    <table style={{
+      width: "100%", borderCollapse: "collapse", border: `1px solid ${LINE}`,
+      borderTop: ocultarEncabezado ? "none" : `1px solid ${LINE}`,
+      borderBottom: continua ? "none" : `1px solid ${LINE}`, marginBottom: continua ? 0 : 10,
+    }}>
+      {!ocultarEncabezado && (
+        <thead>
+          <tr style={{ background: color }}>
+            <th style={{ ...th, width: 24 }}>#</th>
+            <th style={th}>Dependencia</th>
+            <th style={{ ...th, textAlign: "right", width: 66 }}>Seguidores</th>
+            <th style={{ ...th, textAlign: "right", width: 62 }}>Var. audiencia</th>
+            <th style={{ ...th, textAlign: "right", width: 58 }}>Interacción</th>
+            <th style={{ ...th, textAlign: "right", width: 48 }}>Publicac.</th>
+            {mostrarLugarPrevio && <th style={{ ...th, textAlign: "right", width: 46 }}>Lugar previo</th>}
+          </tr>
+        </thead>
+      )}
       <tbody>
         {rows.map((r, i) => (
-          <tr key={i} style={{ background: i % 2 ? "#f8fafc" : "#ffffff" }}>
-            <td style={{ ...td, fontWeight: 700, color: MUTED }}>{i + 1}</td>
+          <tr key={i} style={{ background: (i + indiceInicial) % 2 ? "#f8fafc" : "#ffffff" }}>
+            <td style={{ ...td, fontWeight: 700, color: MUTED }}>{i + indiceInicial + 1}</td>
+
             <td style={td}>
               {r.nombre}
               <span style={{ color: "#94a3b8", fontSize: 8.4 }}> · {r.cuentas} cuenta{r.cuentas === 1 ? "" : "s"}</span>
@@ -887,15 +896,25 @@ export const GabinetePdfTemplate = forwardRef<HTMLDivElement, { data: GabineteRe
 
       {data.tiers.map((t) => (
         <div key={t.label} style={{ marginBottom: 12 }}>
-          <SectionTitle text={t.label} color={SCOPE.institucional.main} hint={t.nota} />
-          <RankTable rows={t.rows} color={SCOPE.institucional.main} mostrarLugarPrevio />
+          <div className="pdf-avoid">
+            <SectionTitle text={t.label} color={SCOPE.institucional.main} hint={t.nota} />
+            <RankTable rows={t.rows.slice(0, 3)} color={SCOPE.institucional.main} mostrarLugarPrevio continua={t.rows.length > 3} />
+          </div>
+          {t.rows.length > 3 && (
+            <RankTable rows={t.rows.slice(3)} color={SCOPE.institucional.main} mostrarLugarPrevio ocultarEncabezado indiceInicial={3} />
+          )}
         </div>
       ))}
 
-      <div className="pdf-page-break" />
-      <SectionTitle text="Tabla completa del gabinete" color={SCOPE.conjunto.main}
-                    hint="Ordenada por tamaño de audiencia; la interacción no es comparable entre cuentas de escala muy distinta." />
-      <RankTable rows={data.ranking} color={SCOPE.conjunto.main} />
+      <div className="pdf-avoid">
+        <SectionTitle text="Tabla completa del gabinete" color={SCOPE.conjunto.main}
+                      hint="Ordenada por tamaño de audiencia; la interacción no es comparable entre cuentas de escala muy distinta." />
+        <RankTable rows={data.ranking.slice(0, 3)} color={SCOPE.conjunto.main} continua={data.ranking.length > 3} />
+      </div>
+      {data.ranking.length > 3 && (
+        <RankTable rows={data.ranking.slice(3)} color={SCOPE.conjunto.main} indiceInicial={3} ocultarEncabezado />
+      )}
+
 
       {data.sinDatos.length > 0 && (
         <div className="pdf-avoid" style={{ marginTop: 8, fontSize: 8.8, color: MUTED }}>
