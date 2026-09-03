@@ -22,7 +22,7 @@ Devuelve SIEMPRE JSON estricto:
 REGLAS DURAS:
 - "lectura" es un párrafo de máximo 4 líneas: cómo le fue al gabinete en el periodo, en lenguaje llano.
 - 3 a 4 "hallazgos". "titulo" máximo 60 caracteres. "que_pasa" cita cifras o dependencias concretas del insumo (máximo 180 caracteres). "por_que_importa" explica la consecuencia práctica para la comunicación del gobierno (máximo 180 caracteres).
-- 3 a 4 "recomendaciones" ejecutables en las próximas semanas, con "porque" anclado a un dato del insumo. Máximo 180 caracteres cada campo.
+- 5 a 6 "recomendaciones" ejecutables en las próximas semanas, ordenadas de mayor a menor prioridad. Cubre tanto cuentas institucionales como cuentas personales de titulares cuando el insumo tenga datos de ambos. Cada "accion" dice qué hacer, quién debería hacerlo y en qué plazo (máximo 200 caracteres); cada "porque" se ancla a un dato concreto del insumo (máximo 220 caracteres). No repitas la misma idea en dos recomendaciones.
 - Está PROHIBIDO inventar cifras, dependencias, medios o eventos. Si no viene en el insumo, no existe.
 - Nada de tecnicismos ni anglicismos (no uses "engagement", "insight", "KPI", "awareness"). Di "interacción", "hallazgo", "indicador", "alcance".
 - Si una variación viene marcada como no comparable o "nuevo", no la presentes como crecimiento.
