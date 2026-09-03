@@ -351,7 +351,7 @@ function RecomendacionesBlock({ data }: { data: { lectura?: string; items: DepRe
       {data.lectura && (
         <Explainer color={SCOPE.conjunto.main} text={stripEmoji(data.lectura)} />
       )}
-      {data.items.slice(0, 5).map((r, i) => (
+      {data.items.slice(0, 6).map((r, i) => (
         <div className="pdf-avoid" key={i} style={{
           border: `1px solid ${LINE}`,
           borderLeft: `3px solid ${r.prioridad === "alta" ? SCOPE.titular.main : SCOPE.institucional.main}`,
