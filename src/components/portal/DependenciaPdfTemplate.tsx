@@ -1017,7 +1017,7 @@ export const GabinetePdfTemplate = forwardRef<HTMLDivElement, { data: GabineteRe
       )}
 
       {(data.interpretacion?.recomendaciones ?? []).length > 0 && (
-        <div style={{ marginTop: 12 }}>
+        <div className="pdf-page-break" style={{ breakBefore: "page", pageBreakBefore: "always", paddingTop: 8 }}>
           <RecomendacionesBlock data={{ items: data.interpretacion!.recomendaciones! }} />
         </div>
       )}
