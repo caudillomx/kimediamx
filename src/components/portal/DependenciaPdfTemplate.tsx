@@ -909,16 +909,28 @@ export const GabinetePdfTemplate = forwardRef<HTMLDivElement, { data: GabineteRe
       </div>
 
       {data.tiers.map((t) => (
-        <div key={t.label} style={{ marginBottom: 12 }}>
-          <div className="pdf-avoid">
-            <SectionTitle text={t.label} color={SCOPE.institucional.main} hint={t.nota} />
-            <RankTable rows={t.rows.slice(0, 3)} color={SCOPE.institucional.main} mostrarLugarPrevio continua={t.rows.length > 3} />
-          </div>
-          {t.rows.length > 3 && (
-            <RankTable rows={t.rows.slice(3)} color={SCOPE.institucional.main} mostrarLugarPrevio ocultarEncabezado indiceInicial={3} />
-          )}
+        <div className="pdf-avoid" key={t.label} style={{ marginBottom: 12 }}>
+          <SectionTitle text={t.label} color={SCOPE.institucional.main}
+                        hint={t.rows.length > 5 ? `${t.nota} · se muestran las 5 primeras; el resto va en la tabla completa` : t.nota} />
+          <RankTable rows={t.rows.slice(0, 5)} color={SCOPE.institucional.main} mostrarLugarPrevio />
         </div>
       ))}
+
+      {(data.titulares ?? []).length > 0 && (
+        <div style={{ marginBottom: 12 }}>
+          <div className="pdf-avoid">
+            <SectionTitle text="Titulares del gabinete" color={SCOPE.titular.main}
+                          hint={`Cuentas personales de los funcionarios${data.titularesInteraccion != null ? ` · interacción ponderada ${pf(data.titularesInteraccion)}` : ""}`} />
+            <TitularTable rows={(data.titulares ?? []).slice(0, 8)} />
+          </div>
+          {(data.titulares ?? []).length > 8 && (
+            <div style={{ fontSize: 8.6, color: MUTED, marginTop: 3 }}>
+              Se muestran los 8 titulares con mayor audiencia de {(data.titulares ?? []).length} con datos en el corte.
+            </div>
+          )}
+        </div>
+      )}
+
 
       <div className="pdf-avoid">
         <SectionTitle text="Tabla completa del gabinete" color={SCOPE.conjunto.main}
