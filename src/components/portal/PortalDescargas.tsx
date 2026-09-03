@@ -1043,8 +1043,11 @@ export default function PortalDescargas({
       seguidoresTitulares,
       publicacionesTitulares,
       titularesInteraccion: weightedRate(titulares.map((r) => ({ rate: r.engagement, weight: r.seguidores }))),
-      suben: allMovers.filter((m) => m.delta > 0).sort((a, b) => b.delta - a.delta).slice(0, 5),
-      bajan: allMovers.filter((m) => m.delta < 0).sort((a, b) => a.delta - b.delta).slice(0, 5),
+      // Cuota fija por ámbito: los titulares crecen más rápido y, sin cuota,
+      // desplazarían por completo a las dependencias de ambas listas.
+      suben: mezclarMovs(allMovers.filter((m) => m.delta > 0), (a, b) => b.delta - a.delta),
+      bajan: mezclarMovs(allMovers.filter((m) => m.delta < 0), (a, b) => a.delta - b.delta),
+
       sinDatos: sinDatos.slice(0, 20),
       comparables: rows.filter((r) => r.comparable).length,
       nota: prevIds.length
