@@ -124,6 +124,13 @@ export type GabineteReportData = {
   sinDatos: string[];
   comparables: number;
   nota: string;
+  /** Interpretación generada con IA a partir de este mismo corte. */
+  interpretacion?: {
+    lectura?: string;
+    hallazgos?: { titulo: string; que_pasa: string; por_que_importa: string }[];
+    recomendaciones?: DepRecomendacion[];
+  } | null;
+
 };
 
 
