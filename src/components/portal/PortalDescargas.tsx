@@ -792,28 +792,157 @@ export default function PortalDescargas({
   };
 
 
+  /**
+   * Panorama del gabinete. Reglas de credibilidad:
+   * - una cuenta se cuenta una sola vez aunque el mes traiga varias cargas;
+   * - la variación de audiencia sólo compara las cuentas presentes en AMBOS
+   *   cortes (si una dependencia sumó cuentas nuevas, no aparece como +271%);
+   * - la interacción del gabinete se pondera por audiencia y el ranking se
+   *   separa por tamaño, para no premiar cuentas de mil seguidores.
+   */
   const buildGabineteReport = (): GabineteReportData => {
-    const curr = aggregate(activePeriods.map((p) => p.id));
-    const prev = aggregate(prevPeriods.map((p) => p.id));
+    const currIds = activePeriods.map((p) => p.id);
+    const prevIds = prevPeriods.map((p) => p.id);
     const depName = new Map(dependencias.map((d) => [d.id, d.nombre]));
-    const ranking = Array.from(curr.entries())
-      .filter(([, v]) => v.engagement != null || v.followers > 0)
-      .sort((a, b) => (b[1].engagement ?? 0) - (a[1].engagement ?? 0))
-      .map(([id, v]) => ({ nombre: depName.get(id) ?? "—", engagement: v.engagement, seguidores: v.followers }));
-    const moves = Array.from(curr.entries()).map(([id, v]) => {
-      const p = prev.get(id);
-      const d = p && p.followers ? (v.followers - p.followers) / Math.abs(p.followers) : null;
-      return { nombre: depName.get(id) ?? "—", delta: d };
-    }).filter((r) => r.delta != null) as { nombre: string; delta: number }[];
+
+    type Bucket = { followers: number; eng: { rate: number | null; weight: number | null }[]; accounts: Map<string, number> };
+    const collect = (ids: string[]) => {
+      const acc = new Map<string, Bucket>();
+      for (const m of uniqueMetrics(ids)) {
+        const dep = depOfCompetitor.get(m.competitor_id);
+        if (!dep) continue;
+        if (!matchesEnfoque(typeOfCompetitor.get(m.competitor_id))) continue;
+        const bucket = acc.get(dep) ?? { followers: 0, eng: [], accounts: new Map() };
+        const followers = Number(m.followers);
+        const hasFollowers = Number.isFinite(followers);
+        if (hasFollowers) bucket.followers += followers;
+        if (Number.isFinite(Number(m.engagement_rate))) {
+          bucket.eng.push({ rate: Number(m.engagement_rate), weight: hasFollowers ? followers : null });
+        }
+        const identity = accountIdentity.get(m.competitor_id) ?? m.competitor_id;
+        if (hasFollowers) bucket.accounts.set(`${identity}|${m.network.toLowerCase()}`, followers);
+        acc.set(dep, bucket);
+      }
+      return acc;
+    };
+
+    const curr = collect(currIds);
+    const prev = collect(prevIds);
+
+    // Publicaciones del corte, sin duplicar entre cargas del mismo periodo.
+    const currSet = new Set(currIds);
+    const seenPosts = new Set<string>();
+    const postsByDep = new Map<string, number>();
+    for (const p of posts) {
+      if (!currSet.has(p.period_id) || !p.competitor_id) continue;
+      const dep = depOfCompetitor.get(p.competitor_id);
+      if (!dep) continue;
+      if (!matchesEnfoque(typeOfCompetitor.get(p.competitor_id))) continue;
+      const key = benchmarkPostKey(p, accountIdentity);
+      if (seenPosts.has(key)) continue;
+      seenPosts.add(key);
+      postsByDep.set(dep, (postsByDep.get(dep) ?? 0) + 1);
+    }
+
+    /** Variación sólo sobre cuentas presentes en los dos cortes. */
+    const likeForLike = (id: string) => {
+      const c = curr.get(id); const p = prev.get(id);
+      if (!c || !p) return { delta: null as number | null, base: 0, cuentas: 0 };
+      let actual = 0; let previo = 0; let cuentas = 0;
+      c.accounts.forEach((value, key) => {
+        const before = p.accounts.get(key);
+        if (before == null) return;
+        actual += value; previo += before; cuentas += 1;
+      });
+      if (!cuentas || previo <= 0) return { delta: null, base: previo, cuentas };
+      return { delta: (actual - previo) / previo, base: previo, cuentas };
+    };
+
+    const rows: GabineteRankRow[] = Array.from(curr.entries())
+      .map(([id, bucket]) => {
+        const comparado = likeForLike(id);
+        const prevBucket = prev.get(id);
+        const prevEng = prevBucket ? weightedRate(prevBucket.eng) : null;
+        const eng = weightedRate(bucket.eng);
+        return {
+          id,
+          nombre: depName.get(id) ?? "—",
+          seguidores: bucket.followers || null,
+          engagement: eng,
+          publicaciones: postsByDep.get(id) ?? null,
+          cuentas: bucket.accounts.size || bucket.eng.length,
+          deltaSeguidores: comparado.delta,
+          deltaEngagement: eng != null && prevEng ? (eng - prevEng) / Math.abs(prevEng) : null,
+          lugarPrevio: null as number | null,
+          comparable: comparado.cuentas > 0,
+          _base: comparado.base,
+        };
+      })
+      .filter((r) => r.seguidores != null || r.engagement != null);
+
+    // Categorías de tamaño: comparar una cuenta de 1,500 seguidores contra una
+    // de 600,000 no dice nada útil, así que el ranking se ordena por interacción
+    // dentro de audiencias equiparables.
+    const TIERS: { label: string; nota: string; min: number; max: number }[] = [
+      { label: "Audiencias grandes (100 mil o más)", nota: "Ordenadas por interacción dentro de su categoría", min: 100_000, max: Infinity },
+      { label: "Audiencias medianas (10 mil a 100 mil)", nota: "Ordenadas por interacción dentro de su categoría", min: 10_000, max: 100_000 },
+      { label: "Audiencias en construcción (menos de 10 mil)", nota: "Porcentajes altos con pocos seguidores: leer con cautela", min: 0, max: 10_000 },
+    ];
+
+    const prevRowsForTier = (min: number, max: number) => Array.from(prev.entries())
+      .map(([id, bucket]) => ({ id, followers: bucket.followers, engagement: weightedRate(bucket.eng) }))
+      .filter((r) => r.followers >= min && r.followers < max && r.engagement != null)
+      .sort((a, b) => (b.engagement ?? 0) - (a.engagement ?? 0));
+
+    const tiers = TIERS.map((t) => {
+      const prevOrder = prevRowsForTier(t.min, t.max);
+      const tierRows = rows
+        .filter((r) => (r.seguidores ?? 0) >= t.min && (r.seguidores ?? 0) < t.max)
+        .sort((a, b) => (b.engagement ?? -1) - (a.engagement ?? -1))
+        .map((r) => {
+          const idx = prevOrder.findIndex((p) => p.id === r.id);
+          return { ...r, lugarPrevio: idx >= 0 ? idx + 1 : null };
+        });
+      return { label: t.label, nota: t.nota, rows: tierRows };
+    }).filter((t) => t.rows.length > 0);
+
+    const movers = rows
+      .filter((r) => r.comparable && r.deltaSeguidores != null && r._base >= 1000 && Math.abs(r.deltaSeguidores) >= 0.002)
+      .map((r) => ({
+        nombre: r.nombre,
+        delta: r.deltaSeguidores as number,
+        base: r._base,
+        detalle: `${nfInt(r._base)} → ${nfInt(Math.round(r._base * (1 + (r.deltaSeguidores as number))))} seguidores en ${r.cuentas} cuenta${r.cuentas === 1 ? "" : "s"} comparables`,
+      }));
+
+    const engs = rows.map((r) => r.engagement).filter((v): v is number => v != null && Number.isFinite(v)).sort((a, b) => a - b);
+    const mediana = engs.length ? (engs.length % 2 ? engs[(engs.length - 1) / 2] : (engs[engs.length / 2 - 1] + engs[engs.length / 2]) / 2) : null;
+    const conDatos = new Set(rows.map((r) => r.id));
+    const sinDatos = dependencias.filter((d) => !conDatos.has(d.id)).map((d) => d.nombre);
+    const publicacionesTotales = postsByDep.size ? Array.from(postsByDep.values()).reduce((a, b) => a + b, 0) : null;
+
+    const strip = ({ _base, id, ...rest }: (typeof rows)[number]) => rest as GabineteRankRow;
+
     return {
       periodoLabel: `${cutLabel} · ${ENFOQUE_LABEL[enfoque]}`,
-      ranking,
-      suben: moves.slice().sort((a, b) => b.delta - a.delta).slice(0, 5),
-      bajan: moves.slice().sort((a, b) => a.delta - b.delta).slice(0, 5),
-      promedioEngagement: RATE_AVG(ranking.map((r) => r.engagement).filter((v): v is number => v != null && Number.isFinite(v))),
-      dependencias: ranking.length,
+      dependencias: rows.length,
+      cuentas: rows.reduce((a, r) => a + r.cuentas, 0),
+      seguidoresTotales: rows.reduce((a, r) => a + (r.seguidores ?? 0), 0),
+      publicacionesTotales,
+      interaccionPonderada: weightedRate(rows.map((r) => ({ rate: r.engagement, weight: r.seguidores }))),
+      interaccionMediana: mediana,
+      ranking: rows.slice().sort((a, b) => (b.seguidores ?? 0) - (a.seguidores ?? 0)).map(strip),
+      tiers: tiers.map((t) => ({ ...t, rows: t.rows.map((r) => strip(r as (typeof rows)[number])) })),
+      suben: movers.filter((m) => m.delta > 0).sort((a, b) => b.delta - a.delta).slice(0, 5),
+      bajan: movers.filter((m) => m.delta < 0).sort((a, b) => a.delta - b.delta).slice(0, 5),
+      sinDatos: sinDatos.slice(0, 20),
+      comparables: rows.filter((r) => r.comparable).length,
+      nota: prevIds.length
+        ? "Cada cuenta se cuenta una sola vez, aunque el mes tenga varias cargas. Las variaciones comparan únicamente las cuentas que existían en los dos cortes, por eso una dependencia que sumó cuentas nuevas aparece como “nuevo” y no como un crecimiento inflado. La interacción del gabinete está ponderada por audiencia."
+        : "No hay un corte anterior cargado, así que este panorama es una fotografía del periodo, sin comparativo. Cada cuenta se cuenta una sola vez y la interacción del gabinete está ponderada por audiencia.",
     };
   };
+
 
   const downloadDepPdf = async () => {
     setBusy("dep");
