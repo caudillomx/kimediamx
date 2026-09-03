@@ -903,7 +903,14 @@ export const GabinetePdfTemplate = forwardRef<HTMLDivElement, { data: GabineteRe
         </div>
       )}
 
+      {(data.interpretacion?.recomendaciones ?? []).length > 0 && (
+        <div style={{ marginTop: 12 }}>
+          <RecomendacionesBlock data={{ items: data.interpretacion!.recomendaciones! }} />
+        </div>
+      )}
+
       <Footer />
+
     </div>
   );
 
