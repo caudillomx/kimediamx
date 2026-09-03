@@ -803,6 +803,10 @@ export default function PortalDescargas({
    *   separa por tamaño, para no premiar cuentas de mil seguidores.
    */
   const buildGabineteReport = (): GabineteReportData => {
+    // Las tablas de dependencias sólo consideran cuentas institucionales; las
+    // cuentas personales de los titulares viven en su propio bloque.
+    const rowScope = enfoque === "titular" ? "titular" : "institucional";
+    const matchesRowScope = (t: string | null | undefined) => (t ?? "institucional") === rowScope;
     const currIds = activePeriods.map((p) => p.id);
     const prevIds = prevPeriods.map((p) => p.id);
     const depName = new Map(dependencias.map((d) => [d.id, d.nombre]));
@@ -813,7 +817,7 @@ export default function PortalDescargas({
       for (const m of uniqueMetrics(ids)) {
         const dep = depOfCompetitor.get(m.competitor_id);
         if (!dep) continue;
-        if (!matchesEnfoque(typeOfCompetitor.get(m.competitor_id))) continue;
+        if (!matchesRowScope(typeOfCompetitor.get(m.competitor_id))) continue;
         const bucket = acc.get(dep) ?? { followers: 0, eng: [], accounts: new Map() };
         const followers = Number(m.followers);
         const hasFollowers = Number.isFinite(followers);
@@ -839,7 +843,7 @@ export default function PortalDescargas({
       if (!currSet.has(p.period_id) || !p.competitor_id) continue;
       const dep = depOfCompetitor.get(p.competitor_id);
       if (!dep) continue;
-      if (!matchesEnfoque(typeOfCompetitor.get(p.competitor_id))) continue;
+      if (!matchesRowScope(typeOfCompetitor.get(p.competitor_id))) continue;
       const key = benchmarkPostKey(p, accountIdentity);
       if (seenPosts.has(key)) continue;
       seenPosts.add(key);
@@ -963,7 +967,7 @@ export default function PortalDescargas({
       titularPosts.set(dep, (titularPosts.get(dep) ?? 0) + 1);
     }
 
-    const titularesFull = enfoque === "institucional" ? [] : Array.from(tCurr.entries())
+    const titularesFull = enfoque !== "combinado" ? [] : Array.from(tCurr.entries())
       .map(([id, bucket]) => {
         const d = depById.get(id);
         const p = tPrev.get(id);
@@ -1024,9 +1028,10 @@ export default function PortalDescargas({
     return {
       periodoLabel: `${cutLabel} · ${ENFOQUE_LABEL[enfoque]}`,
       dependencias: rows.length,
-      cuentas: rows.reduce((a, r) => a + r.cuentas, 0),
-      seguidoresTotales: rows.reduce((a, r) => a + (r.seguidores ?? 0), 0),
-      publicacionesTotales,
+      cuentas: rows.reduce((a, r) => a + r.cuentas, 0) + titulares.reduce((a, r) => a + r.cuentas, 0),
+      seguidoresTotales: rows.reduce((a, r) => a + (r.seguidores ?? 0), 0) + seguidoresTitulares,
+      publicacionesTotales: publicacionesTotales == null && publicacionesTitulares == null
+        ? null : (publicacionesTotales ?? 0) + (publicacionesTitulares ?? 0),
       interaccionPonderada: weightedRate(rows.map((r) => ({ rate: r.engagement, weight: r.seguidores }))),
       interaccionMediana: mediana,
       ranking: rows.slice().sort((a, b) => (b.seguidores ?? 0) - (a.seguidores ?? 0)).map(strip),
