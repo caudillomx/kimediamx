@@ -104,7 +104,7 @@ export type GabineteRankRow = {
   comparable: boolean;
 };
 
-export type GabineteMoveRow = { nombre: string; delta: number; base: number; detalle: string };
+export type GabineteMoveRow = { nombre: string; delta: number; base: number; detalle: string; tipo?: "institucional" | "titular" };
 
 export type GabineteTier = { label: string; nota: string; rows: GabineteRankRow[] };
 
@@ -118,6 +118,8 @@ export type GabineteTitularRow = {
   deltaSeguidores: number | null;
   comparable: boolean;
 };
+
+export type GabineteTitularTier = { label: string; nota: string; rows: GabineteTitularRow[] };
 
 export type GabineteReportData = {
   periodoLabel: string;
@@ -133,11 +135,18 @@ export type GabineteReportData = {
   /** Cuentas personales de los titulares, en bloque breve. */
   titulares?: GabineteTitularRow[];
   titularesInteraccion?: number | null;
+  /** Desglose institucional vs. titulares para los indicadores de portada. */
+  titularesConDatos?: number;
+  cuentasTitulares?: number;
+  seguidoresTitulares?: number;
+  publicacionesTitulares?: number | null;
+  titularTiers?: GabineteTitularTier[];
   suben: GabineteMoveRow[];
   bajan: GabineteMoveRow[];
   sinDatos: string[];
   comparables: number;
   nota: string;
+
   /** Interpretación generada con IA a partir de este mismo corte. */
   interpretacion?: {
     lectura?: string;
