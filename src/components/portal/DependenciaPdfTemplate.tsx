@@ -887,15 +887,25 @@ export const GabinetePdfTemplate = forwardRef<HTMLDivElement, { data: GabineteRe
 
       {data.tiers.map((t) => (
         <div key={t.label} style={{ marginBottom: 12 }}>
-          <SectionTitle text={t.label} color={SCOPE.institucional.main} hint={t.nota} />
-          <RankTable rows={t.rows} color={SCOPE.institucional.main} mostrarLugarPrevio />
+          <div className="pdf-avoid">
+            <SectionTitle text={t.label} color={SCOPE.institucional.main} hint={t.nota} />
+            <RankTable rows={t.rows.slice(0, 3)} color={SCOPE.institucional.main} mostrarLugarPrevio />
+          </div>
+          {t.rows.length > 3 && (
+            <RankTable rows={t.rows.slice(3)} color={SCOPE.institucional.main} mostrarLugarPrevio ocultarEncabezado />
+          )}
         </div>
       ))}
 
-      <div className="pdf-page-break" />
-      <SectionTitle text="Tabla completa del gabinete" color={SCOPE.conjunto.main}
-                    hint="Ordenada por tamaño de audiencia; la interacción no es comparable entre cuentas de escala muy distinta." />
-      <RankTable rows={data.ranking} color={SCOPE.conjunto.main} />
+      <div className="pdf-avoid">
+        <SectionTitle text="Tabla completa del gabinete" color={SCOPE.conjunto.main}
+                      hint="Ordenada por tamaño de audiencia; la interacción no es comparable entre cuentas de escala muy distinta." />
+        <RankTable rows={data.ranking.slice(0, 3)} color={SCOPE.conjunto.main} />
+      </div>
+      {data.ranking.length > 3 && (
+        <RankTable rows={data.ranking.slice(3)} color={SCOPE.conjunto.main} indiceInicial={3} ocultarEncabezado />
+      )}
+
 
       {data.sinDatos.length > 0 && (
         <div className="pdf-avoid" style={{ marginTop: 8, fontSize: 8.8, color: MUTED }}>
