@@ -821,7 +821,7 @@ function RankTable({ rows, color, mostrarLugarPrevio }: { rows: GabineteRankRow[
 
 export const GabinetePdfTemplate = forwardRef<HTMLDivElement, { data: GabineteReportData | null; portalName: string }>(({ data, portalName }, ref) => {
   if (!data) return <div ref={ref} style={page} />;
-  const lider = data.tiers.flatMap((t) => t.rows).length ? data.tiers[0]?.rows[0] : null;
+  
   return (
     <div ref={ref} style={page}>
       <Header title={portalName} subtitle="Panorama de comunicación digital del gabinete" periodo={data.periodoLabel} />
