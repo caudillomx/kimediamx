@@ -802,6 +802,41 @@ function MoveList({ rows, color, titulo, hint }: { rows: GabineteMoveRow[]; colo
   );
 }
 
+function TitularTable({ rows }: { rows: GabineteTitularRow[] }) {
+  const color = SCOPE.titular.main;
+  return (
+    <table style={{ width: "100%", borderCollapse: "collapse", border: `1px solid ${LINE}`, marginBottom: 6 }}>
+      <thead>
+        <tr style={{ background: color }}>
+          <th style={{ ...th, width: 24 }}>#</th>
+          <th style={th}>Titular</th>
+          <th style={{ ...th, textAlign: "right", width: 66 }}>Seguidores</th>
+          <th style={{ ...th, textAlign: "right", width: 62 }}>Var. audiencia</th>
+          <th style={{ ...th, textAlign: "right", width: 58 }}>Interacción</th>
+          <th style={{ ...th, textAlign: "right", width: 48 }}>Publicac.</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((r, i) => (
+          <tr key={i} style={{ background: i % 2 ? "#fff7f8" : "#ffffff" }}>
+            <td style={{ ...td, fontWeight: 700, color: MUTED }}>{i + 1}</td>
+            <td style={td}>
+              {r.nombre}
+              <span style={{ color: "#94a3b8", fontSize: 8.4 }}> · {r.dependencia}</span>
+            </td>
+            <td style={{ ...td, textAlign: "right" }}>{nf(r.seguidores)}</td>
+            <td style={{ ...td, textAlign: "right", color: r.comparable ? deltaColor(r.deltaSeguidores) : MUTED }}>
+              {r.comparable ? df(r.deltaSeguidores) : "nuevo"}
+            </td>
+            <td style={{ ...td, textAlign: "right" }}>{pf(r.engagement)}</td>
+            <td style={{ ...td, textAlign: "right" }}>{r.publicaciones == null ? "s/d" : nf(r.publicaciones)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
 function RankTable({ rows, color, mostrarLugarPrevio, indiceInicial = 0, ocultarEncabezado, continua }: {
   rows: GabineteRankRow[]; color: string; mostrarLugarPrevio?: boolean; indiceInicial?: number; ocultarEncabezado?: boolean; continua?: boolean;
 }) {
