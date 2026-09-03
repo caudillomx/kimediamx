@@ -108,6 +108,17 @@ export type GabineteMoveRow = { nombre: string; delta: number; base: number; det
 
 export type GabineteTier = { label: string; nota: string; rows: GabineteRankRow[] };
 
+export type GabineteTitularRow = {
+  nombre: string;
+  dependencia: string;
+  seguidores: number | null;
+  engagement: number | null;
+  publicaciones: number | null;
+  cuentas: number;
+  deltaSeguidores: number | null;
+  comparable: boolean;
+};
+
 export type GabineteReportData = {
   periodoLabel: string;
   dependencias: number;
@@ -119,6 +130,9 @@ export type GabineteReportData = {
   interaccionMediana: number | null;
   ranking: GabineteRankRow[];
   tiers: GabineteTier[];
+  /** Cuentas personales de los titulares, en bloque breve. */
+  titulares?: GabineteTitularRow[];
+  titularesInteraccion?: number | null;
   suben: GabineteMoveRow[];
   bajan: GabineteMoveRow[];
   sinDatos: string[];
@@ -788,6 +802,41 @@ function MoveList({ rows, color, titulo, hint }: { rows: GabineteMoveRow[]; colo
   );
 }
 
+function TitularTable({ rows }: { rows: GabineteTitularRow[] }) {
+  const color = SCOPE.titular.main;
+  return (
+    <table style={{ width: "100%", borderCollapse: "collapse", border: `1px solid ${LINE}`, marginBottom: 6 }}>
+      <thead>
+        <tr style={{ background: color }}>
+          <th style={{ ...th, width: 24 }}>#</th>
+          <th style={th}>Titular</th>
+          <th style={{ ...th, textAlign: "right", width: 66 }}>Seguidores</th>
+          <th style={{ ...th, textAlign: "right", width: 62 }}>Var. audiencia</th>
+          <th style={{ ...th, textAlign: "right", width: 58 }}>Interacción</th>
+          <th style={{ ...th, textAlign: "right", width: 48 }}>Publicac.</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((r, i) => (
+          <tr key={i} style={{ background: i % 2 ? "#fff7f8" : "#ffffff" }}>
+            <td style={{ ...td, fontWeight: 700, color: MUTED }}>{i + 1}</td>
+            <td style={td}>
+              {r.nombre}
+              <span style={{ color: "#94a3b8", fontSize: 8.4 }}> · {r.dependencia}</span>
+            </td>
+            <td style={{ ...td, textAlign: "right" }}>{nf(r.seguidores)}</td>
+            <td style={{ ...td, textAlign: "right", color: r.comparable ? deltaColor(r.deltaSeguidores) : MUTED }}>
+              {r.comparable ? df(r.deltaSeguidores) : "nuevo"}
+            </td>
+            <td style={{ ...td, textAlign: "right" }}>{pf(r.engagement)}</td>
+            <td style={{ ...td, textAlign: "right" }}>{r.publicaciones == null ? "s/d" : nf(r.publicaciones)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
 function RankTable({ rows, color, mostrarLugarPrevio, indiceInicial = 0, ocultarEncabezado, continua }: {
   rows: GabineteRankRow[]; color: string; mostrarLugarPrevio?: boolean; indiceInicial?: number; ocultarEncabezado?: boolean; continua?: boolean;
 }) {
@@ -895,16 +944,28 @@ export const GabinetePdfTemplate = forwardRef<HTMLDivElement, { data: GabineteRe
       </div>
 
       {data.tiers.map((t) => (
-        <div key={t.label} style={{ marginBottom: 12 }}>
-          <div className="pdf-avoid">
-            <SectionTitle text={t.label} color={SCOPE.institucional.main} hint={t.nota} />
-            <RankTable rows={t.rows.slice(0, 3)} color={SCOPE.institucional.main} mostrarLugarPrevio continua={t.rows.length > 3} />
-          </div>
-          {t.rows.length > 3 && (
-            <RankTable rows={t.rows.slice(3)} color={SCOPE.institucional.main} mostrarLugarPrevio ocultarEncabezado indiceInicial={3} />
-          )}
+        <div className="pdf-avoid" key={t.label} style={{ marginBottom: 12 }}>
+          <SectionTitle text={t.label} color={SCOPE.institucional.main}
+                        hint={t.rows.length > 5 ? `${t.nota} · se muestran las 5 primeras; el resto va en la tabla completa` : t.nota} />
+          <RankTable rows={t.rows.slice(0, 5)} color={SCOPE.institucional.main} mostrarLugarPrevio />
         </div>
       ))}
+
+      {(data.titulares ?? []).length > 0 && (
+        <div style={{ marginBottom: 12 }}>
+          <div className="pdf-avoid">
+            <SectionTitle text="Titulares del gabinete" color={SCOPE.titular.main}
+                          hint={`Cuentas personales de los funcionarios${data.titularesInteraccion != null ? ` · interacción ponderada ${pf(data.titularesInteraccion)}` : ""}`} />
+            <TitularTable rows={(data.titulares ?? []).slice(0, 8)} />
+          </div>
+          {(data.titulares ?? []).length > 8 && (
+            <div style={{ fontSize: 8.6, color: MUTED, marginTop: 3 }}>
+              Se muestran los 8 titulares con mayor audiencia de {(data.titulares ?? []).length} con datos en el corte.
+            </div>
+          )}
+        </div>
+      )}
+
 
       <div className="pdf-avoid">
         <SectionTitle text="Tabla completa del gabinete" color={SCOPE.conjunto.main}
