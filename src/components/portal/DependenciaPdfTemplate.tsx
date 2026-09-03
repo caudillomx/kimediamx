@@ -90,14 +90,42 @@ export type DependenciaReportData = {
 };
 
 
+export type GabineteRankRow = {
+  nombre: string;
+  seguidores: number | null;
+  engagement: number | null;
+  publicaciones: number | null;
+  cuentas: number;
+  /** Variación de audiencia calculada sólo con las cuentas presentes en ambos cortes. */
+  deltaSeguidores: number | null;
+  deltaEngagement: number | null;
+  /** Lugar en el corte anterior dentro de su misma categoría de tamaño. */
+  lugarPrevio: number | null;
+  comparable: boolean;
+};
+
+export type GabineteMoveRow = { nombre: string; delta: number; base: number; detalle: string };
+
+export type GabineteTier = { label: string; nota: string; rows: GabineteRankRow[] };
+
 export type GabineteReportData = {
   periodoLabel: string;
-  ranking: { nombre: string; engagement: number | null; seguidores: number | null }[];
-  suben: { nombre: string; delta: number }[];
-  bajan: { nombre: string; delta: number }[];
-  promedioEngagement: number | null;
   dependencias: number;
+  cuentas: number;
+  seguidoresTotales: number;
+  publicacionesTotales: number | null;
+  /** Interacción del gabinete ponderada por audiencia (no promedio simple). */
+  interaccionPonderada: number | null;
+  interaccionMediana: number | null;
+  ranking: GabineteRankRow[];
+  tiers: GabineteTier[];
+  suben: GabineteMoveRow[];
+  bajan: GabineteMoveRow[];
+  sinDatos: string[];
+  comparables: number;
+  nota: string;
 };
+
 
 /* ------------------------------------------------------------------ */
 /* Paleta y helpers                                                    */
