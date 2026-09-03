@@ -788,13 +788,14 @@ function MoveList({ rows, color, titulo, hint }: { rows: GabineteMoveRow[]; colo
   );
 }
 
-function RankTable({ rows, color, mostrarLugarPrevio, indiceInicial = 0, ocultarEncabezado }: {
-  rows: GabineteRankRow[]; color: string; mostrarLugarPrevio?: boolean; indiceInicial?: number; ocultarEncabezado?: boolean;
+function RankTable({ rows, color, mostrarLugarPrevio, indiceInicial = 0, ocultarEncabezado, continua }: {
+  rows: GabineteRankRow[]; color: string; mostrarLugarPrevio?: boolean; indiceInicial?: number; ocultarEncabezado?: boolean; continua?: boolean;
 }) {
   return (
     <table style={{
       width: "100%", borderCollapse: "collapse", border: `1px solid ${LINE}`,
-      borderTop: ocultarEncabezado ? "none" : `1px solid ${LINE}`, marginBottom: 10,
+      borderTop: ocultarEncabezado ? "none" : `1px solid ${LINE}`,
+      borderBottom: continua ? "none" : `1px solid ${LINE}`, marginBottom: continua ? 0 : 10,
     }}>
       {!ocultarEncabezado && (
         <thead>
@@ -897,10 +898,10 @@ export const GabinetePdfTemplate = forwardRef<HTMLDivElement, { data: GabineteRe
         <div key={t.label} style={{ marginBottom: 12 }}>
           <div className="pdf-avoid">
             <SectionTitle text={t.label} color={SCOPE.institucional.main} hint={t.nota} />
-            <RankTable rows={t.rows.slice(0, 3)} color={SCOPE.institucional.main} mostrarLugarPrevio />
+            <RankTable rows={t.rows.slice(0, 3)} color={SCOPE.institucional.main} mostrarLugarPrevio continua={t.rows.length > 3} />
           </div>
           {t.rows.length > 3 && (
-            <RankTable rows={t.rows.slice(3)} color={SCOPE.institucional.main} mostrarLugarPrevio ocultarEncabezado />
+            <RankTable rows={t.rows.slice(3)} color={SCOPE.institucional.main} mostrarLugarPrevio ocultarEncabezado indiceInicial={3} />
           )}
         </div>
       ))}
@@ -908,7 +909,7 @@ export const GabinetePdfTemplate = forwardRef<HTMLDivElement, { data: GabineteRe
       <div className="pdf-avoid">
         <SectionTitle text="Tabla completa del gabinete" color={SCOPE.conjunto.main}
                       hint="Ordenada por tamaño de audiencia; la interacción no es comparable entre cuentas de escala muy distinta." />
-        <RankTable rows={data.ranking.slice(0, 3)} color={SCOPE.conjunto.main} />
+        <RankTable rows={data.ranking.slice(0, 3)} color={SCOPE.conjunto.main} continua={data.ranking.length > 3} />
       </div>
       {data.ranking.length > 3 && (
         <RankTable rows={data.ranking.slice(3)} color={SCOPE.conjunto.main} indiceInicial={3} ocultarEncabezado />
