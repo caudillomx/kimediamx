@@ -108,6 +108,17 @@ export type GabineteMoveRow = { nombre: string; delta: number; base: number; det
 
 export type GabineteTier = { label: string; nota: string; rows: GabineteRankRow[] };
 
+export type GabineteTitularRow = {
+  nombre: string;
+  dependencia: string;
+  seguidores: number | null;
+  engagement: number | null;
+  publicaciones: number | null;
+  cuentas: number;
+  deltaSeguidores: number | null;
+  comparable: boolean;
+};
+
 export type GabineteReportData = {
   periodoLabel: string;
   dependencias: number;
@@ -119,6 +130,9 @@ export type GabineteReportData = {
   interaccionMediana: number | null;
   ranking: GabineteRankRow[];
   tiers: GabineteTier[];
+  /** Cuentas personales de los titulares, en bloque breve. */
+  titulares?: GabineteTitularRow[];
+  titularesInteraccion?: number | null;
   suben: GabineteMoveRow[];
   bajan: GabineteMoveRow[];
   sinDatos: string[];
