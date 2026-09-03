@@ -963,7 +963,7 @@ export default function PortalDescargas({
       titularPosts.set(dep, (titularPosts.get(dep) ?? 0) + 1);
     }
 
-    const titulares = enfoque === "institucional" ? [] : Array.from(tCurr.entries())
+    const titularesFull = enfoque === "institucional" ? [] : Array.from(tCurr.entries())
       .map(([id, bucket]) => {
         const d = depById.get(id);
         const p = tPrev.get(id);
@@ -984,10 +984,42 @@ export default function PortalDescargas({
           cuentas: bucket.accounts.size || bucket.eng.length,
           deltaSeguidores: comunes && previo > 0 ? (actual - previo) / previo : null,
           comparable: comunes > 0,
+          _base: previo,
         };
       })
       .filter((r) => r.seguidores != null || r.engagement != null)
       .sort((a, b) => (b.seguidores ?? 0) - (a.seguidores ?? 0));
+
+    const titulares = titularesFull.map(({ _base, ...rest }) => rest);
+
+    // Mismas categorías de tamaño, ahora también para las cuentas personales.
+    const titularTiers = TIERS.map((t) => ({
+      label: t.label,
+      nota: t.nota,
+      rows: titulares
+        .filter((r) => (r.seguidores ?? 0) >= t.min && (r.seguidores ?? 0) < t.max)
+        .sort((a, b) => (b.engagement ?? -1) - (a.engagement ?? -1)),
+    })).filter((t) => t.rows.length > 0);
+
+    const titularMovers = titularesFull
+      .filter((r) => r.comparable && r.deltaSeguidores != null && r._base >= 1000 && Math.abs(r.deltaSeguidores) >= 0.002)
+      .map((r) => ({
+        nombre: `${r.nombre} (${r.dependencia})`,
+        delta: r.deltaSeguidores as number,
+        base: r._base,
+        detalle: `${nfInt(r._base)} → ${nfInt(Math.round(r._base * (1 + (r.deltaSeguidores as number))))} seguidores en ${r.cuentas} cuenta${r.cuentas === 1 ? "" : "s"} comparables`,
+        tipo: "titular" as const,
+      }));
+
+    const allMovers = [
+      ...movers.map((m) => ({ ...m, tipo: "institucional" as const })),
+      ...titularMovers,
+    ];
+
+    const seguidoresTitulares = titulares.reduce((a, r) => a + (r.seguidores ?? 0), 0);
+    const publicacionesTitulares = titularPosts.size
+      ? Array.from(titularPosts.values()).reduce((a, b) => a + b, 0)
+      : null;
 
     return {
       periodoLabel: `${cutLabel} · ${ENFOQUE_LABEL[enfoque]}`,
@@ -1000,15 +1032,21 @@ export default function PortalDescargas({
       ranking: rows.slice().sort((a, b) => (b.seguidores ?? 0) - (a.seguidores ?? 0)).map(strip),
       tiers: tiers.map((t) => ({ ...t, rows: t.rows.map((r) => strip(r as (typeof rows)[number])) })),
       titulares,
+      titularTiers,
+      titularesConDatos: titulares.length,
+      cuentasTitulares: titulares.reduce((a, r) => a + r.cuentas, 0),
+      seguidoresTitulares,
+      publicacionesTitulares,
       titularesInteraccion: weightedRate(titulares.map((r) => ({ rate: r.engagement, weight: r.seguidores }))),
-      suben: movers.filter((m) => m.delta > 0).sort((a, b) => b.delta - a.delta).slice(0, 5),
-      bajan: movers.filter((m) => m.delta < 0).sort((a, b) => a.delta - b.delta).slice(0, 5),
+      suben: allMovers.filter((m) => m.delta > 0).sort((a, b) => b.delta - a.delta).slice(0, 5),
+      bajan: allMovers.filter((m) => m.delta < 0).sort((a, b) => a.delta - b.delta).slice(0, 5),
       sinDatos: sinDatos.slice(0, 20),
       comparables: rows.filter((r) => r.comparable).length,
       nota: prevIds.length
-        ? "Cada cuenta se cuenta una sola vez, aunque el mes tenga varias cargas. Las variaciones comparan únicamente las cuentas que existían en los dos cortes, por eso una dependencia que sumó cuentas nuevas aparece como “nuevo” y no como un crecimiento inflado. La interacción del gabinete está ponderada por audiencia."
-        : "No hay un corte anterior cargado, así que este panorama es una fotografía del periodo, sin comparativo. Cada cuenta se cuenta una sola vez y la interacción del gabinete está ponderada por audiencia.",
+        ? "Cada cuenta se cuenta una sola vez, aunque el mes tenga varias cargas. Las variaciones comparan únicamente las cuentas que existían en los dos cortes, por eso una dependencia que sumó cuentas nuevas aparece como “nuevo” y no como un crecimiento inflado. La interacción está ponderada por audiencia."
+        : "No hay un corte anterior cargado, así que este panorama es una fotografía del periodo, sin comparativo. Cada cuenta se cuenta una sola vez y la interacción está ponderada por audiencia.",
     };
+
 
   };
 
