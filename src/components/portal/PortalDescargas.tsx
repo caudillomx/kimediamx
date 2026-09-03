@@ -22,7 +22,7 @@ import { buildDeltaLines } from "@/lib/dependenciaDeltas";
 import {
   DependenciaPdfTemplate, GabinetePdfTemplate,
   type DependenciaReportData, type GabineteReportData, type DepPressRow,
-  type ScopeBlock, type ScopeKey, type DepAccountRow,
+  type ScopeBlock, type ScopeKey, type DepAccountRow, type GabineteRankRow,
 } from "./DependenciaPdfTemplate";
 
 type Dependencia = { id: string; nombre: string; tipo: string | null; titular: string | null; titular_cargo: string | null; sort_order: number | null };
@@ -31,6 +31,8 @@ type Period = { id: string; period_label: string; period_start: string; period_e
 type Metric = { period_id: string; competitor_id: string; network: string; followers: number | null; follower_growth_rate: number | null; engagement_rate: number | null; posts_per_day: number | null; created_at?: string | null };
 type Post = { period_id: string; competitor_id: string | null; network: string; profile_name: string; posted_at: string | null; message: string | null; interactions: number | null; link?: string | null };
 type Report = { id: string; title: string; report_date: string; type: string };
+
+const nfInt = (n: number) => Math.round(n).toLocaleString("es-MX");
 
 const RATE_AVG = (vals: number[]) => (vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null);
 
@@ -858,7 +860,7 @@ export default function PortalDescargas({
       return { delta: (actual - previo) / previo, base: previo, cuentas };
     };
 
-    const rows: GabineteRankRow[] = Array.from(curr.entries())
+    const rows = Array.from(curr.entries())
       .map(([id, bucket]) => {
         const comparado = likeForLike(id);
         const prevBucket = prev.get(id);
