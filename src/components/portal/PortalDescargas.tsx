@@ -1053,7 +1053,17 @@ export default function PortalDescargas({
         })),
       })),
       dependencias_sin_datos: g.sinDatos,
+      titulares: (g.titulares ?? []).slice(0, 10).map((t) => ({
+        nombre: t.nombre,
+        dependencia: t.dependencia,
+        seguidores: t.seguidores,
+        interaccion_pct: t.engagement == null ? null : Number((t.engagement * 100).toFixed(3)),
+        publicaciones: t.publicaciones,
+        variacion_audiencia_pct: t.comparable && t.deltaSeguidores != null ? Number((t.deltaSeguidores * 100).toFixed(2)) : "no comparable",
+      })),
+      interaccion_titulares_pct: g.titularesInteraccion == null ? null : Number((g.titularesInteraccion * 100).toFixed(3)),
       nota_metodologica: g.nota,
+
     };
     const { data, error } = await supabase.functions.invoke("generate-gabinete-reading", { body: { contexto } });
     if (error) throw error;
