@@ -925,6 +925,70 @@ export default function PortalDescargas({
 
     const strip = ({ _base, id, ...rest }: (typeof rows)[number]) => rest as GabineteRankRow;
 
+    /* ---- Bloque breve de titulares (cuentas personales de los funcionarios) ---- */
+    const titularBuckets = (ids: string[]) => {
+      const acc = new Map<string, Bucket>();
+      for (const m of uniqueMetrics(ids)) {
+        const dep = depOfCompetitor.get(m.competitor_id);
+        if (!dep) continue;
+        if ((typeOfCompetitor.get(m.competitor_id) ?? "institucional") !== "titular") continue;
+        const bucket = acc.get(dep) ?? { followers: 0, eng: [], accounts: new Map() };
+        const followers = Number(m.followers);
+        const hasFollowers = Number.isFinite(followers);
+        if (hasFollowers) bucket.followers += followers;
+        if (Number.isFinite(Number(m.engagement_rate))) {
+          bucket.eng.push({ rate: Number(m.engagement_rate), weight: hasFollowers ? followers : null });
+        }
+        const identity = accountIdentity.get(m.competitor_id) ?? m.competitor_id;
+        if (hasFollowers) bucket.accounts.set(`${identity}|${m.network.toLowerCase()}`, followers);
+        acc.set(dep, bucket);
+      }
+      return acc;
+    };
+
+    const tCurr = titularBuckets(currIds);
+    const tPrev = titularBuckets(prevIds);
+    const depById = new Map(dependencias.map((d) => [d.id, d]));
+
+    const titularPosts = new Map<string, number>();
+    const seenTitularPosts = new Set<string>();
+    for (const p of posts) {
+      if (!currSet.has(p.period_id) || !p.competitor_id) continue;
+      const dep = depOfCompetitor.get(p.competitor_id);
+      if (!dep) continue;
+      if ((typeOfCompetitor.get(p.competitor_id) ?? "institucional") !== "titular") continue;
+      const key = benchmarkPostKey(p, accountIdentity);
+      if (seenTitularPosts.has(key)) continue;
+      seenTitularPosts.add(key);
+      titularPosts.set(dep, (titularPosts.get(dep) ?? 0) + 1);
+    }
+
+    const titulares = enfoque === "institucional" ? [] : Array.from(tCurr.entries())
+      .map(([id, bucket]) => {
+        const d = depById.get(id);
+        const p = tPrev.get(id);
+        let actual = 0, previo = 0, comunes = 0;
+        if (p) {
+          bucket.accounts.forEach((value, key) => {
+            const before = p.accounts.get(key);
+            if (before == null) return;
+            actual += value; previo += before; comunes += 1;
+          });
+        }
+        return {
+          nombre: d?.titular?.trim() || "Titular sin registrar",
+          dependencia: d?.nombre ?? "—",
+          seguidores: bucket.followers || null,
+          engagement: weightedRate(bucket.eng),
+          publicaciones: titularPosts.get(id) ?? null,
+          cuentas: bucket.accounts.size || bucket.eng.length,
+          deltaSeguidores: comunes && previo > 0 ? (actual - previo) / previo : null,
+          comparable: comunes > 0,
+        };
+      })
+      .filter((r) => r.seguidores != null || r.engagement != null)
+      .sort((a, b) => (b.seguidores ?? 0) - (a.seguidores ?? 0));
+
     return {
       periodoLabel: `${cutLabel} · ${ENFOQUE_LABEL[enfoque]}`,
       dependencias: rows.length,
@@ -935,6 +999,8 @@ export default function PortalDescargas({
       interaccionMediana: mediana,
       ranking: rows.slice().sort((a, b) => (b.seguidores ?? 0) - (a.seguidores ?? 0)).map(strip),
       tiers: tiers.map((t) => ({ ...t, rows: t.rows.map((r) => strip(r as (typeof rows)[number])) })),
+      titulares,
+      titularesInteraccion: weightedRate(titulares.map((r) => ({ rate: r.engagement, weight: r.seguidores }))),
       suben: movers.filter((m) => m.delta > 0).sort((a, b) => b.delta - a.delta).slice(0, 5),
       bajan: movers.filter((m) => m.delta < 0).sort((a, b) => a.delta - b.delta).slice(0, 5),
       sinDatos: sinDatos.slice(0, 20),
@@ -943,6 +1009,7 @@ export default function PortalDescargas({
         ? "Cada cuenta se cuenta una sola vez, aunque el mes tenga varias cargas. Las variaciones comparan únicamente las cuentas que existían en los dos cortes, por eso una dependencia que sumó cuentas nuevas aparece como “nuevo” y no como un crecimiento inflado. La interacción del gabinete está ponderada por audiencia."
         : "No hay un corte anterior cargado, así que este panorama es una fotografía del periodo, sin comparativo. Cada cuenta se cuenta una sola vez y la interacción del gabinete está ponderada por audiencia.",
     };
+
   };
 
 
