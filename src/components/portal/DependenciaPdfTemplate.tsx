@@ -900,27 +900,49 @@ export const GabinetePdfTemplate = forwardRef<HTMLDivElement, { data: GabineteRe
     <div ref={ref} style={page}>
       <Header title={portalName} subtitle="Panorama de comunicación digital del gabinete" periodo={data.periodoLabel} />
 
-      <div className="pdf-avoid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 12 }}>
-        <Kpi label="Dependencias con datos" value={String(data.dependencias)} color={SCOPE.institucional.main}
-             foot={`${data.cuentas} cuentas medidas`}
-             explain="Sólo se cuentan dependencias con al menos una cuenta con datos en el corte." />
-        <Kpi label="Audiencia del gabinete" value={nf(data.seguidoresTotales)} color={SCOPE.conjunto.main}
-             foot="Seguidores sumados sin duplicar cuentas"
-             explain="Cada cuenta se cuenta una sola vez, aunque aparezca en varias cargas del mes." />
-        <Kpi label="Interacción del gabinete" value={pf(data.interaccionPonderada)} color={SCOPE.titular.main}
-             foot={`Mediana por dependencia: ${pf(data.interaccionMediana)}`}
-             explain="Ponderada por audiencia: las cuentas grandes pesan más que las pequeñas." />
-        <Kpi label="Publicaciones del periodo" value={data.publicacionesTotales == null ? "s/d" : nf(data.publicacionesTotales)}
-             color={INK} foot="Contenido publicado por el gabinete"
-             explain="Publicaciones registradas en el corte, sin duplicados entre cargas." />
-      </div>
+      {(() => {
+        const tit = data.titulares ?? [];
+        const hayTitulares = tit.length > 0;
+        const segTit = data.seguidoresTitulares ?? 0;
+        const segInst = Math.max(0, data.seguidoresTotales - segTit);
+        const pubTit = data.publicacionesTitulares ?? null;
+        const pubInst = data.publicacionesTotales == null ? null : Math.max(0, data.publicacionesTotales - (pubTit ?? 0));
+        return (
+          <div className="pdf-avoid" style={{ display: "grid", gridTemplateColumns: `repeat(${hayTitulares ? 5 : 4}, 1fr)`, gap: 8, marginBottom: 12 }}>
+            <Kpi label="Dependencias con datos" value={String(data.dependencias)} color={SCOPE.institucional.main}
+                 foot={`${Math.max(0, data.cuentas - (data.cuentasTitulares ?? 0))} cuentas institucionales`}
+                 explain="Sólo se cuentan dependencias con al menos una cuenta institucional con datos en el corte." />
+            {hayTitulares && (
+              <Kpi label="Titulares con datos" value={String(data.titularesConDatos ?? tit.length)} color={SCOPE.titular.main}
+                   foot={`${data.cuentasTitulares ?? 0} cuentas personales`}
+                   explain="Funcionarios con al menos una cuenta personal medida en el corte." />
+            )}
+            <Kpi label="Audiencia del gabinete" value={nf(data.seguidoresTotales)} color={SCOPE.conjunto.main}
+                 foot={hayTitulares ? `Instituciones ${nf(segInst)} · Titulares ${nf(segTit)}` : "Seguidores sumados sin duplicar cuentas"}
+                 explain="Cada cuenta se cuenta una sola vez, aunque aparezca en varias cargas del mes." />
+            <Kpi label="Interacción del gabinete" value={pf(data.interaccionPonderada)} color={SCOPE.titular.main}
+                 foot={hayTitulares && data.titularesInteraccion != null
+                   ? `Instituciones ${pf(data.interaccionPonderada)} · Titulares ${pf(data.titularesInteraccion)}`
+                   : `Mediana por dependencia: ${pf(data.interaccionMediana)}`}
+                 explain="Ponderada por audiencia: las cuentas grandes pesan más que las pequeñas." />
+            <Kpi label="Publicaciones del periodo" value={data.publicacionesTotales == null ? "s/d" : nf(data.publicacionesTotales)}
+                 color={INK}
+                 foot={hayTitulares && pubInst != null ? `Instituciones ${nf(pubInst)} · Titulares ${pubTit == null ? "s/d" : nf(pubTit)}` : "Contenido publicado por el gabinete"}
+                 explain="Publicaciones registradas en el corte, sin duplicados entre cargas." />
+          </div>
+        );
+      })()}
 
       <div className="pdf-avoid" style={{
         border: `1px solid ${LINE}`, borderLeft: `3px solid ${SCOPE.institucional.main}`,
         borderRadius: 6, padding: "7px 10px", marginBottom: 14, fontSize: 9, color: MUTED, background: "#f8fafc",
       }}>
-        <strong style={{ color: INK }}>Cómo leer este reporte. </strong>{data.nota}
+        <strong style={{ color: INK }}>Cómo leer este reporte. </strong>
+        El panorama separa dos ámbitos: las <b style={{ color: SCOPE.institucional.main }}>cuentas institucionales</b> de cada dependencia y las{" "}
+        <b style={{ color: SCOPE.titular.main }}>cuentas personales de los titulares</b>. Cada indicador y cada tabla indica a cuál de los dos corresponde;
+        cuando la cifra es del conjunto, el desglose aparece debajo del número. {data.nota}
       </div>
+
 
       {data.interpretacion?.lectura && (
         <div className="pdf-avoid" style={{ marginBottom: 14 }}>
