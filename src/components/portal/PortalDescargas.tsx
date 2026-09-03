@@ -1146,7 +1146,7 @@ export default function PortalDescargas({
         }
       }
       await new Promise((r) => setTimeout(r, 400));
-      await renderPdf(gabPdfRef, `gabinete-${enfoque}-${cutSlug}.pdf`);
+      await renderPdf(gabPdfRef, `gabinete-${enfoque}-${cutSlug}.pdf`, true);
       toast.success("Panorama descargado", { id: "gab-pdf" });
     } catch {
       toast.error("No se pudo generar el PDF", { id: "gab-pdf" });
