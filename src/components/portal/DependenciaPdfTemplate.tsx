@@ -855,6 +855,31 @@ export const GabinetePdfTemplate = forwardRef<HTMLDivElement, { data: GabineteRe
         <strong style={{ color: INK }}>Cómo leer este reporte. </strong>{data.nota}
       </div>
 
+      {data.interpretacion?.lectura && (
+        <div className="pdf-avoid" style={{ marginBottom: 14 }}>
+          <SectionTitle text="Qué significa este corte" color={SCOPE.conjunto.main}
+                        hint="Interpretación de las cifras del periodo: qué está pasando y por qué importa." />
+          <Explainer color={SCOPE.conjunto.main} text={stripEmoji(data.interpretacion.lectura)} />
+          {(data.interpretacion.hallazgos ?? []).slice(0, 4).map((h, i) => (
+            <div className="pdf-avoid" key={i} style={{
+              border: `1px solid ${LINE}`, borderLeft: `3px solid ${SCOPE.conjunto.main}`,
+              borderRadius: 7, padding: "6px 9px", marginBottom: 5, background: "#ffffff",
+            }}>
+              <div style={{ fontSize: 10.2, fontWeight: 700, color: INK, overflowWrap: "anywhere" }}>
+                {i + 1}. {stripEmoji(h.titulo)}
+              </div>
+              <div style={{ fontSize: 9.4, color: "#475569", marginTop: 2, overflowWrap: "anywhere" }}>
+                {stripEmoji(h.que_pasa)}
+              </div>
+              <div style={{ fontSize: 9.4, color: "#334155", marginTop: 2, overflowWrap: "anywhere" }}>
+                <b style={{ color: MUTED }}>Por qué importa:</b> {stripEmoji(h.por_que_importa)}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+
       <div className="pdf-avoid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 16 }}>
         <MoveList rows={data.suben} color="#059669" titulo="Quién creció" hint="Sólo variaciones reales, comparando las mismas cuentas" />
         <MoveList rows={data.bajan} color="#dc2626" titulo="Quién retrocedió" hint="Caídas de audiencia frente al corte anterior" />
