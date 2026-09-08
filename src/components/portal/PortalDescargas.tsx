@@ -179,11 +179,11 @@ export default function PortalDescargas({
     [periods],
   );
   const selectActiveReportPeriods = (sourcePeriods: Period[]) => {
-    if (cut !== "semanal") return sourcePeriods.filter((p) => periodMatchesDisplayLabel(p, periodLabel));
+    if (!isRange) return sourcePeriods.filter((p) => periodMatchesDisplayLabel(p, periodLabel));
 
-    // Un corte semanal necesita el snapshot más reciente disponible de CADA
+    // Un corte por rango necesita el snapshot más reciente disponible de CADA
     // cuenta. Las cargas suelen cerrar en lunes o en cortes mixtos, así que se
-    // aceptan periodos que terminen antes de la semana o que se solapen con ella
+    // aceptan periodos que terminen antes del rango o que se solapen con él
     // con una tolerancia breve de captura posterior. Esto evita reportes en cero
     // cuando la base sí trae el corte nuevo, pero no permite jalar un mes futuro.
     const lookaheadTo = shiftIso(weekTo, 2);
@@ -194,7 +194,7 @@ export default function PortalDescargas({
   };
 
   const selectPreviousReportPeriods = (sourcePeriods: Period[], labels = periodLabels) => {
-    if (cut === "semanal") return sourcePeriods.filter((p) => p.period_end < weekFrom);
+    if (isRange) return sourcePeriods.filter((p) => p.period_end < weekFrom);
     const idx = labels.indexOf(periodLabel);
     return idx > 0 ? sourcePeriods.filter((p) => periodMatchesDisplayLabel(p, labels[idx - 1])) : [];
   };
@@ -208,7 +208,7 @@ export default function PortalDescargas({
     [periods, periodLabels, periodLabel, cut, weekFrom],
   );
 
-  /** Corte de datos realmente usado en semanal: el snapshot más reciente disponible. */
+  /** Corte de datos realmente usado por rango: el snapshot más reciente disponible. */
   const latestActivePeriodLabel = useMemo(() => {
     if (activePeriods.length === 0) return null;
     return activePeriods.reduce((a, b) => (b.period_end > a.period_end ? b : a)).period_label;
@@ -218,10 +218,10 @@ export default function PortalDescargas({
 
 
   /** Etiqueta del corte activo y ventana de fechas para prensa/publicaciones. */
-  const cutLabel = cut === "semanal"
-    ? `Semana ${fmtDia(weekFrom)} — ${fmtDia(weekTo)}`
+  const cutLabel = isRange
+    ? `${CUT_LABEL[cut]} ${fmtDia(weekFrom)} — ${fmtDia(weekTo)}`
     : (periodLabel || "Periodo");
-  const cutSlug = cut === "semanal" ? `semana-${weekFrom}` : (periodLabel || "reporte").replace(/\s+/g, "-").toLowerCase();
+  const cutSlug = isRange ? `${cut}-${weekFrom}` : (periodLabel || "reporte").replace(/\s+/g, "-").toLowerCase();
 
   const competitorMaps = useMemo(
     () => buildValidCompetitorMaps(competitors, dependencias),
