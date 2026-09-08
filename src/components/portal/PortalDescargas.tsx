@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { inMxRange } from "@/lib/tz";
+import { inMxRange, mxRangeBounds } from "@/lib/tz";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -834,7 +834,7 @@ export default function PortalDescargas({
    * - la interacción del gabinete se pondera por audiencia y el ranking se
    *   separa por tamaño, para no premiar cuentas de mil seguidores.
    */
-  const buildGabineteReport = (): GabineteReportData => {
+  const buildGabineteReport = async (): Promise<GabineteReportData> => {
     // Las tablas de dependencias sólo consideran cuentas institucionales; las
     // cuentas personales de los titulares viven en su propio bloque.
     const rowScope = enfoque === "titular" ? "titular" : "institucional";
@@ -867,19 +867,45 @@ export default function PortalDescargas({
     const curr = collect(currIds);
     const prev = collect(prevIds);
 
-    // Publicaciones del corte, sin duplicar entre cargas del mismo periodo.
-    const currSet = new Set(currIds);
+    // Publicaciones del corte contadas por su FECHA REAL dentro de la ventana
+    // elegida (mes, semana, quincena, trimestre o rango libre), no por la carga
+    // a la que pertenecen: una carga de julio puede cerrar en agosto y otra
+    // solaparse con septiembre. Se consultan todas las cargas que cruzan la
+    // ventana, filtrando por fecha en la base y sin tope de las más exitosas.
+    const monthlyRange = isRange ? null : periodRangeForDisplayLabel(periodLabel, periods);
+    const currStarts = activePeriods.map((p) => p.period_start).sort();
+    const currEnds = activePeriods.map((p) => p.period_end).sort();
+    const winFrom = isRange ? weekFrom : (monthlyRange?.from ?? currStarts[0] ?? pressFrom);
+    const winTo = isRange ? weekTo : (monthlyRange?.to ?? currEnds[currEnds.length - 1] ?? pressTo);
+    const bounds = mxRangeBounds(winFrom, winTo);
+    const postPeriodIds = periods
+      .filter((p) => p.period_start <= winTo && p.period_end >= winFrom)
+      .map((p) => p.id);
+    const windowPosts = postPeriodIds.length
+      ? await fetchAllPages<Post>((from, to) =>
+          supabase.from("client_portal_benchmark_posts")
+            .select("period_id,competitor_id,network,profile_name,posted_at,message,interactions,link")
+            .in("period_id", postPeriodIds)
+            .gte("posted_at", bounds.gte)
+            .lte("posted_at", bounds.lte)
+            .order("posted_at", { ascending: true })
+            .order("id")
+            .range(from, to), 1000, 80000)
+      : [];
+
     const seenPosts = new Set<string>();
     const postsByDep = new Map<string, number>();
-    for (const p of posts) {
-      if (!currSet.has(p.period_id) || !p.competitor_id) continue;
+    const titularPosts = new Map<string, number>();
+    for (const p of windowPosts) {
+      if (!p.competitor_id) continue;
       const dep = depOfCompetitor.get(p.competitor_id);
       if (!dep) continue;
-      if (!matchesRowScope(typeOfCompetitor.get(p.competitor_id))) continue;
+      const tipo = typeOfCompetitor.get(p.competitor_id) ?? "institucional";
       const key = benchmarkPostKey(p, accountIdentity);
       if (seenPosts.has(key)) continue;
       seenPosts.add(key);
-      postsByDep.set(dep, (postsByDep.get(dep) ?? 0) + 1);
+      if (matchesRowScope(tipo)) postsByDep.set(dep, (postsByDep.get(dep) ?? 0) + 1);
+      if (tipo === "titular") titularPosts.set(dep, (titularPosts.get(dep) ?? 0) + 1);
     }
 
     /** Variación sólo sobre cuentas presentes en los dos cortes. */
@@ -986,18 +1012,6 @@ export default function PortalDescargas({
     const tPrev = titularBuckets(prevIds);
     const depById = new Map(dependencias.map((d) => [d.id, d]));
 
-    const titularPosts = new Map<string, number>();
-    const seenTitularPosts = new Set<string>();
-    for (const p of posts) {
-      if (!currSet.has(p.period_id) || !p.competitor_id) continue;
-      const dep = depOfCompetitor.get(p.competitor_id);
-      if (!dep) continue;
-      if ((typeOfCompetitor.get(p.competitor_id) ?? "institucional") !== "titular") continue;
-      const key = benchmarkPostKey(p, accountIdentity);
-      if (seenTitularPosts.has(key)) continue;
-      seenTitularPosts.add(key);
-      titularPosts.set(dep, (titularPosts.get(dep) ?? 0) + 1);
-    }
 
     const titularesFull = enfoque !== "combinado" ? [] : Array.from(tCurr.entries())
       .map(([id, bucket]) => {
@@ -1083,7 +1097,7 @@ export default function PortalDescargas({
       sinDatos: sinDatos.slice(0, 20),
       comparables: rows.filter((r) => r.comparable).length,
       nota: prevIds.length
-        ? "Cada cuenta se cuenta una sola vez, aunque el mes tenga varias cargas. Las variaciones comparan únicamente las cuentas que existían en los dos cortes, por eso una dependencia que sumó cuentas nuevas aparece como “nuevo” y no como un crecimiento inflado. La interacción está ponderada por audiencia."
+        ? `Cada cuenta se cuenta una sola vez, aunque el mes tenga varias cargas. Las publicaciones se cuentan por su fecha real entre el ${fmtDia(winFrom)} y el ${fmtDia(winTo)}, sin repetir las que aparecen en más de una carga. Las variaciones comparan únicamente las cuentas que existían en los dos cortes, por eso una dependencia que sumó cuentas nuevas aparece como “nuevo” y no como un crecimiento inflado. La interacción está ponderada por audiencia.`
         : "No hay un corte anterior cargado, así que este panorama es una fotografía del periodo, sin comparativo. Cada cuenta se cuenta una sola vez y la interacción está ponderada por audiencia.",
     };
 
@@ -1151,9 +1165,9 @@ export default function PortalDescargas({
 
   const downloadGabPdf = async () => {
     setBusy("gab");
-    const base = buildGabineteReport();
-    setGabData(base);
     toast.loading("Generando panorama…", { id: "gab-pdf" });
+    const base = await buildGabineteReport();
+    setGabData(base);
     try {
       if (conRecomendaciones) {
         try {
