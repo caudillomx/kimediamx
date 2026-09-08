@@ -1012,18 +1012,6 @@ export default function PortalDescargas({
     const tPrev = titularBuckets(prevIds);
     const depById = new Map(dependencias.map((d) => [d.id, d]));
 
-    const titularPosts = new Map<string, number>();
-    const seenTitularPosts = new Set<string>();
-    for (const p of posts) {
-      if (!currSet.has(p.period_id) || !p.competitor_id) continue;
-      const dep = depOfCompetitor.get(p.competitor_id);
-      if (!dep) continue;
-      if ((typeOfCompetitor.get(p.competitor_id) ?? "institucional") !== "titular") continue;
-      const key = benchmarkPostKey(p, accountIdentity);
-      if (seenTitularPosts.has(key)) continue;
-      seenTitularPosts.add(key);
-      titularPosts.set(dep, (titularPosts.get(dep) ?? 0) + 1);
-    }
 
     const titularesFull = enfoque !== "combinado" ? [] : Array.from(tCurr.entries())
       .map(([id, bucket]) => {
