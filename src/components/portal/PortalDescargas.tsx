@@ -834,7 +834,7 @@ export default function PortalDescargas({
    * - la interacción del gabinete se pondera por audiencia y el ranking se
    *   separa por tamaño, para no premiar cuentas de mil seguidores.
    */
-  const buildGabineteReport = (): GabineteReportData => {
+  const buildGabineteReport = async (): Promise<GabineteReportData> => {
     // Las tablas de dependencias sólo consideran cuentas institucionales; las
     // cuentas personales de los titulares viven en su propio bloque.
     const rowScope = enfoque === "titular" ? "titular" : "institucional";
