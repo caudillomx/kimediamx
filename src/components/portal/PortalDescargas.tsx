@@ -1205,11 +1205,21 @@ export default function PortalDescargas({
           </div>
           <div className="space-y-1">
             <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Corte</span>
-            <Select value={cut} onValueChange={(v) => setCut(v as typeof cut)}>
-              <SelectTrigger className="w-[170px] h-9"><SelectValue /></SelectTrigger>
+            <Select
+              value={cut}
+              onValueChange={(v) => {
+                const next = v as CutKind;
+                setCut(next);
+                const r = rangoSugerido(next, { from: weekFrom, to: weekTo });
+                setWeekFrom(r.from);
+                setWeekTo(r.to);
+              }}
+            >
+              <SelectTrigger className="w-[190px] h-9"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="mensual">Mensual</SelectItem>
-                <SelectItem value="semanal">Semanal</SelectItem>
+                {(Object.keys(CUT_LABEL) as CutKind[]).map((k) => (
+                  <SelectItem key={k} value={k}>{CUT_LABEL[k]}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -1226,7 +1236,7 @@ export default function PortalDescargas({
           ) : (
             <>
               <div className="space-y-1">
-                <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Semana desde</span>
+                <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Desde</span>
                 <Input type="date" value={weekFrom} max={weekTo} onChange={(e) => setWeekFrom(e.target.value)} className="h-9 w-[150px]" />
               </div>
               <div className="space-y-1">
@@ -1235,9 +1245,9 @@ export default function PortalDescargas({
               </div>
               <Button
                 variant="ghost" size="sm" className="h-9"
-                onClick={() => { const w = ultimaSemanaCompleta(); setWeekFrom(w.from); setWeekTo(w.to); }}
+                onClick={() => { const r = rangoSugerido(cut === "personalizado" ? "semanal" : cut, { from: weekFrom, to: weekTo }); setWeekFrom(r.from); setWeekTo(r.to); }}
               >
-                Última semana completa
+                Rango sugerido
               </Button>
             </>
           )}
