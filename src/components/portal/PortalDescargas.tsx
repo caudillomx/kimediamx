@@ -1097,7 +1097,7 @@ export default function PortalDescargas({
       sinDatos: sinDatos.slice(0, 20),
       comparables: rows.filter((r) => r.comparable).length,
       nota: prevIds.length
-        ? "Cada cuenta se cuenta una sola vez, aunque el mes tenga varias cargas. Las variaciones comparan únicamente las cuentas que existían en los dos cortes, por eso una dependencia que sumó cuentas nuevas aparece como “nuevo” y no como un crecimiento inflado. La interacción está ponderada por audiencia."
+        ? `Cada cuenta se cuenta una sola vez, aunque el mes tenga varias cargas. Las publicaciones se cuentan por su fecha real entre el ${fmtDia(winFrom)} y el ${fmtDia(winTo)}, sin repetir las que aparecen en más de una carga. Las variaciones comparan únicamente las cuentas que existían en los dos cortes, por eso una dependencia que sumó cuentas nuevas aparece como “nuevo” y no como un crecimiento inflado. La interacción está ponderada por audiencia.`
         : "No hay un corte anterior cargado, así que este panorama es una fotografía del periodo, sin comparativo. Cada cuenta se cuenta una sola vez y la interacción está ponderada por audiencia.",
     };
 
