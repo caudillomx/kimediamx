@@ -70,6 +70,26 @@ function ultimaSemanaCompleta() {
   return { from: lunes.toISOString().slice(0, 10), to: domingo.toISOString().slice(0, 10) };
 }
 
+type CutKind = "mensual" | "semanal" | "quincenal" | "trimestral" | "personalizado";
+
+const CUT_LABEL: Record<CutKind, string> = {
+  mensual: "Mensual",
+  semanal: "Semanal",
+  quincenal: "Quincenal",
+  trimestral: "Trimestral",
+  personalizado: "Rango personalizado",
+};
+
+/** Rango sugerido al cambiar de corte (el usuario puede ajustarlo con el calendario). */
+function rangoSugerido(kind: CutKind, actual: { from: string; to: string }) {
+  const semana = ultimaSemanaCompleta();
+  if (kind === "semanal") return semana;
+  if (kind === "quincenal") return { from: shiftIso(semana.to, -13), to: semana.to };
+  if (kind === "trimestral") return { from: shiftIso(semana.to, -89), to: semana.to };
+  return actual;
+}
+
+
 const TONE_LABEL: Record<string, string> = { positivo: "Positivo", neutral: "Neutral", negativo: "Negativo", crisis: "Crisis" };
 
 export default function PortalDescargas({
