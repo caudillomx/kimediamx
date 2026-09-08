@@ -1165,7 +1165,7 @@ export default function PortalDescargas({
 
   const downloadGabPdf = async () => {
     setBusy("gab");
-    const base = buildGabineteReport();
+    const base = await buildGabineteReport();
     setGabData(base);
     toast.loading("Generando panorama…", { id: "gab-pdf" });
     try {
