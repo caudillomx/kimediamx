@@ -70,6 +70,26 @@ function ultimaSemanaCompleta() {
   return { from: lunes.toISOString().slice(0, 10), to: domingo.toISOString().slice(0, 10) };
 }
 
+type CutKind = "mensual" | "semanal" | "quincenal" | "trimestral" | "personalizado";
+
+const CUT_LABEL: Record<CutKind, string> = {
+  mensual: "Mensual",
+  semanal: "Semanal",
+  quincenal: "Quincenal",
+  trimestral: "Trimestral",
+  personalizado: "Rango personalizado",
+};
+
+/** Rango sugerido al cambiar de corte (el usuario puede ajustarlo con el calendario). */
+function rangoSugerido(kind: CutKind, actual: { from: string; to: string }) {
+  const semana = ultimaSemanaCompleta();
+  if (kind === "semanal") return semana;
+  if (kind === "quincenal") return { from: shiftIso(semana.to, -13), to: semana.to };
+  if (kind === "trimestral") return { from: shiftIso(semana.to, -89), to: semana.to };
+  return actual;
+}
+
+
 const TONE_LABEL: Record<string, string> = { positivo: "Positivo", neutral: "Neutral", negativo: "Negativo", crisis: "Crisis" };
 
 export default function PortalDescargas({
@@ -87,9 +107,10 @@ export default function PortalDescargas({
   const [depId, setDepId] = useState<string>("");
   const [enfoque, setEnfoque] = useState<"combinado" | "institucional" | "titular">("combinado");
   const [periodLabel, setPeriodLabel] = useState<string>("");
-  const [cut, setCut] = useState<"mensual" | "semanal">("mensual");
+  const [cut, setCut] = useState<CutKind>("mensual");
   const [weekFrom, setWeekFrom] = useState(ultimaSemanaCompleta().from);
   const [weekTo, setWeekTo] = useState(ultimaSemanaCompleta().to);
+  const isRange = cut !== "mensual";
   const [busy, setBusy] = useState<string | null>(null);
   const [conRecomendaciones, setConRecomendaciones] = useState(true);
 
@@ -158,11 +179,11 @@ export default function PortalDescargas({
     [periods],
   );
   const selectActiveReportPeriods = (sourcePeriods: Period[]) => {
-    if (cut !== "semanal") return sourcePeriods.filter((p) => periodMatchesDisplayLabel(p, periodLabel));
+    if (!isRange) return sourcePeriods.filter((p) => periodMatchesDisplayLabel(p, periodLabel));
 
-    // Un corte semanal necesita el snapshot más reciente disponible de CADA
+    // Un corte por rango necesita el snapshot más reciente disponible de CADA
     // cuenta. Las cargas suelen cerrar en lunes o en cortes mixtos, así que se
-    // aceptan periodos que terminen antes de la semana o que se solapen con ella
+    // aceptan periodos que terminen antes del rango o que se solapen con él
     // con una tolerancia breve de captura posterior. Esto evita reportes en cero
     // cuando la base sí trae el corte nuevo, pero no permite jalar un mes futuro.
     const lookaheadTo = shiftIso(weekTo, 2);
@@ -173,7 +194,7 @@ export default function PortalDescargas({
   };
 
   const selectPreviousReportPeriods = (sourcePeriods: Period[], labels = periodLabels) => {
-    if (cut === "semanal") return sourcePeriods.filter((p) => p.period_end < weekFrom);
+    if (isRange) return sourcePeriods.filter((p) => p.period_end < weekFrom);
     const idx = labels.indexOf(periodLabel);
     return idx > 0 ? sourcePeriods.filter((p) => periodMatchesDisplayLabel(p, labels[idx - 1])) : [];
   };
@@ -187,7 +208,7 @@ export default function PortalDescargas({
     [periods, periodLabels, periodLabel, cut, weekFrom],
   );
 
-  /** Corte de datos realmente usado en semanal: el snapshot más reciente disponible. */
+  /** Corte de datos realmente usado por rango: el snapshot más reciente disponible. */
   const latestActivePeriodLabel = useMemo(() => {
     if (activePeriods.length === 0) return null;
     return activePeriods.reduce((a, b) => (b.period_end > a.period_end ? b : a)).period_label;
@@ -197,10 +218,10 @@ export default function PortalDescargas({
 
 
   /** Etiqueta del corte activo y ventana de fechas para prensa/publicaciones. */
-  const cutLabel = cut === "semanal"
-    ? `Semana ${fmtDia(weekFrom)} — ${fmtDia(weekTo)}`
+  const cutLabel = isRange
+    ? `${CUT_LABEL[cut]} ${fmtDia(weekFrom)} — ${fmtDia(weekTo)}`
     : (periodLabel || "Periodo");
-  const cutSlug = cut === "semanal" ? `semana-${weekFrom}` : (periodLabel || "reporte").replace(/\s+/g, "-").toLowerCase();
+  const cutSlug = isRange ? `${cut}-${weekFrom}` : (periodLabel || "reporte").replace(/\s+/g, "-").toLowerCase();
 
   const competitorMaps = useMemo(
     () => buildValidCompetitorMaps(competitors, dependencias),
@@ -440,11 +461,11 @@ export default function PortalDescargas({
       if (!current || c.name.length > current.name.length) compByIdentity.set(key, c);
     }
 
-    const monthlyRange = cut === "semanal" ? null : periodRangeForDisplayLabel(periodLabel, reportPeriods);
+    const monthlyRange = isRange ? null : periodRangeForDisplayLabel(periodLabel, reportPeriods);
     const monthlyStarts = reportActivePeriods.map((p) => p.period_start).sort();
     const monthlyEnds = reportActivePeriods.map((p) => p.period_end).sort();
-    const winFrom = cut === "semanal" ? weekFrom : (monthlyRange?.from ?? monthlyStarts[0] ?? pressFrom);
-    const winTo = cut === "semanal" ? weekTo : (monthlyRange?.to ?? monthlyEnds[monthlyEnds.length - 1] ?? pressTo);
+    const winFrom = isRange ? weekFrom : (monthlyRange?.from ?? monthlyStarts[0] ?? pressFrom);
+    const winTo = isRange ? weekTo : (monthlyRange?.to ?? monthlyEnds[monthlyEnds.length - 1] ?? pressTo);
     const winDays = Math.max(
       1,
       Math.round((new Date(winTo + "T00:00:00").getTime() - new Date(winFrom + "T00:00:00").getTime()) / 86_400_000) + 1,
@@ -481,10 +502,10 @@ export default function PortalDescargas({
     // Ventana del corte anterior: sirve para el bloque "Lo que cambió".
     const prevStarts = reportPrevPeriods.map((p) => p.period_start).sort();
     const prevEnds = reportPrevPeriods.map((p) => p.period_end).sort();
-    const prevFrom = cut === "semanal"
-      ? shiftIso(winFrom, -7)
+    const prevFrom = isRange
+      ? shiftIso(winFrom, -winDays)
       : (prevStarts[0] ?? shiftIso(winFrom, -winDays));
-    const prevTo = cut === "semanal"
+    const prevTo = isRange
       ? shiftIso(winFrom, -1)
       : (prevEnds[prevEnds.length - 1] ?? shiftIso(winFrom, -1));
 
@@ -1184,11 +1205,21 @@ export default function PortalDescargas({
           </div>
           <div className="space-y-1">
             <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Corte</span>
-            <Select value={cut} onValueChange={(v) => setCut(v as typeof cut)}>
-              <SelectTrigger className="w-[170px] h-9"><SelectValue /></SelectTrigger>
+            <Select
+              value={cut}
+              onValueChange={(v) => {
+                const next = v as CutKind;
+                setCut(next);
+                const r = rangoSugerido(next, { from: weekFrom, to: weekTo });
+                setWeekFrom(r.from);
+                setWeekTo(r.to);
+              }}
+            >
+              <SelectTrigger className="w-[190px] h-9"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="mensual">Mensual</SelectItem>
-                <SelectItem value="semanal">Semanal</SelectItem>
+                {(Object.keys(CUT_LABEL) as CutKind[]).map((k) => (
+                  <SelectItem key={k} value={k}>{CUT_LABEL[k]}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -1205,7 +1236,7 @@ export default function PortalDescargas({
           ) : (
             <>
               <div className="space-y-1">
-                <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Semana desde</span>
+                <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Desde</span>
                 <Input type="date" value={weekFrom} max={weekTo} onChange={(e) => setWeekFrom(e.target.value)} className="h-9 w-[150px]" />
               </div>
               <div className="space-y-1">
@@ -1214,9 +1245,9 @@ export default function PortalDescargas({
               </div>
               <Button
                 variant="ghost" size="sm" className="h-9"
-                onClick={() => { const w = ultimaSemanaCompleta(); setWeekFrom(w.from); setWeekTo(w.to); }}
+                onClick={() => { const r = rangoSugerido(cut === "personalizado" ? "semanal" : cut, { from: weekFrom, to: weekTo }); setWeekFrom(r.from); setWeekTo(r.to); }}
               >
-                Última semana completa
+                Rango sugerido
               </Button>
             </>
           )}
@@ -1258,8 +1289,8 @@ export default function PortalDescargas({
           </p>
         )}
         <p className="text-[11px] text-muted-foreground">
-          {cut === "semanal"
-            ? `Corte semanal ${fmtDia(weekFrom)} — ${fmtDia(weekTo)}: publicaciones y menciones de prensa se filtran a esos días; las métricas de seguidores y engagement provienen del corte de datos más reciente disponible${latestActivePeriodLabel ? ` (${latestActivePeriodLabel})` : ""}.`
+          {isRange
+            ? `Corte ${CUT_LABEL[cut].toLowerCase()} ${fmtDia(weekFrom)} — ${fmtDia(weekTo)}: publicaciones y menciones de prensa se filtran a esos días; las métricas de seguidores y engagement provienen del corte de datos más reciente disponible${latestActivePeriodLabel ? ` (${latestActivePeriodLabel})` : ""}.`
             : `Corte mensual: publicaciones, métricas y prensa del periodo ${periodLabel || "seleccionado"}.`}
         </p>
       </Card>
