@@ -867,19 +867,45 @@ export default function PortalDescargas({
     const curr = collect(currIds);
     const prev = collect(prevIds);
 
-    // Publicaciones del corte, sin duplicar entre cargas del mismo periodo.
-    const currSet = new Set(currIds);
+    // Publicaciones del corte contadas por su FECHA REAL dentro de la ventana
+    // elegida (mes, semana, quincena, trimestre o rango libre), no por la carga
+    // a la que pertenecen: una carga de julio puede cerrar en agosto y otra
+    // solaparse con septiembre. Se consultan todas las cargas que cruzan la
+    // ventana, filtrando por fecha en la base y sin tope de las más exitosas.
+    const monthlyRange = isRange ? null : periodRangeForDisplayLabel(periodLabel, periods);
+    const currStarts = activePeriods.map((p) => p.period_start).sort();
+    const currEnds = activePeriods.map((p) => p.period_end).sort();
+    const winFrom = isRange ? weekFrom : (monthlyRange?.from ?? currStarts[0] ?? pressFrom);
+    const winTo = isRange ? weekTo : (monthlyRange?.to ?? currEnds[currEnds.length - 1] ?? pressTo);
+    const bounds = mxRangeBounds(winFrom, winTo);
+    const postPeriodIds = periods
+      .filter((p) => p.period_start <= winTo && p.period_end >= winFrom)
+      .map((p) => p.id);
+    const windowPosts = postPeriodIds.length
+      ? await fetchAllPages<Post>((from, to) =>
+          supabase.from("client_portal_benchmark_posts")
+            .select("period_id,competitor_id,network,profile_name,posted_at,message,interactions,link")
+            .in("period_id", postPeriodIds)
+            .gte("posted_at", bounds.gte)
+            .lte("posted_at", bounds.lte)
+            .order("posted_at", { ascending: true })
+            .order("id")
+            .range(from, to), 1000, 80000)
+      : [];
+
     const seenPosts = new Set<string>();
     const postsByDep = new Map<string, number>();
-    for (const p of posts) {
-      if (!currSet.has(p.period_id) || !p.competitor_id) continue;
+    const titularPosts = new Map<string, number>();
+    for (const p of windowPosts) {
+      if (!p.competitor_id) continue;
       const dep = depOfCompetitor.get(p.competitor_id);
       if (!dep) continue;
-      if (!matchesRowScope(typeOfCompetitor.get(p.competitor_id))) continue;
+      const tipo = typeOfCompetitor.get(p.competitor_id) ?? "institucional";
       const key = benchmarkPostKey(p, accountIdentity);
       if (seenPosts.has(key)) continue;
       seenPosts.add(key);
-      postsByDep.set(dep, (postsByDep.get(dep) ?? 0) + 1);
+      if (matchesRowScope(tipo)) postsByDep.set(dep, (postsByDep.get(dep) ?? 0) + 1);
+      if (tipo === "titular") titularPosts.set(dep, (titularPosts.get(dep) ?? 0) + 1);
     }
 
     /** Variación sólo sobre cuentas presentes en los dos cortes. */
