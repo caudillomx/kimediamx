@@ -502,10 +502,10 @@ export default function PortalDescargas({
     // Ventana del corte anterior: sirve para el bloque "Lo que cambió".
     const prevStarts = reportPrevPeriods.map((p) => p.period_start).sort();
     const prevEnds = reportPrevPeriods.map((p) => p.period_end).sort();
-    const prevFrom = cut === "semanal"
-      ? shiftIso(winFrom, -7)
+    const prevFrom = isRange
+      ? shiftIso(winFrom, -winDays)
       : (prevStarts[0] ?? shiftIso(winFrom, -winDays));
-    const prevTo = cut === "semanal"
+    const prevTo = isRange
       ? shiftIso(winFrom, -1)
       : (prevEnds[prevEnds.length - 1] ?? shiftIso(winFrom, -1));
 
