@@ -461,11 +461,11 @@ export default function PortalDescargas({
       if (!current || c.name.length > current.name.length) compByIdentity.set(key, c);
     }
 
-    const monthlyRange = cut === "semanal" ? null : periodRangeForDisplayLabel(periodLabel, reportPeriods);
+    const monthlyRange = isRange ? null : periodRangeForDisplayLabel(periodLabel, reportPeriods);
     const monthlyStarts = reportActivePeriods.map((p) => p.period_start).sort();
     const monthlyEnds = reportActivePeriods.map((p) => p.period_end).sort();
-    const winFrom = cut === "semanal" ? weekFrom : (monthlyRange?.from ?? monthlyStarts[0] ?? pressFrom);
-    const winTo = cut === "semanal" ? weekTo : (monthlyRange?.to ?? monthlyEnds[monthlyEnds.length - 1] ?? pressTo);
+    const winFrom = isRange ? weekFrom : (monthlyRange?.from ?? monthlyStarts[0] ?? pressFrom);
+    const winTo = isRange ? weekTo : (monthlyRange?.to ?? monthlyEnds[monthlyEnds.length - 1] ?? pressTo);
     const winDays = Math.max(
       1,
       Math.round((new Date(winTo + "T00:00:00").getTime() - new Date(winFrom + "T00:00:00").getTime()) / 86_400_000) + 1,
