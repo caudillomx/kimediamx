@@ -87,9 +87,10 @@ export default function PortalDescargas({
   const [depId, setDepId] = useState<string>("");
   const [enfoque, setEnfoque] = useState<"combinado" | "institucional" | "titular">("combinado");
   const [periodLabel, setPeriodLabel] = useState<string>("");
-  const [cut, setCut] = useState<"mensual" | "semanal">("mensual");
+  const [cut, setCut] = useState<CutKind>("mensual");
   const [weekFrom, setWeekFrom] = useState(ultimaSemanaCompleta().from);
   const [weekTo, setWeekTo] = useState(ultimaSemanaCompleta().to);
+  const isRange = cut !== "mensual";
   const [busy, setBusy] = useState<string | null>(null);
   const [conRecomendaciones, setConRecomendaciones] = useState(true);
 
