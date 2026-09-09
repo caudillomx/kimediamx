@@ -140,25 +140,6 @@ export function buildDeltaLines(input: DeltaInput): DeltaLine[] {
     });
   }
 
-  // Prensa
-  const pr = num(input.prensaTotal);
-  const prevPr = num(input.prevPrensaTotal);
-  if (pr != null && prevPr != null && (pr > 0 || prevPr > 0)) {
-    const d = prevPr > 0 ? rel(pr, prevPr) : 1;
-    const neg = num(input.prensaNegativa) ?? 0;
-    const prevNeg = num(input.prevPrensaNegativa) ?? 0;
-    const dNeg = neg - prevNeg;
-    const colaTono = dNeg === 0
-      ? ` Las menciones negativas se mantuvieron en ${neg}.`
-      : ` Las menciones negativas pasaron de ${prevNeg} a ${neg}.`;
-    out.push({
-      label: "Prensa",
-      dir: dNeg > 0 ? "down" : dirOf(d ?? 0, 0.1),
-      peso: Math.abs(d ?? 0) * 1.2 + Math.abs(dNeg) * 0.15,
-      texto: `La cobertura de prensa sobre ${sujeto} pasó de ${nf(prevPr)} a ${nf(pr)} menciones.${colaTono}`,
-    });
-  }
-
   // Red que más se movió
   const redes = input.redes
     .map((r) => {
