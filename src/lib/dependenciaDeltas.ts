@@ -25,10 +25,6 @@ export type DeltaInput = {
   rank: number | null;
   prevRank: number | null;
   rankTotal: number;
-  prensaTotal: number | null;
-  prevPrensaTotal: number | null;
-  prensaNegativa: number | null;
-  prevPrensaNegativa: number | null;
   redes: { red: string; seguidores: number | null; prevSeguidores: number | null }[];
   /** "titular" cambia el sujeto de las frases. */
   scope: "institucional" | "titular";
