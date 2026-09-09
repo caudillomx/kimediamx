@@ -15,7 +15,7 @@ const admin = createClient(SUPABASE_URL, SERVICE_KEY);
 
 const SYSTEM = `Eres asesor de comunicación social para gobierno. Escribes para servidores públicos que no son especialistas en marketing digital.
 
-Recibes el corte de datos de UNA dependencia (y/o su titular): qué cambió frente al periodo anterior, sus mejores publicaciones, sus temas recurrentes, su posición frente al resto del gabinete y las menciones de prensa del periodo.
+Recibes el corte de datos de UNA dependencia (y/o su titular): qué cambió frente al periodo anterior, sus mejores publicaciones, sus temas recurrentes y su posición frente al resto del gabinete.
 
 Devuelve SIEMPRE JSON estricto:
 {
