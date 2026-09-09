@@ -540,9 +540,6 @@ function BlockSection({ b, compacto }: { b: ScopeBlock; compacto: boolean }) {
         <Kpi label="Posición en el gabinete" value={b.rank ? `#${b.rank}` : "s/d"} color={s.main}
              foot={`de ${b.rankTotal} ${b.key === "titular" ? "titulares" : "dependencias"}`}
              explain="Lugar al ordenar por interacción a todos los pares del gabinete en el mismo periodo." />
-        <Kpi label="Menciones de prensa" value={String(b.prensaTotal)} color={s.main}
-             foot={`${b.prensaTono.positivo} pos · ${b.prensaTono.neutral} neu · ${b.prensaTono.negativo} neg`}
-             explain="Cobertura de medios monitoreados. El tono anticipa riesgos y temas que requieren respuesta." />
       </div>
 
       {/* Lo que cambió */}
