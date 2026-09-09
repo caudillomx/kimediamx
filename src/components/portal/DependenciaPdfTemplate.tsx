@@ -644,60 +644,6 @@ function BlockSection({ b, compacto }: { b: ScopeBlock; compacto: boolean }) {
         )}
       </div>
 
-      {/* Prensa */}
-      <div>
-        <SectionTitle
-          text={b.key === "titular" ? "Menciones de prensa del titular" : "Menciones de prensa de la dependencia"}
-          color={s.main}
-          hint={
-            b.prensaTotal > 0
-              ? `${b.prensaTotal} menciones · ${b.prensaTono.positivo} positivas, ${b.prensaTono.neutral} neutrales, ${b.prensaTono.negativo} negativas.${
-                  b.prensaMedios.length ? ` Medios más activos: ${b.prensaMedios.slice(0, 3).map((m) => `${m.medio} (${m.n})`).join(", ")}.` : ""
-                }`
-              : undefined
-          }
-        />
-        {b.prensa.length === 0 ? (
-          <div style={{ color: MUTED, fontSize: 10 }}>
-            Sin menciones registradas en el periodo para {b.key === "titular" ? "el titular" : "la dependencia"}.
-          </div>
-        ) : (
-          b.prensa.slice(0, maxPrensa).map((m, i) => (
-            <div className="pdf-avoid" key={i} style={{
-              border: `1px solid ${LINE}`, borderLeft: `3px solid ${TONE_COLOR[m.tono] ?? MUTED}`,
-              borderRadius: 7, padding: "6px 9px", marginBottom: 5, background: "#ffffff",
-            }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, fontSize: 9, color: MUTED }}>
-                <span>{m.fecha} · {m.medio}{m.canal && m.canal !== "medios" ? ` · ${m.canal}` : ""}</span>
-                <span style={{
-                  color: TONE_COLOR[m.tono] ?? MUTED, textTransform: "uppercase", fontWeight: 700,
-                  fontSize: 8.5, letterSpacing: "0.08em", whiteSpace: "nowrap", flexShrink: 0,
-                }}>
-                  {m.tono}
-                </span>
-              </div>
-              <div style={{ marginTop: 2, fontSize: 10.2, fontWeight: 600, wordBreak: "break-word", overflowWrap: "anywhere" }}>
-                {stripEmoji(m.titular).slice(0, 130) || "(sin titular)"}{stripEmoji(m.titular).length > 130 ? "…" : ""}
-              </div>
-              {m.cita && (
-                <div style={{ marginTop: 2, fontSize: 9.4, color: "#475569", wordBreak: "break-word", overflowWrap: "anywhere" }}>
-                  “{stripEmoji(m.cita).slice(0, 180)}{stripEmoji(m.cita).length > 180 ? "…" : ""}”
-                </div>
-              )}
-              {m.match && (
-                <div style={{ marginTop: 3, fontSize: 8.4, color: "#94a3b8" }}>
-                  Vinculada por coincidencia con: {m.match}
-                </div>
-              )}
-            </div>
-          ))
-        )}
-        {b.prensaTotal > Math.min(b.prensa.length, maxPrensa) && (
-          <div style={{ fontSize: 9, color: "#94a3b8", marginTop: 3 }}>
-            Se muestran {Math.min(b.prensa.length, maxPrensa)} de {b.prensaTotal} menciones. La lista completa está en la descarga de Excel.
-          </div>
-        )}
-      </div>
     </div>
   );
 }
