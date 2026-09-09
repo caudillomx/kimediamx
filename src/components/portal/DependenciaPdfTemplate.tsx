@@ -524,13 +524,13 @@ function BlockSection({ b, compacto }: { b: ScopeBlock; compacto: boolean }) {
         color={s.main}
         text={
           b.key === "titular"
-            ? "Este bloque mide la voz personal del titular: sus cuentas propias, lo que publica y cómo la prensa lo menciona por nombre. Sirve para evaluar liderazgo y vocería."
-            : "Este bloque mide la voz institucional de la dependencia: cuentas oficiales, contenido publicado y cobertura de prensa a nombre de la institución. Sirve para evaluar la comunicación de la política pública."
+            ? "Este bloque mide la voz personal del titular: sus cuentas propias y lo que publica. Sirve para evaluar liderazgo y vocería."
+            : "Este bloque mide la voz institucional de la dependencia: cuentas oficiales y contenido publicado. Sirve para evaluar la comunicación de la política pública."
         }
       />
 
       {/* KPIs del bloque */}
-      <div className="pdf-avoid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 10 }}>
+      <div className="pdf-avoid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 10 }}>
         <Kpi label="Seguidores" value={nf(b.seguidores)} color={s.main}
              foot={`${df(b.variacionSeguidores)} vs periodo previo`} footColor={deltaColor(b.variacionSeguidores)}
              explain="Audiencia propia acumulada: a cuánta gente se puede llegar sin pagar pauta." />
