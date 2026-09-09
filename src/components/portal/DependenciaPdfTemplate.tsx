@@ -56,10 +56,6 @@ export type ScopeBlock = {
   topPosts: DepPostRow[];
   narrativas: { name: string; description?: string }[];
   narrativasFuentes: string[];
-  prensa: DepPressRow[];
-  prensaTotal: number;
-  prensaTono: { positivo: number; neutral: number; negativo: number };
-  prensaMedios: { medio: string; n: number }[];
   /** Frases de "lo que cambió" contra el corte anterior. */
   cambios?: DeltaLine[];
 };
@@ -80,12 +76,11 @@ export type DependenciaReportData = {
     seguidores: number;
     engagement: number | null;
     postsDia: number | null;
-    prensaTotal: number;
     variacionSeguidores: number | null;
     rank: number | null;
     rankTotal: number;
   } | null;
-  /** Recomendaciones generadas con IA a partir del corte y la prensa del periodo. */
+  /** Recomendaciones generadas con IA a partir del corte del periodo. */
   recomendaciones?: { lectura?: string; items: DepRecomendacion[] } | null;
 };
 
@@ -338,7 +333,7 @@ function CambiosBlock({ cambios, color, scope }: { cambios: DeltaLine[]; color: 
   );
 }
 
-/** "Qué hacer ahora": recomendaciones accionables generadas del corte y la prensa. */
+/** "Qué hacer ahora": recomendaciones accionables generadas del corte. */
 function RecomendacionesBlock({ data }: { data: { lectura?: string; items: DepRecomendacion[] } }) {
   if (!data.items?.length) return null;
   return (
@@ -346,7 +341,7 @@ function RecomendacionesBlock({ data }: { data: { lectura?: string; items: DepRe
       <SectionTitle
         text="Qué hacer ahora"
         color={SCOPE.conjunto.main}
-        hint="Acciones sugeridas a partir de los cambios del periodo, el contenido publicado y las menciones de prensa detectadas."
+        hint="Acciones sugeridas a partir de los cambios del periodo y el contenido publicado."
       />
       {data.lectura && (
         <Explainer color={SCOPE.conjunto.main} text={stripEmoji(data.lectura)} />
@@ -406,11 +401,6 @@ const GLOSARIO: { termino: string; que: string; porque: string }[] = [
     termino: "Posición en el gabinete",
     que: "Lugar que ocupa la cuenta al ordenar a todas las dependencias (o titulares) por interacción.",
     porque: "Da contexto: compara contra pares con condiciones similares, no contra marcas comerciales.",
-  },
-  {
-    termino: "Menciones de prensa y tono",
-    que: "Notas de medios monitoreados en el periodo, clasificadas como positiva, neutral o negativa.",
-    porque: "Es la conversación que no controlamos; el tono anticipa riesgos reputacionales y temas por atender.",
   },
   {
     termino: "Narrativas / territorios",
@@ -496,7 +486,6 @@ function BlockSection({ b, compacto }: { b: ScopeBlock; compacto: boolean }) {
   const maxCuentas = compacto ? 6 : 12;
   const maxNarr = compacto ? 2 : 4;
   const maxPosts = compacto ? 2 : 3;
-  const maxPrensa = compacto ? 5 : 8;
   const cuentasActivas = b.cuentas.filter((c) => !c.sinDatos);
   const cuentasInactivas = b.cuentas.filter((c) => c.sinDatos);
 
@@ -678,7 +667,7 @@ export const DependenciaPdfTemplate = forwardRef<HTMLDivElement, { data: Depende
           <>
             <b>Cómo leer este reporte.</b> Incluye dos bloques independientes: en <span style={{ color: SCOPE.institucional.main, fontWeight: 700 }}>azul</span> lo que corresponde a las cuentas
             institucionales de la dependencia y en <span style={{ color: SCOPE.titular.main, fontWeight: 700 }}>rojo</span> lo que corresponde a las cuentas personales del titular.
-            Cada bloque tiene sus propios indicadores, cuentas, narrativas, publicaciones y menciones de prensa; el resumen conjunto de abajo suma ambos.
+            Cada bloque tiene sus propios indicadores, cuentas, narrativas y publicaciones; el resumen conjunto de abajo suma ambos.
             Cada indicador incluye una nota que explica qué mide y por qué importa, y al final encontrará un glosario con los términos técnicos.
           </>
         ) : data.modo === "titular" ? (
@@ -702,7 +691,7 @@ export const DependenciaPdfTemplate = forwardRef<HTMLDivElement, { data: Depende
             color={SCOPE.conjunto.main}
             text="Suma de la comunicación institucional y la del titular. Es la fotografía general del esfuerzo comunicativo de la dependencia; el detalle por ámbito se desglosa en los bloques siguientes."
           />
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
             <Kpi label="Seguidores totales" value={nf(c.seguidores)} color={INK}
                  foot={`${df(c.variacionSeguidores)} vs periodo previo`} footColor={deltaColor(c.variacionSeguidores)}
                  explain="Audiencia sumada de cuentas institucionales y del titular." />
@@ -710,8 +699,6 @@ export const DependenciaPdfTemplate = forwardRef<HTMLDivElement, { data: Depende
                  explain="Qué tanto responde la gente al contenido publicado por ambos ámbitos." />
             <Kpi label="Posición combinada" value={c.rank ? `#${c.rank}` : "s/d"} color={INK} foot={`de ${c.rankTotal} dependencias`}
                  explain="Lugar frente al resto del gabinete considerando ambos ámbitos." />
-            <Kpi label="Menciones de prensa" value={String(c.prensaTotal)} color={INK} foot="Dependencia y titular"
-                 explain="Notas de medios del periodo que aluden a la institución o a su titular." />
           </div>
         </div>
       )}
@@ -1032,7 +1019,7 @@ export const GabinetePdfTemplate = forwardRef<HTMLDivElement, { data: GabineteRe
       {/* 6 — Recomendaciones */}
       {recos.length > 0 && (
         <Slide kicker="Siguientes pasos" title="Qué hacer ahora"
-               hint="Acciones sugeridas a partir de los cambios del periodo, el contenido publicado y las menciones de prensa detectadas."
+               hint="Acciones sugeridas a partir de los cambios del periodo y el contenido publicado."
                last>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             {recos.slice(0, 6).map((r, i) => (
