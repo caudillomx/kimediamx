@@ -25,10 +25,6 @@ export type DeltaInput = {
   rank: number | null;
   prevRank: number | null;
   rankTotal: number;
-  prensaTotal: number | null;
-  prevPrensaTotal: number | null;
-  prensaNegativa: number | null;
-  prevPrensaNegativa: number | null;
   redes: { red: string; seguidores: number | null; prevSeguidores: number | null }[];
   /** "titular" cambia el sujeto de las frases. */
   scope: "institucional" | "titular";
@@ -141,25 +137,6 @@ export function buildDeltaLines(input: DeltaInput): DeltaLine[] {
       texto: saltos === 0
         ? `Se mantuvo en el lugar #${rank} de ${input.rankTotal} en interacción.`
         : `${saltos > 0 ? "Subió" : "Bajó"} ${Math.abs(saltos)} lugar${Math.abs(saltos) === 1 ? "" : "es"} en el gabinete: del #${prevRank} al #${rank} de ${input.rankTotal}.`,
-    });
-  }
-
-  // Prensa
-  const pr = num(input.prensaTotal);
-  const prevPr = num(input.prevPrensaTotal);
-  if (pr != null && prevPr != null && (pr > 0 || prevPr > 0)) {
-    const d = prevPr > 0 ? rel(pr, prevPr) : 1;
-    const neg = num(input.prensaNegativa) ?? 0;
-    const prevNeg = num(input.prevPrensaNegativa) ?? 0;
-    const dNeg = neg - prevNeg;
-    const colaTono = dNeg === 0
-      ? ` Las menciones negativas se mantuvieron en ${neg}.`
-      : ` Las menciones negativas pasaron de ${prevNeg} a ${neg}.`;
-    out.push({
-      label: "Prensa",
-      dir: dNeg > 0 ? "down" : dirOf(d ?? 0, 0.1),
-      peso: Math.abs(d ?? 0) * 1.2 + Math.abs(dNeg) * 0.15,
-      texto: `La cobertura de prensa sobre ${sujeto} pasó de ${nf(prevPr)} a ${nf(pr)} menciones.${colaTono}`,
     });
   }
 

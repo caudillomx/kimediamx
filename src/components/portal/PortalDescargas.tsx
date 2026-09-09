@@ -638,47 +638,10 @@ export default function PortalDescargas({
         red: p.network, fecha: p.posted_at, texto: p.message ?? "", interacciones: p.interactions ?? 0,
       }));
 
-    // Prensa separada: menciones al titular vs a la institución.
-    const [mentionsRaw, prevMentionsRaw] = await Promise.all([
-      fetchMentions(winFrom, winTo),
-      fetchMentions(prevFrom, prevTo),
-    ]);
-    const mentions = mentionsRaw.filter((r) => r.dep === dep.id);
-    const prevMentions = prevMentionsRaw.filter((r) => r.dep === dep.id);
-    const prensaDe = (scope: ScopeKey) => {
-      const rows = mentions
-        .filter((r) => (r.scope ?? "institucional") === scope)
-        .map((r) => ({
-          fecha: r.fecha, medio: r.medio, titular: r.titular || r.cita.slice(0, 90),
-          tono: r.tono, url: r.url, cita: r.cita, canal: r.canal, match: r.match ?? undefined,
-        }));
-      const medioCount = new Map<string, number>();
-      rows.forEach((p) => medioCount.set(p.medio, (medioCount.get(p.medio) ?? 0) + 1));
-      return {
-        prensa: rows.slice(0, 8),
-        prensaTotal: rows.length,
-        prensaMedios: Array.from(medioCount.entries()).map(([medio, n]) => ({ medio, n })).sort((a, b) => b.n - a.n),
-        prensaTono: {
-          positivo: rows.filter((p) => p.tono === "positivo").length,
-          neutral: rows.filter((p) => p.tono === "neutral").length,
-          negativo: rows.filter((p) => p.tono === "negativo" || p.tono === "crisis").length,
-        },
-      };
-    };
-    const prensaPreviaDe = (scope: ScopeKey) => {
-      const rows = prevMentions.filter((r) => (r.scope ?? "institucional") === scope);
-      return {
-        total: rows.length,
-        negativa: rows.filter((r) => r.tono === "negativo" || r.tono === "crisis").length,
-      };
-    };
-
     const bloqueDe = (scope: ScopeKey): ScopeBlock => {
       const rows = cuentas.filter((c) => (c.tipo ?? "institucional") === scope);
       const r = rankingDe(scope);
       const nar = narrativasDe(scope);
-      const pr = prensaDe(scope);
-      const prPrev = prensaPreviaDe(scope);
       const pds = rows.map((x) => x.postsDia).filter((v): v is number => v != null && Number.isFinite(v));
       const publicaciones = rows.reduce((a, x) => a + (x.publicaciones ?? 0), 0);
 
@@ -723,17 +686,12 @@ export default function PortalDescargas({
           promedioGabinete: r.promedio,
           prevPromedioGabinete: r.prevPromedio,
           publicaciones,
-          prevPublicaciones: prevPostsByScope.get(scope) ?? (prevMentions.length || prevIds.length ? 0 : null),
+          prevPublicaciones: prevPostsByScope.get(scope) ?? (prevIds.length ? 0 : null),
           rank: r.rank,
           prevRank: r.prevRank,
           rankTotal: r.total,
-          prensaTotal: pr.prensaTotal,
-          prevPrensaTotal: prPrev.total,
-          prensaNegativa: pr.prensaTono.negativo,
-          prevPrensaNegativa: prPrev.negativa,
           redes,
         }),
-        ...pr,
       };
     };
 
@@ -748,7 +706,6 @@ export default function PortalDescargas({
           seguidores: bloques.reduce((a, b) => a + b.seguidores, 0),
           engagement: comb.mine.engagement,
           postsDia: comb.mine.postsDia,
-          prensaTotal: bloques.reduce((a, b) => a + b.prensaTotal, 0),
           variacionSeguidores: pctDelta(comb.mine.followers, comb.prevMine?.followers),
           rank: comb.rank,
           rankTotal: comb.total,
@@ -779,9 +736,6 @@ export default function PortalDescargas({
             mejores_publicaciones: b.topPosts.map((p) => ({
               red: p.red, fecha: p.fecha, interacciones: p.interacciones, texto: (p.texto || "").slice(0, 220),
             })),
-            prensa_total: b.prensaTotal,
-            prensa_tono: b.prensaTono,
-            prensa: b.prensa.slice(0, 8).map((p) => ({ fecha: p.fecha, medio: p.medio, titular: p.titular, tono: p.tono })),
           })),
         };
         const { data, error } = await supabase.functions.invoke("generate-dependencia-recommendations", {
@@ -1202,7 +1156,7 @@ export default function PortalDescargas({
           <div>
             <h3 className="font-display font-bold">Reporte ejecutivo por dependencia</h3>
             <p className="text-xs text-muted-foreground">
-              Cuentas, posición frente al gabinete, mejores publicaciones, narrativas y menciones de prensa en un PDF listo para circular.
+              Cuentas, posición frente al gabinete, mejores publicaciones y narrativas en un PDF listo para circular.
             </p>
           </div>
         </div>
@@ -1304,8 +1258,8 @@ export default function PortalDescargas({
         )}
         <p className="text-[11px] text-muted-foreground">
           {isRange
-            ? `Corte ${CUT_LABEL[cut].toLowerCase()} ${fmtDia(weekFrom)} — ${fmtDia(weekTo)}: publicaciones y menciones de prensa se filtran a esos días; las métricas de seguidores y engagement provienen del corte de datos más reciente disponible${latestActivePeriodLabel ? ` (${latestActivePeriodLabel})` : ""}.`
-            : `Corte mensual: publicaciones, métricas y prensa del periodo ${periodLabel || "seleccionado"}.`}
+            ? `Corte ${CUT_LABEL[cut].toLowerCase()} ${fmtDia(weekFrom)} — ${fmtDia(weekTo)}: las publicaciones se filtran a esos días; las métricas de seguidores y engagement provienen del corte de datos más reciente disponible${latestActivePeriodLabel ? ` (${latestActivePeriodLabel})` : ""}.`
+            : `Corte mensual: publicaciones y métricas del periodo ${periodLabel || "seleccionado"}.`}
         </p>
       </Card>
 

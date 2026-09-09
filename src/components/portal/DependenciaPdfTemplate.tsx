@@ -56,10 +56,6 @@ export type ScopeBlock = {
   topPosts: DepPostRow[];
   narrativas: { name: string; description?: string }[];
   narrativasFuentes: string[];
-  prensa: DepPressRow[];
-  prensaTotal: number;
-  prensaTono: { positivo: number; neutral: number; negativo: number };
-  prensaMedios: { medio: string; n: number }[];
   /** Frases de "lo que cambió" contra el corte anterior. */
   cambios?: DeltaLine[];
 };
@@ -80,12 +76,11 @@ export type DependenciaReportData = {
     seguidores: number;
     engagement: number | null;
     postsDia: number | null;
-    prensaTotal: number;
     variacionSeguidores: number | null;
     rank: number | null;
     rankTotal: number;
   } | null;
-  /** Recomendaciones generadas con IA a partir del corte y la prensa del periodo. */
+  /** Recomendaciones generadas con IA a partir del corte del periodo. */
   recomendaciones?: { lectura?: string; items: DepRecomendacion[] } | null;
 };
 
@@ -338,7 +333,7 @@ function CambiosBlock({ cambios, color, scope }: { cambios: DeltaLine[]; color: 
   );
 }
 
-/** "Qué hacer ahora": recomendaciones accionables generadas del corte y la prensa. */
+/** "Qué hacer ahora": recomendaciones accionables generadas del corte. */
 function RecomendacionesBlock({ data }: { data: { lectura?: string; items: DepRecomendacion[] } }) {
   if (!data.items?.length) return null;
   return (
@@ -346,7 +341,7 @@ function RecomendacionesBlock({ data }: { data: { lectura?: string; items: DepRe
       <SectionTitle
         text="Qué hacer ahora"
         color={SCOPE.conjunto.main}
-        hint="Acciones sugeridas a partir de los cambios del periodo, el contenido publicado y las menciones de prensa detectadas."
+        hint="Acciones sugeridas a partir de los cambios del periodo y el contenido publicado."
       />
       {data.lectura && (
         <Explainer color={SCOPE.conjunto.main} text={stripEmoji(data.lectura)} />
@@ -406,11 +401,6 @@ const GLOSARIO: { termino: string; que: string; porque: string }[] = [
     termino: "Posición en el gabinete",
     que: "Lugar que ocupa la cuenta al ordenar a todas las dependencias (o titulares) por interacción.",
     porque: "Da contexto: compara contra pares con condiciones similares, no contra marcas comerciales.",
-  },
-  {
-    termino: "Menciones de prensa y tono",
-    que: "Notas de medios monitoreados en el periodo, clasificadas como positiva, neutral o negativa.",
-    porque: "Es la conversación que no controlamos; el tono anticipa riesgos reputacionales y temas por atender.",
   },
   {
     termino: "Narrativas / territorios",
@@ -496,7 +486,6 @@ function BlockSection({ b, compacto }: { b: ScopeBlock; compacto: boolean }) {
   const maxCuentas = compacto ? 6 : 12;
   const maxNarr = compacto ? 2 : 4;
   const maxPosts = compacto ? 2 : 3;
-  const maxPrensa = compacto ? 5 : 8;
   const cuentasActivas = b.cuentas.filter((c) => !c.sinDatos);
   const cuentasInactivas = b.cuentas.filter((c) => c.sinDatos);
 
@@ -524,13 +513,13 @@ function BlockSection({ b, compacto }: { b: ScopeBlock; compacto: boolean }) {
         color={s.main}
         text={
           b.key === "titular"
-            ? "Este bloque mide la voz personal del titular: sus cuentas propias, lo que publica y cómo la prensa lo menciona por nombre. Sirve para evaluar liderazgo y vocería."
-            : "Este bloque mide la voz institucional de la dependencia: cuentas oficiales, contenido publicado y cobertura de prensa a nombre de la institución. Sirve para evaluar la comunicación de la política pública."
+            ? "Este bloque mide la voz personal del titular: sus cuentas propias y lo que publica. Sirve para evaluar liderazgo y vocería."
+            : "Este bloque mide la voz institucional de la dependencia: cuentas oficiales y contenido publicado. Sirve para evaluar la comunicación de la política pública."
         }
       />
 
       {/* KPIs del bloque */}
-      <div className="pdf-avoid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 10 }}>
+      <div className="pdf-avoid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 10 }}>
         <Kpi label="Seguidores" value={nf(b.seguidores)} color={s.main}
              foot={`${df(b.variacionSeguidores)} vs periodo previo`} footColor={deltaColor(b.variacionSeguidores)}
              explain="Audiencia propia acumulada: a cuánta gente se puede llegar sin pagar pauta." />
@@ -540,9 +529,6 @@ function BlockSection({ b, compacto }: { b: ScopeBlock; compacto: boolean }) {
         <Kpi label="Posición en el gabinete" value={b.rank ? `#${b.rank}` : "s/d"} color={s.main}
              foot={`de ${b.rankTotal} ${b.key === "titular" ? "titulares" : "dependencias"}`}
              explain="Lugar al ordenar por interacción a todos los pares del gabinete en el mismo periodo." />
-        <Kpi label="Menciones de prensa" value={String(b.prensaTotal)} color={s.main}
-             foot={`${b.prensaTono.positivo} pos · ${b.prensaTono.neutral} neu · ${b.prensaTono.negativo} neg`}
-             explain="Cobertura de medios monitoreados. El tono anticipa riesgos y temas que requieren respuesta." />
       </div>
 
       {/* Lo que cambió */}
@@ -644,60 +630,6 @@ function BlockSection({ b, compacto }: { b: ScopeBlock; compacto: boolean }) {
         )}
       </div>
 
-      {/* Prensa */}
-      <div>
-        <SectionTitle
-          text={b.key === "titular" ? "Menciones de prensa del titular" : "Menciones de prensa de la dependencia"}
-          color={s.main}
-          hint={
-            b.prensaTotal > 0
-              ? `${b.prensaTotal} menciones · ${b.prensaTono.positivo} positivas, ${b.prensaTono.neutral} neutrales, ${b.prensaTono.negativo} negativas.${
-                  b.prensaMedios.length ? ` Medios más activos: ${b.prensaMedios.slice(0, 3).map((m) => `${m.medio} (${m.n})`).join(", ")}.` : ""
-                }`
-              : undefined
-          }
-        />
-        {b.prensa.length === 0 ? (
-          <div style={{ color: MUTED, fontSize: 10 }}>
-            Sin menciones registradas en el periodo para {b.key === "titular" ? "el titular" : "la dependencia"}.
-          </div>
-        ) : (
-          b.prensa.slice(0, maxPrensa).map((m, i) => (
-            <div className="pdf-avoid" key={i} style={{
-              border: `1px solid ${LINE}`, borderLeft: `3px solid ${TONE_COLOR[m.tono] ?? MUTED}`,
-              borderRadius: 7, padding: "6px 9px", marginBottom: 5, background: "#ffffff",
-            }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, fontSize: 9, color: MUTED }}>
-                <span>{m.fecha} · {m.medio}{m.canal && m.canal !== "medios" ? ` · ${m.canal}` : ""}</span>
-                <span style={{
-                  color: TONE_COLOR[m.tono] ?? MUTED, textTransform: "uppercase", fontWeight: 700,
-                  fontSize: 8.5, letterSpacing: "0.08em", whiteSpace: "nowrap", flexShrink: 0,
-                }}>
-                  {m.tono}
-                </span>
-              </div>
-              <div style={{ marginTop: 2, fontSize: 10.2, fontWeight: 600, wordBreak: "break-word", overflowWrap: "anywhere" }}>
-                {stripEmoji(m.titular).slice(0, 130) || "(sin titular)"}{stripEmoji(m.titular).length > 130 ? "…" : ""}
-              </div>
-              {m.cita && (
-                <div style={{ marginTop: 2, fontSize: 9.4, color: "#475569", wordBreak: "break-word", overflowWrap: "anywhere" }}>
-                  “{stripEmoji(m.cita).slice(0, 180)}{stripEmoji(m.cita).length > 180 ? "…" : ""}”
-                </div>
-              )}
-              {m.match && (
-                <div style={{ marginTop: 3, fontSize: 8.4, color: "#94a3b8" }}>
-                  Vinculada por coincidencia con: {m.match}
-                </div>
-              )}
-            </div>
-          ))
-        )}
-        {b.prensaTotal > Math.min(b.prensa.length, maxPrensa) && (
-          <div style={{ fontSize: 9, color: "#94a3b8", marginTop: 3 }}>
-            Se muestran {Math.min(b.prensa.length, maxPrensa)} de {b.prensaTotal} menciones. La lista completa está en la descarga de Excel.
-          </div>
-        )}
-      </div>
     </div>
   );
 }
@@ -735,7 +667,7 @@ export const DependenciaPdfTemplate = forwardRef<HTMLDivElement, { data: Depende
           <>
             <b>Cómo leer este reporte.</b> Incluye dos bloques independientes: en <span style={{ color: SCOPE.institucional.main, fontWeight: 700 }}>azul</span> lo que corresponde a las cuentas
             institucionales de la dependencia y en <span style={{ color: SCOPE.titular.main, fontWeight: 700 }}>rojo</span> lo que corresponde a las cuentas personales del titular.
-            Cada bloque tiene sus propios indicadores, cuentas, narrativas, publicaciones y menciones de prensa; el resumen conjunto de abajo suma ambos.
+            Cada bloque tiene sus propios indicadores, cuentas, narrativas y publicaciones; el resumen conjunto de abajo suma ambos.
             Cada indicador incluye una nota que explica qué mide y por qué importa, y al final encontrará un glosario con los términos técnicos.
           </>
         ) : data.modo === "titular" ? (
@@ -759,7 +691,7 @@ export const DependenciaPdfTemplate = forwardRef<HTMLDivElement, { data: Depende
             color={SCOPE.conjunto.main}
             text="Suma de la comunicación institucional y la del titular. Es la fotografía general del esfuerzo comunicativo de la dependencia; el detalle por ámbito se desglosa en los bloques siguientes."
           />
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
             <Kpi label="Seguidores totales" value={nf(c.seguidores)} color={INK}
                  foot={`${df(c.variacionSeguidores)} vs periodo previo`} footColor={deltaColor(c.variacionSeguidores)}
                  explain="Audiencia sumada de cuentas institucionales y del titular." />
@@ -767,8 +699,6 @@ export const DependenciaPdfTemplate = forwardRef<HTMLDivElement, { data: Depende
                  explain="Qué tanto responde la gente al contenido publicado por ambos ámbitos." />
             <Kpi label="Posición combinada" value={c.rank ? `#${c.rank}` : "s/d"} color={INK} foot={`de ${c.rankTotal} dependencias`}
                  explain="Lugar frente al resto del gabinete considerando ambos ámbitos." />
-            <Kpi label="Menciones de prensa" value={String(c.prensaTotal)} color={INK} foot="Dependencia y titular"
-                 explain="Notas de medios del periodo que aluden a la institución o a su titular." />
           </div>
         </div>
       )}
@@ -1089,7 +1019,7 @@ export const GabinetePdfTemplate = forwardRef<HTMLDivElement, { data: GabineteRe
       {/* 6 — Recomendaciones */}
       {recos.length > 0 && (
         <Slide kicker="Siguientes pasos" title="Qué hacer ahora"
-               hint="Acciones sugeridas a partir de los cambios del periodo, el contenido publicado y las menciones de prensa detectadas."
+               hint="Acciones sugeridas a partir de los cambios del periodo y el contenido publicado."
                last>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             {recos.slice(0, 6).map((r, i) => (
