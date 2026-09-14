@@ -215,6 +215,92 @@ export default function PortalDataAdmin({ clientId }: { clientId: string }) {
     load();
   };
 
+  /** Guarda la cuenta de anuncios de Google del cliente. */
+  const addAdAccount = async () => {
+    const customerId = adId.trim().replace(/[^\d]/g, "");
+    if (!/^\d{8,}$/.test(customerId)) { toast.error("El número de cuenta son solo dígitos (ej. 1196579909)"); return; }
+    setBusy("ad-acc");
+    const { error } = await supabase.from("client_google_ads_accounts").insert({
+      client_id: clientId,
+      customer_id: customerId,
+      label: adLabel.trim() || null,
+      created_by: uid.current,
+    });
+    setBusy(null);
+    if (error) { toast.error(error.message); return; }
+    setAdId(""); setAdLabel("");
+    toast.success("Cuenta guardada");
+    load();
+  };
+
+  const removeAdAccount = async (id: string) => {
+    const { error } = await supabase.from("client_google_ads_accounts").delete().eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    load();
+  };
+
+  /** Trae del periodo elegido los resultados por campaña de Google Ads. */
+  const syncAds = async () => {
+    setBusy("ad-sync");
+    try {
+      const { data, error } = await supabase.functions.invoke("google-ads-sync", {
+        body: { client_id: clientId, period_start: period.start, period_end: period.end, period_label: period.label },
+      });
+      if (error) {
+        const detail = (error as any)?.context?.text ? await (error as any).context.text() : error.message;
+        let msg = detail;
+        try { msg = JSON.parse(detail)?.error ?? detail; } catch { /* texto plano */ }
+        throw new Error(msg);
+      }
+      toast.success(`Google Ads actualizado: ${Number(data?.campaigns ?? 0)} campañas en ${period.label}`);
+      load();
+    } catch (e: any) {
+      toast.error(e.message ?? "No se pudo leer Google Ads");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  /** Trae mes por mes el histórico de campañas, desde el mes elegido hasta el mes pasado. */
+  const syncAdsHistory = async () => {
+    const from = adFrom.trim();
+    if (!/^\d{4}-\d{2}$/.test(from)) { toast.error("Elige el mes de inicio del histórico"); return; }
+    const months: string[] = [];
+    const [fy, fm] = from.split("-").map(Number);
+    const cursor = new Date(Date.UTC(fy, fm - 1, 1));
+    const now = new Date();
+    const limit = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+    while (cursor < limit && months.length < 48) {
+      months.push(`${cursor.getUTCFullYear()}-${String(cursor.getUTCMonth() + 1).padStart(2, "0")}`);
+      cursor.setUTCMonth(cursor.getUTCMonth() + 1);
+    }
+    if (!months.length) { toast.error("Ese mes de inicio no deja meses completos por traer"); return; }
+
+    setBusy("ad-history");
+    setAdProgress(`0 de ${months.length}`);
+    let ok = 0;
+    const fails: string[] = [];
+    for (let i = 0; i < months.length; i++) {
+      const p = monthBounds(months[i]);
+      setAdProgress(`${i + 1} de ${months.length} · ${p.label}`);
+      try {
+        const { error } = await supabase.functions.invoke("google-ads-sync", {
+          body: { client_id: clientId, period_start: p.start, period_end: p.end, period_label: p.label },
+        });
+        if (error) throw error;
+        ok++;
+      } catch {
+        fails.push(p.label);
+      }
+    }
+    setAdProgress(null);
+    setBusy(null);
+    if (ok) toast.success(`Histórico listo: ${ok} meses revisados`);
+    if (fails.length) toast.error(`Sin datos o con error: ${fails.slice(0, 4).join(", ")}${fails.length > 4 ? "…" : ""}`);
+    load();
+  };
+
+
 
   const uid = useRef<string | null>(null);
   useEffect(() => { supabase.auth.getUser().then(({ data }) => { uid.current = data.user?.id ?? null; }); }, []);
