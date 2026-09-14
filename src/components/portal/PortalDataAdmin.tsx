@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { BarChart3, Globe, Megaphone, Upload, Trash2, Loader2 } from "lucide-react";
+import { BarChart3, Globe, Megaphone, Upload, Trash2, Loader2, RefreshCw } from "lucide-react";
 import {
   AD_PLATFORMS,
   NETWORK_LABELS,
@@ -503,6 +503,53 @@ export default function PortalDataAdmin({ clientId }: { clientId: string }) {
 
         {/* -------- Web -------- */}
         <TabsContent value="web" className="mt-0 space-y-4">
+          <Card className="p-4 space-y-3">
+            <div className="text-sm font-semibold flex items-center gap-2">
+              <RefreshCw className="w-4 h-4" /> Lectura automática de Analytics
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Pide al cliente que agregue nuestra cuenta de lectura a su propiedad de Analytics y captura aquí el
+              identificador de la propiedad (solo números, aparece en la configuración de su cuenta). Después, con un
+              clic se traen los datos del periodo elegido arriba.
+            </p>
+
+            {gaProps.map((p) => (
+              <div key={p.id} className="flex flex-wrap items-center gap-2 rounded-lg border p-2.5 text-sm">
+                <Badge variant="outline">{p.property_id}</Badge>
+                <span className="font-medium">{p.label ?? "Propiedad de Analytics"}</span>
+                <span className="text-xs text-muted-foreground">
+                  {p.last_sync_error
+                    ? `Falló: ${p.last_sync_error}`
+                    : p.last_synced_at
+                      ? `Última lectura: ${new Date(p.last_synced_at).toLocaleString("es-MX")}`
+                      : "Sin leer todavía"}
+                </span>
+                <Button variant="ghost" size="icon" className="h-7 w-7 ml-auto" onClick={() => removeGaProperty(p.id)}>
+                  <Trash2 className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            ))}
+
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Identificador de la propiedad</Label>
+                <Input className="h-9 w-48" placeholder="481234567" value={gaId} onChange={(e) => setGaId(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Nombre (opcional)</Label>
+                <Input className="h-9 w-56" placeholder="Sitio principal" value={gaLabel} onChange={(e) => setGaLabel(e.target.value)} />
+              </div>
+              <Button size="sm" variant="outline" onClick={addGaProperty} disabled={busy === "ga-prop"}>
+                {busy === "ga-prop" ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                Guardar propiedad
+              </Button>
+              <Button size="sm" onClick={syncGa} disabled={busy === "ga-sync" || !gaProps.length}>
+                {busy === "ga-sync" ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+                Traer datos de {period.label}
+              </Button>
+            </div>
+          </Card>
+
           <Card className="p-4 space-y-3">
             <div className="text-sm font-semibold">Subir analítica web (Google Analytics 4)</div>
             <p className="text-xs text-muted-foreground">
