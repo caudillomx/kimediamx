@@ -591,6 +591,21 @@ export default function PortalDataAdmin({ clientId }: { clientId: string }) {
                 Traer datos de {period.label}
               </Button>
             </div>
+
+            <div className="flex flex-wrap items-end gap-3 border-t pt-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Histórico desde</Label>
+                <Input type="month" className="h-9 w-44" value={gaFrom} onChange={(e) => setGaFrom(e.target.value)} />
+              </div>
+              <Button size="sm" variant="outline" onClick={syncGaHistory} disabled={busy === "ga-history" || !gaProps.length}>
+                {busy === "ga-history" ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+                Traer todo el histórico
+              </Button>
+              <span className="text-xs text-muted-foreground pb-2">
+                {gaProgress ? `Cargando ${gaProgress}` : "Trae mes por mes, desde ese mes hasta el mes pasado."}
+              </span>
+            </div>
+
           </Card>
 
           <Card className="p-4 space-y-3">
