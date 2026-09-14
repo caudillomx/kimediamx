@@ -94,6 +94,9 @@ export default function PortalDataAdmin({ clientId }: { clientId: string }) {
   const [autoMonths, setAutoMonths] = useState(true);
   const [metaNetwork, setMetaNetwork] = useState("facebook");
   const [metaAccount, setMetaAccount] = useState("");
+  const [gaProps, setGaProps] = useState<any[]>([]);
+  const [gaId, setGaId] = useState("");
+  const [gaLabel, setGaLabel] = useState("");
 
 
   const socialRef = useRef<HTMLInputElement>(null);
@@ -103,17 +106,65 @@ export default function PortalDataAdmin({ clientId }: { clientId: string }) {
 
 
   const load = useCallback(async () => {
-    const [s, w, a] = await Promise.all([
+    const [s, w, a, g] = await Promise.all([
       supabase.from("client_portal_social_metrics").select("*").eq("client_id", clientId).order("period_end", { ascending: false }).limit(200),
       supabase.from("client_portal_web_analytics").select("*").eq("client_id", clientId).order("period_end", { ascending: false }).limit(60),
       supabase.from("client_portal_ads_metrics").select("*").eq("client_id", clientId).order("period_end", { ascending: false }).limit(200),
+      supabase.from("client_ga4_properties").select("*").eq("client_id", clientId).order("created_at", { ascending: true }),
     ]);
     setSocial(s.data ?? []);
     setWeb(w.data ?? []);
     setAds(a.data ?? []);
+    setGaProps(g.data ?? []);
   }, [clientId]);
 
   useEffect(() => { load(); }, [load]);
+
+  /** Guarda la propiedad de Analytics a la que el cliente nos dio acceso de lectura. */
+  const addGaProperty = async () => {
+    const propertyId = gaId.trim().replace(/^properties\//, "");
+    if (!/^\d{6,}$/.test(propertyId)) { toast.error("El identificador de la propiedad son solo números (ej. 481234567)"); return; }
+    setBusy("ga-prop");
+    const { error } = await supabase.from("client_ga4_properties").insert({
+      client_id: clientId,
+      property_id: propertyId,
+      label: gaLabel.trim() || null,
+      created_by: uid.current,
+    });
+    setBusy(null);
+    if (error) { toast.error(error.message); return; }
+    setGaId(""); setGaLabel("");
+    toast.success("Propiedad guardada");
+    load();
+  };
+
+  const removeGaProperty = async (id: string) => {
+    const { error } = await supabase.from("client_ga4_properties").delete().eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    load();
+  };
+
+  /** Lee las métricas del periodo directo de Analytics y las guarda en el portal. */
+  const syncGa = async () => {
+    setBusy("ga-sync");
+    try {
+      const { data, error } = await supabase.functions.invoke("ga4-sync", {
+        body: { client_id: clientId, period_start: period.start, period_end: period.end, period_label: period.label },
+      });
+      if (error) {
+        const detail = (error as any)?.context?.text ? await (error as any).context.text() : error.message;
+        let msg = detail;
+        try { msg = JSON.parse(detail)?.error ?? detail; } catch { /* texto plano */ }
+        throw new Error(msg);
+      }
+      toast.success(`Analytics actualizado: ${Number(data?.sessions ?? 0).toLocaleString("es-MX")} sesiones en ${period.label}`);
+      load();
+    } catch (e: any) {
+      toast.error(e.message ?? "No se pudo leer Analytics");
+    } finally {
+      setBusy(null);
+    }
+  };
 
   const uid = useRef<string | null>(null);
   useEffect(() => { supabase.auth.getUser().then(({ data }) => { uid.current = data.user?.id ?? null; }); }, []);
