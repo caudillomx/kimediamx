@@ -97,6 +97,9 @@ export default function PortalDataAdmin({ clientId }: { clientId: string }) {
   const [gaProps, setGaProps] = useState<any[]>([]);
   const [gaId, setGaId] = useState("");
   const [gaLabel, setGaLabel] = useState("");
+  const [gaFrom, setGaFrom] = useState("2025-01");
+  const [gaProgress, setGaProgress] = useState<string | null>(null);
+
 
 
   const socialRef = useRef<HTMLInputElement>(null);
@@ -165,6 +168,46 @@ export default function PortalDataAdmin({ clientId }: { clientId: string }) {
       setBusy(null);
     }
   };
+
+  /** Trae mes por mes el histórico de Analytics, desde el mes elegido hasta el mes pasado. */
+  const syncGaHistory = async () => {
+    const from = gaFrom.trim();
+    if (!/^\d{4}-\d{2}$/.test(from)) { toast.error("Elige el mes de inicio del histórico"); return; }
+    const months: string[] = [];
+    const [fy, fm] = from.split("-").map(Number);
+    const cursor = new Date(Date.UTC(fy, fm - 1, 1));
+    const now = new Date();
+    const limit = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+    while (cursor < limit && months.length < 48) {
+      months.push(`${cursor.getUTCFullYear()}-${String(cursor.getUTCMonth() + 1).padStart(2, "0")}`);
+      cursor.setUTCMonth(cursor.getUTCMonth() + 1);
+    }
+    if (!months.length) { toast.error("Ese mes de inicio no deja meses completos por traer"); return; }
+
+    setBusy("ga-history");
+    setGaProgress(`0 de ${months.length}`);
+    let ok = 0;
+    const fails: string[] = [];
+    for (let i = 0; i < months.length; i++) {
+      const p = monthBounds(months[i]);
+      setGaProgress(`${i + 1} de ${months.length} · ${p.label}`);
+      try {
+        const { error } = await supabase.functions.invoke("ga4-sync", {
+          body: { client_id: clientId, period_start: p.start, period_end: p.end, period_label: p.label },
+        });
+        if (error) throw error;
+        ok++;
+      } catch {
+        fails.push(p.label);
+      }
+    }
+    setGaProgress(null);
+    setBusy(null);
+    if (ok) toast.success(`Histórico listo: ${ok} meses cargados`);
+    if (fails.length) toast.error(`Sin datos o con error: ${fails.slice(0, 4).join(", ")}${fails.length > 4 ? "…" : ""}`);
+    load();
+  };
+
 
   const uid = useRef<string | null>(null);
   useEffect(() => { supabase.auth.getUser().then(({ data }) => { uid.current = data.user?.id ?? null; }); }, []);
@@ -548,6 +591,21 @@ export default function PortalDataAdmin({ clientId }: { clientId: string }) {
                 Traer datos de {period.label}
               </Button>
             </div>
+
+            <div className="flex flex-wrap items-end gap-3 border-t pt-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Histórico desde</Label>
+                <Input type="month" className="h-9 w-44" value={gaFrom} onChange={(e) => setGaFrom(e.target.value)} />
+              </div>
+              <Button size="sm" variant="outline" onClick={syncGaHistory} disabled={busy === "ga-history" || !gaProps.length}>
+                {busy === "ga-history" ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+                Traer todo el histórico
+              </Button>
+              <span className="text-xs text-muted-foreground pb-2">
+                {gaProgress ? `Cargando ${gaProgress}` : "Trae mes por mes, desde ese mes hasta el mes pasado."}
+              </span>
+            </div>
+
           </Card>
 
           <Card className="p-4 space-y-3">
