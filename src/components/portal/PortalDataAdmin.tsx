@@ -733,6 +733,66 @@ export default function PortalDataAdmin({ clientId }: { clientId: string }) {
         {/* -------- Ads -------- */}
         <TabsContent value="ads" className="mt-0 space-y-4">
           <Card className="p-4 space-y-3">
+            <div className="text-sm font-semibold flex items-center gap-2">
+              <RefreshCw className="w-4 h-4" /> Lectura automática de Google Ads
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Captura el número de la cuenta de anuncios del cliente (solo dígitos, sin guiones). Después, con un clic
+              se traen los resultados por campaña del periodo elegido arriba.
+            </p>
+
+            {adAccounts.map((a) => (
+              <div key={a.id} className="flex flex-wrap items-center gap-2 rounded-lg border p-2.5 text-sm">
+                <Badge variant="outline">{a.customer_id}</Badge>
+                <span className="font-medium">{a.label ?? "Cuenta de anuncios"}</span>
+                <span className="text-xs text-muted-foreground">
+                  {a.last_sync_error
+                    ? `Falló: ${a.last_sync_error}`
+                    : a.last_synced_at
+                      ? `Última lectura: ${new Date(a.last_synced_at).toLocaleString("es-MX")}`
+                      : "Sin leer todavía"}
+                </span>
+                <Button variant="ghost" size="icon" className="h-7 w-7 ml-auto" onClick={() => removeAdAccount(a.id)}>
+                  <Trash2 className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            ))}
+
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Número de cuenta</Label>
+                <Input className="h-9 w-48" placeholder="1196579909" value={adId} onChange={(e) => setAdId(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Nombre (opcional)</Label>
+                <Input className="h-9 w-56" placeholder="Cuenta principal" value={adLabel} onChange={(e) => setAdLabel(e.target.value)} />
+              </div>
+              <Button size="sm" variant="outline" onClick={addAdAccount} disabled={busy === "ad-acc"}>
+                {busy === "ad-acc" ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                Guardar cuenta
+              </Button>
+              <Button size="sm" onClick={syncAds} disabled={busy === "ad-sync" || !adAccounts.length}>
+                {busy === "ad-sync" ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+                Traer datos de {period.label}
+              </Button>
+            </div>
+
+            <div className="flex flex-wrap items-end gap-3 border-t pt-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Histórico desde</Label>
+                <Input type="month" className="h-9 w-44" value={adFrom} onChange={(e) => setAdFrom(e.target.value)} />
+              </div>
+              <Button size="sm" variant="outline" onClick={syncAdsHistory} disabled={busy === "ad-history" || !adAccounts.length}>
+                {busy === "ad-history" ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+                Traer todo el histórico
+              </Button>
+              <span className="text-xs text-muted-foreground pb-2">
+                {adProgress ? `Cargando ${adProgress}` : "Trae mes por mes, desde ese mes hasta el mes pasado."}
+              </span>
+            </div>
+          </Card>
+
+          <Card className="p-4 space-y-3">
             <div className="text-sm font-semibold">Subir resultados de campañas</div>
             <p className="text-xs text-muted-foreground">
               Export por campaña de Meta, Google, TikTok o X. Si no logro detectar la plataforma, uso la que elijas aquí.
