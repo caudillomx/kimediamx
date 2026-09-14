@@ -99,6 +99,11 @@ export default function PortalDataAdmin({ clientId }: { clientId: string }) {
   const [gaLabel, setGaLabel] = useState("");
   const [gaFrom, setGaFrom] = useState("2025-01");
   const [gaProgress, setGaProgress] = useState<string | null>(null);
+  const [adAccounts, setAdAccounts] = useState<any[]>([]);
+  const [adId, setAdId] = useState("");
+  const [adLabel, setAdLabel] = useState("");
+  const [adFrom, setAdFrom] = useState("2025-01");
+  const [adProgress, setAdProgress] = useState<string | null>(null);
 
 
 
