@@ -99,6 +99,11 @@ export default function PortalDataAdmin({ clientId }: { clientId: string }) {
   const [gaLabel, setGaLabel] = useState("");
   const [gaFrom, setGaFrom] = useState("2025-01");
   const [gaProgress, setGaProgress] = useState<string | null>(null);
+  const [adAccounts, setAdAccounts] = useState<any[]>([]);
+  const [adId, setAdId] = useState("");
+  const [adLabel, setAdLabel] = useState("");
+  const [adFrom, setAdFrom] = useState("2025-01");
+  const [adProgress, setAdProgress] = useState<string | null>(null);
 
 
 
@@ -109,16 +114,18 @@ export default function PortalDataAdmin({ clientId }: { clientId: string }) {
 
 
   const load = useCallback(async () => {
-    const [s, w, a, g] = await Promise.all([
+    const [s, w, a, g, ga] = await Promise.all([
       supabase.from("client_portal_social_metrics").select("*").eq("client_id", clientId).order("period_end", { ascending: false }).limit(200),
       supabase.from("client_portal_web_analytics").select("*").eq("client_id", clientId).order("period_end", { ascending: false }).limit(60),
       supabase.from("client_portal_ads_metrics").select("*").eq("client_id", clientId).order("period_end", { ascending: false }).limit(200),
       supabase.from("client_ga4_properties").select("*").eq("client_id", clientId).order("created_at", { ascending: true }),
+      supabase.from("client_google_ads_accounts").select("*").eq("client_id", clientId).order("created_at", { ascending: true }),
     ]);
     setSocial(s.data ?? []);
     setWeb(w.data ?? []);
     setAds(a.data ?? []);
     setGaProps(g.data ?? []);
+    setAdAccounts(ga.data ?? []);
   }, [clientId]);
 
   useEffect(() => { load(); }, [load]);
@@ -207,6 +214,92 @@ export default function PortalDataAdmin({ clientId }: { clientId: string }) {
     if (fails.length) toast.error(`Sin datos o con error: ${fails.slice(0, 4).join(", ")}${fails.length > 4 ? "…" : ""}`);
     load();
   };
+
+  /** Guarda la cuenta de anuncios de Google del cliente. */
+  const addAdAccount = async () => {
+    const customerId = adId.trim().replace(/[^\d]/g, "");
+    if (!/^\d{8,}$/.test(customerId)) { toast.error("El número de cuenta son solo dígitos (ej. 1196579909)"); return; }
+    setBusy("ad-acc");
+    const { error } = await supabase.from("client_google_ads_accounts").insert({
+      client_id: clientId,
+      customer_id: customerId,
+      label: adLabel.trim() || null,
+      created_by: uid.current,
+    });
+    setBusy(null);
+    if (error) { toast.error(error.message); return; }
+    setAdId(""); setAdLabel("");
+    toast.success("Cuenta guardada");
+    load();
+  };
+
+  const removeAdAccount = async (id: string) => {
+    const { error } = await supabase.from("client_google_ads_accounts").delete().eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    load();
+  };
+
+  /** Trae del periodo elegido los resultados por campaña de Google Ads. */
+  const syncAds = async () => {
+    setBusy("ad-sync");
+    try {
+      const { data, error } = await supabase.functions.invoke("google-ads-sync", {
+        body: { client_id: clientId, period_start: period.start, period_end: period.end, period_label: period.label },
+      });
+      if (error) {
+        const detail = (error as any)?.context?.text ? await (error as any).context.text() : error.message;
+        let msg = detail;
+        try { msg = JSON.parse(detail)?.error ?? detail; } catch { /* texto plano */ }
+        throw new Error(msg);
+      }
+      toast.success(`Google Ads actualizado: ${Number(data?.campaigns ?? 0)} campañas en ${period.label}`);
+      load();
+    } catch (e: any) {
+      toast.error(e.message ?? "No se pudo leer Google Ads");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  /** Trae mes por mes el histórico de campañas, desde el mes elegido hasta el mes pasado. */
+  const syncAdsHistory = async () => {
+    const from = adFrom.trim();
+    if (!/^\d{4}-\d{2}$/.test(from)) { toast.error("Elige el mes de inicio del histórico"); return; }
+    const months: string[] = [];
+    const [fy, fm] = from.split("-").map(Number);
+    const cursor = new Date(Date.UTC(fy, fm - 1, 1));
+    const now = new Date();
+    const limit = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+    while (cursor < limit && months.length < 48) {
+      months.push(`${cursor.getUTCFullYear()}-${String(cursor.getUTCMonth() + 1).padStart(2, "0")}`);
+      cursor.setUTCMonth(cursor.getUTCMonth() + 1);
+    }
+    if (!months.length) { toast.error("Ese mes de inicio no deja meses completos por traer"); return; }
+
+    setBusy("ad-history");
+    setAdProgress(`0 de ${months.length}`);
+    let ok = 0;
+    const fails: string[] = [];
+    for (let i = 0; i < months.length; i++) {
+      const p = monthBounds(months[i]);
+      setAdProgress(`${i + 1} de ${months.length} · ${p.label}`);
+      try {
+        const { error } = await supabase.functions.invoke("google-ads-sync", {
+          body: { client_id: clientId, period_start: p.start, period_end: p.end, period_label: p.label },
+        });
+        if (error) throw error;
+        ok++;
+      } catch {
+        fails.push(p.label);
+      }
+    }
+    setAdProgress(null);
+    setBusy(null);
+    if (ok) toast.success(`Histórico listo: ${ok} meses revisados`);
+    if (fails.length) toast.error(`Sin datos o con error: ${fails.slice(0, 4).join(", ")}${fails.length > 4 ? "…" : ""}`);
+    load();
+  };
+
 
 
   const uid = useRef<string | null>(null);
@@ -639,6 +732,66 @@ export default function PortalDataAdmin({ clientId }: { clientId: string }) {
 
         {/* -------- Ads -------- */}
         <TabsContent value="ads" className="mt-0 space-y-4">
+          <Card className="p-4 space-y-3">
+            <div className="text-sm font-semibold flex items-center gap-2">
+              <RefreshCw className="w-4 h-4" /> Lectura automática de Google Ads
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Captura el número de la cuenta de anuncios del cliente (solo dígitos, sin guiones). Después, con un clic
+              se traen los resultados por campaña del periodo elegido arriba.
+            </p>
+
+            {adAccounts.map((a) => (
+              <div key={a.id} className="flex flex-wrap items-center gap-2 rounded-lg border p-2.5 text-sm">
+                <Badge variant="outline">{a.customer_id}</Badge>
+                <span className="font-medium">{a.label ?? "Cuenta de anuncios"}</span>
+                <span className="text-xs text-muted-foreground">
+                  {a.last_sync_error
+                    ? `Falló: ${a.last_sync_error}`
+                    : a.last_synced_at
+                      ? `Última lectura: ${new Date(a.last_synced_at).toLocaleString("es-MX")}`
+                      : "Sin leer todavía"}
+                </span>
+                <Button variant="ghost" size="icon" className="h-7 w-7 ml-auto" onClick={() => removeAdAccount(a.id)}>
+                  <Trash2 className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            ))}
+
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Número de cuenta</Label>
+                <Input className="h-9 w-48" placeholder="1196579909" value={adId} onChange={(e) => setAdId(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Nombre (opcional)</Label>
+                <Input className="h-9 w-56" placeholder="Cuenta principal" value={adLabel} onChange={(e) => setAdLabel(e.target.value)} />
+              </div>
+              <Button size="sm" variant="outline" onClick={addAdAccount} disabled={busy === "ad-acc"}>
+                {busy === "ad-acc" ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                Guardar cuenta
+              </Button>
+              <Button size="sm" onClick={syncAds} disabled={busy === "ad-sync" || !adAccounts.length}>
+                {busy === "ad-sync" ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+                Traer datos de {period.label}
+              </Button>
+            </div>
+
+            <div className="flex flex-wrap items-end gap-3 border-t pt-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Histórico desde</Label>
+                <Input type="month" className="h-9 w-44" value={adFrom} onChange={(e) => setAdFrom(e.target.value)} />
+              </div>
+              <Button size="sm" variant="outline" onClick={syncAdsHistory} disabled={busy === "ad-history" || !adAccounts.length}>
+                {busy === "ad-history" ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+                Traer todo el histórico
+              </Button>
+              <span className="text-xs text-muted-foreground pb-2">
+                {adProgress ? `Cargando ${adProgress}` : "Trae mes por mes, desde ese mes hasta el mes pasado."}
+              </span>
+            </div>
+          </Card>
+
           <Card className="p-4 space-y-3">
             <div className="text-sm font-semibold">Subir resultados de campañas</div>
             <p className="text-xs text-muted-foreground">

@@ -754,6 +754,53 @@ export type Database = {
           },
         ]
       }
+      client_google_ads_accounts: {
+        Row: {
+          active: boolean
+          client_id: string
+          created_at: string
+          created_by: string | null
+          customer_id: string
+          id: string
+          label: string | null
+          last_sync_error: string | null
+          last_synced_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          client_id: string
+          created_at?: string
+          created_by?: string | null
+          customer_id: string
+          id?: string
+          label?: string | null
+          last_sync_error?: string | null
+          last_synced_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          client_id?: string
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string
+          id?: string
+          label?: string | null
+          last_sync_error?: string | null
+          last_synced_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_google_ads_accounts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_objectives: {
         Row: {
           business_unit: string | null
