@@ -114,16 +114,18 @@ export default function PortalDataAdmin({ clientId }: { clientId: string }) {
 
 
   const load = useCallback(async () => {
-    const [s, w, a, g] = await Promise.all([
+    const [s, w, a, g, ga] = await Promise.all([
       supabase.from("client_portal_social_metrics").select("*").eq("client_id", clientId).order("period_end", { ascending: false }).limit(200),
       supabase.from("client_portal_web_analytics").select("*").eq("client_id", clientId).order("period_end", { ascending: false }).limit(60),
       supabase.from("client_portal_ads_metrics").select("*").eq("client_id", clientId).order("period_end", { ascending: false }).limit(200),
       supabase.from("client_ga4_properties").select("*").eq("client_id", clientId).order("created_at", { ascending: true }),
+      supabase.from("client_google_ads_accounts").select("*").eq("client_id", clientId).order("created_at", { ascending: true }),
     ]);
     setSocial(s.data ?? []);
     setWeb(w.data ?? []);
     setAds(a.data ?? []);
     setGaProps(g.data ?? []);
+    setAdAccounts(ga.data ?? []);
   }, [clientId]);
 
   useEffect(() => { load(); }, [load]);
