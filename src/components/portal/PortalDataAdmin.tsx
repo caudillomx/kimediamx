@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { BarChart3, Globe, Megaphone, Upload, Trash2, Loader2 } from "lucide-react";
+import { BarChart3, Globe, Megaphone, Upload, Trash2, Loader2, RefreshCw } from "lucide-react";
 import {
   AD_PLATFORMS,
   NETWORK_LABELS,
@@ -94,6 +94,9 @@ export default function PortalDataAdmin({ clientId }: { clientId: string }) {
   const [autoMonths, setAutoMonths] = useState(true);
   const [metaNetwork, setMetaNetwork] = useState("facebook");
   const [metaAccount, setMetaAccount] = useState("");
+  const [gaProps, setGaProps] = useState<any[]>([]);
+  const [gaId, setGaId] = useState("");
+  const [gaLabel, setGaLabel] = useState("");
 
 
   const socialRef = useRef<HTMLInputElement>(null);
@@ -103,17 +106,65 @@ export default function PortalDataAdmin({ clientId }: { clientId: string }) {
 
 
   const load = useCallback(async () => {
-    const [s, w, a] = await Promise.all([
+    const [s, w, a, g] = await Promise.all([
       supabase.from("client_portal_social_metrics").select("*").eq("client_id", clientId).order("period_end", { ascending: false }).limit(200),
       supabase.from("client_portal_web_analytics").select("*").eq("client_id", clientId).order("period_end", { ascending: false }).limit(60),
       supabase.from("client_portal_ads_metrics").select("*").eq("client_id", clientId).order("period_end", { ascending: false }).limit(200),
+      supabase.from("client_ga4_properties").select("*").eq("client_id", clientId).order("created_at", { ascending: true }),
     ]);
     setSocial(s.data ?? []);
     setWeb(w.data ?? []);
     setAds(a.data ?? []);
+    setGaProps(g.data ?? []);
   }, [clientId]);
 
   useEffect(() => { load(); }, [load]);
+
+  /** Guarda la propiedad de Analytics a la que el cliente nos dio acceso de lectura. */
+  const addGaProperty = async () => {
+    const propertyId = gaId.trim().replace(/^properties\//, "");
+    if (!/^\d{6,}$/.test(propertyId)) { toast.error("El identificador de la propiedad son solo números (ej. 481234567)"); return; }
+    setBusy("ga-prop");
+    const { error } = await supabase.from("client_ga4_properties").insert({
+      client_id: clientId,
+      property_id: propertyId,
+      label: gaLabel.trim() || null,
+      created_by: uid.current,
+    });
+    setBusy(null);
+    if (error) { toast.error(error.message); return; }
+    setGaId(""); setGaLabel("");
+    toast.success("Propiedad guardada");
+    load();
+  };
+
+  const removeGaProperty = async (id: string) => {
+    const { error } = await supabase.from("client_ga4_properties").delete().eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    load();
+  };
+
+  /** Lee las métricas del periodo directo de Analytics y las guarda en el portal. */
+  const syncGa = async () => {
+    setBusy("ga-sync");
+    try {
+      const { data, error } = await supabase.functions.invoke("ga4-sync", {
+        body: { client_id: clientId, period_start: period.start, period_end: period.end, period_label: period.label },
+      });
+      if (error) {
+        const detail = (error as any)?.context?.text ? await (error as any).context.text() : error.message;
+        let msg = detail;
+        try { msg = JSON.parse(detail)?.error ?? detail; } catch { /* texto plano */ }
+        throw new Error(msg);
+      }
+      toast.success(`Analytics actualizado: ${Number(data?.sessions ?? 0).toLocaleString("es-MX")} sesiones en ${period.label}`);
+      load();
+    } catch (e: any) {
+      toast.error(e.message ?? "No se pudo leer Analytics");
+    } finally {
+      setBusy(null);
+    }
+  };
 
   const uid = useRef<string | null>(null);
   useEffect(() => { supabase.auth.getUser().then(({ data }) => { uid.current = data.user?.id ?? null; }); }, []);
@@ -452,6 +503,53 @@ export default function PortalDataAdmin({ clientId }: { clientId: string }) {
 
         {/* -------- Web -------- */}
         <TabsContent value="web" className="mt-0 space-y-4">
+          <Card className="p-4 space-y-3">
+            <div className="text-sm font-semibold flex items-center gap-2">
+              <RefreshCw className="w-4 h-4" /> Lectura automática de Analytics
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Pide al cliente que agregue nuestra cuenta de lectura a su propiedad de Analytics y captura aquí el
+              identificador de la propiedad (solo números, aparece en la configuración de su cuenta). Después, con un
+              clic se traen los datos del periodo elegido arriba.
+            </p>
+
+            {gaProps.map((p) => (
+              <div key={p.id} className="flex flex-wrap items-center gap-2 rounded-lg border p-2.5 text-sm">
+                <Badge variant="outline">{p.property_id}</Badge>
+                <span className="font-medium">{p.label ?? "Propiedad de Analytics"}</span>
+                <span className="text-xs text-muted-foreground">
+                  {p.last_sync_error
+                    ? `Falló: ${p.last_sync_error}`
+                    : p.last_synced_at
+                      ? `Última lectura: ${new Date(p.last_synced_at).toLocaleString("es-MX")}`
+                      : "Sin leer todavía"}
+                </span>
+                <Button variant="ghost" size="icon" className="h-7 w-7 ml-auto" onClick={() => removeGaProperty(p.id)}>
+                  <Trash2 className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            ))}
+
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Identificador de la propiedad</Label>
+                <Input className="h-9 w-48" placeholder="481234567" value={gaId} onChange={(e) => setGaId(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Nombre (opcional)</Label>
+                <Input className="h-9 w-56" placeholder="Sitio principal" value={gaLabel} onChange={(e) => setGaLabel(e.target.value)} />
+              </div>
+              <Button size="sm" variant="outline" onClick={addGaProperty} disabled={busy === "ga-prop"}>
+                {busy === "ga-prop" ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                Guardar propiedad
+              </Button>
+              <Button size="sm" onClick={syncGa} disabled={busy === "ga-sync" || !gaProps.length}>
+                {busy === "ga-sync" ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+                Traer datos de {period.label}
+              </Button>
+            </div>
+          </Card>
+
           <Card className="p-4 space-y-3">
             <div className="text-sm font-semibold">Subir analítica web (Google Analytics 4)</div>
             <p className="text-xs text-muted-foreground">
