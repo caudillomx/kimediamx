@@ -74,6 +74,8 @@ Deno.serve(async (req) => {
     const start = String(body.period_start ?? '');
     const end = String(body.period_end ?? '');
     const label = body.period_label ? String(body.period_label) : null;
+    // En modo histórico se agrega por mes en una sola consulta por cuenta.
+    const byMonth = body.mode === 'history';
     if (!clientId) return json({ error: 'client_id requerido' }, 400);
     if (!ISO.test(start) || !ISO.test(end) || start > end) return json({ error: 'Periodo inválido' }, 400);
 
@@ -87,11 +89,23 @@ Deno.serve(async (req) => {
 
     const query = `
       SELECT campaign.id, campaign.name, campaign.advertising_channel_type,
+        ${byMonth ? 'segments.month,' : ''}
         metrics.cost_micros, metrics.impressions, metrics.clicks,
         metrics.ctr, metrics.average_cpc, metrics.average_cpm,
         metrics.conversions
       FROM campaign
       WHERE segments.date BETWEEN '${start}' AND '${end}'`;
+
+    const monthLabel = (ym: string) => {
+      const l = new Date(`${ym}-01T00:00:00Z`).toLocaleDateString('es-MX', {
+        month: 'long', year: 'numeric', timeZone: 'UTC',
+      });
+      return l.charAt(0).toUpperCase() + l.slice(1);
+    };
+    const monthEnd = (ym: string) => {
+      const [y, m] = ym.split('-').map(Number);
+      return new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
+    };
 
     let campaigns = 0;
     let spend = 0;
@@ -100,12 +114,17 @@ Deno.serve(async (req) => {
       try {
         const rows = await runQuery(acc.customer_id, query);
 
-        // Google devuelve una fila por campaña dentro del rango; se agrega por campaña.
+        // Google devuelve una fila por campaña (y por mes en histórico); se agrega por clave.
         const byCampaign = new Map<string, any>();
         for (const r of rows) {
           const id = String(r.campaign?.id ?? '');
           if (!id) continue;
-          const cur = byCampaign.get(id) ?? {
+          const ym = byMonth ? String(r.segments?.month ?? '').slice(0, 7) : '';
+          if (byMonth && !/^\d{4}-\d{2}$/.test(ym)) continue;
+          const key = byMonth ? `${id}|${ym}` : id;
+          const cur = byCampaign.get(key) ?? {
+            id,
+            ym,
             name: r.campaign?.name ?? `Campaña ${id}`,
             objective: r.campaign?.advertisingChannelType ?? null,
             cost: 0, impressions: 0, clicks: 0, conversions: 0,
@@ -114,18 +133,18 @@ Deno.serve(async (req) => {
           cur.impressions += num(r.metrics?.impressions);
           cur.clicks += num(r.metrics?.clicks);
           cur.conversions += num(r.metrics?.conversions);
-          byCampaign.set(id, cur);
+          byCampaign.set(key, cur);
         }
 
-        const payload = [...byCampaign.entries()].map(([id, c]) => ({
+        const payload = [...byCampaign.values()].map((c) => ({
           client_id: clientId,
           platform: 'google_ads',
-          campaign_key: `${acc.customer_id}:${id}`,
+          campaign_key: `${acc.customer_id}:${c.id}`,
           campaign_name: c.name,
           objective: c.objective,
-          period_start: start,
-          period_end: end,
-          period_label: label,
+          period_start: byMonth ? `${c.ym}-01` : start,
+          period_end: byMonth ? monthEnd(c.ym) : end,
+          period_label: byMonth ? monthLabel(c.ym) : label,
           spend: c.cost,
           impressions: c.impressions,
           clicks: c.clicks,
@@ -136,9 +155,10 @@ Deno.serve(async (req) => {
           result_type: 'conversiones',
           cost_per_result: c.conversions ? c.cost / c.conversions : null,
           conversions: c.conversions,
-          raw: { source: 'google_ads_api', customer_id: acc.customer_id, campaign_id: id },
+          raw: { source: 'google_ads_api', customer_id: acc.customer_id, campaign_id: c.id },
           created_by: userData.user.id,
         }));
+
 
         if (payload.length) {
           const { error: upErr } = await admin
