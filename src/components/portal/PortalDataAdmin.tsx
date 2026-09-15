@@ -261,44 +261,36 @@ export default function PortalDataAdmin({ clientId }: { clientId: string }) {
     }
   };
 
-  /** Trae mes por mes el histórico de campañas, desde el mes elegido hasta el mes pasado. */
+  /** Trae de una sola vez el histórico mensual de campañas, desde el mes elegido hasta hoy. */
   const syncAdsHistory = async () => {
     const from = adFrom.trim();
     if (!/^\d{4}-\d{2}$/.test(from)) { toast.error("Elige el mes de inicio del histórico"); return; }
-    const months: string[] = [];
-    const [fy, fm] = from.split("-").map(Number);
-    const cursor = new Date(Date.UTC(fy, fm - 1, 1));
-    const now = new Date();
-    const limit = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
-    while (cursor < limit && months.length < 48) {
-      months.push(`${cursor.getUTCFullYear()}-${String(cursor.getUTCMonth() + 1).padStart(2, "0")}`);
-      cursor.setUTCMonth(cursor.getUTCMonth() + 1);
-    }
-    if (!months.length) { toast.error("Ese mes de inicio no deja meses completos por traer"); return; }
+    const startDate = `${from}-01`;
+    const today = new Date().toISOString().slice(0, 10);
+    if (startDate > today) { toast.error("Ese mes de inicio es posterior a hoy"); return; }
 
     setBusy("ad-history");
-    setAdProgress(`0 de ${months.length}`);
-    let ok = 0;
-    const fails: string[] = [];
-    for (let i = 0; i < months.length; i++) {
-      const p = monthBounds(months[i]);
-      setAdProgress(`${i + 1} de ${months.length} · ${p.label}`);
-      try {
-        const { error } = await supabase.functions.invoke("google-ads-sync", {
-          body: { client_id: clientId, period_start: p.start, period_end: p.end, period_label: p.label },
-        });
-        if (error) throw error;
-        ok++;
-      } catch {
-        fails.push(p.label);
+    setAdProgress("Consultando Google Ads…");
+    try {
+      const { data, error } = await supabase.functions.invoke("google-ads-sync", {
+        body: { client_id: clientId, mode: "history", period_start: startDate, period_end: today },
+      });
+      if (error) {
+        const detail = (error as any)?.context?.text ? await (error as any).context.text() : error.message;
+        let msg = detail;
+        try { msg = JSON.parse(detail)?.error ?? detail; } catch { /* texto plano */ }
+        throw new Error(msg);
       }
+      toast.success(`Histórico listo: ${Number(data?.campaigns ?? 0)} registros de campaña por mes`);
+      load();
+    } catch (e: any) {
+      toast.error(e.message ?? "No se pudo leer el histórico de Google Ads");
+    } finally {
+      setAdProgress(null);
+      setBusy(null);
     }
-    setAdProgress(null);
-    setBusy(null);
-    if (ok) toast.success(`Histórico listo: ${ok} meses revisados`);
-    if (fails.length) toast.error(`Sin datos o con error: ${fails.slice(0, 4).join(", ")}${fails.length > 4 ? "…" : ""}`);
-    load();
   };
+
 
 
 
