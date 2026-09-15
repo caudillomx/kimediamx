@@ -1,0 +1,2 @@
+UPDATE public.action_items SET client_id = '21c1595b-988f-47d0-bd97-02021aaf7147' WHERE client_id = '01a7e715-4c28-445f-87e1-4314dab308c3';
+UPDATE public.clients SET is_active = false WHERE id = '01a7e715-4c28-445f-87e1-4314dab308c3';
