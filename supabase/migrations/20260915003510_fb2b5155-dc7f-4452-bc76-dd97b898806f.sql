@@ -1,0 +1,1 @@
+UPDATE public.clients SET services = ARRAY['estrategia','ads','audiovisual'] WHERE id = '7369630f-9706-430a-a80a-6b35437acb40';
