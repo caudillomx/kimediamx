@@ -53,6 +53,13 @@ export const CLIENT_PORTALS: Record<string, ClientPortalConfig> = {
     displayName: "Mario Doria",
     tagline: "Portal privado de estrategia digital",
   },
+  strategos: {
+    slug: "strategos",
+    clientId: "7369630f-9706-430a-a80a-6b35437acb40",
+    clientName: "Strategos",
+    displayName: "Strategos",
+    tagline: "Portal privado de estrategia digital",
+  },
 };
 
 
