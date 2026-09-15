@@ -33,7 +33,8 @@ async function runQuery(customerId: string, query: string) {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
         'X-Connection-Api-Key': GOOGLE_ADS_API_KEY,
       },
-      body: JSON.stringify({ query, pageSize: 1000, ...(pageToken ? { pageToken } : {}) }),
+      // Google Ads no acepta pageSize: la respuesta trae páginas fijas de 10 000 filas.
+      body: JSON.stringify({ query, ...(pageToken ? { pageToken } : {}) }),
     });
     const text = await res.text();
     if (!res.ok) throw new Error(`Google Ads respondió [${res.status}]: ${text.slice(0, 500)}`);
