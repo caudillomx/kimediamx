@@ -74,6 +74,8 @@ Deno.serve(async (req) => {
     const start = String(body.period_start ?? '');
     const end = String(body.period_end ?? '');
     const label = body.period_label ? String(body.period_label) : null;
+    // En modo histórico se agrega por mes en una sola consulta por cuenta.
+    const byMonth = body.mode === 'history';
     if (!clientId) return json({ error: 'client_id requerido' }, 400);
     if (!ISO.test(start) || !ISO.test(end) || start > end) return json({ error: 'Periodo inválido' }, 400);
 
@@ -87,11 +89,23 @@ Deno.serve(async (req) => {
 
     const query = `
       SELECT campaign.id, campaign.name, campaign.advertising_channel_type,
+        ${byMonth ? 'segments.month,' : ''}
         metrics.cost_micros, metrics.impressions, metrics.clicks,
         metrics.ctr, metrics.average_cpc, metrics.average_cpm,
         metrics.conversions
       FROM campaign
       WHERE segments.date BETWEEN '${start}' AND '${end}'`;
+
+    const monthLabel = (ym: string) => {
+      const l = new Date(`${ym}-01T00:00:00Z`).toLocaleDateString('es-MX', {
+        month: 'long', year: 'numeric', timeZone: 'UTC',
+      });
+      return l.charAt(0).toUpperCase() + l.slice(1);
+    };
+    const monthEnd = (ym: string) => {
+      const [y, m] = ym.split('-').map(Number);
+      return new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
+    };
 
     let campaigns = 0;
     let spend = 0;
