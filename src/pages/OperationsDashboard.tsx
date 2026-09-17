@@ -234,6 +234,10 @@ const OperationsDashboard = () => {
                   )}
                 </DropdownMenuItem>
               ))}
+              <DropdownMenuItem onClick={() => navigate("/admin/operaciones/junta-embudo")} className="gap-2">
+                <Filter className="w-4 h-4" />
+                <span className="flex-1">Junta embudo</span>
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
