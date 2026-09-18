@@ -147,7 +147,7 @@ const ReorganizacionSesion = () => {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
-  const slides: { titulo: string; render: () => ReactNode }[] = useMemo(() => [
+  const slidesBase: { titulo: string; render: () => ReactNode }[] = useMemo(() => [
     /* 1 — Portada */
     {
       titulo: "Portada",
@@ -478,6 +478,18 @@ const ReorganizacionSesion = () => {
       ),
     },
   ], [api]);
+
+  // Orden de proyección: los datos y el contraste van antes de llenar las matrices.
+  const ORDEN = [
+    "Portada", "Diagnóstico", "Metodología",
+    "Los números", "¿Para qué trabajamos?", "Contraste",
+    "Matriz en blanco", "Matriz: 4 cuentas",
+    "Preguntas", "Matriz completa", "Lo que cambia mañana",
+  ];
+  const slides = useMemo(
+    () => ORDEN.map(t => slidesBase.find(s => s.titulo === t)!).filter(Boolean),
+    [slidesBase]
+  );
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
