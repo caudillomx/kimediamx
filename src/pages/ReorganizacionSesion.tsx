@@ -392,6 +392,66 @@ const ReorganizacionSesion = () => {
         </Slide>
       ),
     },
+    /* Santo grial — el embudo completo */
+    {
+      titulo: "Nuestro santo grial",
+      render: () => (
+        <Slide>
+          <SlideTitle sub="Cada etapa con sus cuentas y los productos que la sostienen">
+            Nuestro santo grial: el embudo completo
+          </SlideTitle>
+          <div className="space-y-2.5">
+            {EMBUDO_ETAPAS.map((e, i) => {
+              const ancho = 100 - i * 11;
+              return (
+                <div key={e.etapa} className="mx-auto" style={{ width: `${ancho}%`, minWidth: 280 }}>
+                  <div
+                    className="rounded-2xl border p-4 sm:p-5 grid gap-4 lg:grid-cols-[minmax(180px,220px)_1fr_1fr] items-start"
+                    style={{ borderColor: `${e.color}66`, backgroundColor: `${e.color}16` }}
+                  >
+                    <div>
+                      <h3 className="font-display font-bold text-xl sm:text-2xl leading-tight" style={{ color: e.color }}>
+                        {e.etapa}
+                      </h3>
+                      <p className="text-xs text-muted-foreground mt-1">{e.pregunta}</p>
+                    </div>
+                    <div>
+                      <span className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Cuentas</span>
+                      <div className="flex flex-wrap gap-1.5 mt-1.5">
+                        {e.clientes.map(c => (
+                          <span key={c} className="rounded-full border px-2.5 py-1 text-xs font-medium text-foreground"
+                            style={{ borderColor: `${e.color}80` }}>
+                            {c}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Productos</span>
+                      <div className="flex flex-wrap gap-1.5 mt-1.5">
+                        {e.productos.map(p => (
+                          <span key={p} className="rounded-md px-2.5 py-1 text-xs font-medium text-foreground"
+                            style={{ backgroundColor: `${e.color}26` }}>
+                            {p}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div className="mt-6 grid gap-3 sm:grid-cols-3">
+            {EMBUDO_REGLAS.map(r => (
+              <p key={r} className="rounded-xl border border-border bg-card px-4 py-3 text-sm font-medium text-foreground">
+                {r}
+              </p>
+            ))}
+          </div>
+        </Slide>
+      ),
+    },
     /* 7 — Contraste */
     {
       titulo: "Contraste",
