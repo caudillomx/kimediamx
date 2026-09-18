@@ -13,7 +13,7 @@ import KitPyme from "./pages/KitPyme";
 import NotFound from "./pages/NotFound";
 import OperationsLogin from "./pages/OperationsLogin";
 import OperationsDashboard from "./pages/OperationsDashboard";
-import JuntaEmbudo from "./pages/JuntaEmbudo";
+import ReorganizacionSesion from "./pages/ReorganizacionSesion";
 import ResetPassword from "./pages/ResetPassword";
 import ContentEngine from "./pages/ContentEngine";
 import ContentCycleDetail from "./pages/ContentCycleDetail";
@@ -69,7 +69,7 @@ const App = () => {
           <Route path="/mi-estrategia/:profileId" element={<MyStrategyDetail />} />
           <Route path="/admin/operaciones/login" element={<OperationsLogin />} />
           <Route path="/admin/operaciones" element={<OperationsDashboard />} />
-          <Route path="/admin/operaciones/junta-embudo" element={<JuntaEmbudo />} />
+          <Route path="/admin/operaciones/reorganizacion" element={<ReorganizacionSesion />} />
           <Route path="/admin/cliente/:clientId" element={<ClientWorkspace />} />
           <Route path="/admin/cliente/:clientId/portal" element={<ClientPortalAdmin />} />
           <Route path="/admin/propuesta/:proposalId" element={<AdsProposalView />} />

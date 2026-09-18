@@ -234,9 +234,9 @@ const OperationsDashboard = () => {
                   )}
                 </DropdownMenuItem>
               ))}
-              <DropdownMenuItem onClick={() => navigate("/admin/operaciones/junta-embudo")} className="gap-2">
-                <Filter className="w-4 h-4" />
-                <span className="flex-1">Junta embudo</span>
+              <DropdownMenuItem onClick={() => navigate("/admin/operaciones/reorganizacion")} className="gap-2">
+                <Target className="w-4 h-4" />
+                <span className="flex-1">Sesión de reorganización</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
