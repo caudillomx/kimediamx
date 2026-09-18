@@ -147,7 +147,7 @@ const ReorganizacionSesion = () => {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
-  const slides: { titulo: string; render: () => ReactNode }[] = useMemo(() => [
+  const slidesBase: { titulo: string; render: () => ReactNode }[] = useMemo(() => [
     /* 1 — Portada */
     {
       titulo: "Portada",
