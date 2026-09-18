@@ -149,3 +149,56 @@ export const PREGUNTAS: { linea: LineaKey; texto: string }[] = [
   { linea: "estrategia", texto: "De lo que se publica hoy, ¿cuánto abre conversación y cuánto es porque “toca publicar”?" },
   { linea: "analytics", texto: "Un insight que no cambia una decisión es solo un reporte." },
 ];
+
+/* ---------- Embudo KiMedia — "Nuestro santo grial" ---------- */
+export type EtapaEmbudo = {
+  etapa: string;
+  pregunta: string;
+  color: string;
+  clientes: string[];
+  productos: string[];
+};
+
+export const EMBUDO_ETAPAS: EtapaEmbudo[] = [
+  {
+    etapa: "Reconocimiento",
+    pregunta: "¿Quién soy y por qué debería importarte?",
+    color: "hsl(185 95% 50%)",
+    clientes: ["Falcon", "Strategos", "KiMedia (propio)", "20 Rostros 20 Años"],
+    productos: ["Reels de marca", "Contenido de autoridad", "Campañas de alcance", "Producción audiovisual"],
+  },
+  {
+    etapa: "Interacción",
+    pregunta: "¿Te quedas a conversar conmigo?",
+    color: "hsl(160 85% 45%)",
+    clientes: ["El Diluvio", "Padre Sada", "Strategos"],
+    productos: ["Parrilla editorial", "Temas de conversación", "Comunidad y respuestas", "Analytics de engagement"],
+  },
+  {
+    etapa: "Consideración",
+    pregunta: "¿Confías lo suficiente para dar el siguiente paso?",
+    color: "hsl(45 100% 55%)",
+    clientes: ["Padre Sada", "Mario Doria", "Lidérate"],
+    productos: ["Casos y testimonios", "Guías y kits descargables", "Landing / portal de cliente", "Remarketing"],
+  },
+  {
+    etapa: "Conversión",
+    pregunta: "¿Compras, agendas o te dejas contactar?",
+    color: "hsl(15 95% 55%)",
+    clientes: ["Mario Doria", "Padre Sada"],
+    productos: ["Ads a WhatsApp", "Formularios y agenda", "Venta de libros", "Medición de leads"],
+  },
+  {
+    etapa: "Retención",
+    pregunta: "¿Vuelves y me recomiendas?",
+    color: "hsl(320 90% 55%)",
+    clientes: ["Mario Doria", "El Diluvio", "IPS", "Ricardo Robles"],
+    productos: ["Seguimiento de pacientes/clientes", "Contenido de comunidad", "Reportes y portales", "Programas de recomendación"],
+  },
+];
+
+export const EMBUDO_REGLAS = [
+  "Toda pieza debe mover a alguien de una etapa a la siguiente.",
+  "Si una etapa no tiene producto, no hay embudo: hay publicaciones.",
+  "Cada etapa necesita una métrica propia, no solo alcance.",
+];
