@@ -13,6 +13,7 @@ import {
 import {
   LINEAS, LINEA_COLOR, CLIENTES_MATRIZ, CLIENTES_PENDIENTES, MATRIZ_LLENA,
   CRECIMIENTO, CLIENTE_COLOR, CONTENIDO_CARDS, LEADS_DORIA, PROPOSITO_TABLA, PREGUNTAS,
+  EMBUDO_ETAPAS, EMBUDO_REGLAS,
   type LineaKey,
 } from "@/data/reorgSesion";
 
@@ -542,7 +543,7 @@ const ReorganizacionSesion = () => {
   // Orden de proyección: los datos y el contraste van antes de llenar las matrices.
   const ORDEN = [
     "Portada", "Diagnóstico", "Metodología",
-    "Los números", "¿Para qué trabajamos?", "Contraste",
+    "Los números", "¿Para qué trabajamos?", "Nuestro santo grial", "Contraste",
     "Matriz en blanco", "Matriz: 4 cuentas",
     "Preguntas", "Matriz completa", "Lo que cambia mañana",
   ];
