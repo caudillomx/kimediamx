@@ -444,9 +444,9 @@ export default function PortalDescargas({
     const reportDepOfCompetitor = reportCompetitorMaps.depOfCompetitor;
     const reportTypeOfCompetitor = reportCompetitorMaps.typeOfCompetitor;
 
-    const aggregateForReport = (ids: string[], scope: "combinado" | ScopeKey = enfoque) => {
+    const aggregateForReport = (ids: string[], scope: "combinado" | ScopeKey = enfoque, refDate?: string | null) => {
       const acc = new Map<string, { followers: number; eng: { rate: number | null; weight: number | null }[]; posts: number[] }>();
-      for (const m of reportUniqueMetrics(ids)) {
+      for (const m of reportUniqueMetrics(ids, refDate)) {
         const targetDep = reportDepOfCompetitor.get(m.competitor_id);
         if (!targetDep) continue;
         if (!matchesScope(reportTypeOfCompetitor.get(m.competitor_id), scope)) continue;
