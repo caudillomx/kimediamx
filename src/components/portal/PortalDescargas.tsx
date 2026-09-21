@@ -991,7 +991,7 @@ export default function PortalDescargas({
       return acc;
     };
 
-    const tCurr = titularBuckets(currIds);
+    const tCurr = titularBuckets(currIds, cutRefDate);
     const tPrev = titularBuckets(prevIds);
     const depById = new Map(dependencias.map((d) => [d.id, d]));
 
