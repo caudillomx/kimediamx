@@ -879,6 +879,7 @@ export default function PortalDescargas({
     const seenPosts = new Set<string>();
     const postsByDep = new Map<string, number>();
     const titularPosts = new Map<string, number>();
+    const postsLimpios: { post: Post; dep: string; tipo: string }[] = [];
     for (const p of windowPosts) {
       if (!p.competitor_id) continue;
       const dep = depOfCompetitor.get(p.competitor_id);
@@ -887,9 +888,26 @@ export default function PortalDescargas({
       const key = benchmarkPostKey(p, accountIdentity);
       if (seenPosts.has(key)) continue;
       seenPosts.add(key);
+      postsLimpios.push({ post: p, dep, tipo });
       if (matchesRowScope(tipo)) postsByDep.set(dep, (postsByDep.get(dep) ?? 0) + 1);
       if (tipo === "titular") titularPosts.set(dep, (titularPosts.get(dep) ?? 0) + 1);
     }
+
+    /** Publicaciones con mejor respuesta del periodo, para la lámina de contenido. */
+    const mejores = postsLimpios
+      .filter((x) => (x.post.interactions ?? 0) > 0)
+      .sort((a, b) => (b.post.interactions ?? 0) - (a.post.interactions ?? 0))
+      .slice(0, 6)
+      .map((x) => ({
+        perfil: x.post.profile_name || "—",
+        red: x.post.network,
+        dependencia: depName.get(x.dep) ?? "—",
+        tipo: x.tipo,
+        fecha: x.post.posted_at,
+        texto: (x.post.message ?? "").trim(),
+        interacciones: x.post.interactions ?? 0,
+      }));
+
 
     /** Variación sólo sobre cuentas presentes en los dos cortes. */
     const likeForLike = (id: string) => {
