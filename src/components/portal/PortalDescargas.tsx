@@ -879,6 +879,7 @@ export default function PortalDescargas({
     const seenPosts = new Set<string>();
     const postsByDep = new Map<string, number>();
     const titularPosts = new Map<string, number>();
+    const marcaPosts = new Map<string, number>();
     const postsLimpios: { post: Post; dep: string; tipo: string }[] = [];
     for (const p of windowPosts) {
       if (!p.competitor_id) continue;
@@ -891,6 +892,7 @@ export default function PortalDescargas({
       postsLimpios.push({ post: p, dep, tipo });
       if (matchesRowScope(tipo)) postsByDep.set(dep, (postsByDep.get(dep) ?? 0) + 1);
       if (tipo === "titular") titularPosts.set(dep, (titularPosts.get(dep) ?? 0) + 1);
+      if (tipo === "marca") marcaPosts.set(dep, (marcaPosts.get(dep) ?? 0) + 1);
     }
 
     /** Publicaciones con mejor respuesta del periodo, para la lámina de contenido. */
