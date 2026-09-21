@@ -574,7 +574,7 @@ export default function PortalDescargas({
 
 
     const latestMetricByIdentity = new Map(
-      reportUniqueMetrics(periodIds)
+      reportUniqueMetrics(periodIds, winTo)
         .filter((m) => depIdentityKeys.has(reportAccountIdentity.get(m.competitor_id) ?? m.competitor_id))
         .map((m) => [`${reportAccountIdentity.get(m.competitor_id) ?? m.competitor_id}|${m.network.toLowerCase()}`, m]),
     );
