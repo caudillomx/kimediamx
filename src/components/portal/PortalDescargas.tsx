@@ -800,11 +800,11 @@ export default function PortalDescargas({
     };
   };
 
-  /** Toma hasta 3 dependencias y 3 titulares para que ambos ámbitos aparezcan. */
+  /** Toma hasta 5 dependencias y 5 titulares para que ambos ámbitos aparezcan. */
   function mezclarMovs<T extends { tipo: "institucional" | "titular" }>(list: T[], cmp: (a: T, b: T) => number): T[] {
     const ord = list.slice().sort(cmp);
-    const inst = ord.filter((m) => m.tipo === "institucional").slice(0, 3);
-    const tit = ord.filter((m) => m.tipo === "titular").slice(0, 3);
+    const inst = ord.filter((m) => m.tipo === "institucional").slice(0, 5);
+    const tit = ord.filter((m) => m.tipo === "titular").slice(0, 5);
     return [...inst, ...tit].sort(cmp);
   }
 
@@ -879,6 +879,7 @@ export default function PortalDescargas({
     const seenPosts = new Set<string>();
     const postsByDep = new Map<string, number>();
     const titularPosts = new Map<string, number>();
+    const postsLimpios: { post: Post; dep: string; tipo: string }[] = [];
     for (const p of windowPosts) {
       if (!p.competitor_id) continue;
       const dep = depOfCompetitor.get(p.competitor_id);
@@ -887,9 +888,26 @@ export default function PortalDescargas({
       const key = benchmarkPostKey(p, accountIdentity);
       if (seenPosts.has(key)) continue;
       seenPosts.add(key);
+      postsLimpios.push({ post: p, dep, tipo });
       if (matchesRowScope(tipo)) postsByDep.set(dep, (postsByDep.get(dep) ?? 0) + 1);
       if (tipo === "titular") titularPosts.set(dep, (titularPosts.get(dep) ?? 0) + 1);
     }
+
+    /** Publicaciones con mejor respuesta del periodo, para la lámina de contenido. */
+    const mejores = postsLimpios
+      .filter((x) => (x.post.interactions ?? 0) > 0)
+      .sort((a, b) => (b.post.interactions ?? 0) - (a.post.interactions ?? 0))
+      .slice(0, 6)
+      .map((x) => ({
+        perfil: x.post.profile_name || "—",
+        red: x.post.network,
+        dependencia: depName.get(x.dep) ?? "—",
+        tipo: x.tipo,
+        fecha: x.post.posted_at,
+        texto: (x.post.message ?? "").trim(),
+        interacciones: x.post.interactions ?? 0,
+      }));
+
 
     /** Variación sólo sobre cuentas presentes en los dos cortes. */
     const likeForLike = (id: string) => {
@@ -964,8 +982,12 @@ export default function PortalDescargas({
 
     const engs = rows.map((r) => r.engagement).filter((v): v is number => v != null && Number.isFinite(v)).sort((a, b) => a - b);
     const mediana = engs.length ? (engs.length % 2 ? engs[(engs.length - 1) / 2] : (engs[engs.length / 2 - 1] + engs[engs.length / 2]) / 2) : null;
-    const conDatos = new Set(rows.map((r) => r.id));
-    const sinDatos = dependencias.filter((d) => !conDatos.has(d.id)).map((d) => d.nombre);
+    // El reporte sólo habla de quien sí está medido en el corte: las dependencias
+    // sin cuentas con datos no se listan ni se cuentan en ningún indicador.
+    const silenciosInst = rows
+      .filter((r) => !(r.publicaciones ?? 0))
+      .map((r) => ({ nombre: r.nombre, tipo: "institucional" as const, cuentas: r.cuentas, seguidores: r.seguidores }));
+
     const publicacionesTotales = postsByDep.size ? Array.from(postsByDep.values()).reduce((a, b) => a + b, 0) : null;
 
     const strip = ({ _base, id, ...rest }: (typeof rows)[number]) => rest as GabineteRankRow;
@@ -1054,6 +1076,16 @@ export default function PortalDescargas({
       ? Array.from(titularPosts.values()).reduce((a, b) => a + b, 0)
       : null;
 
+    // Cuentas medidas que no publicaron en la ventana: es cumplimiento real,
+    // no un hueco de captura, porque sí tienen datos en el corte.
+    const silencios = [
+      ...silenciosInst,
+      ...titulares
+        .filter((r) => !(r.publicaciones ?? 0))
+        .map((r) => ({ nombre: `${r.nombre} (${r.dependencia})`, tipo: "titular" as const, cuentas: r.cuentas, seguidores: r.seguidores })),
+    ].sort((a, b) => (b.seguidores ?? 0) - (a.seguidores ?? 0));
+
+
     return {
       periodoLabel: `${cutLabel} · ${ENFOQUE_LABEL[enfoque]}`,
       dependencias: rows.length,
@@ -1077,7 +1109,9 @@ export default function PortalDescargas({
       suben: mezclarMovs(allMovers.filter((m) => m.delta > 0), (a, b) => b.delta - a.delta),
       bajan: mezclarMovs(allMovers.filter((m) => m.delta < 0), (a, b) => a.delta - b.delta),
 
-      sinDatos: sinDatos.slice(0, 20),
+      silencios,
+      mejores,
+
       comparables: rows.filter((r) => r.comparable).length,
       nota: prevIds.length
         ? `Cada cuenta se cuenta una sola vez, aunque el mes tenga varias cargas. Las publicaciones se cuentan por su fecha real entre el ${fmtDia(winFrom)} y el ${fmtDia(winTo)}, sin repetir las que aparecen en más de una carga. Las variaciones comparan únicamente las cuentas que existían en los dos cortes, por eso una dependencia que sumó cuentas nuevas aparece como “nuevo” y no como un crecimiento inflado. La interacción está ponderada por audiencia.`
@@ -1127,8 +1161,14 @@ export default function PortalDescargas({
           lugar_previo: r.lugarPrevio,
         })),
       })),
-      dependencias_sin_datos: g.sinDatos,
-      titulares: (g.titulares ?? []).slice(0, 10).map((t) => ({
+      sin_publicaciones: (g.silencios ?? []).map((s) => ({
+        entidad: s.nombre, ambito: s.tipo, cuentas_medidas: s.cuentas, seguidores: s.seguidores,
+      })),
+      mejores_publicaciones: (g.mejores ?? []).map((p) => ({
+        perfil: p.perfil, dependencia: p.dependencia, ambito: p.tipo, red: p.red,
+        fecha: p.fecha, interacciones: p.interacciones, texto: p.texto.slice(0, 220),
+      })),
+      titulares: (g.titulares ?? []).slice(0, 20).map((t) => ({
         nombre: t.nombre,
         dependencia: t.dependencia,
         seguidores: t.seguidores,
@@ -1136,6 +1176,7 @@ export default function PortalDescargas({
         publicaciones: t.publicaciones,
         variacion_audiencia_pct: t.comparable && t.deltaSeguidores != null ? Number((t.deltaSeguidores * 100).toFixed(2)) : "no comparable",
       })),
+
       interaccion_titulares_pct: g.titularesInteraccion == null ? null : Number((g.titularesInteraccion * 100).toFixed(3)),
       nota_metodologica: g.nota,
 
