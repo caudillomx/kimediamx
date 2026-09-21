@@ -652,8 +652,13 @@ function BlockSection({ b, compacto }: { b: ScopeBlock; compacto: boolean }) {
 
 export const DependenciaPdfTemplate = forwardRef<HTMLDivElement, { data: DependenciaReportData | null }>(({ data }, ref) => {
   if (!data) return <div ref={ref} style={page} />;
-  const combinado = data.modo === "combinado";
+  /* Una dependencia puede no operar todos los ámbitos (la Presidencia del DIF, por
+     ejemplo, solo tiene cuentas del titular). En ese caso el modo combinado
+     imprime un solo bloque y no tiene sentido mostrar un resumen "conjunto". */
+  const ambitos = data.bloques.map((b) => b.key);
+  const combinado = data.modo === "combinado" && data.bloques.length > 1;
   const c = data.conjunto;
+
 
   return (
     <div ref={ref} style={page}>
