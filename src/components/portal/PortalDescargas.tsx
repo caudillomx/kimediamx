@@ -1141,10 +1141,11 @@ export default function PortalDescargas({
     return {
       periodoLabel: `${cutLabel} · ${ENFOQUE_LABEL[enfoque]}`,
       dependencias: rows.length,
-      cuentas: rows.reduce((a, r) => a + r.cuentas, 0) + titulares.reduce((a, r) => a + r.cuentas, 0),
-      seguidoresTotales: rows.reduce((a, r) => a + (r.seguidores ?? 0), 0) + seguidoresTitulares,
-      publicacionesTotales: publicacionesTotales == null && publicacionesTitulares == null
-        ? null : (publicacionesTotales ?? 0) + (publicacionesTitulares ?? 0),
+      cuentas: rows.reduce((a, r) => a + r.cuentas, 0) + titulares.reduce((a, r) => a + r.cuentas, 0)
+        + marcas.reduce((a, r) => a + r.cuentas, 0),
+      seguidoresTotales: rows.reduce((a, r) => a + (r.seguidores ?? 0), 0) + seguidoresTitulares + seguidoresMarca,
+      publicacionesTotales: publicacionesTotales == null && publicacionesTitulares == null && publicacionesMarca == null
+        ? null : (publicacionesTotales ?? 0) + (publicacionesTitulares ?? 0) + (publicacionesMarca ?? 0),
       interaccionPonderada: weightedRate(rows.map((r) => ({ rate: r.engagement, weight: r.seguidores }))),
       interaccionMediana: mediana,
       ranking: rows.slice().sort((a, b) => (b.seguidores ?? 0) - (a.seguidores ?? 0)).map(strip),
