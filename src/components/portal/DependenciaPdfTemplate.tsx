@@ -761,24 +761,32 @@ function MoveList({ rows, color, titulo, hint }: { rows: GabineteMoveRow[]; colo
   );
 }
 
-function TitularTable({ rows }: { rows: GabineteTitularRow[] }) {
+function TitularTable({ rows, indiceInicial = 0, ocultarEncabezado, continua }: {
+  rows: GabineteTitularRow[]; indiceInicial?: number; ocultarEncabezado?: boolean; continua?: boolean;
+}) {
   const color = SCOPE.titular.main;
   return (
-    <table style={{ width: "100%", borderCollapse: "collapse", border: `1px solid ${LINE}`, marginBottom: 6 }}>
-      <thead>
-        <tr style={{ background: color }}>
-          <th style={{ ...th, width: 24 }}>#</th>
-          <th style={th}>Titular</th>
-          <th style={{ ...th, textAlign: "right", width: 66 }}>Seguidores</th>
-          <th style={{ ...th, textAlign: "right", width: 62 }}>Var. audiencia</th>
-          <th style={{ ...th, textAlign: "right", width: 58 }}>Interacción</th>
-          <th style={{ ...th, textAlign: "right", width: 48 }}>Publicac.</th>
-        </tr>
-      </thead>
+    <table style={{
+      width: "100%", borderCollapse: "collapse", border: `1px solid ${LINE}`,
+      borderTop: ocultarEncabezado ? "none" : `1px solid ${LINE}`,
+      borderBottom: continua ? "none" : `1px solid ${LINE}`, marginBottom: continua ? 0 : 6,
+    }}>
+      {!ocultarEncabezado && (
+        <thead>
+          <tr style={{ background: color }}>
+            <th style={{ ...th, width: 24 }}>#</th>
+            <th style={th}>Titular</th>
+            <th style={{ ...th, textAlign: "right", width: 66 }}>Seguidores</th>
+            <th style={{ ...th, textAlign: "right", width: 62 }}>Var. audiencia</th>
+            <th style={{ ...th, textAlign: "right", width: 58 }}>Interacción</th>
+            <th style={{ ...th, textAlign: "right", width: 48 }}>Publicac.</th>
+          </tr>
+        </thead>
+      )}
       <tbody>
         {rows.map((r, i) => (
-          <tr key={i} style={{ background: i % 2 ? "#fff7f8" : "#ffffff" }}>
-            <td style={{ ...td, fontWeight: 700, color: MUTED }}>{i + 1}</td>
+          <tr key={i} style={{ background: (i + indiceInicial) % 2 ? "#fff7f8" : "#ffffff" }}>
+            <td style={{ ...td, fontWeight: 700, color: MUTED }}>{i + indiceInicial + 1}</td>
             <td style={td}>
               {r.nombre}
               <span style={{ color: "#94a3b8", fontSize: 8.4 }}> · {r.dependencia}</span>
@@ -794,6 +802,39 @@ function TitularTable({ rows }: { rows: GabineteTitularRow[] }) {
       </tbody>
     </table>
   );
+}
+
+/**
+ * Reparte las categorías de tamaño en láminas completas: antes se recortaba a
+ * las 5 primeras de 14 y media lámina quedaba en blanco.
+ */
+type TierPage<R> = {
+  label: string; nota: string; rows: R[]; inicio: number; total: number; continua: boolean; ocultarEncabezado: boolean;
+}[];
+
+function paginarTiers<R>(tiers: { label: string; nota: string; rows: R[] }[]): TierPage<R>[] {
+  const BUDGET = 580, ROW = 17.8, OVERHEAD = 52;
+  const pages: TierPage<R>[] = [];
+  let page: TierPage<R> = [];
+  let used = 0;
+  for (const t of tiers) {
+    let inicio = 0;
+    while (inicio < t.rows.length) {
+      let cap = Math.floor((BUDGET - used - OVERHEAD) / ROW);
+      if (cap < 3) {
+        if (page.length) { pages.push(page); page = []; used = 0; continue; }
+        cap = 3;
+      }
+      const rows = t.rows.slice(inicio, inicio + cap);
+      const continua = inicio + rows.length < t.rows.length;
+      page.push({ label: t.label, nota: t.nota, rows, inicio, total: t.rows.length, continua, ocultarEncabezado: inicio > 0 });
+      used += OVERHEAD + rows.length * ROW;
+      inicio += rows.length;
+      if (used > BUDGET - 80) { pages.push(page); page = []; used = 0; }
+    }
+  }
+  if (page.length) pages.push(page);
+  return pages;
 }
 
 function RankTable({ rows, color, mostrarLugarPrevio, indiceInicial = 0, ocultarEncabezado, continua }: {
