@@ -941,171 +941,241 @@ export const GabinetePdfTemplate = forwardRef<HTMLDivElement, { data: GabineteRe
   const hallazgos = (data.interpretacion?.hallazgos ?? []).slice(0, 4);
   const recos = data.interpretacion?.recomendaciones ?? [];
   const titularTiers = data.titularTiers ?? [];
+  const silencios = (data.silencios ?? []).slice(0, 12);
+  const mejores = (data.mejores ?? []).slice(0, 6);
+  const paginasInst = paginarTiers(data.tiers);
+  const paginasTit = paginarTiers(titularTiers);
 
-  return (
-    <div ref={ref} style={{ width: SLIDE_W, background: "#ffffff" }}>
-      {/* 1 — Portada e indicadores */}
-      <Slide>
-        <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-          <div style={{ borderBottom: `3px solid ${SCOPE.titular.main}`, paddingBottom: 14, marginBottom: 18 }}>
-            <div style={{ fontSize: 9.4, letterSpacing: "0.2em", textTransform: "uppercase", color: MUTED }}>
-              Panorama de comunicación digital del gabinete
-            </div>
-            <h1 style={{ fontSize: 38, fontWeight: 700, margin: "8px 0 4px", letterSpacing: "-0.02em", lineHeight: 1.1 }}>
-              {portalName}
-            </h1>
-            <div style={{ fontSize: 14, color: "#475569" }}>{data.periodoLabel}</div>
-          </div>
+  /* Orden de lectura para la Coordinación: cumplimiento, contenido, rankings y
+     al final la interpretación con sus acciones. */
+  const laminas: ((last: boolean) => React.ReactNode)[] = [];
 
-          <div style={{ display: "grid", gridTemplateColumns: `repeat(${hayTitulares ? 5 : 4}, 1fr)`, gap: 12, marginBottom: 18 }}>
-            <Kpi label="Dependencias con datos" value={String(data.dependencias)} color={SCOPE.institucional.main}
-                 foot={`${Math.max(0, data.cuentas - (data.cuentasTitulares ?? 0))} cuentas institucionales`}
-                 explain="Sólo se cuentan dependencias con al menos una cuenta institucional con datos en el corte." />
-            {hayTitulares && (
-              <Kpi label="Titulares con datos" value={String(data.titularesConDatos ?? tit.length)} color={SCOPE.titular.main}
-                   foot={`${data.cuentasTitulares ?? 0} cuentas personales`}
-                   explain="Funcionarios con al menos una cuenta personal medida en el corte." />
-            )}
-            <Kpi label="Audiencia del gabinete" value={nf(data.seguidoresTotales)} color={SCOPE.conjunto.main}
-                 foot={hayTitulares ? `Instituciones ${nf(segInst)} · Titulares ${nf(segTit)}` : "Seguidores sumados sin duplicar cuentas"}
-                 explain="Cada cuenta se cuenta una sola vez, aunque aparezca en varias cargas del mes." />
-            <Kpi label="Interacción del gabinete" value={pf(data.interaccionPonderada)} color={SCOPE.titular.main}
-                 foot={hayTitulares && data.titularesInteraccion != null
-                   ? `Instituciones ${pf(data.interaccionPonderada)} · Titulares ${pf(data.titularesInteraccion)}`
-                   : `Mediana por dependencia: ${pf(data.interaccionMediana)}`}
-                 explain="Ponderada por audiencia: las cuentas grandes pesan más que las pequeñas." />
-            <Kpi label="Publicaciones del periodo" value={data.publicacionesTotales == null ? "s/d" : nf(data.publicacionesTotales)}
-                 color={INK}
-                 foot={hayTitulares && pubInst != null ? `Instituciones ${nf(pubInst)} · Titulares ${pubTit == null ? "s/d" : nf(pubTit)}` : "Contenido publicado por el gabinete"}
-                 explain="Publicaciones registradas en el corte, sin duplicados entre cargas." />
+  laminas.push(() => (
+    <Slide key="portada">
+      <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+        <div style={{ borderBottom: `3px solid ${SCOPE.titular.main}`, paddingBottom: 14, marginBottom: 18 }}>
+          <div style={{ fontSize: 9.4, letterSpacing: "0.2em", textTransform: "uppercase", color: MUTED }}>
+            Panorama de comunicación digital del gabinete
           </div>
-
-          <div style={{
-            border: `1px solid ${LINE}`, borderLeft: `3px solid ${SCOPE.institucional.main}`,
-            borderRadius: 8, padding: "12px 14px", fontSize: 10, color: MUTED, background: "#f8fafc",
-          }}>
-            <strong style={{ color: INK }}>Cómo leer esta presentación. </strong>
-            El panorama separa dos ámbitos: las <b style={{ color: SCOPE.institucional.main }}>cuentas institucionales</b> de cada dependencia y las{" "}
-            <b style={{ color: SCOPE.titular.main }}>cuentas personales de los titulares</b>. Cada indicador y cada tabla indica a cuál de los dos corresponde;
-            cuando la cifra es del conjunto, el desglose aparece debajo del número. {data.nota}
-          </div>
-
-          <div style={{ marginTop: "auto", paddingTop: 12, fontSize: 8.6, color: "#94a3b8", textAlign: "right" }}>
-            {new Date().toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" })}
-          </div>
+          <h1 style={{ fontSize: 38, fontWeight: 700, margin: "8px 0 4px", letterSpacing: "-0.02em", lineHeight: 1.1 }}>
+            {portalName}
+          </h1>
+          <div style={{ fontSize: 14, color: "#475569" }}>{data.periodoLabel}</div>
         </div>
-      </Slide>
 
-      {/* 2 — Interpretación */}
-      {(data.interpretacion?.lectura || hallazgos.length > 0) && (
-        <Slide kicker="Lectura del corte" title="Qué significa este corte"
-               hint="Interpretación de las cifras del periodo: qué está pasando y por qué importa.">
-          {data.interpretacion?.lectura && (
-            <div style={{
-              background: "#f8fafc", borderLeft: `3px solid ${SCOPE.conjunto.main}`, borderRadius: "0 8px 8px 0",
-              padding: "10px 14px", marginBottom: 14, fontSize: 10.6, color: "#334155", lineHeight: 1.5,
-            }}>
-              {stripEmoji(data.interpretacion.lectura)}
-            </div>
+        <div style={{ display: "grid", gridTemplateColumns: `repeat(${hayTitulares ? 5 : 4}, 1fr)`, gap: 12, marginBottom: 18 }}>
+          <Kpi label="Dependencias medidas" value={String(data.dependencias)} color={SCOPE.institucional.main}
+               foot={`${Math.max(0, data.cuentas - (data.cuentasTitulares ?? 0))} cuentas institucionales`}
+               explain="Dependencias con al menos una cuenta institucional medida en el corte; el reporte no habla de ninguna otra." />
+          {hayTitulares && (
+            <Kpi label="Titulares medidos" value={String(data.titularesConDatos ?? tit.length)} color={SCOPE.titular.main}
+                 foot={`${data.cuentasTitulares ?? 0} cuentas personales`}
+                 explain="Funcionarios con al menos una cuenta personal medida en el corte." />
           )}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            {hallazgos.map((h, i) => (
-              <div key={i} style={{
-                border: `1px solid ${LINE}`, borderLeft: `3px solid ${SCOPE.conjunto.main}`,
-                borderRadius: 8, padding: "10px 12px", background: "#ffffff",
-              }}>
-                <div style={{ fontSize: 11.4, fontWeight: 700, color: INK, overflowWrap: "anywhere" }}>
-                  {i + 1}. {stripEmoji(h.titulo)}
+          <Kpi label="Audiencia del gabinete" value={nf(data.seguidoresTotales)} color={SCOPE.conjunto.main}
+               foot={hayTitulares ? `Instituciones ${nf(segInst)} · Titulares ${nf(segTit)}` : "Seguidores sumados sin duplicar cuentas"}
+               explain="Cada cuenta se cuenta una sola vez, aunque aparezca en varias cargas del mes." />
+          <Kpi label="Interacción del gabinete" value={pf(data.interaccionPonderada)} color={SCOPE.titular.main}
+               foot={hayTitulares && data.titularesInteraccion != null
+                 ? `Instituciones ${pf(data.interaccionPonderada)} · Titulares ${pf(data.titularesInteraccion)}`
+                 : `Mediana por dependencia: ${pf(data.interaccionMediana)}`}
+               explain="Ponderada por audiencia: las cuentas grandes pesan más que las pequeñas." />
+          <Kpi label="Publicaciones del periodo" value={data.publicacionesTotales == null ? "s/d" : nf(data.publicacionesTotales)}
+               color={INK}
+               foot={hayTitulares && pubInst != null ? `Instituciones ${nf(pubInst)} · Titulares ${pubTit == null ? "s/d" : nf(pubTit)}` : "Contenido publicado por el gabinete"}
+               explain="Publicaciones registradas en el corte, sin duplicados entre cargas." />
+        </div>
+
+        <div style={{
+          border: `1px solid ${LINE}`, borderLeft: `3px solid ${SCOPE.institucional.main}`,
+          borderRadius: 8, padding: "12px 14px", fontSize: 10, color: MUTED, background: "#f8fafc",
+        }}>
+          <strong style={{ color: INK }}>Cómo leer esta presentación. </strong>
+          El panorama separa dos ámbitos: las <b style={{ color: SCOPE.institucional.main }}>cuentas institucionales</b> de cada dependencia y las{" "}
+          <b style={{ color: SCOPE.titular.main }}>cuentas personales de los titulares</b>. Sólo aparecen las cuentas con datos medidos en el corte.
+          Cada indicador y cada tabla indica a cuál de los dos ámbitos corresponde; cuando la cifra es del conjunto, el desglose aparece debajo del número. {data.nota}
+        </div>
+
+        <div style={{ marginTop: "auto", paddingTop: 12, fontSize: 8.6, color: "#94a3b8", textAlign: "right" }}>
+          {new Date().toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" })}
+        </div>
+      </div>
+    </Slide>
+  ));
+
+  laminas.push((last) => (
+    <Slide key="cumplimiento" last={last} kicker="Cumplimiento del periodo"
+           title="Quién se movió y quién no publicó"
+           hint="Variaciones reales comparando las mismas cuentas contra el corte anterior; a la derecha, cuentas medidas que no publicaron nada en la ventana.">
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 18 }}>
+        <MoveList rows={data.suben} color="#059669" titulo="Quién creció" hint="Hasta 5 instituciones y 5 titulares" />
+        <MoveList rows={data.bajan} color="#dc2626" titulo="Quién retrocedió" hint="Hasta 5 instituciones y 5 titulares" />
+        <div className="pdf-avoid">
+          <SectionTitle text="Sin publicaciones en el periodo" color="#b45309"
+                        hint={silencios.length ? `${silencios.length} de las entidades medidas` : "Todas publicaron"} />
+          {silencios.length === 0 ? (
+            <div style={{ color: MUTED, fontSize: 9.5 }}>Todas las cuentas medidas publicaron en el periodo.</div>
+          ) : silencios.map((s, i) => (
+            <div key={i} style={{ padding: "4px 0", borderBottom: "1px solid #f1f5f9" }}>
+              <div style={{ fontWeight: 600 }}>
+                {s.nombre}
+                <span style={{ color: s.tipo === "titular" ? SCOPE.titular.main : SCOPE.institucional.main, fontSize: 8.2, fontWeight: 700 }}>
+                  {" "}· {s.tipo === "titular" ? "titular" : "institución"}
+                </span>
+              </div>
+              <div style={{ fontSize: 8.6, color: MUTED }}>
+                {nf(s.seguidores)} seguidores en {s.cuentas} cuenta{s.cuentas === 1 ? "" : "s"} medida{s.cuentas === 1 ? "" : "s"}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </Slide>
+  ));
+
+  if (mejores.length > 0) {
+    laminas.push((last) => (
+      <Slide key="contenido" last={last} kicker="Contenido" title="Qué funcionó en el periodo"
+             hint="Publicaciones con mayor respuesta de la gente, para replicar el enfoque en el resto del gabinete.">
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          {mejores.map((p, i) => (
+            <div key={i} style={{
+              border: `1px solid ${LINE}`,
+              borderLeft: `3px solid ${p.tipo === "titular" ? SCOPE.titular.main : p.tipo === "marca" ? SCOPE.marca.main : SCOPE.institucional.main}`,
+              borderRadius: 8, padding: "9px 12px", background: "#ffffff",
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "baseline" }}>
+                <div style={{ fontSize: 10.4, fontWeight: 700, color: INK, overflowWrap: "anywhere" }}>
+                  {p.perfil} <span style={{ color: MUTED, fontWeight: 400 }}>· {p.red}</span>
                 </div>
-                <div style={{ fontSize: 9.8, color: "#475569", marginTop: 4, overflowWrap: "anywhere" }}>
-                  {stripEmoji(h.que_pasa)}
-                </div>
-                <div style={{ fontSize: 9.8, color: "#334155", marginTop: 4, overflowWrap: "anywhere" }}>
-                  <b style={{ color: MUTED }}>Por qué importa:</b> {stripEmoji(h.por_que_importa)}
+                <div style={{ fontSize: 12, fontWeight: 700, color: SCOPE.conjunto.main, whiteSpace: "nowrap" }}>
+                  {nf(p.interacciones)}
                 </div>
               </div>
-            ))}
-          </div>
-        </Slide>
-      )}
-
-      {/* 3 — Movimientos */}
-      <Slide kicker="Movimientos del periodo" title="Quién creció y quién retrocedió"
-             hint="Instituciones y titulares; sólo variaciones reales, comparando las mismas cuentas contra el corte anterior.">
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 22 }}>
-          <MoveList rows={data.suben} color="#059669" titulo="Quién creció" hint="Hasta 3 instituciones y 3 titulares" />
-          <MoveList rows={data.bajan} color="#dc2626" titulo="Quién retrocedió" hint="Hasta 3 instituciones y 3 titulares" />
+              <div style={{ fontSize: 8.6, color: MUTED, marginTop: 2 }}>
+                {p.dependencia}{p.fecha ? ` · ${new Date(`${String(p.fecha).slice(0, 10)}T00:00:00`).toLocaleDateString("es-MX", { day: "2-digit", month: "short" })}` : ""}
+              </div>
+              <div style={{ fontSize: 9.4, color: "#475569", marginTop: 5, overflowWrap: "anywhere" }}>
+                {stripEmoji(p.texto).slice(0, 230)}{p.texto.length > 230 ? "…" : ""}
+              </div>
+            </div>
+          ))}
         </div>
       </Slide>
+    ));
+  }
 
-      {/* 4 — Dependencias por tamaño */}
-      <Slide kicker="Instituciones" title="Dependencias por tamaño de audiencia"
-             hint="Cuentas institucionales, agrupadas para comparar entre iguales."
-             last={titularTiers.length === 0 && recos.length === 0}>
-        {data.tiers.map((t) => (
-          <div key={t.label} style={{ marginBottom: 10 }}>
-            <SectionTitle text={t.label} color={SCOPE.institucional.main}
-                          hint={t.rows.length > 5 ? `${t.nota} · se muestran las 5 primeras de ${t.rows.length}` : t.nota} />
-            <RankTable rows={t.rows.slice(0, 5)} color={SCOPE.institucional.main} mostrarLugarPrevio />
+  paginasInst.forEach((pagina, idx) => {
+    laminas.push((last) => (
+      <Slide key={`inst-${idx}`} last={last} kicker="Instituciones"
+             title={idx === 0 ? "Dependencias por tamaño de audiencia" : "Dependencias por tamaño de audiencia (continúa)"}
+             hint="Cuentas institucionales, agrupadas para comparar entre iguales.">
+        {pagina.map((b, i) => (
+          <div key={i} style={{ marginBottom: b.continua ? 0 : 10 }}>
+            {!b.ocultarEncabezado && (
+              <SectionTitle text={b.label} color={SCOPE.institucional.main}
+                            hint={b.total > b.rows.length ? `${b.nota} · ${b.total} dependencias en total` : b.nota} />
+            )}
+            <RankTable rows={b.rows} color={SCOPE.institucional.main} mostrarLugarPrevio
+                       indiceInicial={b.inicio} ocultarEncabezado={b.ocultarEncabezado} continua={b.continua} />
           </div>
         ))}
       </Slide>
+    ));
+  });
 
-      {/* 5 — Titulares por tamaño */}
-      {titularTiers.length > 0 && (
-        <Slide kicker="Titulares" title="Titulares por tamaño de audiencia"
-               hint={`Cuentas personales de los funcionarios${data.titularesInteraccion != null ? ` · interacción ponderada ${pf(data.titularesInteraccion)}` : ""}`}
-               last={recos.length === 0}>
-          {titularTiers.map((t) => (
-            <div key={t.label} style={{ marginBottom: 10 }}>
-              <SectionTitle text={t.label} color={SCOPE.titular.main}
-                            hint={t.rows.length > 5 ? `${t.nota} · se muestran los 5 primeros de ${t.rows.length}` : t.nota} />
-              <TitularTable rows={t.rows.slice(0, 5)} />
+  paginasTit.forEach((pagina, idx) => {
+    laminas.push((last) => (
+      <Slide key={`tit-${idx}`} last={last} kicker="Titulares"
+             title={idx === 0 ? "Titulares por tamaño de audiencia" : "Titulares por tamaño de audiencia (continúa)"}
+             hint={`Cuentas personales de los funcionarios${data.titularesInteraccion != null ? ` · interacción ponderada ${pf(data.titularesInteraccion)}` : ""}`}>
+        {pagina.map((b, i) => (
+          <div key={i} style={{ marginBottom: b.continua ? 0 : 10 }}>
+            {!b.ocultarEncabezado && (
+              <SectionTitle text={b.label} color={SCOPE.titular.main}
+                            hint={b.total > b.rows.length ? `${b.nota} · ${b.total} titulares en total` : b.nota} />
+            )}
+            <TitularTable rows={b.rows} indiceInicial={b.inicio} ocultarEncabezado={b.ocultarEncabezado} continua={b.continua} />
+          </div>
+        ))}
+      </Slide>
+    ));
+  });
+
+  if (data.interpretacion?.lectura || hallazgos.length > 0) {
+    laminas.push((last) => (
+      <Slide key="lectura" last={last} kicker="Lectura del corte" title="Qué significa este corte"
+             hint="Interpretación de las cifras del periodo: qué está pasando y por qué importa.">
+        {data.interpretacion?.lectura && (
+          <div style={{
+            background: "#f8fafc", borderLeft: `3px solid ${SCOPE.conjunto.main}`, borderRadius: "0 8px 8px 0",
+            padding: "10px 14px", marginBottom: 14, fontSize: 10.6, color: "#334155", lineHeight: 1.5,
+          }}>
+            {stripEmoji(data.interpretacion.lectura)}
+          </div>
+        )}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          {hallazgos.map((h, i) => (
+            <div key={i} style={{
+              border: `1px solid ${LINE}`, borderLeft: `3px solid ${SCOPE.conjunto.main}`,
+              borderRadius: 8, padding: "10px 12px", background: "#ffffff",
+            }}>
+              <div style={{ fontSize: 11.4, fontWeight: 700, color: INK, overflowWrap: "anywhere" }}>
+                {i + 1}. {stripEmoji(h.titulo)}
+              </div>
+              <div style={{ fontSize: 9.8, color: "#475569", marginTop: 4, overflowWrap: "anywhere" }}>
+                {stripEmoji(h.que_pasa)}
+              </div>
+              <div style={{ fontSize: 9.8, color: "#334155", marginTop: 4, overflowWrap: "anywhere" }}>
+                <b style={{ color: MUTED }}>Por qué importa:</b> {stripEmoji(h.por_que_importa)}
+              </div>
             </div>
           ))}
-          {data.sinDatos.length > 0 && (
-            <div style={{ marginTop: 6, fontSize: 8.6, color: MUTED }}>
-              <strong style={{ color: INK }}>Sin datos en este corte: </strong>{data.sinDatos.join(" · ")}
-            </div>
-          )}
-        </Slide>
-      )}
+        </div>
+      </Slide>
+    ));
+  }
 
-      {/* 6 — Recomendaciones */}
-      {recos.length > 0 && (
-        <Slide kicker="Siguientes pasos" title="Qué hacer ahora"
-               hint="Acciones sugeridas a partir de los cambios del periodo y el contenido publicado."
-               last>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            {recos.slice(0, 6).map((r, i) => (
-              <div key={i} style={{
-                border: `1px solid ${LINE}`,
-                borderLeft: `3px solid ${r.prioridad === "alta" ? SCOPE.titular.main : SCOPE.institucional.main}`,
-                borderRadius: 8, padding: "10px 12px", background: "#ffffff",
-              }}>
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "flex-start" }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: INK, overflowWrap: "anywhere" }}>
-                    {i + 1}. {stripEmoji(r.accion)}
-                  </div>
-                  {r.prioridad && (
-                    <span style={{
-                      fontSize: 8, textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 700,
-                      color: r.prioridad === "alta" ? SCOPE.titular.main : SCOPE.institucional.main, whiteSpace: "nowrap",
-                    }}>
-                      {r.prioridad}
-                    </span>
-                  )}
+  if (recos.length > 0) {
+    laminas.push((last) => (
+      <Slide key="recos" last={last} kicker="Siguientes pasos" title="Qué hacer ahora"
+             hint="Acciones sugeridas a partir de los cambios del periodo y el contenido publicado.">
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          {recos.slice(0, 6).map((r, i) => (
+            <div key={i} style={{
+              border: `1px solid ${LINE}`,
+              borderLeft: `3px solid ${r.prioridad === "alta" ? SCOPE.titular.main : SCOPE.institucional.main}`,
+              borderRadius: 8, padding: "10px 12px", background: "#ffffff",
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "flex-start" }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: INK, overflowWrap: "anywhere" }}>
+                  {i + 1}. {stripEmoji(r.accion)}
                 </div>
-                <div style={{ fontSize: 9.6, color: "#475569", marginTop: 4, overflowWrap: "anywhere" }}>
-                  <b style={{ color: MUTED }}>Porque:</b> {stripEmoji(r.porque)}
-                </div>
+                {r.prioridad && (
+                  <span style={{
+                    fontSize: 8, textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 700,
+                    color: r.prioridad === "alta" ? SCOPE.titular.main : SCOPE.institucional.main, whiteSpace: "nowrap",
+                  }}>
+                    {r.prioridad}
+                  </span>
+                )}
               </div>
-            ))}
-          </div>
-        </Slide>
-      )}
+              <div style={{ fontSize: 9.6, color: "#475569", marginTop: 4, overflowWrap: "anywhere" }}>
+                <b style={{ color: MUTED }}>Porque:</b> {stripEmoji(r.porque)}
+              </div>
+            </div>
+          ))}
+        </div>
+      </Slide>
+    ));
+  }
+
+  return (
+    <div ref={ref} style={{ width: SLIDE_W, background: "#ffffff" }}>
+      {laminas.map((render, i) => render(i === laminas.length - 1))}
     </div>
   );
 });
 GabinetePdfTemplate.displayName = "GabinetePdfTemplate";
+
 
