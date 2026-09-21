@@ -127,3 +127,41 @@ export function uniqueMetricsForPeriods<T extends BenchmarkMetric>(
   }
   return Array.from(byAccount.values());
 }
+const dayDistance = (a: string, b: string) =>
+  Math.abs(Math.round((new Date(`${a}T00:00:00`).getTime() - new Date(`${b}T00:00:00`).getTime()) / 86_400_000));
+
+/**
+ * Accounts loaded through a single accumulated export have no snapshot inside
+ * older cuts, so a past-month report would show them without followers or
+ * engagement. For those accounts we reuse the snapshot closest to the report
+ * window (a past cut wins over a later one) instead of dropping the row.
+ * Only apply this to the current window: previous-period buckets must stay
+ * empty so growth deltas are never computed against a borrowed snapshot.
+ */
+export function fillMissingAccountSnapshots<T extends BenchmarkMetric>(
+  base: T[],
+  allMetrics: T[],
+  accountIdentity: ReadonlyMap<string, string> | undefined,
+  periods: readonly BenchmarkPeriod[],
+  refDate?: string | null,
+): T[] {
+  if (!refDate || !base.length) return base;
+  const keyOf = (metric: BenchmarkMetric) =>
+    `${accountIdentity?.get(metric.competitor_id) ?? metric.competitor_id}|${metric.network.toLowerCase()}`;
+  const present = new Set(base.map(keyOf));
+  const periodById = new Map(periods.map((period) => [period.id, period]));
+  const best = new Map<string, { metric: T; past: number; distance: number }>();
+  for (const metric of allMetrics) {
+    const key = keyOf(metric);
+    if (present.has(key)) continue;
+    const period = periodById.get(metric.period_id);
+    if (!period) continue;
+    const past = period.period_end <= refDate ? 0 : 1;
+    const distance = dayDistance(period.period_end, refDate);
+    const current = best.get(key);
+    if (!current || past < current.past || (past === current.past && distance < current.distance)) {
+      best.set(key, { metric, past, distance });
+    }
+  }
+  return [...base, ...Array.from(best.values(), (entry) => entry.metric)];
+}

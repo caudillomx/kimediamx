@@ -14,6 +14,7 @@ import {
   periodMonthLabel,
   periodRangeForDisplayLabel,
   uniqueMetricsForPeriods,
+  fillMissingAccountSnapshots,
 } from "@/lib/benchmarkReportData";
 import { benchmarkPostKey, resolveGabineteMention, weightedRate } from "@/lib/gabineteReportUtils";
 import { benchmarkAccountKey, buildValidCompetitorMaps, titularAccountIds } from "@/lib/benchmarkAccountIdentity";
@@ -214,6 +215,16 @@ export default function PortalDescargas({
     return activePeriods.reduce((a, b) => (b.period_end > a.period_end ? b : a)).period_label;
   }, [activePeriods]);
 
+  /**
+   * Fecha de cierre de la ventana elegida. Sirve de referencia para reutilizar
+   * el snapshot más cercano de una cuenta que no tenga corte propio en ese mes
+   * o semana (cuentas dadas de alta con una exportación acumulada).
+   */
+  const cutRefDate = useMemo(() => {
+    if (isRange) return weekTo;
+    return periodRangeForDisplayLabel(periodLabel, periods)?.to ?? null;
+  }, [isRange, weekTo, periodLabel, periods]);
+
 
 
 
@@ -248,9 +259,14 @@ export default function PortalDescargas({
     marca: "Solo cuentas de marca o destino",
   };
 
-  /** Una sola métrica por cuenta+red (evita duplicados por cargas repetidas del mismo corte). */
-  const uniqueMetrics = (periodIds: string[]) => {
-    return uniqueMetricsForPeriods(metrics, periodIds, accountIdentity, periods);
+  /**
+   * Una sola métrica por cuenta+red (evita duplicados por cargas repetidas del
+   * mismo corte). Con `refDate` se rellenan las cuentas sin corte propio en esa
+   * ventana usando su snapshot más cercano.
+   */
+  const uniqueMetrics = (periodIds: string[], refDate?: string | null) => {
+    const base = uniqueMetricsForPeriods(metrics, periodIds, accountIdentity, periods);
+    return fillMissingAccountSnapshots(base, metrics, accountIdentity, periods, refDate);
   };
 
   /** Agregado por dependencia para un conjunto de periodos y un ámbito. */
@@ -408,7 +424,9 @@ export default function PortalDescargas({
     const reportPrevPeriods = selectPreviousReportPeriods(reportPeriods, reportLabels);
     const periodIds = reportActivePeriods.map((p) => p.id);
     const prevIds = reportPrevPeriods.map((p) => p.id);
-    const reportMetricIds = Array.from(new Set([...periodIds, ...prevIds]));
+    // Se traen las métricas de TODOS los cortes: las cuentas sin snapshot en la
+    // ventana elegida se rellenan con el más cercano de su histórico.
+    const reportMetricIds = Array.from(new Set([...reportPeriods.map((p) => p.id), ...periodIds, ...prevIds]));
     const freshMetrics = reportMetricIds.length
       ? await fetchAllPages<Metric>((from, to) =>
           supabase.from("client_portal_benchmark_metrics")
@@ -419,13 +437,16 @@ export default function PortalDescargas({
     const reportMetrics = freshMetrics.length ? freshMetrics : metrics;
     const reportAccountIdentity = new Map(reportCompetitors.map((c) => [c.id, benchmarkAccountKey(c)]));
     const reportCompetitorMaps = buildValidCompetitorMaps(reportCompetitors, dependencias);
-    const reportUniqueMetrics = (ids: string[]) => uniqueMetricsForPeriods(reportMetrics, ids, reportAccountIdentity, reportPeriods);
+    const reportUniqueMetrics = (ids: string[], refDate?: string | null) => {
+      const base = uniqueMetricsForPeriods(reportMetrics, ids, reportAccountIdentity, reportPeriods);
+      return fillMissingAccountSnapshots(base, reportMetrics, reportAccountIdentity, reportPeriods, refDate);
+    };
     const reportDepOfCompetitor = reportCompetitorMaps.depOfCompetitor;
     const reportTypeOfCompetitor = reportCompetitorMaps.typeOfCompetitor;
 
-    const aggregateForReport = (ids: string[], scope: "combinado" | ScopeKey = enfoque) => {
+    const aggregateForReport = (ids: string[], scope: "combinado" | ScopeKey = enfoque, refDate?: string | null) => {
       const acc = new Map<string, { followers: number; eng: { rate: number | null; weight: number | null }[]; posts: number[] }>();
-      for (const m of reportUniqueMetrics(ids)) {
+      for (const m of reportUniqueMetrics(ids, refDate)) {
         const targetDep = reportDepOfCompetitor.get(m.competitor_id);
         if (!targetDep) continue;
         if (!matchesScope(reportTypeOfCompetitor.get(m.competitor_id), scope)) continue;
@@ -553,7 +574,7 @@ export default function PortalDescargas({
 
 
     const latestMetricByIdentity = new Map(
-      reportUniqueMetrics(periodIds)
+      reportUniqueMetrics(periodIds, winTo)
         .filter((m) => depIdentityKeys.has(reportAccountIdentity.get(m.competitor_id) ?? m.competitor_id))
         .map((m) => [`${reportAccountIdentity.get(m.competitor_id) ?? m.competitor_id}|${m.network.toLowerCase()}`, m]),
     );
@@ -586,7 +607,7 @@ export default function PortalDescargas({
 
     // Rankings del gabinete por ámbito.
     const rankingDe = (scope: "combinado" | ScopeKey) => {
-      const curr = aggregateForReport(periodIds, scope);
+      const curr = aggregateForReport(periodIds, scope, winTo);
       const prev = aggregateForReport(prevIds, scope);
       const order = (map: typeof curr) => Array.from(map.entries())
         .filter(([, v]) => v.engagement != null)
@@ -806,9 +827,9 @@ export default function PortalDescargas({
     const depName = new Map(dependencias.map((d) => [d.id, d.nombre]));
 
     type Bucket = { followers: number; eng: { rate: number | null; weight: number | null }[]; accounts: Map<string, number> };
-    const collect = (ids: string[]) => {
+    const collect = (ids: string[], refDate?: string | null) => {
       const acc = new Map<string, Bucket>();
-      for (const m of uniqueMetrics(ids)) {
+      for (const m of uniqueMetrics(ids, refDate)) {
         const dep = depOfCompetitor.get(m.competitor_id);
         if (!dep) continue;
         if (!matchesRowScope(typeOfCompetitor.get(m.competitor_id))) continue;
@@ -826,7 +847,7 @@ export default function PortalDescargas({
       return acc;
     };
 
-    const curr = collect(currIds);
+    const curr = collect(currIds, cutRefDate);
     const prev = collect(prevIds);
 
     // Publicaciones del corte contadas por su FECHA REAL dentro de la ventana
@@ -950,9 +971,9 @@ export default function PortalDescargas({
     const strip = ({ _base, id, ...rest }: (typeof rows)[number]) => rest as GabineteRankRow;
 
     /* ---- Bloque breve de titulares (cuentas personales de los funcionarios) ---- */
-    const titularBuckets = (ids: string[]) => {
+    const titularBuckets = (ids: string[], refDate?: string | null) => {
       const acc = new Map<string, Bucket>();
-      for (const m of uniqueMetrics(ids)) {
+      for (const m of uniqueMetrics(ids, refDate)) {
         const dep = depOfCompetitor.get(m.competitor_id);
         if (!dep) continue;
         if ((typeOfCompetitor.get(m.competitor_id) ?? "institucional") !== "titular") continue;
@@ -970,7 +991,7 @@ export default function PortalDescargas({
       return acc;
     };
 
-    const tCurr = titularBuckets(currIds);
+    const tCurr = titularBuckets(currIds, cutRefDate);
     const tPrev = titularBuckets(prevIds);
     const depById = new Map(dependencias.map((d) => [d.id, d]));
 
