@@ -1234,6 +1234,13 @@ export default function PortalDescargas({
         publicaciones: t.publicaciones,
         variacion_audiencia_pct: t.comparable && t.deltaSeguidores != null ? Number((t.deltaSeguidores * 100).toFixed(2)) : "no comparable",
       })),
+      cuentas_de_marca_o_destino: (g.marcas ?? []).map((m) => ({
+        dependencia: m.nombre,
+        seguidores: m.seguidores,
+        interaccion_pct: m.engagement == null ? null : Number((m.engagement * 100).toFixed(3)),
+        publicaciones: m.publicaciones,
+        variacion_audiencia_pct: m.comparable && m.deltaSeguidores != null ? Number((m.deltaSeguidores * 100).toFixed(2)) : "no comparable",
+      })),
 
       interaccion_titulares_pct: g.titularesInteraccion == null ? null : Number((g.titularesInteraccion * 100).toFixed(3)),
       nota_metodologica: g.nota,
