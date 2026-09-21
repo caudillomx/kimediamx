@@ -1007,9 +1007,11 @@ export const GabinetePdfTemplate = forwardRef<HTMLDivElement, { data: GabineteRe
           borderRadius: 8, padding: "12px 14px", fontSize: 10, color: MUTED, background: "#f8fafc",
         }}>
           <strong style={{ color: INK }}>Cómo leer esta presentación. </strong>
-          El panorama separa dos ámbitos: las <b style={{ color: SCOPE.institucional.main }}>cuentas institucionales</b> de cada dependencia y las{" "}
-          <b style={{ color: SCOPE.titular.main }}>cuentas personales de los titulares</b>. Sólo aparecen las cuentas con datos medidos en el corte.
-          Cada indicador y cada tabla indica a cuál de los dos ámbitos corresponde; cuando la cifra es del conjunto, el desglose aparece debajo del número. {data.nota}
+          El panorama separa las <b style={{ color: SCOPE.institucional.main }}>cuentas institucionales</b> de cada dependencia y las{" "}
+          <b style={{ color: SCOPE.titular.main }}>cuentas personales de los titulares</b>
+          {hayMarcas && <>, más las <b style={{ color: SCOPE.marca.main }}>cuentas de marca o destino</b> que algunas dependencias operan sin nombre institucional</>}.
+          Sólo aparecen las cuentas con datos medidos en el corte.
+          Cada indicador y cada tabla indica a qué ámbito corresponde; cuando la cifra es del conjunto, el desglose aparece debajo del número. {data.nota}
         </div>
 
         <div style={{ marginTop: "auto", paddingTop: 12, fontSize: 8.6, color: "#94a3b8", textAlign: "right" }}>
