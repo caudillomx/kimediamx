@@ -136,10 +136,16 @@ export type GabineteReportData = {
   seguidoresTitulares?: number;
   publicacionesTitulares?: number | null;
   titularTiers?: GabineteTitularTier[];
+  /** Cuentas de marca o destino que operan las dependencias (turismo, campañas). */
+  marcas?: GabineteTitularRow[];
+  seguidoresMarca?: number;
+  cuentasMarca?: number;
+  publicacionesMarca?: number | null;
+  marcaInteraccion?: number | null;
   suben: GabineteMoveRow[];
   bajan: GabineteMoveRow[];
   /** Entidades medidas en el corte que no publicaron en la ventana. */
-  silencios?: { nombre: string; tipo: "institucional" | "titular"; cuentas: number; seguidores: number | null }[];
+  silencios?: { nombre: string; tipo: ScopeKey; cuentas: number; seguidores: number | null }[];
   /** Publicaciones con mejor respuesta del periodo. */
   mejores?: { perfil: string; red: string; dependencia: string; tipo: string; fecha: string | null; texto: string; interacciones: number }[];
   comparables: number;
