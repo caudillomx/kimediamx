@@ -437,7 +437,10 @@ export default function PortalDescargas({
     const reportMetrics = freshMetrics.length ? freshMetrics : metrics;
     const reportAccountIdentity = new Map(reportCompetitors.map((c) => [c.id, benchmarkAccountKey(c)]));
     const reportCompetitorMaps = buildValidCompetitorMaps(reportCompetitors, dependencias);
-    const reportUniqueMetrics = (ids: string[]) => uniqueMetricsForPeriods(reportMetrics, ids, reportAccountIdentity, reportPeriods);
+    const reportUniqueMetrics = (ids: string[], refDate?: string | null) => {
+      const base = uniqueMetricsForPeriods(reportMetrics, ids, reportAccountIdentity, reportPeriods);
+      return fillMissingAccountSnapshots(base, reportMetrics, reportAccountIdentity, reportPeriods, refDate);
+    };
     const reportDepOfCompetitor = reportCompetitorMaps.depOfCompetitor;
     const reportTypeOfCompetitor = reportCompetitorMaps.typeOfCompetitor;
 
