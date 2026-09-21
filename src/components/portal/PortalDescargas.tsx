@@ -995,12 +995,12 @@ export default function PortalDescargas({
     const strip = ({ _base, id, ...rest }: (typeof rows)[number]) => rest as GabineteRankRow;
 
     /* ---- Bloque breve de titulares (cuentas personales de los funcionarios) ---- */
-    const titularBuckets = (ids: string[], refDate?: string | null) => {
+    const scopeBuckets = (ids: string[], scope: ScopeKey, refDate?: string | null) => {
       const acc = new Map<string, Bucket>();
       for (const m of uniqueMetrics(ids, refDate)) {
         const dep = depOfCompetitor.get(m.competitor_id);
         if (!dep) continue;
-        if ((typeOfCompetitor.get(m.competitor_id) ?? "institucional") !== "titular") continue;
+        if ((typeOfCompetitor.get(m.competitor_id) ?? "institucional") !== scope) continue;
         const bucket = acc.get(dep) ?? { followers: 0, eng: [], accounts: new Map() };
         const followers = Number(m.followers);
         const hasFollowers = Number.isFinite(followers);
@@ -1015,8 +1015,8 @@ export default function PortalDescargas({
       return acc;
     };
 
-    const tCurr = titularBuckets(currIds, cutRefDate);
-    const tPrev = titularBuckets(prevIds);
+    const tCurr = scopeBuckets(currIds, "titular", cutRefDate);
+    const tPrev = scopeBuckets(prevIds, "titular");
     const depById = new Map(dependencias.map((d) => [d.id, d]));
 
 
