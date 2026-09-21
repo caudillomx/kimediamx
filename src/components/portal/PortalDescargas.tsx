@@ -1109,7 +1109,9 @@ export default function PortalDescargas({
       suben: mezclarMovs(allMovers.filter((m) => m.delta > 0), (a, b) => b.delta - a.delta),
       bajan: mezclarMovs(allMovers.filter((m) => m.delta < 0), (a, b) => a.delta - b.delta),
 
-      sinDatos: sinDatos.slice(0, 20),
+      silencios,
+      mejores,
+
       comparables: rows.filter((r) => r.comparable).length,
       nota: prevIds.length
         ? `Cada cuenta se cuenta una sola vez, aunque el mes tenga varias cargas. Las publicaciones se cuentan por su fecha real entre el ${fmtDia(winFrom)} y el ${fmtDia(winTo)}, sin repetir las que aparecen en más de una carga. Las variaciones comparan únicamente las cuentas que existían en los dos cortes, por eso una dependencia que sumó cuentas nuevas aparece como “nuevo” y no como un crecimiento inflado. La interacción está ponderada por audiencia.`
