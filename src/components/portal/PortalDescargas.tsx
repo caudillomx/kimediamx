@@ -721,13 +721,16 @@ export default function PortalDescargas({
     };
 
 
-    // El bloque de marca solo aparece si la dependencia tiene cuentas de ese tipo,
-    // para no ensuciar los reportes de las dependencias que no las operan.
-    const hayMarca = cuentas.some((c) => (c.tipo ?? "institucional") === "marca");
+    // En modo combinado solo se imprimen los ámbitos donde la dependencia
+    // realmente tiene cuentas medidas: antes una dependencia sin cuentas
+    // institucionales (p. ej. la Presidencia del DIF, que solo tiene al titular)
+    // mostraba un bloque institucional con ceros y "s/d" por todas partes.
+    const tiene = (scope: ScopeKey) => cuentas.some((c) => (c.tipo ?? "institucional") === scope);
     const bloques: ScopeBlock[] =
       enfoque === "combinado"
-        ? [bloqueDe("institucional"), bloqueDe("titular"), ...(hayMarca ? [bloqueDe("marca")] : [])]
+        ? (["institucional", "titular", "marca"] as ScopeKey[]).filter(tiene).map(bloqueDe)
         : [bloqueDe(enfoque)];
+
 
     const comb = rankingDe("combinado");
     const conjunto = enfoque === "combinado"
@@ -793,7 +796,10 @@ export default function PortalDescargas({
       titularCargo: dep.titular_cargo,
       periodoLabel: cutLabel,
       modo: enfoque,
-      enfoqueLabel: ENFOQUE_LABEL[enfoque],
+      enfoqueLabel: enfoque === "combinado" && bloques.length === 1
+        ? ENFOQUE_LABEL[bloques[0].key]
+        : ENFOQUE_LABEL[enfoque],
+
       bloques,
       conjunto,
       recomendaciones,
