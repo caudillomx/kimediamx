@@ -424,7 +424,9 @@ export default function PortalDescargas({
     const reportPrevPeriods = selectPreviousReportPeriods(reportPeriods, reportLabels);
     const periodIds = reportActivePeriods.map((p) => p.id);
     const prevIds = reportPrevPeriods.map((p) => p.id);
-    const reportMetricIds = Array.from(new Set([...periodIds, ...prevIds]));
+    // Se traen las métricas de TODOS los cortes: las cuentas sin snapshot en la
+    // ventana elegida se rellenan con el más cercano de su histórico.
+    const reportMetricIds = Array.from(new Set([...reportPeriods.map((p) => p.id), ...periodIds, ...prevIds]));
     const freshMetrics = reportMetricIds.length
       ? await fetchAllPages<Metric>((from, to) =>
           supabase.from("client_portal_benchmark_metrics")
