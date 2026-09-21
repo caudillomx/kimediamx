@@ -847,7 +847,7 @@ export default function PortalDescargas({
       return acc;
     };
 
-    const curr = collect(currIds);
+    const curr = collect(currIds, cutRefDate);
     const prev = collect(prevIds);
 
     // Publicaciones del corte contadas por su FECHA REAL dentro de la ventana
