@@ -940,10 +940,16 @@ export const GabinetePdfTemplate = forwardRef<HTMLDivElement, { data: GabineteRe
 
   const tit = data.titulares ?? [];
   const hayTitulares = tit.length > 0;
+  const marcas = data.marcas ?? [];
+  const hayMarcas = marcas.length > 0;
   const segTit = data.seguidoresTitulares ?? 0;
-  const segInst = Math.max(0, data.seguidoresTotales - segTit);
+  const segMarca = data.seguidoresMarca ?? 0;
+  const segInst = Math.max(0, data.seguidoresTotales - segTit - segMarca);
   const pubTit = data.publicacionesTitulares ?? null;
-  const pubInst = data.publicacionesTotales == null ? null : Math.max(0, data.publicacionesTotales - (pubTit ?? 0));
+  const pubMarca = data.publicacionesMarca ?? null;
+  const pubInst = data.publicacionesTotales == null
+    ? null
+    : Math.max(0, data.publicacionesTotales - (pubTit ?? 0) - (pubMarca ?? 0));
   const hallazgos = (data.interpretacion?.hallazgos ?? []).slice(0, 4);
   const recos = data.interpretacion?.recomendaciones ?? [];
   const titularTiers = data.titularTiers ?? [];
