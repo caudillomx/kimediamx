@@ -259,9 +259,14 @@ export default function PortalDescargas({
     marca: "Solo cuentas de marca o destino",
   };
 
-  /** Una sola métrica por cuenta+red (evita duplicados por cargas repetidas del mismo corte). */
-  const uniqueMetrics = (periodIds: string[]) => {
-    return uniqueMetricsForPeriods(metrics, periodIds, accountIdentity, periods);
+  /**
+   * Una sola métrica por cuenta+red (evita duplicados por cargas repetidas del
+   * mismo corte). Con `refDate` se rellenan las cuentas sin corte propio en esa
+   * ventana usando su snapshot más cercano.
+   */
+  const uniqueMetrics = (periodIds: string[], refDate?: string | null) => {
+    const base = uniqueMetricsForPeriods(metrics, periodIds, accountIdentity, periods);
+    return fillMissingAccountSnapshots(base, metrics, accountIdentity, periods, refDate);
   };
 
   /** Agregado por dependencia para un conjunto de periodos y un ámbito. */
