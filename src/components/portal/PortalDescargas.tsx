@@ -14,6 +14,7 @@ import {
   periodMonthLabel,
   periodRangeForDisplayLabel,
   uniqueMetricsForPeriods,
+  fillMissingAccountSnapshots,
 } from "@/lib/benchmarkReportData";
 import { benchmarkPostKey, resolveGabineteMention, weightedRate } from "@/lib/gabineteReportUtils";
 import { benchmarkAccountKey, buildValidCompetitorMaps, titularAccountIds } from "@/lib/benchmarkAccountIdentity";
