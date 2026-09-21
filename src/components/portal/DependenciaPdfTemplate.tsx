@@ -1035,8 +1035,8 @@ export const GabinetePdfTemplate = forwardRef<HTMLDivElement, { data: GabineteRe
             <div key={i} style={{ padding: "4px 0", borderBottom: "1px solid #f1f5f9" }}>
               <div style={{ fontWeight: 600 }}>
                 {s.nombre}
-                <span style={{ color: s.tipo === "titular" ? SCOPE.titular.main : SCOPE.institucional.main, fontSize: 8.2, fontWeight: 700 }}>
-                  {" "}· {s.tipo === "titular" ? "titular" : "institución"}
+                <span style={{ color: SCOPE[s.tipo].main, fontSize: 8.2, fontWeight: 700 }}>
+                  {" "}· {s.tipo === "titular" ? "titular" : s.tipo === "marca" ? "marca / destino" : "institución"}
                 </span>
               </div>
               <div style={{ fontSize: 8.6, color: MUTED }}>
