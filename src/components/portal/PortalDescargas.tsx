@@ -1076,6 +1076,16 @@ export default function PortalDescargas({
       ? Array.from(titularPosts.values()).reduce((a, b) => a + b, 0)
       : null;
 
+    // Cuentas medidas que no publicaron en la ventana: es cumplimiento real,
+    // no un hueco de captura, porque sí tienen datos en el corte.
+    const silencios = [
+      ...silenciosInst,
+      ...titulares
+        .filter((r) => !(r.publicaciones ?? 0))
+        .map((r) => ({ nombre: `${r.nombre} (${r.dependencia})`, tipo: "titular" as const, cuentas: r.cuentas, seguidores: r.seguidores })),
+    ].sort((a, b) => (b.seguidores ?? 0) - (a.seguidores ?? 0));
+
+
     return {
       periodoLabel: `${cutLabel} · ${ENFOQUE_LABEL[enfoque]}`,
       dependencias: rows.length,
