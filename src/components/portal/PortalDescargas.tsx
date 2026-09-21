@@ -215,6 +215,16 @@ export default function PortalDescargas({
     return activePeriods.reduce((a, b) => (b.period_end > a.period_end ? b : a)).period_label;
   }, [activePeriods]);
 
+  /**
+   * Fecha de cierre de la ventana elegida. Sirve de referencia para reutilizar
+   * el snapshot más cercano de una cuenta que no tenga corte propio en ese mes
+   * o semana (cuentas dadas de alta con una exportación acumulada).
+   */
+  const cutRefDate = useMemo(() => {
+    if (isRange) return weekTo;
+    return periodRangeForDisplayLabel(periodLabel, periods)?.to ?? null;
+  }, [isRange, weekTo, periodLabel, periods]);
+
 
 
 
