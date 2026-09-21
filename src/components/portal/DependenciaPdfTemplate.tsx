@@ -684,28 +684,34 @@ export const DependenciaPdfTemplate = forwardRef<HTMLDivElement, { data: Depende
       }}>
         {combinado ? (
           <>
-            <b>Cómo leer este reporte.</b> Incluye dos bloques independientes: en <span style={{ color: SCOPE.institucional.main, fontWeight: 700 }}>azul</span> lo que corresponde a las cuentas
-            institucionales de la dependencia, en <span style={{ color: SCOPE.titular.main, fontWeight: 700 }}>rojo</span> lo que corresponde a las cuentas personales del titular y en{" "}
-            <span style={{ color: SCOPE.marca.main, fontWeight: 700 }}>verde</span> las cuentas de marca o destino, cuando existen.
-            Cada bloque tiene sus propios indicadores, cuentas, narrativas y publicaciones; el resumen conjunto de abajo suma ambos.
+            <b>Cómo leer este reporte.</b> Incluye un bloque independiente por ámbito medido:
+            {ambitos.includes("institucional") && <> en <span style={{ color: SCOPE.institucional.main, fontWeight: 700 }}>azul</span> las cuentas institucionales de la dependencia,</>}
+            {ambitos.includes("titular") && <> en <span style={{ color: SCOPE.titular.main, fontWeight: 700 }}>rojo</span> las cuentas personales del titular,</>}
+            {ambitos.includes("marca") && <> en <span style={{ color: SCOPE.marca.main, fontWeight: 700 }}>verde</span> las cuentas de marca o destino,</>}
+            {" "}cada uno con sus propios indicadores, cuentas, narrativas y publicaciones; el resumen conjunto de abajo los suma.
+            Solo aparecen los ámbitos en los que la dependencia tiene cuentas medidas.
             Cada indicador incluye una nota que explica qué mide y por qué importa, y al final encontrará un glosario con los términos técnicos.
           </>
-        ) : data.modo === "marca" ? (
+        ) : ambitos[0] === "marca" ? (
           <>
             <b>Cómo leer este reporte.</b> Considera únicamente las cuentas de marca o destino que opera la dependencia. Las cuentas institucionales y las personales del
             titular quedan fuera y la posición se compara contra el resto de cuentas de marca del gabinete.
           </>
-        ) : data.modo === "titular" ? (
+        ) : ambitos[0] === "titular" ? (
           <>
             <b>Cómo leer este reporte.</b> Considera únicamente las cuentas personales del titular
-            {data.titular ? ` (${data.titular})` : ""}. Los indicadores institucionales de la dependencia no se incluyen y la posición se compara contra el resto de titulares del gabinete.
+            {data.titular ? ` (${data.titular})` : ""}
+            {data.modo === "combinado" ? ", que son las únicas cuentas medidas de esta dependencia" : ". Los indicadores institucionales de la dependencia no se incluyen"}
+            {" "}y la posición se compara contra el resto de titulares del gabinete.
           </>
         ) : (
           <>
-            <b>Cómo leer este reporte.</b> Considera únicamente las cuentas institucionales de la dependencia. Las cuentas personales del titular quedan fuera y la
-            posición se compara contra el resto de dependencias.
+            <b>Cómo leer este reporte.</b> Considera únicamente las cuentas institucionales de la dependencia
+            {data.modo === "combinado" ? ", que son las únicas cuentas medidas" : "; las cuentas personales del titular quedan fuera"}
+            {" "}y la posición se compara contra el resto de dependencias.
           </>
         )}
+
       </div>
 
       {/* Resumen conjunto solo en modo combinado */}
