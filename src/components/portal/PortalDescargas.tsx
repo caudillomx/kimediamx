@@ -796,7 +796,10 @@ export default function PortalDescargas({
       titularCargo: dep.titular_cargo,
       periodoLabel: cutLabel,
       modo: enfoque,
-      enfoqueLabel: ENFOQUE_LABEL[enfoque],
+      enfoqueLabel: enfoque === "combinado" && bloques.length === 1
+        ? ENFOQUE_LABEL[bloques[0].key]
+        : ENFOQUE_LABEL[enfoque],
+
       bloques,
       conjunto,
       recomendaciones,
