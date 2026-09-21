@@ -1118,6 +1118,20 @@ export const GabinetePdfTemplate = forwardRef<HTMLDivElement, { data: GabineteRe
     ));
   });
 
+  if (hayMarcas) {
+    laminas.push((last) => (
+      <Slide key="marcas" last={last} kicker="Marca / destino"
+             title="Cuentas de marca o destino"
+             hint={`Cuentas que las dependencias operan sin nombre institucional (promoción turística, campañas)${data.marcaInteraccion != null ? ` · interacción ponderada ${pf(data.marcaInteraccion)}` : ""}`}>
+        <SectionTitle text="Ordenadas por audiencia" color={SCOPE.marca.main}
+                      hint={`${data.cuentasMarca ?? 0} cuenta${(data.cuentasMarca ?? 0) === 1 ? "" : "s"} medida${(data.cuentasMarca ?? 0) === 1 ? "" : "s"}`} />
+        <TitularTable rows={marcas} />
+      </Slide>
+    ));
+  }
+
+
+
   if (data.interpretacion?.lectura || hallazgos.length > 0) {
     laminas.push((last) => (
       <Slide key="lectura" last={last} kicker="Lectura del corte" title="Qué significa este corte"
