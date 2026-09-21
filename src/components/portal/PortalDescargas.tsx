@@ -1068,14 +1068,61 @@ export default function PortalDescargas({
         tipo: "titular" as const,
       }));
 
+    /* ---- Cuentas de marca o destino (p. ej. las de promoción turística) ---- */
+    const mCurr = scopeBuckets(currIds, "marca", cutRefDate);
+    const mPrev = scopeBuckets(prevIds, "marca");
+
+    const marcasFull = enfoque !== "combinado" ? [] : Array.from(mCurr.entries())
+      .map(([id, bucket]) => {
+        const p = mPrev.get(id);
+        let actual = 0, previo = 0, comunes = 0;
+        if (p) {
+          bucket.accounts.forEach((value, key) => {
+            const before = p.accounts.get(key);
+            if (before == null) return;
+            actual += value; previo += before; comunes += 1;
+          });
+        }
+        return {
+          nombre: depById.get(id)?.nombre ?? "—",
+          dependencia: "Cuentas de marca o destino",
+          seguidores: bucket.followers || null,
+          engagement: weightedRate(bucket.eng),
+          publicaciones: marcaPosts.get(id) ?? null,
+          cuentas: bucket.accounts.size || bucket.eng.length,
+          deltaSeguidores: comunes && previo > 0 ? (actual - previo) / previo : null,
+          comparable: comunes > 0,
+          _base: previo,
+        };
+      })
+      .filter((r) => r.seguidores != null || r.engagement != null)
+      .sort((a, b) => (b.seguidores ?? 0) - (a.seguidores ?? 0));
+
+    const marcas = marcasFull.map(({ _base, ...rest }) => rest);
+
+    const marcaMovers = marcasFull
+      .filter((r) => r.comparable && r.deltaSeguidores != null && r._base >= 1000 && Math.abs(r.deltaSeguidores) >= 0.002)
+      .map((r) => ({
+        nombre: `${r.nombre} (marca / destino)`,
+        delta: r.deltaSeguidores as number,
+        base: r._base,
+        detalle: `${nfInt(r._base)} → ${nfInt(Math.round(r._base * (1 + (r.deltaSeguidores as number))))} seguidores en ${r.cuentas} cuenta${r.cuentas === 1 ? "" : "s"} comparables`,
+        tipo: "marca" as const,
+      }));
+
     const allMovers = [
       ...movers.map((m) => ({ ...m, tipo: "institucional" as const })),
       ...titularMovers,
+      ...marcaMovers,
     ];
 
     const seguidoresTitulares = titulares.reduce((a, r) => a + (r.seguidores ?? 0), 0);
     const publicacionesTitulares = titularPosts.size
       ? Array.from(titularPosts.values()).reduce((a, b) => a + b, 0)
+      : null;
+    const seguidoresMarca = marcas.reduce((a, r) => a + (r.seguidores ?? 0), 0);
+    const publicacionesMarca = marcaPosts.size
+      ? Array.from(marcaPosts.values()).reduce((a, b) => a + b, 0)
       : null;
 
     // Cuentas medidas que no publicaron en la ventana: es cumplimiento real,
@@ -1085,6 +1132,9 @@ export default function PortalDescargas({
       ...titulares
         .filter((r) => !(r.publicaciones ?? 0))
         .map((r) => ({ nombre: `${r.nombre} (${r.dependencia})`, tipo: "titular" as const, cuentas: r.cuentas, seguidores: r.seguidores })),
+      ...marcas
+        .filter((r) => !(r.publicaciones ?? 0))
+        .map((r) => ({ nombre: `${r.nombre} (marca / destino)`, tipo: "marca" as const, cuentas: r.cuentas, seguidores: r.seguidores })),
     ].sort((a, b) => (b.seguidores ?? 0) - (a.seguidores ?? 0));
 
 
