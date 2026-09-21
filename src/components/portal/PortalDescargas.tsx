@@ -982,8 +982,12 @@ export default function PortalDescargas({
 
     const engs = rows.map((r) => r.engagement).filter((v): v is number => v != null && Number.isFinite(v)).sort((a, b) => a - b);
     const mediana = engs.length ? (engs.length % 2 ? engs[(engs.length - 1) / 2] : (engs[engs.length / 2 - 1] + engs[engs.length / 2]) / 2) : null;
-    const conDatos = new Set(rows.map((r) => r.id));
-    const sinDatos = dependencias.filter((d) => !conDatos.has(d.id)).map((d) => d.nombre);
+    // El reporte sólo habla de quien sí está medido en el corte: las dependencias
+    // sin cuentas con datos no se listan ni se cuentan en ningún indicador.
+    const silenciosInst = rows
+      .filter((r) => !(r.publicaciones ?? 0))
+      .map((r) => ({ nombre: r.nombre, tipo: "institucional" as const, cuentas: r.cuentas, seguidores: r.seguidores }));
+
     const publicacionesTotales = postsByDep.size ? Array.from(postsByDep.values()).reduce((a, b) => a + b, 0) : null;
 
     const strip = ({ _base, id, ...rest }: (typeof rows)[number]) => rest as GabineteRankRow;
