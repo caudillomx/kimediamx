@@ -27,7 +27,7 @@ export type DeltaInput = {
   rankTotal: number;
   redes: { red: string; seguidores: number | null; prevSeguidores: number | null }[];
   /** "titular" cambia el sujeto de las frases. */
-  scope: "institucional" | "titular";
+  scope: "institucional" | "titular" | "marca";
 };
 
 const num = (v: number | null | undefined) =>
@@ -58,7 +58,7 @@ const dirOf = (delta: number, umbral = 0.005): DeltaDir =>
  */
 export function buildDeltaLines(input: DeltaInput): DeltaLine[] {
   const out: DeltaLine[] = [];
-  const sujeto = input.scope === "titular" ? "el titular" : "la dependencia";
+  const sujeto = input.scope === "titular" ? "el titular" : input.scope === "marca" ? "la marca" : "la dependencia";
 
   // Seguidores
   const seg = num(input.seguidores);

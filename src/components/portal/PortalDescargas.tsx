@@ -105,7 +105,7 @@ export default function PortalDescargas({
   const [loading, setLoading] = useState(true);
 
   const [depId, setDepId] = useState<string>("");
-  const [enfoque, setEnfoque] = useState<"combinado" | "institucional" | "titular">("combinado");
+  const [enfoque, setEnfoque] = useState<"combinado" | ScopeKey>("combinado");
   const [periodLabel, setPeriodLabel] = useState<string>("");
   const [cut, setCut] = useState<CutKind>("mensual");
   const [weekFrom, setWeekFrom] = useState(ultimaSemanaCompleta().from);
@@ -242,9 +242,10 @@ export default function PortalDescargas({
     scope === "combinado" ? true : (accountType ?? "institucional") === scope;
 
   const ENFOQUE_LABEL: Record<string, string> = {
-    combinado: "Dependencia + titular",
+    combinado: "Dependencia + titular + marca",
     institucional: "Solo cuentas institucionales",
     titular: "Solo cuentas del titular",
+    marca: "Solo cuentas de marca o destino",
   };
 
   /** Una sola métrica por cuenta+red (evita duplicados por cargas repetidas del mismo corte). */
@@ -661,10 +662,13 @@ export default function PortalDescargas({
 
       return {
         key: scope,
-        label: scope === "titular" ? "Comunicación del titular" : "Comunicación institucional",
+        label: scope === "titular" ? "Comunicación del titular"
+          : scope === "marca" ? "Marca o destino"
+            : "Comunicación institucional",
         sujeto: scope === "titular"
           ? `${dep.titular ?? "Titular sin registrar"}${dep.titular_cargo ? ` · ${dep.titular_cargo}` : ""}`
-          : dep.nombre,
+          : scope === "marca" ? `Cuentas de marca operadas por ${dep.nombre}`
+            : dep.nombre,
         cuentas: rows,
         seguidores: rows.reduce((a, x) => a + (x.seguidores ?? 0), 0),
         engagement: weightedRate(rows.map((x) => ({ rate: x.engagement, weight: x.seguidores }))),
@@ -696,8 +700,12 @@ export default function PortalDescargas({
     };
 
 
+    // El bloque de marca solo aparece si la dependencia tiene cuentas de ese tipo,
+    // para no ensuciar los reportes de las dependencias que no las operan.
+    const hayMarca = cuentas.some((c) => (c.tipo ?? "institucional") === "marca");
     const bloques: ScopeBlock[] =
-      enfoque === "combinado" ? [bloqueDe("institucional"), bloqueDe("titular")]
+      enfoque === "combinado"
+        ? [bloqueDe("institucional"), bloqueDe("titular"), ...(hayMarca ? [bloqueDe("marca")] : [])]
         : [bloqueDe(enfoque)];
 
     const comb = rankingDe("combinado");
@@ -1224,9 +1232,10 @@ export default function PortalDescargas({
             <Select value={enfoque} onValueChange={(v) => setEnfoque(v as typeof enfoque)}>
               <SelectTrigger className="w-[240px] h-9"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="combinado">Combinado (institución + titular)</SelectItem>
+                <SelectItem value="combinado">Combinado (institución + titular + marca)</SelectItem>
                 <SelectItem value="institucional">Solo institucional</SelectItem>
                 <SelectItem value="titular">Solo titular (funcionario)</SelectItem>
+                <SelectItem value="marca">Solo marca / destino</SelectItem>
               </SelectContent>
             </Select>
           </div>

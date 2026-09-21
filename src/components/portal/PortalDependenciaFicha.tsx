@@ -21,6 +21,12 @@ const TONE_CLASS: Record<string, string> = {
   crisis: "bg-rose-500/15 text-rose-600 border-rose-500/40",
 };
 
+const TIPO_LABEL: Record<string, string> = {
+  institucional: "Institucional",
+  titular: "Titular",
+  marca: "Marca / destino",
+};
+
 export default function PortalDependenciaFicha({
   gab, dep, periodLabel, enfoque, open, onOpenChange, onDescargar, ventana, ventanaLabel, mentionsOverride, postsOverride,
 }: {
@@ -294,7 +300,7 @@ export default function PortalDependenciaFicha({
                   <div key={i} className="rounded-lg border border-border/60 p-2.5">
                     <div className="text-xs font-medium break-words">{c.perfil}</div>
                     <div className="text-[11px] text-muted-foreground capitalize mb-1.5">
-                      {c.red} · {c.tipo === "titular" ? "Titular" : "Institucional"}
+                      {c.red} · {TIPO_LABEL[c.tipo] ?? "Institucional"}
                     </div>
                     <div className="grid grid-cols-3 gap-2 text-[11px]">
                       <div>
@@ -329,7 +335,7 @@ export default function PortalDependenciaFicha({
                     <tr key={i} className="border-t border-border/60">
                       <td className="py-1.5 pr-3 break-words">{c.perfil}</td>
                       <td className="py-1.5 pr-3 capitalize">{c.red}</td>
-                      <td className="py-1.5 pr-3">{c.tipo === "titular" ? "Titular" : "Institucional"}</td>
+                      <td className="py-1.5 pr-3">{TIPO_LABEL[c.tipo] ?? "Institucional"}</td>
                       <td className="py-1.5 pr-3 text-right">{fmtNum(c.seguidores)}</td>
                       <td className="py-1.5 pr-3 text-right">{fmtPct(c.engagement, 2)}</td>
                       <td className="py-1.5 text-right">{c.postsDia != null ? Number(c.postsDia).toFixed(2) : "—"}</td>

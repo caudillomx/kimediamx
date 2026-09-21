@@ -38,7 +38,7 @@ export type DepPressRow = {
   match?: string;
 };
 
-export type ScopeKey = "institucional" | "titular";
+export type ScopeKey = "institucional" | "titular" | "marca";
 
 export type ScopeBlock = {
   key: ScopeKey;
@@ -69,7 +69,7 @@ export type DependenciaReportData = {
   titular: string | null;
   titularCargo: string | null;
   periodoLabel: string;
-  modo: "combinado" | "institucional" | "titular";
+  modo: "combinado" | "institucional" | "titular" | "marca";
   enfoqueLabel: string;
   bloques: ScopeBlock[];
   conjunto?: {
@@ -99,7 +99,7 @@ export type GabineteRankRow = {
   comparable: boolean;
 };
 
-export type GabineteMoveRow = { nombre: string; delta: number; base: number; detalle: string; tipo?: "institucional" | "titular" };
+export type GabineteMoveRow = { nombre: string; delta: number; base: number; detalle: string; tipo?: ScopeKey };
 
 export type GabineteTier = { label: string; nota: string; rows: GabineteRankRow[] };
 
@@ -163,6 +163,7 @@ const LINE = "#e2e8f0";
 const SCOPE = {
   institucional: { main: "#1d4ed8", soft: "#eff6ff", border: "#bfdbfe", tag: "Institución" },
   titular:       { main: "#be123c", soft: "#fff1f2", border: "#fecdd3", tag: "Titular" },
+  marca:         { main: "#0f766e", soft: "#f0fdfa", border: "#99f6e4", tag: "Marca / destino" },
   conjunto:      { main: "#0f172a", soft: "#f1f5f9", border: "#cbd5e1", tag: "Conjunto" },
 } as const;
 
@@ -514,7 +515,9 @@ function BlockSection({ b, compacto }: { b: ScopeBlock; compacto: boolean }) {
         text={
           b.key === "titular"
             ? "Este bloque mide la voz personal del titular: sus cuentas propias y lo que publica. Sirve para evaluar liderazgo y vocería."
-            : "Este bloque mide la voz institucional de la dependencia: cuentas oficiales y contenido publicado. Sirve para evaluar la comunicación de la política pública."
+            : b.key === "marca"
+              ? "Este bloque mide las cuentas de marca o destino que la dependencia opera sin nombre institucional. Sirve para evaluar promoción y atracción de audiencia."
+              : "Este bloque mide la voz institucional de la dependencia: cuentas oficiales y contenido publicado. Sirve para evaluar la comunicación de la política pública."
         }
       />
 
@@ -527,7 +530,7 @@ function BlockSection({ b, compacto }: { b: ScopeBlock; compacto: boolean }) {
              foot={`Promedio gabinete: ${pf(b.promedioGabinete)}`}
              explain="Reacciones + comentarios + compartidos entre seguidores. Mide relevancia del contenido, no tamaño." />
         <Kpi label="Posición en el gabinete" value={b.rank ? `#${b.rank}` : "s/d"} color={s.main}
-             foot={`de ${b.rankTotal} ${b.key === "titular" ? "titulares" : "dependencias"}`}
+             foot={`de ${b.rankTotal} ${b.key === "titular" ? "titulares" : b.key === "marca" ? "cuentas de marca" : "dependencias"}`}
              explain="Lugar al ordenar por interacción a todos los pares del gabinete en el mismo periodo." />
       </div>
 
@@ -538,7 +541,7 @@ function BlockSection({ b, compacto }: { b: ScopeBlock; compacto: boolean }) {
 
       <div className="pdf-avoid" style={{ marginBottom: 10 }}>
         <SectionTitle
-          text={b.key === "titular" ? "Cuentas del titular" : "Cuentas institucionales"}
+          text={b.key === "titular" ? "Cuentas del titular" : b.key === "marca" ? "Cuentas de marca o destino" : "Cuentas institucionales"}
           color={s.main}
           hint="Crec./día = crecimiento promedio diario de seguidores. Pub./día = publicaciones por día. “s/d” = la red no reportó el dato en el periodo."
         />
@@ -582,7 +585,7 @@ function BlockSection({ b, compacto }: { b: ScopeBlock; compacto: boolean }) {
       {/* Narrativas */}
       <div className="pdf-avoid" style={{ marginBottom: 10 }}>
         <SectionTitle
-          text={b.key === "titular" ? "De qué habla el titular en sus redes" : "De qué habla la dependencia en sus redes"}
+          text={b.key === "titular" ? "De qué habla el titular en sus redes" : b.key === "marca" ? "De qué hablan las cuentas de marca" : "De qué habla la dependencia en sus redes"}
           color={s.main}
           hint={`Temas recurrentes de las publicaciones propias del periodo${b.narrativasFuentes.length ? ` (${b.narrativasFuentes.slice(0, 3).join(", ")})` : ""}. Describen el contenido publicado, no son recomendaciones.`}
         />
@@ -605,7 +608,7 @@ function BlockSection({ b, compacto }: { b: ScopeBlock; compacto: boolean }) {
       {/* Top posts */}
       <div style={{ marginBottom: 10 }}>
         <SectionTitle
-          text={b.key === "titular" ? "Publicaciones del titular con mayor interacción" : "Publicaciones institucionales con mayor interacción"}
+          text={b.key === "titular" ? "Publicaciones del titular con mayor interacción" : b.key === "marca" ? "Publicaciones de marca con mayor interacción" : "Publicaciones institucionales con mayor interacción"}
           color={s.main}
           hint="Contenido con más reacciones, comentarios y compartidos del periodo. Indica qué mensajes conectaron con la audiencia y conviene replicar."
         />
@@ -652,6 +655,8 @@ export const DependenciaPdfTemplate = forwardRef<HTMLDivElement, { data: Depende
             ? (data.titular ? `${data.titular}${data.titularCargo ? ` · ${data.titularCargo}` : ""}` : data.tipo)
             : data.modo === "institucional"
               ? (data.tipo ?? "Cuentas institucionales")
+            : data.modo === "marca"
+              ? "Cuentas de marca o destino"
               : (data.titular ? `${data.titular}${data.titularCargo ? ` · ${data.titularCargo}` : ""}` : data.tipo)
         }
         periodo={data.periodoLabel}
@@ -666,9 +671,15 @@ export const DependenciaPdfTemplate = forwardRef<HTMLDivElement, { data: Depende
         {combinado ? (
           <>
             <b>Cómo leer este reporte.</b> Incluye dos bloques independientes: en <span style={{ color: SCOPE.institucional.main, fontWeight: 700 }}>azul</span> lo que corresponde a las cuentas
-            institucionales de la dependencia y en <span style={{ color: SCOPE.titular.main, fontWeight: 700 }}>rojo</span> lo que corresponde a las cuentas personales del titular.
+            institucionales de la dependencia, en <span style={{ color: SCOPE.titular.main, fontWeight: 700 }}>rojo</span> lo que corresponde a las cuentas personales del titular y en{" "}
+            <span style={{ color: SCOPE.marca.main, fontWeight: 700 }}>verde</span> las cuentas de marca o destino, cuando existen.
             Cada bloque tiene sus propios indicadores, cuentas, narrativas y publicaciones; el resumen conjunto de abajo suma ambos.
             Cada indicador incluye una nota que explica qué mide y por qué importa, y al final encontrará un glosario con los términos técnicos.
+          </>
+        ) : data.modo === "marca" ? (
+          <>
+            <b>Cómo leer este reporte.</b> Considera únicamente las cuentas de marca o destino que opera la dependencia. Las cuentas institucionales y las personales del
+            titular quedan fuera y la posición se compara contra el resto de cuentas de marca del gabinete.
           </>
         ) : data.modo === "titular" ? (
           <>
@@ -686,7 +697,7 @@ export const DependenciaPdfTemplate = forwardRef<HTMLDivElement, { data: Depende
       {/* Resumen conjunto solo en modo combinado */}
       {combinado && c && (
         <div className="pdf-avoid" style={{ marginBottom: 14 }}>
-          <SectionTitle text="Resumen conjunto (institución + titular)" color={SCOPE.conjunto.main} />
+          <SectionTitle text="Resumen conjunto (todas las cuentas de la dependencia)" color={SCOPE.conjunto.main} />
           <Explainer
             color={SCOPE.conjunto.main}
             text="Suma de la comunicación institucional y la del titular. Es la fotografía general del esfuerzo comunicativo de la dependencia; el detalle por ámbito se desglosa en los bloques siguientes."
@@ -733,8 +744,8 @@ function MoveList({ rows, color, titulo, hint }: { rows: GabineteMoveRow[]; colo
           <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
             <span style={{ fontWeight: 600 }}>
               {r.nombre}
-              <span style={{ color: r.tipo === "titular" ? SCOPE.titular.main : SCOPE.institucional.main, fontSize: 8.2, fontWeight: 700 }}>
-                {" "}· {r.tipo === "titular" ? "titular" : "institución"}
+              <span style={{ color: r.tipo === "titular" ? SCOPE.titular.main : r.tipo === "marca" ? SCOPE.marca.main : SCOPE.institucional.main, fontSize: 8.2, fontWeight: 700 }}>
+                {" "}· {r.tipo === "titular" ? "titular" : r.tipo === "marca" ? "marca" : "institución"}
               </span>
             </span>
 

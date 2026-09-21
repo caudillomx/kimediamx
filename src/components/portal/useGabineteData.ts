@@ -24,12 +24,13 @@ export type Mention = {
   fecha: string; medio: string; titular: string; cita: string; url: string;
   tono: string; canal: string; dep: string | null;
 };
-export type Enfoque = "combinado" | "institucional" | "titular";
+export type Enfoque = "combinado" | "institucional" | "titular" | "marca";
 
 export const ENFOQUE_LABEL: Record<Enfoque, string> = {
-  combinado: "Dependencia + titular",
+  combinado: "Dependencia + titular + marca",
   institucional: "Solo cuentas institucionales",
   titular: "Solo cuentas del titular",
+  marca: "Solo cuentas de marca o destino",
 };
 
 export type DepAgg = { followers: number; engagement: number | null; postsDia: number | null; cuentas: number };
