@@ -800,11 +800,11 @@ export default function PortalDescargas({
     };
   };
 
-  /** Toma hasta 3 dependencias y 3 titulares para que ambos ámbitos aparezcan. */
+  /** Toma hasta 5 dependencias y 5 titulares para que ambos ámbitos aparezcan. */
   function mezclarMovs<T extends { tipo: "institucional" | "titular" }>(list: T[], cmp: (a: T, b: T) => number): T[] {
     const ord = list.slice().sort(cmp);
-    const inst = ord.filter((m) => m.tipo === "institucional").slice(0, 3);
-    const tit = ord.filter((m) => m.tipo === "titular").slice(0, 3);
+    const inst = ord.filter((m) => m.tipo === "institucional").slice(0, 5);
+    const tit = ord.filter((m) => m.tipo === "titular").slice(0, 5);
     return [...inst, ...tit].sort(cmp);
   }
 
