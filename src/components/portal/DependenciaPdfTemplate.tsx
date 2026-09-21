@@ -138,7 +138,10 @@ export type GabineteReportData = {
   titularTiers?: GabineteTitularTier[];
   suben: GabineteMoveRow[];
   bajan: GabineteMoveRow[];
-  sinDatos: string[];
+  /** Entidades medidas en el corte que no publicaron en la ventana. */
+  silencios?: { nombre: string; tipo: "institucional" | "titular"; cuentas: number; seguidores: number | null }[];
+  /** Publicaciones con mejor respuesta del periodo. */
+  mejores?: { perfil: string; red: string; dependencia: string; tipo: string; fecha: string | null; texto: string; interacciones: number }[];
   comparables: number;
   nota: string;
 
