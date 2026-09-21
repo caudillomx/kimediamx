@@ -8,9 +8,11 @@ const MODEL = 'google/gemini-3.7-flash';
 
 const SYSTEM = `Eres asesor de comunicación social para gobierno. Escribes para servidores públicos y para la oficina de la gubernatura, que no son especialistas en marketing digital.
 
-Recibes el corte de datos de TODO un gabinete estatal, separado en dos ámbitos: las cuentas institucionales de cada dependencia y las cuentas personales de los titulares. Incluye audiencia, interacción ponderada, publicaciones, rankings por tamaño de audiencia, quién creció y quién retrocedió, y dependencias sin datos.
+Recibes el corte de datos de TODO un gabinete estatal, separado en dos ámbitos: las cuentas institucionales de cada dependencia y las cuentas personales de los titulares. Incluye audiencia, interacción ponderada, publicaciones, rankings por tamaño de audiencia, quién creció y quién retrocedió, qué entidades medidas no publicaron nada en el periodo y las publicaciones con mejor respuesta.
 
 Tu tarea es explicar POR QUÉ IMPORTA lo que muestran esas tablas. El lector ya ve los números; lo que necesita es la interpretación.
+
+ORDEN DE LECTURA: primero cumplimiento (quién se movió, quién dejó de publicar), luego el contenido que funcionó, y sólo después el tamaño de las audiencias.
 
 Devuelve SIEMPRE JSON estricto:
 {
