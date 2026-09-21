@@ -801,11 +801,12 @@ export default function PortalDescargas({
   };
 
   /** Toma hasta 5 dependencias y 5 titulares para que ambos ámbitos aparezcan. */
-  function mezclarMovs<T extends { tipo: "institucional" | "titular" }>(list: T[], cmp: (a: T, b: T) => number): T[] {
+  function mezclarMovs<T extends { tipo: ScopeKey }>(list: T[], cmp: (a: T, b: T) => number): T[] {
     const ord = list.slice().sort(cmp);
     const inst = ord.filter((m) => m.tipo === "institucional").slice(0, 5);
     const tit = ord.filter((m) => m.tipo === "titular").slice(0, 5);
-    return [...inst, ...tit].sort(cmp);
+    const marca = ord.filter((m) => m.tipo === "marca").slice(0, 3);
+    return [...inst, ...tit, ...marca].sort(cmp);
   }
 
 
@@ -879,6 +880,7 @@ export default function PortalDescargas({
     const seenPosts = new Set<string>();
     const postsByDep = new Map<string, number>();
     const titularPosts = new Map<string, number>();
+    const marcaPosts = new Map<string, number>();
     const postsLimpios: { post: Post; dep: string; tipo: string }[] = [];
     for (const p of windowPosts) {
       if (!p.competitor_id) continue;
@@ -891,6 +893,7 @@ export default function PortalDescargas({
       postsLimpios.push({ post: p, dep, tipo });
       if (matchesRowScope(tipo)) postsByDep.set(dep, (postsByDep.get(dep) ?? 0) + 1);
       if (tipo === "titular") titularPosts.set(dep, (titularPosts.get(dep) ?? 0) + 1);
+      if (tipo === "marca") marcaPosts.set(dep, (marcaPosts.get(dep) ?? 0) + 1);
     }
 
     /** Publicaciones con mejor respuesta del periodo, para la lámina de contenido. */
@@ -993,12 +996,12 @@ export default function PortalDescargas({
     const strip = ({ _base, id, ...rest }: (typeof rows)[number]) => rest as GabineteRankRow;
 
     /* ---- Bloque breve de titulares (cuentas personales de los funcionarios) ---- */
-    const titularBuckets = (ids: string[], refDate?: string | null) => {
+    const scopeBuckets = (ids: string[], scope: ScopeKey, refDate?: string | null) => {
       const acc = new Map<string, Bucket>();
       for (const m of uniqueMetrics(ids, refDate)) {
         const dep = depOfCompetitor.get(m.competitor_id);
         if (!dep) continue;
-        if ((typeOfCompetitor.get(m.competitor_id) ?? "institucional") !== "titular") continue;
+        if ((typeOfCompetitor.get(m.competitor_id) ?? "institucional") !== scope) continue;
         const bucket = acc.get(dep) ?? { followers: 0, eng: [], accounts: new Map() };
         const followers = Number(m.followers);
         const hasFollowers = Number.isFinite(followers);
@@ -1013,8 +1016,8 @@ export default function PortalDescargas({
       return acc;
     };
 
-    const tCurr = titularBuckets(currIds, cutRefDate);
-    const tPrev = titularBuckets(prevIds);
+    const tCurr = scopeBuckets(currIds, "titular", cutRefDate);
+    const tPrev = scopeBuckets(prevIds, "titular");
     const depById = new Map(dependencias.map((d) => [d.id, d]));
 
 
@@ -1066,14 +1069,61 @@ export default function PortalDescargas({
         tipo: "titular" as const,
       }));
 
+    /* ---- Cuentas de marca o destino (p. ej. las de promoción turística) ---- */
+    const mCurr = scopeBuckets(currIds, "marca", cutRefDate);
+    const mPrev = scopeBuckets(prevIds, "marca");
+
+    const marcasFull = enfoque !== "combinado" ? [] : Array.from(mCurr.entries())
+      .map(([id, bucket]) => {
+        const p = mPrev.get(id);
+        let actual = 0, previo = 0, comunes = 0;
+        if (p) {
+          bucket.accounts.forEach((value, key) => {
+            const before = p.accounts.get(key);
+            if (before == null) return;
+            actual += value; previo += before; comunes += 1;
+          });
+        }
+        return {
+          nombre: depById.get(id)?.nombre ?? "—",
+          dependencia: "Cuentas de marca o destino",
+          seguidores: bucket.followers || null,
+          engagement: weightedRate(bucket.eng),
+          publicaciones: marcaPosts.get(id) ?? null,
+          cuentas: bucket.accounts.size || bucket.eng.length,
+          deltaSeguidores: comunes && previo > 0 ? (actual - previo) / previo : null,
+          comparable: comunes > 0,
+          _base: previo,
+        };
+      })
+      .filter((r) => r.seguidores != null || r.engagement != null)
+      .sort((a, b) => (b.seguidores ?? 0) - (a.seguidores ?? 0));
+
+    const marcas = marcasFull.map(({ _base, ...rest }) => rest);
+
+    const marcaMovers = marcasFull
+      .filter((r) => r.comparable && r.deltaSeguidores != null && r._base >= 1000 && Math.abs(r.deltaSeguidores) >= 0.002)
+      .map((r) => ({
+        nombre: `${r.nombre} (marca / destino)`,
+        delta: r.deltaSeguidores as number,
+        base: r._base,
+        detalle: `${nfInt(r._base)} → ${nfInt(Math.round(r._base * (1 + (r.deltaSeguidores as number))))} seguidores en ${r.cuentas} cuenta${r.cuentas === 1 ? "" : "s"} comparables`,
+        tipo: "marca" as const,
+      }));
+
     const allMovers = [
       ...movers.map((m) => ({ ...m, tipo: "institucional" as const })),
       ...titularMovers,
+      ...marcaMovers,
     ];
 
     const seguidoresTitulares = titulares.reduce((a, r) => a + (r.seguidores ?? 0), 0);
     const publicacionesTitulares = titularPosts.size
       ? Array.from(titularPosts.values()).reduce((a, b) => a + b, 0)
+      : null;
+    const seguidoresMarca = marcas.reduce((a, r) => a + (r.seguidores ?? 0), 0);
+    const publicacionesMarca = marcaPosts.size
+      ? Array.from(marcaPosts.values()).reduce((a, b) => a + b, 0)
       : null;
 
     // Cuentas medidas que no publicaron en la ventana: es cumplimiento real,
@@ -1083,16 +1133,20 @@ export default function PortalDescargas({
       ...titulares
         .filter((r) => !(r.publicaciones ?? 0))
         .map((r) => ({ nombre: `${r.nombre} (${r.dependencia})`, tipo: "titular" as const, cuentas: r.cuentas, seguidores: r.seguidores })),
+      ...marcas
+        .filter((r) => !(r.publicaciones ?? 0))
+        .map((r) => ({ nombre: `${r.nombre} (marca / destino)`, tipo: "marca" as const, cuentas: r.cuentas, seguidores: r.seguidores })),
     ].sort((a, b) => (b.seguidores ?? 0) - (a.seguidores ?? 0));
 
 
     return {
       periodoLabel: `${cutLabel} · ${ENFOQUE_LABEL[enfoque]}`,
       dependencias: rows.length,
-      cuentas: rows.reduce((a, r) => a + r.cuentas, 0) + titulares.reduce((a, r) => a + r.cuentas, 0),
-      seguidoresTotales: rows.reduce((a, r) => a + (r.seguidores ?? 0), 0) + seguidoresTitulares,
-      publicacionesTotales: publicacionesTotales == null && publicacionesTitulares == null
-        ? null : (publicacionesTotales ?? 0) + (publicacionesTitulares ?? 0),
+      cuentas: rows.reduce((a, r) => a + r.cuentas, 0) + titulares.reduce((a, r) => a + r.cuentas, 0)
+        + marcas.reduce((a, r) => a + r.cuentas, 0),
+      seguidoresTotales: rows.reduce((a, r) => a + (r.seguidores ?? 0), 0) + seguidoresTitulares + seguidoresMarca,
+      publicacionesTotales: publicacionesTotales == null && publicacionesTitulares == null && publicacionesMarca == null
+        ? null : (publicacionesTotales ?? 0) + (publicacionesTitulares ?? 0) + (publicacionesMarca ?? 0),
       interaccionPonderada: weightedRate(rows.map((r) => ({ rate: r.engagement, weight: r.seguidores }))),
       interaccionMediana: mediana,
       ranking: rows.slice().sort((a, b) => (b.seguidores ?? 0) - (a.seguidores ?? 0)).map(strip),
@@ -1104,6 +1158,11 @@ export default function PortalDescargas({
       seguidoresTitulares,
       publicacionesTitulares,
       titularesInteraccion: weightedRate(titulares.map((r) => ({ rate: r.engagement, weight: r.seguidores }))),
+      marcas,
+      seguidoresMarca,
+      cuentasMarca: marcas.reduce((a, r) => a + r.cuentas, 0),
+      publicacionesMarca,
+      marcaInteraccion: weightedRate(marcas.map((r) => ({ rate: r.engagement, weight: r.seguidores }))),
       // Cuota fija por ámbito: los titulares crecen más rápido y, sin cuota,
       // desplazarían por completo a las dependencias de ambas listas.
       suben: mezclarMovs(allMovers.filter((m) => m.delta > 0), (a, b) => b.delta - a.delta),
@@ -1175,6 +1234,13 @@ export default function PortalDescargas({
         interaccion_pct: t.engagement == null ? null : Number((t.engagement * 100).toFixed(3)),
         publicaciones: t.publicaciones,
         variacion_audiencia_pct: t.comparable && t.deltaSeguidores != null ? Number((t.deltaSeguidores * 100).toFixed(2)) : "no comparable",
+      })),
+      cuentas_de_marca_o_destino: (g.marcas ?? []).map((m) => ({
+        dependencia: m.nombre,
+        seguidores: m.seguidores,
+        interaccion_pct: m.engagement == null ? null : Number((m.engagement * 100).toFixed(3)),
+        publicaciones: m.publicaciones,
+        variacion_audiencia_pct: m.comparable && m.deltaSeguidores != null ? Number((m.deltaSeguidores * 100).toFixed(2)) : "no comparable",
       })),
 
       interaccion_titulares_pct: g.titularesInteraccion == null ? null : Number((g.titularesInteraccion * 100).toFixed(3)),

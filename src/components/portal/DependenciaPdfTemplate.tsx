@@ -136,10 +136,16 @@ export type GabineteReportData = {
   seguidoresTitulares?: number;
   publicacionesTitulares?: number | null;
   titularTiers?: GabineteTitularTier[];
+  /** Cuentas de marca o destino que operan las dependencias (turismo, campañas). */
+  marcas?: GabineteTitularRow[];
+  seguidoresMarca?: number;
+  cuentasMarca?: number;
+  publicacionesMarca?: number | null;
+  marcaInteraccion?: number | null;
   suben: GabineteMoveRow[];
   bajan: GabineteMoveRow[];
   /** Entidades medidas en el corte que no publicaron en la ventana. */
-  silencios?: { nombre: string; tipo: "institucional" | "titular"; cuentas: number; seguidores: number | null }[];
+  silencios?: { nombre: string; tipo: ScopeKey; cuentas: number; seguidores: number | null }[];
   /** Publicaciones con mejor respuesta del periodo. */
   mejores?: { perfil: string; red: string; dependencia: string; tipo: string; fecha: string | null; texto: string; interacciones: number }[];
   comparables: number;
@@ -934,10 +940,16 @@ export const GabinetePdfTemplate = forwardRef<HTMLDivElement, { data: GabineteRe
 
   const tit = data.titulares ?? [];
   const hayTitulares = tit.length > 0;
+  const marcas = data.marcas ?? [];
+  const hayMarcas = marcas.length > 0;
   const segTit = data.seguidoresTitulares ?? 0;
-  const segInst = Math.max(0, data.seguidoresTotales - segTit);
+  const segMarca = data.seguidoresMarca ?? 0;
+  const segInst = Math.max(0, data.seguidoresTotales - segTit - segMarca);
   const pubTit = data.publicacionesTitulares ?? null;
-  const pubInst = data.publicacionesTotales == null ? null : Math.max(0, data.publicacionesTotales - (pubTit ?? 0));
+  const pubMarca = data.publicacionesMarca ?? null;
+  const pubInst = data.publicacionesTotales == null
+    ? null
+    : Math.max(0, data.publicacionesTotales - (pubTit ?? 0) - (pubMarca ?? 0));
   const hallazgos = (data.interpretacion?.hallazgos ?? []).slice(0, 4);
   const recos = data.interpretacion?.recomendaciones ?? [];
   const titularTiers = data.titularTiers ?? [];
@@ -965,7 +977,7 @@ export const GabinetePdfTemplate = forwardRef<HTMLDivElement, { data: GabineteRe
 
         <div style={{ display: "grid", gridTemplateColumns: `repeat(${hayTitulares ? 5 : 4}, 1fr)`, gap: 12, marginBottom: 18 }}>
           <Kpi label="Dependencias medidas" value={String(data.dependencias)} color={SCOPE.institucional.main}
-               foot={`${Math.max(0, data.cuentas - (data.cuentasTitulares ?? 0))} cuentas institucionales`}
+               foot={`${Math.max(0, data.cuentas - (data.cuentasTitulares ?? 0) - (data.cuentasMarca ?? 0))} cuentas institucionales${hayMarcas ? ` · ${data.cuentasMarca ?? 0} de marca` : ""}`}
                explain="Dependencias con al menos una cuenta institucional medida en el corte; el reporte no habla de ninguna otra." />
           {hayTitulares && (
             <Kpi label="Titulares medidos" value={String(data.titularesConDatos ?? tit.length)} color={SCOPE.titular.main}
@@ -973,16 +985,20 @@ export const GabinetePdfTemplate = forwardRef<HTMLDivElement, { data: GabineteRe
                  explain="Funcionarios con al menos una cuenta personal medida en el corte." />
           )}
           <Kpi label="Audiencia del gabinete" value={nf(data.seguidoresTotales)} color={SCOPE.conjunto.main}
-               foot={hayTitulares ? `Instituciones ${nf(segInst)} · Titulares ${nf(segTit)}` : "Seguidores sumados sin duplicar cuentas"}
+               foot={hayTitulares
+                 ? `Instituciones ${nf(segInst)} · Titulares ${nf(segTit)}${hayMarcas ? ` · Marca ${nf(segMarca)}` : ""}`
+                 : "Seguidores sumados sin duplicar cuentas"}
                explain="Cada cuenta se cuenta una sola vez, aunque aparezca en varias cargas del mes." />
           <Kpi label="Interacción del gabinete" value={pf(data.interaccionPonderada)} color={SCOPE.titular.main}
                foot={hayTitulares && data.titularesInteraccion != null
-                 ? `Instituciones ${pf(data.interaccionPonderada)} · Titulares ${pf(data.titularesInteraccion)}`
+                 ? `Instituciones ${pf(data.interaccionPonderada)} · Titulares ${pf(data.titularesInteraccion)}${hayMarcas && data.marcaInteraccion != null ? ` · Marca ${pf(data.marcaInteraccion)}` : ""}`
                  : `Mediana por dependencia: ${pf(data.interaccionMediana)}`}
                explain="Ponderada por audiencia: las cuentas grandes pesan más que las pequeñas." />
           <Kpi label="Publicaciones del periodo" value={data.publicacionesTotales == null ? "s/d" : nf(data.publicacionesTotales)}
                color={INK}
-               foot={hayTitulares && pubInst != null ? `Instituciones ${nf(pubInst)} · Titulares ${pubTit == null ? "s/d" : nf(pubTit)}` : "Contenido publicado por el gabinete"}
+               foot={hayTitulares && pubInst != null
+                 ? `Instituciones ${nf(pubInst)} · Titulares ${pubTit == null ? "s/d" : nf(pubTit)}${hayMarcas ? ` · Marca ${pubMarca == null ? "s/d" : nf(pubMarca)}` : ""}`
+                 : "Contenido publicado por el gabinete"}
                explain="Publicaciones registradas en el corte, sin duplicados entre cargas." />
         </div>
 
@@ -991,9 +1007,11 @@ export const GabinetePdfTemplate = forwardRef<HTMLDivElement, { data: GabineteRe
           borderRadius: 8, padding: "12px 14px", fontSize: 10, color: MUTED, background: "#f8fafc",
         }}>
           <strong style={{ color: INK }}>Cómo leer esta presentación. </strong>
-          El panorama separa dos ámbitos: las <b style={{ color: SCOPE.institucional.main }}>cuentas institucionales</b> de cada dependencia y las{" "}
-          <b style={{ color: SCOPE.titular.main }}>cuentas personales de los titulares</b>. Sólo aparecen las cuentas con datos medidos en el corte.
-          Cada indicador y cada tabla indica a cuál de los dos ámbitos corresponde; cuando la cifra es del conjunto, el desglose aparece debajo del número. {data.nota}
+          El panorama separa las <b style={{ color: SCOPE.institucional.main }}>cuentas institucionales</b> de cada dependencia y las{" "}
+          <b style={{ color: SCOPE.titular.main }}>cuentas personales de los titulares</b>
+          {hayMarcas && <>, más las <b style={{ color: SCOPE.marca.main }}>cuentas de marca o destino</b> que algunas dependencias operan sin nombre institucional</>}.
+          Sólo aparecen las cuentas con datos medidos en el corte.
+          Cada indicador y cada tabla indica a qué ámbito corresponde; cuando la cifra es del conjunto, el desglose aparece debajo del número. {data.nota}
         </div>
 
         <div style={{ marginTop: "auto", paddingTop: 12, fontSize: 8.6, color: "#94a3b8", textAlign: "right" }}>
@@ -1019,8 +1037,8 @@ export const GabinetePdfTemplate = forwardRef<HTMLDivElement, { data: GabineteRe
             <div key={i} style={{ padding: "4px 0", borderBottom: "1px solid #f1f5f9" }}>
               <div style={{ fontWeight: 600 }}>
                 {s.nombre}
-                <span style={{ color: s.tipo === "titular" ? SCOPE.titular.main : SCOPE.institucional.main, fontSize: 8.2, fontWeight: 700 }}>
-                  {" "}· {s.tipo === "titular" ? "titular" : "institución"}
+                <span style={{ color: SCOPE[s.tipo].main, fontSize: 8.2, fontWeight: 700 }}>
+                  {" "}· {s.tipo === "titular" ? "titular" : s.tipo === "marca" ? "marca / destino" : "institución"}
                 </span>
               </div>
               <div style={{ fontSize: 8.6, color: MUTED }}>
@@ -1101,6 +1119,20 @@ export const GabinetePdfTemplate = forwardRef<HTMLDivElement, { data: GabineteRe
       </Slide>
     ));
   });
+
+  if (hayMarcas) {
+    laminas.push((last) => (
+      <Slide key="marcas" last={last} kicker="Marca / destino"
+             title="Cuentas de marca o destino"
+             hint={`Cuentas que las dependencias operan sin nombre institucional (promoción turística, campañas)${data.marcaInteraccion != null ? ` · interacción ponderada ${pf(data.marcaInteraccion)}` : ""}`}>
+        <SectionTitle text="Ordenadas por audiencia" color={SCOPE.marca.main}
+                      hint={`${data.cuentasMarca ?? 0} cuenta${(data.cuentasMarca ?? 0) === 1 ? "" : "s"} medida${(data.cuentasMarca ?? 0) === 1 ? "" : "s"}`} />
+        <TitularTable rows={marcas} />
+      </Slide>
+    ));
+  }
+
+
 
   if (data.interpretacion?.lectura || hallazgos.length > 0) {
     laminas.push((last) => (
