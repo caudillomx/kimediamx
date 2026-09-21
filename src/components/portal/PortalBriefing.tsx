@@ -560,7 +560,7 @@ export default function PortalBriefing({
           <Select value={enfoque} onValueChange={(v) => setEnfoque(v as Enfoque)}>
             <SelectTrigger className="w-[200px] h-9"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="combinado">Dependencia + titular</SelectItem>
+              <SelectItem value="combinado">Dependencia + titular + marca</SelectItem>
               <SelectItem value="institucional">Solo institucional</SelectItem>
               <SelectItem value="titular">Solo titular</SelectItem>
               <SelectItem value="marca">Solo marca / destino</SelectItem>

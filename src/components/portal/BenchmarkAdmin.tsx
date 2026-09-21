@@ -420,6 +420,8 @@ export default function BenchmarkAdmin({ clientId, clientName, scope = "general"
     return m;
   }, [uploads]);
 
+  const sinAsignar = competitors.filter((c) => !c.dependencia_id);
+
   return (
     <div className="space-y-6">
       {/* Uploader */}
@@ -557,6 +559,49 @@ export default function BenchmarkAdmin({ clientId, clientName, scope = "general"
         )}
       </Card>
 
+      {/* Cuentas sin dependencia: se crean solas al subir un XLSX y el análisis
+          las ignora hasta que se ligan a una dependencia. */}
+      {dependencias.length > 0 && sinAsignar.length > 0 && (
+        <Card className="p-5 border-amber-500/40 bg-amber-500/5">
+          <h3 className="font-display font-bold text-lg">
+            {sinAsignar.length} cuenta{sinAsignar.length === 1 ? "" : "s"} sin dependencia
+          </h3>
+          <p className="text-xs text-muted-foreground mb-3">
+            Estas cuentas ya tienen datos cargados pero no aparecen en el análisis ni en los reportes.
+            Asígnalas a su dependencia e indica de qué tipo son.
+          </p>
+          <div className="space-y-2">
+            {sinAsignar.map((c) => (
+              <div key={c.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-border/60 bg-background p-2">
+                <span className="text-xs font-medium flex-1 min-w-[160px] break-words">{c.name}</span>
+                <span className="text-[11px] text-muted-foreground capitalize w-[70px]">{c.network}</span>
+                <Select
+                  value={c.dependencia_id ?? "none"}
+                  onValueChange={(v) => updateCompetitor(c.id, { dependencia_id: v === "none" ? null : v })}
+                >
+                  <SelectTrigger className="h-8 text-xs w-[230px]"><SelectValue placeholder="Sin asignar" /></SelectTrigger>
+                  <SelectContent className="max-h-[300px]">
+                    <SelectItem value="none">Sin asignar</SelectItem>
+                    {dependencias.map((d) => <SelectItem key={d.id} value={d.id}>{d.nombre}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={c.account_type ?? "institucional"}
+                  onValueChange={(v) => updateCompetitor(c.id, { account_type: v })}
+                >
+                  <SelectTrigger className="h-8 text-xs w-[150px]"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="institucional">Institucional</SelectItem>
+                    <SelectItem value="titular">Titular</SelectItem>
+                    <SelectItem value="marca">Marca / destino</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
       {/* Competitor catalog */}
       <Card className="p-5">
         <div className="flex items-center justify-between mb-3">
@@ -564,7 +609,7 @@ export default function BenchmarkAdmin({ clientId, clientName, scope = "general"
             <h3 className="font-display font-bold text-lg">Catálogo de perfiles</h3>
             <p className="text-xs text-muted-foreground">
               Marca "Cliente" para identificar los perfiles propios de {clientName}. Se auto-registran al procesar cada XLSX.
-              {dependencias.length > 0 && " Asigna cada perfil a su dependencia e indica si es la cuenta institucional o la del titular."}
+              {dependencias.length > 0 && " Asigna cada perfil a su dependencia e indica si es la cuenta institucional, la del titular o una cuenta de marca o destino."}
             </p>
           </div>
         </div>

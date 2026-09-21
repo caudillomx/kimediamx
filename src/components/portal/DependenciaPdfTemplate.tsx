@@ -697,7 +697,7 @@ export const DependenciaPdfTemplate = forwardRef<HTMLDivElement, { data: Depende
       {/* Resumen conjunto solo en modo combinado */}
       {combinado && c && (
         <div className="pdf-avoid" style={{ marginBottom: 14 }}>
-          <SectionTitle text="Resumen conjunto (institución + titular)" color={SCOPE.conjunto.main} />
+          <SectionTitle text="Resumen conjunto (todas las cuentas de la dependencia)" color={SCOPE.conjunto.main} />
           <Explainer
             color={SCOPE.conjunto.main}
             text="Suma de la comunicación institucional y la del titular. Es la fotografía general del esfuerzo comunicativo de la dependencia; el detalle por ámbito se desglosa en los bloques siguientes."
