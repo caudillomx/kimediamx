@@ -607,7 +607,7 @@ export default function PortalDescargas({
 
     // Rankings del gabinete por ámbito.
     const rankingDe = (scope: "combinado" | ScopeKey) => {
-      const curr = aggregateForReport(periodIds, scope);
+      const curr = aggregateForReport(periodIds, scope, winTo);
       const prev = aggregateForReport(prevIds, scope);
       const order = (map: typeof curr) => Array.from(map.entries())
         .filter(([, v]) => v.engagement != null)
