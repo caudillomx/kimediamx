@@ -977,7 +977,7 @@ export const GabinetePdfTemplate = forwardRef<HTMLDivElement, { data: GabineteRe
 
         <div style={{ display: "grid", gridTemplateColumns: `repeat(${hayTitulares ? 5 : 4}, 1fr)`, gap: 12, marginBottom: 18 }}>
           <Kpi label="Dependencias medidas" value={String(data.dependencias)} color={SCOPE.institucional.main}
-               foot={`${Math.max(0, data.cuentas - (data.cuentasTitulares ?? 0))} cuentas institucionales`}
+               foot={`${Math.max(0, data.cuentas - (data.cuentasTitulares ?? 0) - (data.cuentasMarca ?? 0))} cuentas institucionales${hayMarcas ? ` · ${data.cuentasMarca ?? 0} de marca` : ""}`}
                explain="Dependencias con al menos una cuenta institucional medida en el corte; el reporte no habla de ninguna otra." />
           {hayTitulares && (
             <Kpi label="Titulares medidos" value={String(data.titularesConDatos ?? tit.length)} color={SCOPE.titular.main}
@@ -985,16 +985,20 @@ export const GabinetePdfTemplate = forwardRef<HTMLDivElement, { data: GabineteRe
                  explain="Funcionarios con al menos una cuenta personal medida en el corte." />
           )}
           <Kpi label="Audiencia del gabinete" value={nf(data.seguidoresTotales)} color={SCOPE.conjunto.main}
-               foot={hayTitulares ? `Instituciones ${nf(segInst)} · Titulares ${nf(segTit)}` : "Seguidores sumados sin duplicar cuentas"}
+               foot={hayTitulares
+                 ? `Instituciones ${nf(segInst)} · Titulares ${nf(segTit)}${hayMarcas ? ` · Marca ${nf(segMarca)}` : ""}`
+                 : "Seguidores sumados sin duplicar cuentas"}
                explain="Cada cuenta se cuenta una sola vez, aunque aparezca en varias cargas del mes." />
           <Kpi label="Interacción del gabinete" value={pf(data.interaccionPonderada)} color={SCOPE.titular.main}
                foot={hayTitulares && data.titularesInteraccion != null
-                 ? `Instituciones ${pf(data.interaccionPonderada)} · Titulares ${pf(data.titularesInteraccion)}`
+                 ? `Instituciones ${pf(data.interaccionPonderada)} · Titulares ${pf(data.titularesInteraccion)}${hayMarcas && data.marcaInteraccion != null ? ` · Marca ${pf(data.marcaInteraccion)}` : ""}`
                  : `Mediana por dependencia: ${pf(data.interaccionMediana)}`}
                explain="Ponderada por audiencia: las cuentas grandes pesan más que las pequeñas." />
           <Kpi label="Publicaciones del periodo" value={data.publicacionesTotales == null ? "s/d" : nf(data.publicacionesTotales)}
                color={INK}
-               foot={hayTitulares && pubInst != null ? `Instituciones ${nf(pubInst)} · Titulares ${pubTit == null ? "s/d" : nf(pubTit)}` : "Contenido publicado por el gabinete"}
+               foot={hayTitulares && pubInst != null
+                 ? `Instituciones ${nf(pubInst)} · Titulares ${pubTit == null ? "s/d" : nf(pubTit)}${hayMarcas ? ` · Marca ${pubMarca == null ? "s/d" : nf(pubMarca)}` : ""}`
+                 : "Contenido publicado por el gabinete"}
                explain="Publicaciones registradas en el corte, sin duplicados entre cargas." />
         </div>
 
