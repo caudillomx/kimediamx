@@ -827,9 +827,9 @@ export default function PortalDescargas({
     const depName = new Map(dependencias.map((d) => [d.id, d.nombre]));
 
     type Bucket = { followers: number; eng: { rate: number | null; weight: number | null }[]; accounts: Map<string, number> };
-    const collect = (ids: string[]) => {
+    const collect = (ids: string[], refDate?: string | null) => {
       const acc = new Map<string, Bucket>();
-      for (const m of uniqueMetrics(ids)) {
+      for (const m of uniqueMetrics(ids, refDate)) {
         const dep = depOfCompetitor.get(m.competitor_id);
         if (!dep) continue;
         if (!matchesRowScope(typeOfCompetitor.get(m.competitor_id))) continue;
