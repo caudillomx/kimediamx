@@ -1161,8 +1161,14 @@ export default function PortalDescargas({
           lugar_previo: r.lugarPrevio,
         })),
       })),
-      dependencias_sin_datos: g.sinDatos,
-      titulares: (g.titulares ?? []).slice(0, 10).map((t) => ({
+      sin_publicaciones: (g.silencios ?? []).map((s) => ({
+        entidad: s.nombre, ambito: s.tipo, cuentas_medidas: s.cuentas, seguidores: s.seguidores,
+      })),
+      mejores_publicaciones: (g.mejores ?? []).map((p) => ({
+        perfil: p.perfil, dependencia: p.dependencia, ambito: p.tipo, red: p.red,
+        fecha: p.fecha, interacciones: p.interacciones, texto: p.texto.slice(0, 220),
+      })),
+      titulares: (g.titulares ?? []).slice(0, 20).map((t) => ({
         nombre: t.nombre,
         dependencia: t.dependencia,
         seguidores: t.seguidores,
@@ -1170,6 +1176,7 @@ export default function PortalDescargas({
         publicaciones: t.publicaciones,
         variacion_audiencia_pct: t.comparable && t.deltaSeguidores != null ? Number((t.deltaSeguidores * 100).toFixed(2)) : "no comparable",
       })),
+
       interaccion_titulares_pct: g.titularesInteraccion == null ? null : Number((g.titularesInteraccion * 100).toFixed(3)),
       nota_metodologica: g.nota,
 
