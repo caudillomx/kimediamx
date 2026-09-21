@@ -1,4 +1,4 @@
-import { forwardRef } from "react";
+import { forwardRef, type ReactNode } from "react";
 import type { DeltaLine } from "@/lib/dependenciaDeltas";
 
 
@@ -948,7 +948,7 @@ export const GabinetePdfTemplate = forwardRef<HTMLDivElement, { data: GabineteRe
 
   /* Orden de lectura para la Coordinación: cumplimiento, contenido, rankings y
      al final la interpretación con sus acciones. */
-  const laminas: ((last: boolean) => React.ReactNode)[] = [];
+  const laminas: ((last: boolean) => ReactNode)[] = [];
 
   laminas.push(() => (
     <Slide key="portada">
