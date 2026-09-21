@@ -563,6 +563,7 @@ export default function PortalBriefing({
               <SelectItem value="combinado">Dependencia + titular</SelectItem>
               <SelectItem value="institucional">Solo institucional</SelectItem>
               <SelectItem value="titular">Solo titular</SelectItem>
+              <SelectItem value="marca">Solo marca / destino</SelectItem>
             </SelectContent>
           </Select>
         </div>

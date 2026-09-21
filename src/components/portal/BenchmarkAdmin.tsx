@@ -631,6 +631,7 @@ export default function BenchmarkAdmin({ clientId, clientName, scope = "general"
                           <SelectContent>
                             <SelectItem value="institucional">Institucional</SelectItem>
                             <SelectItem value="titular">Titular</SelectItem>
+                            <SelectItem value="marca">Marca / destino</SelectItem>
                           </SelectContent>
                         </Select>
                       </td>
