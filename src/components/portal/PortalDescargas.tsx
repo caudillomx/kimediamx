@@ -971,9 +971,9 @@ export default function PortalDescargas({
     const strip = ({ _base, id, ...rest }: (typeof rows)[number]) => rest as GabineteRankRow;
 
     /* ---- Bloque breve de titulares (cuentas personales de los funcionarios) ---- */
-    const titularBuckets = (ids: string[]) => {
+    const titularBuckets = (ids: string[], refDate?: string | null) => {
       const acc = new Map<string, Bucket>();
-      for (const m of uniqueMetrics(ids)) {
+      for (const m of uniqueMetrics(ids, refDate)) {
         const dep = depOfCompetitor.get(m.competitor_id);
         if (!dep) continue;
         if ((typeOfCompetitor.get(m.competitor_id) ?? "institucional") !== "titular") continue;
