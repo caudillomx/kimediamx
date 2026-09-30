@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrig
 import { toast } from "sonner";
 import PortalAprendizajes from "./PortalAprendizajes";
 import InsightsPdf, { downloadPdf, type PdfSpec } from "./InsightsPdf";
+import { useWebRows, channelsOf, webReading, dur } from "./PortalWebsite";
 import {
   type Social, type Ad, type Post, type Win, NET_LABEL, SAVES_NETWORKS,
   buildPosts, buildFollowers, buildWindows, aggregate, adsIn, sumAds, isMonthly, isWeekly, monthLabel, dayLabel,
@@ -98,6 +99,7 @@ export default function PortalInsights({ clientId, clientName, view }: { clientI
   const [downloading, setDownloading] = useState(false);
   const [learnSpec, setLearnSpec] = useState<Partial<PdfSpec>>({});
   const pdfRef = useRef<HTMLDivElement>(null);
+  const webRows = useWebRows(clientId);
 
   useEffect(() => {
     let alive = true;
@@ -344,8 +346,30 @@ export default function PortalInsights({ clientId, clientName, view }: { clientI
           bullets: adsReading.length ? [{ title: "Lectura de la inversión", items: adsReading }] : undefined,
         });
       }
+      const webCur = win?.kind === "month" ? webRows?.find((r) => r.period_start === win.from) : undefined;
+      if (webCur) {
+        const wi = webRows!.indexOf(webCur), webPrev = wi > 0 ? webRows![wi - 1] : undefined;
+        const ch = channelsOf(webCur);
+        const wd = (c: number | null, p: number | null | undefined) => deltaNote(c, p ?? null);
+        const last = webRows!.slice(Math.max(0, wi - 11), wi + 1);
+        sections.push({
+          kicker: `${String(sections.length + 1).padStart(2, "0")} · Sitio web`, title: "Cómo se comportó tu sitio web",
+          intro: "Datos de Google Analytics del mes.",
+          kpis: [
+            { label: "Personas", value: nf(webCur.users), ...wd(webCur.users, webPrev?.users) },
+            { label: "Visitas", value: nf(webCur.sessions), ...wd(webCur.sessions, webPrev?.sessions) },
+            { label: "Páginas vistas", value: nf(webCur.pageviews), ...wd(webCur.pageviews, webPrev?.pageviews) },
+            { label: "Tiempo por visita", value: dur(webCur.avg_session_seconds), ...wd(webCur.avg_session_seconds, webPrev?.avg_session_seconds) },
+          ],
+          chartRows: [[
+            { kind: "hbar", title: "De dónde llegan las visitas", subtitle: "Visitas por canal", items: ch.slice(0, 6).map((c) => ({ label: c.label, value: c.sessions, display: `${nf(c.share * 100, 0)}%` })) },
+            { kind: "combo", title: "Visitas y personas por mes", labels: last.map((r) => monthLabel(r.period_start.slice(0, 7))), bars: { name: "Visitas", color: "#ef6a4d", values: last.map((r) => r.sessions ?? 0) }, line: { name: "Personas", color: "#d63a8a", values: last.map((r) => r.users) } },
+          ]],
+          bullets: [{ title: "Lectura del sitio", items: webReading(webCur, webPrev) }],
+        });
+      }
       const recs = [...(learnSpec.recs ?? []), ...adsRecs.map((t) => ({ tag: "Publicidad", title: t, body: "" }))].slice(0, 6);
-      sections.push({ kicker: hasAds ? "04 · Siguientes pasos" : "03 · Siguientes pasos", title: "Lo que haremos a continuación", recs: recs.length ? recs : undefined,
+      sections.push({ kicker: `${String(sections.length + 1).padStart(2, "0")} · Siguientes pasos`, title: "Lo que haremos a continuación", recs: recs.length ? recs : undefined,
         bullets: insights.length ? [{ title: "Claves del periodo", items: insights }] : undefined });
       return {
         ...base, title: win?.kind === "week" ? "Reporte semanal de redes" : win?.kind === "month" ? "Reporte mensual de redes" : "Reporte de redes",
@@ -394,7 +418,7 @@ export default function PortalInsights({ clientId, clientName, view }: { clientI
       ],
       notes: ["CTR = clics / impresiones · CPC = costo por clic · Frecuencia = veces que cada persona vio el anuncio."],
     };
-  }, [view, win, cur, prev, followersCmp, trend, networks, aCur, aPrev, cpr, cprPrev, insights, posts, formats, filteredPosts, adm, adsReading, adsRecs, campaigns, learnSpec, clientName]);
+  }, [view, win, cur, prev, followersCmp, trend, networks, webRows, aCur, aPrev, cpr, cprPrev, insights, posts, formats, filteredPosts, adm, adsReading, adsRecs, campaigns, learnSpec, clientName]);
 
   const download = async () => {
     if (!pdfRef.current) return;
