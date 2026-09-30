@@ -164,15 +164,17 @@ Deno.serve(async (req) => {
       try {
         const d = await mc("/v2/analytics/campaigns/facebookads", base);
         const camps = ((d?.data ?? []) as any[]).filter((c) => (c.spent ?? 0) > 0 || (c.impressions ?? 0) > 0);
-        const RESULT_LABELS: Record<string, string> = {
-          "onsite_conversion.messaging_conversation_started_7d": "conversaciones iniciadas",
-          link_click: "clics al enlace", post_engagement: "interacciones", video_view: "reproducciones",
-          reach: "personas alcanzadas", lead: "registros", "offsite_conversion.fb_pixel_purchase": "compras",
-        };
         const labelOf = (l: string | null) => {
-          if (!l) return "resultados";
-          const k = l.toLowerCase().replace(/ /g, "_");
-          return RESULT_LABELS[k] ?? RESULT_LABELS[Object.keys(RESULT_LABELS).find((x) => k.includes(x.replace(/\./g, "_").slice(-20))) ?? ""] ?? l.toLowerCase();
+          const k = String(l ?? "").toLowerCase();
+          if (!k) return "resultados";
+          if (k.includes("messaging conversation")) return "conversaciones iniciadas";
+          if (k.includes("link click")) return "clics al enlace";
+          if (k.includes("engagement")) return "interacciones";
+          if (k.includes("video")) return "reproducciones";
+          if (k.includes("reach")) return "personas alcanzadas";
+          if (k.includes("lead")) return "registros";
+          if (k.includes("purchase")) return "compras";
+          return k;
         };
         const adRows = camps.map((c) => ({
           client_id: clientId, platform: "meta", campaign_key: String(c.providerCampaignId ?? c.id),
