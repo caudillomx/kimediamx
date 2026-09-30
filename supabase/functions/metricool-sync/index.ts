@@ -22,14 +22,23 @@ Deno.serve(async (req) => {
       return json({ error: "Metricool no está configurado" }, 500);
 
     const url = Deno.env.get("SUPABASE_URL")!;
-    const userClient = createClient(url, Deno.env.get("SUPABASE_ANON_KEY")!, {
-      global: { headers: { Authorization: req.headers.get("Authorization") ?? "" } },
-    });
-    const { data: u } = await userClient.auth.getUser();
-    if (!u?.user) return json({ error: "No autenticado" }, 401);
     const admin = createClient(url, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    const { data: roles } = await admin.from("user_roles").select("role").eq("user_id", u.user.id);
-    if (!(roles ?? []).some((r: any) => r.role === "admin")) return json({ error: "Solo administradores" }, 403);
+    let actorId: string | null = null;
+    const cronHeader = req.headers.get("x-cron-secret");
+    if (cronHeader) {
+      const { data: cs } = await admin.from("app_settings").select("value").eq("key", "cron_secret").maybeSingle();
+      if (!cs?.value || cs.value !== cronHeader) return json({ error: "No autorizado" }, 401);
+    } else {
+      const userClient = createClient(url, Deno.env.get("SUPABASE_ANON_KEY")!, {
+        global: { headers: { Authorization: req.headers.get("Authorization") ?? "" } },
+      });
+      const { data: u } = await userClient.auth.getUser();
+      if (!u?.user) return json({ error: "No autenticado" }, 401);
+      const { data: roles } = await admin.from("user_roles").select("role").eq("user_id", u.user.id);
+      if (!(roles ?? []).some((r: any) => r.role === "admin")) return json({ error: "Solo administradores" }, 403);
+      actorId = u.user.id;
+    }
+    const u = { user: { id: actorId } };
 
     const body = await req.json().catch(() => ({}));
     const action = String(body?.action ?? "brands");
