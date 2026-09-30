@@ -15,6 +15,20 @@ async function mc(path: string, params: Record<string, string>) {
   try { return JSON.parse(text); } catch { return text; }
 }
 
+
+/** Metricool entrega {dateTime, timezone}; lo convertimos a ISO con desfase real para no mover horarios. */
+function iso(o: any): string | undefined {
+  if (!o?.dateTime) return undefined;
+  const dt = String(o.dateTime); if (/[zZ]|[+-]\d{2}:?\d{2}$/.test(dt) || !o.timezone) return dt;
+  try {
+    const guess = new Date(dt + "Z");
+    const parts = Object.fromEntries(new Intl.DateTimeFormat("en-US", { timeZone: o.timezone, hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }).formatToParts(guess).map((x) => [x.type, x.value]));
+    const asTz = Date.UTC(+parts.year, +parts.month - 1, +parts.day, +parts.hour, +parts.minute, +parts.second);
+    const offMin = Math.round((asTz - guess.getTime()) / 60000);
+    return new Date(guess.getTime() - offMin * 60000).toISOString();
+  } catch { return dt; }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
@@ -104,14 +118,14 @@ Deno.serve(async (req) => {
         const [fol, ps] = await Promise.all([series(api, n.metric), posts(api)]);
         const norm = ps.map((p) => {
           if (n.key === "instagram") return {
-            url: p.url, text: p.content, date: p.publishedAt?.dateTime, image: p.imageUrl,
+            url: p.url, text: p.content, date: iso(p.publishedAt), image: p.imageUrl,
             format: String(p.type ?? "").replace("FEED_", "").replace("CAROUSEL_ALBUM", "CARRUSEL").toLowerCase(),
             likes: p.likes ?? 0, comments: p.comments ?? 0, shares: p.shares ?? 0, saves: p.saved ?? 0,
             interactions: p.interactions ?? 0, reach: p.reach ?? 0, impressions: p.impressionsTotal ?? p.views ?? 0,
             views: p.views ?? 0, engagement: p.engagement ?? null,
           };
           if (n.key === "facebook") return {
-            url: p.link, text: p.text, date: p.created?.dateTime, image: p.picture,
+            url: p.link, text: p.text, date: iso(p.created), image: p.picture,
             format: String(p.type ?? "post").toLowerCase(),
             likes: p.reactions ?? 0, comments: p.comments ?? 0, shares: p.shares ?? 0, saves: 0,
             interactions: (p.reactions ?? 0) + (p.comments ?? 0) + (p.shares ?? 0),
@@ -122,7 +136,7 @@ Deno.serve(async (req) => {
             const likes = p.totalLikes ?? p.organicLikes ?? 0, rts = p.totalRetweets ?? p.organicRetweets ?? 0;
             const rep = p.totalReplies ?? p.organicReplies ?? 0, q = p.totalQuotes ?? 0;
             return {
-              url: p.url, text: p.text, date: p.created?.dateTime ?? p.createdAt?.dateTime, image: p.picture,
+              url: p.url, text: p.text, date: iso(p.created ?? p.createdAt), image: p.picture,
               format: (p.totalVideoViews ?? 0) > 0 ? "video" : "post",
               likes, comments: rep, shares: rts + q, saves: p.totalBookmarks ?? 0,
               interactions: likes + rts + rep + q + (p.totalBookmarks ?? 0),
@@ -133,7 +147,7 @@ Deno.serve(async (req) => {
           if (n.key === "linkedin") {
             const likes = p.likes ?? p.like ?? 0;
             return {
-              url: p.url, text: p.comment, date: p.created?.dateTime, image: p.picture,
+              url: p.url, text: p.comment, date: iso(p.created), image: p.picture,
               format: String(p.type ?? (p.videoViews != null ? "video" : "post")).toLowerCase(),
               likes, comments: 0, shares: 0, saves: 0, interactions: likes + (p.clicks ?? 0) * 0,
               reach: p.impressions ?? p.viewers ?? 0, impressions: p.impressions ?? 0,
@@ -141,7 +155,7 @@ Deno.serve(async (req) => {
             };
           }
           if (n.key === "youtube") return {
-            url: p.watchUrl, text: p.title, date: p.publishedAt?.dateTime, image: p.thumbnailUrl,
+            url: p.watchUrl, text: p.title, date: iso(p.publishedAt), image: p.thumbnailUrl,
             format: String(p.videoType ?? "video").toLowerCase() === "short" ? "short" : "video",
             likes: p.likes ?? 0, comments: p.comments ?? 0, shares: p.shares ?? 0, saves: 0,
             interactions: (p.likes ?? 0) + (p.comments ?? 0) + (p.shares ?? 0),
