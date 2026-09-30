@@ -2,7 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-cron-secret",
 };
 
 const GATEWAY_URL = "https://connector-gateway.lovable.dev/notion/v1";
@@ -82,27 +82,38 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const authHeader = req.headers.get("Authorization") ?? "";
 
-    // auth: admin only
-    const userClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data: userData } = await userClient.auth.getUser();
-    const uid = userData?.user?.id;
-    if (!uid) {
-      return new Response(JSON.stringify({ error: "No autenticado" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    // auth: admin o cron con secreto compartido
     const admin = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    const { data: roles } = await admin.from("user_roles").select("role").eq("user_id", uid);
-    if (!(roles ?? []).some((r: any) => r.role === "admin")) {
-      return new Response(JSON.stringify({ error: "Solo administradores pueden sincronizar" }), {
-        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    const cronHeader = req.headers.get("x-cron-secret");
+    if (cronHeader) {
+      const { data: cs } = await admin.from("app_settings").select("value").eq("key", "cron_secret").maybeSingle();
+      if (!cs?.value || cs.value !== cronHeader) {
+        return new Response(JSON.stringify({ error: "No autorizado" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    } else {
+      const userClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
+        global: { headers: { Authorization: authHeader } },
       });
+      const { data: userData } = await userClient.auth.getUser();
+      const uid = userData?.user?.id;
+      if (!uid) {
+        return new Response(JSON.stringify({ error: "No autenticado" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { data: roles } = await admin.from("user_roles").select("role").eq("user_id", uid);
+      if (!(roles ?? []).some((r: any) => r.role === "admin")) {
+        return new Response(JSON.stringify({ error: "Solo administradores pueden sincronizar" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     const body = await req.json().catch(() => ({}));
     const sourceId: string | undefined = body?.sourceId;
+    const onlyClientId: string | undefined = body?.clientId;
 
     let q = admin.from("notion_parrilla_sources").select("*").eq("active", true);
     if (sourceId) q = q.eq("id", sourceId);
