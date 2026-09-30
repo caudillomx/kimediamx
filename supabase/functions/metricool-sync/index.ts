@@ -90,14 +90,18 @@ Deno.serve(async (req) => {
         catch (e) { console.warn("posts", network, String(e)); return []; }
       };
 
-      const nets: { key: string; metric: string; handle?: string }[] = [];
+      const nets: { key: string; metric: string; handle?: string; api?: string }[] = [];
       if (brand.instagram) nets.push({ key: "instagram", metric: "Followers", handle: brand.instagram });
       if (brand.facebook || brand.facebookPageId) nets.push({ key: "facebook", metric: "pageFollows", handle: brand.facebook });
       if (brand.tiktok) nets.push({ key: "tiktok", metric: "followers_count", handle: brand.tiktok });
+      if (brand.twitter) nets.push({ key: "x", api: "twitter", metric: "followers", handle: brand.twitter });
+      if (brand.linkedinCompany) nets.push({ key: "linkedin", metric: "followers", handle: brand.linkedinCompany });
+      if (brand.youtube) nets.push({ key: "youtube", metric: "totalSubscribers", handle: brand.youtube });
 
       const rows: any[] = [];
       for (const n of nets) {
-        const [fol, ps] = await Promise.all([series(n.key, n.metric), posts(n.key)]);
+        const api = n.api ?? n.key;
+        const [fol, ps] = await Promise.all([series(api, n.metric), posts(api)]);
         const norm = ps.map((p) => {
           if (n.key === "instagram") return {
             url: p.url, text: p.content, date: p.publishedAt?.dateTime, image: p.imageUrl,
@@ -113,6 +117,36 @@ Deno.serve(async (req) => {
             interactions: (p.reactions ?? 0) + (p.comments ?? 0) + (p.shares ?? 0),
             reach: p.impressionsUnique ?? 0, impressions: p.impressions ?? 0,
             views: p.videoViews ?? 0, clicks: p.clicks ?? 0, engagement: p.engagement ?? null,
+          };
+          if (n.key === "x") {
+            const likes = p.totalLikes ?? p.organicLikes ?? 0, rts = p.totalRetweets ?? p.organicRetweets ?? 0;
+            const rep = p.totalReplies ?? p.organicReplies ?? 0, q = p.totalQuotes ?? 0;
+            return {
+              url: p.url, text: p.text, date: p.created?.dateTime ?? p.createdAt?.dateTime, image: p.picture,
+              format: (p.totalVideoViews ?? 0) > 0 ? "video" : "post",
+              likes, comments: rep, shares: rts + q, saves: p.totalBookmarks ?? 0,
+              interactions: likes + rts + rep + q + (p.totalBookmarks ?? 0),
+              reach: p.totalImpressions ?? 0, impressions: p.totalImpressions ?? 0,
+              views: p.totalVideoViews ?? 0, clicks: p.totalLinkClicks ?? 0, engagement: p.totalEngagement ?? null,
+            };
+          }
+          if (n.key === "linkedin") {
+            const likes = p.likes ?? p.like ?? 0;
+            return {
+              url: p.url, text: p.comment, date: p.created?.dateTime, image: p.picture,
+              format: String(p.type ?? (p.videoViews != null ? "video" : "post")).toLowerCase(),
+              likes, comments: 0, shares: 0, saves: 0, interactions: likes + (p.clicks ?? 0) * 0,
+              reach: p.impressions ?? p.viewers ?? 0, impressions: p.impressions ?? 0,
+              views: p.videoViews ?? 0, clicks: p.clicks ?? 0, engagement: p.engagement ?? null,
+            };
+          }
+          if (n.key === "youtube") return {
+            url: p.watchUrl, text: p.title, date: p.publishedAt?.dateTime, image: p.thumbnailUrl,
+            format: String(p.videoType ?? "video").toLowerCase() === "short" ? "short" : "video",
+            likes: p.likes ?? 0, comments: p.comments ?? 0, shares: p.shares ?? 0, saves: 0,
+            interactions: (p.likes ?? 0) + (p.comments ?? 0) + (p.shares ?? 0),
+            reach: p.views ?? 0, impressions: p.views ?? 0, views: p.views ?? 0,
+            duration: p.durationSeconds ?? null, watch_minutes: p.watchMinutes ?? null, engagement: null,
           };
           return {
             url: p.shareUrl, text: p.videoDescription ?? p.title, date: p.createTime, image: p.coverImageUrl,
