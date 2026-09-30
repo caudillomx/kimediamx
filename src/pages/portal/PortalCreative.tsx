@@ -6,10 +6,9 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
-import { LogOut, ShieldAlert, Sun, Moon, CalendarDays, Megaphone, FileText, LayoutDashboard, Sparkles } from "lucide-react";
+import { LogOut, ShieldAlert, Sun, Moon, CalendarDays, Megaphone, FileText, LayoutDashboard, Sparkles, Lightbulb } from "lucide-react";
 import type { ClientPortalConfig } from "@/lib/clientPortal";
 import { SERVICE_MAP, type ServiceKey } from "@/lib/services";
-import PortalParrilla from "@/components/portal/PortalParrilla";
 import PortalParrillaNotion from "@/components/portal/PortalParrillaNotion";
 
 import PortalInsights from "@/components/portal/PortalInsights";
@@ -89,6 +88,7 @@ export default function PortalCreative({ portal }: { portal: ClientPortalConfig 
   const tabs = useMemo(() => {
     const list: { key: string; label: string; icon: any }[] = [
       { key: "resumen", label: "Resumen", icon: LayoutDashboard },
+      { key: "aprendizajes", label: "Qué funciona", icon: Lightbulb },
       { key: "contenido", label: "Contenido", icon: Sparkles },
     ];
     if (counts.ads > 0) list.push({ key: "publicidad", label: "Publicidad", icon: Megaphone });
@@ -182,6 +182,9 @@ export default function PortalCreative({ portal }: { portal: ClientPortalConfig 
               <TabsContent value="resumen" className="mt-0">
                 <PortalInsights clientId={portal.clientId} clientName={portal.displayName} view="panorama" />
               </TabsContent>
+              <TabsContent value="aprendizajes" className="mt-0">
+                <PortalInsights clientId={portal.clientId} clientName={portal.displayName} view="aprendizajes" />
+              </TabsContent>
               <TabsContent value="contenido" className="mt-0">
                 <PortalInsights clientId={portal.clientId} clientName={portal.displayName} view="contenido" />
               </TabsContent>
@@ -192,18 +195,7 @@ export default function PortalCreative({ portal }: { portal: ClientPortalConfig 
               {services.includes("estrategia") && (
                 <>
                   <TabsContent value="parrilla" className="mt-0">
-                    <Tabs defaultValue="notion" className="space-y-4">
-                      <TabsList className="glass h-auto p-1">
-                        <TabsTrigger value="notion">Calendario (Notion)</TabsTrigger>
-                        <TabsTrigger value="ciclos">Ciclos KiMedia</TabsTrigger>
-                      </TabsList>
-                      <TabsContent value="notion" className="mt-0">
-                        <PortalParrillaNotion clientId={portal.clientId} clientName={portal.clientName} canSync={isAdmin} />
-                      </TabsContent>
-                      <TabsContent value="ciclos" className="mt-0">
-                        <PortalParrilla clientId={portal.clientId} clientName={portal.clientName} />
-                      </TabsContent>
-                    </Tabs>
+                    <PortalParrillaNotion clientId={portal.clientId} clientName={portal.clientName} canSync={isAdmin} />
                   </TabsContent>
 
                 </>

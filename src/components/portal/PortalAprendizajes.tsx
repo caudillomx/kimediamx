@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -199,15 +199,15 @@ export default function PortalAprendizajes({
           <div className="grid grid-cols-[48px_repeat(4,1fr)] gap-1 text-[11px]">
             <div />{FRANJAS.map((f) => <div key={f.k} className="text-center text-muted-foreground">{f.k}</div>)}
             {DIAS.map((d, di) => (
-              <>
-                <div key={d} className="text-muted-foreground flex items-center">{d}</div>
+              <Fragment key={d}>
+                <div className="text-muted-foreground flex items-center">{d}</div>
                 {FRANJAS.map((f, fi) => { const xs = a.heat[di][fi]; const v = avg(xs); return (
                   <div key={d + f.k} title={`${xs.length} piezas`} className="h-9 rounded-md flex items-center justify-center font-medium"
                     style={{ background: xs.length ? `hsl(15 95% 55% / ${0.1 + (v / a.heatMax) * 0.8})` : "hsl(var(--muted) / 0.4)" }}>
                     {xs.length ? nf(v) : ""}
                   </div>
                 ); })}
-              </>
+              </Fragment>
             ))}
           </div>
           <p className="text-[11px] text-muted-foreground">Promedio de interacciones por pieza, según día y hora de publicación.</p>
