@@ -33,7 +33,7 @@ export default function PortalCreative({ portal }: { portal: ClientPortalConfig 
   );
 
   useEffect(() => {
-    document.documentElement.classList.toggle("light", theme === "light");
+    document.documentElement.classList.toggle("theme-light", theme === "light");
     localStorage.setItem("portal-theme", theme);
   }, [theme]);
 
