@@ -122,7 +122,7 @@ Deno.serve(async (req) => {
             reach: p.viewCount ?? 0, impressions: p.viewCount ?? 0, views: p.viewCount ?? 0,
             duration: p.duration ?? null, engagement: p.engagement ?? null,
           };
-        }).map((p) => ({ ...p, text: String(p.text ?? "").slice(0, 400) }));
+        }).map((p) => ({ ...p, text: Array.from(String(p.text ?? "")).slice(0, 400).join("") }));
         const followers = fol.length ? fol[fol.length - 1].value : null;
         const first = fol.length ? fol[0].value : null;
         const growth = followers != null && first != null ? followers - first : null;
