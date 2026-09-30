@@ -53,10 +53,10 @@ export default function PortalParrillaNotion({ clientId, clientName, canSync }: 
       supabase.from("notion_parrilla_items")
         .select("id, notion_page_id, account, title, scheduled_date, theme, objective, format, network, status, responsible, notion_url")
         .eq("client_id", clientId).order("scheduled_date", { ascending: true }),
-      supabase.from("client_portal_social_metrics").select("network, period_start, raw").eq("client_id", clientId).like("period_start", "%-01").limit(500),
+      supabase.from("client_portal_social_metrics").select("network, period_start, raw").eq("client_id", clientId).limit(1000),
     ]);
     setItems((data ?? []) as NotionItem[]);
-    setPubs(((s ?? []) as any[]).flatMap((r) => ((r.raw?.posts ?? []) as any[]).map((p) => ({ date: String(p.date ?? "").slice(0, 10), network: r.network, interactions: p.interactions ?? 0, url: p.url, text: p.text }))));
+    setPubs(((s ?? []) as any[]).filter((r) => String(r.period_start).endsWith("-01")).flatMap((r) => ((r.raw?.posts ?? []) as any[]).map((p) => ({ date: String(p.date ?? "").slice(0, 10), network: r.network, interactions: p.interactions ?? 0, url: p.url, text: p.text }))));
     setLoading(false);
   };
   useEffect(() => { setLoading(true); load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [clientId]);

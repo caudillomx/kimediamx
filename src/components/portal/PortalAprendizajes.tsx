@@ -27,7 +27,7 @@ const avg = (xs: number[]) => xs.length ? xs.reduce((a, b) => a + b, 0) / xs.len
 const er = (p: APost) => (p.reach ? p.interactions / p.reach : null);
 const snippet = (t?: string, n = 90) => { const a = Array.from((t ?? "").replace(/\s+/g, " ").trim()); return a.length > n ? a.slice(0, n).join("") + "…" : a.join(""); };
 
-const STOP = new Set(("de la que el en y a los del se las por un para con no una su al lo como más pero sus le ya o este sí porque esta entre cuando muy sin sobre también me hasta hay donde quien desde todo nos durante todos uno les ni contra otros ese eso ante ellos e esto mí antes algunos qué unos yo otro otras otra él tanto esa estos mucho quienes nada muchos cual poco ella estar estas algunas algo nosotros mi mis tú te ti tu tus ellas nosotras vosotros os mío mía tuyo suyo nuestro nuestra es son fue ser hoy día vez cada tiene hace puede solo así bien cómo dónde qué cuál todas estás está están tan sea aquí ahí dios jesús señor").split(" "));
+const STOP = new Set(("de la que el en y a los del se las por un para con no una su al lo como más pero sus le ya o este sí porque esta entre cuando muy sin sobre también me hasta hay donde quien desde todo nos durante todos uno les ni contra otros ese eso ante ellos e esto mí antes algunos qué unos yo otro otras otra él tanto esa estos mucho quienes nada muchos cual poco ella estar estas algunas algo nosotros mi mis tú te ti tu tus ellas nosotras vosotros os mío mía tuyo suyo nuestro nuestra es son fue ser hoy día vez cada tiene hace puede solo así bien cómo dónde qué cuál todas estás está están tan sea aquí ahí dios jesus señor senor aunque tarde entrega padre nuevo nueva nuestros nuestras siempre cuando hacer tener sentir mismo misma puedes quieres vamos parte gracias ahora luego despues después mejor mayor menos cosas manera forma momento momentos favor ricardo solamente todavia además ademas incluso mientras donde hacia través traves").split(" "));
 
 type ParrillaItem = { scheduled_date: string | null; network: string | null; status: string | null; title: string | null };
 
@@ -83,7 +83,7 @@ export default function PortalAprendizajes({
     // Temas (palabras) ponderados — desde histórico para tener volumen
     const words = new Map<string, number[]>();
     allPosts.forEach((p) => {
-      const ws = new Set(((p.text ?? "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").match(/[a-zñ]{5,}/g) ?? []).filter((w) => !STOP.has(w)));
+      const ws = new Set(((p.text ?? "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").match(/[a-zñ]{5,}/g) ?? []).filter((w) => !STOP.has(w) && !STOP.has(w.normalize("NFD").replace(/[\u0300-\u036f]/g, ""))));
       ws.forEach((w) => { const xs = words.get(w) ?? []; xs.push(p.interactions || 0); words.set(w, xs); });
     });
     const themes = [...words.entries()].filter(([, xs]) => xs.length >= 4)
