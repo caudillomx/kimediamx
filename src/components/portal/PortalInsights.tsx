@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrig
 import { toast } from "sonner";
 import PortalAprendizajes from "./PortalAprendizajes";
 import InsightsPdf, { downloadPdf, type PdfSpec } from "./InsightsPdf";
+import { useWebRows, channelsOf, webReading, dur } from "./PortalWebsite";
 import {
   type Social, type Ad, type Post, type Win, NET_LABEL, SAVES_NETWORKS,
   buildPosts, buildFollowers, buildWindows, aggregate, adsIn, sumAds, isMonthly, isWeekly, monthLabel, dayLabel,
@@ -98,6 +99,7 @@ export default function PortalInsights({ clientId, clientName, view }: { clientI
   const [downloading, setDownloading] = useState(false);
   const [learnSpec, setLearnSpec] = useState<Partial<PdfSpec>>({});
   const pdfRef = useRef<HTMLDivElement>(null);
+  const webRows = useWebRows(clientId);
 
   useEffect(() => {
     let alive = true;
@@ -220,25 +222,30 @@ export default function PortalInsights({ clientId, clientName, view }: { clientI
     return { cur: mk(aCur), prev: mk(aPrev) };
   }, [aCur, aPrev]);
 
+  const isMsg = useMemo(() => campaigns.some((c) => /conversa|mensaj/i.test(c.result_type ?? "") || /MESSAG/i.test(c.objective ?? "")), [campaigns]);
+  const resNoun = isMsg ? "conversaciones" : (campaigns[0]?.result_type ?? "resultados");
+  const resTitle = resNoun[0].toUpperCase() + resNoun.slice(1);
   const adsReading = useMemo(() => {
     const out: string[] = [];
     if (!aCur.spend) return out;
-    const rt = campaigns[0]?.result_type ?? "resultados";
+    const rt = resNoun;
     out.push(`Se invirtieron ${money(aCur.spend)} y se obtuvieron ${nf(aCur.results)} ${rt}: cada una costó ${money(cpr)}${cprPrev ? `, ${cpr! < cprPrev ? "más barato" : "más caro"} que el periodo anterior (${money(cprPrev)})` : ""}.`);
-    if (adm.cur.replyRate != null && adm.cur.replies) out.push(`De cada 10 conversaciones iniciadas, ${nf(adm.cur.replyRate * 10, 1)} recibieron primera respuesta (${nf(adm.cur.replies)} en total). Costo real por conversación respondida: ${money(adm.cur.costPerReply)}.`);
+    const vv = aCur.actions["video_view"] ?? 0, net = aCur.actions["post_interaction_net"] ?? 0;
+    if (!isMsg && vv && aCur.results) out.push(`Ojo: ${nf((vv / aCur.results) * 100, 0)}% de esas ${rt} son reproducciones de video de al menos 3 segundos (${nf(vv)}); las reacciones, comentarios y compartidos fueron ${nf(net)}, a ${money(net ? aCur.spend / net : null)} cada una.`);
+    if (isMsg && adm.cur.replyRate != null && adm.cur.replies) out.push(`De cada 10 conversaciones iniciadas, ${nf(adm.cur.replyRate * 10, 1)} recibieron primera respuesta (${nf(adm.cur.replies)} en total). Costo real por conversación respondida: ${money(adm.cur.costPerReply)}.`);
     if (adm.cur.ctr != null) out.push(`El ${pctf(adm.cur.ctr, 2)} de quienes vieron el anuncio dio clic (CTR). ${adm.cur.ctr >= 0.03 ? "Es un nivel alto: el creativo está llamando la atención." : adm.cur.ctr >= 0.01 ? "Es un nivel sano para campañas de mensajes." : "Es bajo: conviene probar otro creativo o mensaje."}`);
     if (adm.cur.freq != null) out.push(`Cada persona vio el anuncio ${nf(adm.cur.freq, 2)} veces en promedio. ${adm.cur.freq > 3 ? "Hay riesgo de cansancio: renovar creativos o ampliar público." : "Frecuencia sana: todavía hay espacio para repetir el mensaje."}`);
-    if (adm.cur.convRate != null) out.push(`${pctf(adm.cur.convRate)} de los clics terminó en ${rt}.`);
+    if (adm.cur.convRate != null && adm.cur.convRate <= 1) out.push(`${pctf(adm.cur.convRate)} de los clics terminó en ${rt}.`);
     if (cur?.reach) out.push(`El alcance pagado (${nf(aCur.reach)} personas) equivale a ${nf(aCur.reach / cur.reach, 1)}× el alcance orgánico del mismo periodo (${nf(cur.reach)}).`);
     const best = [...campaigns].filter((c) => c.results).sort((a, b) => (a.cost_per_result ?? 1e9) - (b.cost_per_result ?? 1e9));
     if (best.length > 1) out.push(`La campaña más eficiente fue "${best[0].campaign_name}" con ${money(best[0].cost_per_result)} por resultado; la menos eficiente, "${best[best.length - 1].campaign_name}" con ${money(best[best.length - 1].cost_per_result)}.`);
     return out;
-  }, [aCur, adm, campaigns, cpr, cprPrev, cur]);
+  }, [aCur, adm, campaigns, cpr, cprPrev, cur, isMsg, resNoun]);
 
   const adsRecs = useMemo(() => {
     const out: string[] = [];
     if (!aCur.spend) return out;
-    if (adm.cur.replyRate != null && adm.cur.replyRate < 0.8) out.push(`Responder más rápido en WhatsApp: ${nf((1 - adm.cur.replyRate) * 100)}% de las conversaciones pagadas no recibió primera respuesta registrada.`);
+    if (isMsg && adm.cur.replyRate != null && adm.cur.replyRate < 0.8) out.push(`Responder más rápido en WhatsApp: ${nf((1 - adm.cur.replyRate) * 100)}% de las conversaciones pagadas no recibió primera respuesta registrada.`);
     if (adm.cur.freq != null && adm.cur.freq > 2.5) out.push("Rotar el creativo: la frecuencia ya supera 2.5 vistas por persona.");
     if (cprPrev && cpr && cpr > cprPrev * 1.15) out.push(`Revisar segmentación o creativo: el costo por resultado subió ${nf(((cpr - cprPrev) / cprPrev) * 100)}% vs. el periodo anterior.`);
     if (cprPrev && cpr && cpr < cprPrev * 0.9) out.push("Considerar subir presupuesto: el costo por resultado bajó y la campaña está respondiendo.");
@@ -303,7 +310,7 @@ export default function PortalInsights({ clientId, clientName, view }: { clientI
       const hasAds = aCur.spend > 0;
       const intro = `Este reporte resume cómo se movieron tus redes durante ${periodKind} (${base.period}). `
         + `Publicamos ${nf(cur.nPosts)} piezas que generaron ${nf(cur.interactions)} interacciones y llegaron a ${nf(cur.reach)} personas de forma orgánica`
-        + (hasAds ? `; además, la publicidad en Meta generó ${nf(aCur.results)} conversaciones con una inversión de ${money(aCur.spend)}.` : ".")
+        + (hasAds ? `; además, la publicidad en Meta generó ${nf(aCur.results)} ${resNoun} con una inversión de ${money(aCur.spend)}.` : ".")
         + (win?.prev ? ` Comparamos cada cifra contra ${win.prev.label}.` : "");
       const sections: NonNullable<PdfSpec["sections"]> = [
         {
@@ -328,24 +335,47 @@ export default function PortalInsights({ clientId, clientName, view }: { clientI
         },
       ];
       if (hasAds) {
-        const fn = funnel(aCur, adm.cur.replies);
+        const fn = funnel(aCur, isMsg ? adm.cur.replies : 0, isMsg ? "Conversaciones iniciadas" : resTitle);
         sections.push({
           kicker: "03 · Publicidad", title: "Qué logró la inversión en anuncios",
           kpis: [
             { label: "Inversión", value: money(aCur.spend), ...deltaNote(aCur.spend, aPrev.spend || null) },
-            { label: "Conversaciones", value: nf(aCur.results), ...deltaNote(aCur.results, aPrev.results || null) },
-            { label: "Costo por conversación", value: money(cpr), ...deltaNote(cpr, cprPrev, true) },
-            { label: "Con respuesta", value: adm.cur.replies ? nf(adm.cur.replies) : "—", note: adm.cur.replyRate != null ? `${pctf(adm.cur.replyRate, 0)} de las iniciadas` : undefined },
+            { label: resTitle, value: nf(aCur.results), ...deltaNote(aCur.results, aPrev.results || null) },
+            { label: "Costo por resultado", value: money(cpr), ...deltaNote(cpr, cprPrev, true) },
+            isMsg ? { label: "Con respuesta", value: adm.cur.replies ? nf(adm.cur.replies) : "—", note: adm.cur.replyRate != null ? `${pctf(adm.cur.replyRate, 0)} de las iniciadas` : undefined }
+              : { label: "Personas alcanzadas", value: nf(aCur.reach), note: adm.cur.freq != null ? `${nf(adm.cur.freq, 2)} vistas por persona` : undefined },
           ],
           chartRows: [[
-            { kind: "hbar", title: "Del anuncio a la conversación", subtitle: "Cuántas personas avanzaron en cada paso", items: fn.map((x) => ({ label: x.label, value: x.v, display: nf(x.v) })) },
-            { kind: "combo", title: win?.kind === "week" ? "Inversión y conversaciones por semana" : "Inversión y conversaciones por mes", labels: trendLabels, bars: { name: "Inversión", color: "#f5b942", values: trend.map((r: any) => r.spend ?? 0) }, line: { name: "Conversaciones", color: "#d63a8a", values: trend.map((r: any) => r.results) } },
+            { kind: "hbar", title: isMsg ? "Del anuncio a la conversación" : "Del anuncio al resultado", subtitle: "Cuántas personas avanzaron en cada paso", items: fn.map((x) => ({ label: x.label, value: x.v, display: nf(x.v) })) },
+            { kind: "combo", title: win?.kind === "week" ? `Inversión y ${resNoun} por semana` : `Inversión y ${resNoun} por mes`, labels: trendLabels, bars: { name: "Inversión", color: "#f5b942", values: trend.map((r: any) => r.spend ?? 0) }, line: { name: resTitle, color: "#d63a8a", values: trend.map((r: any) => r.results) } },
           ]],
           bullets: adsReading.length ? [{ title: "Lectura de la inversión", items: adsReading }] : undefined,
         });
       }
+      const webCur = win?.kind === "month" ? webRows?.find((r) => r.period_start === win.from) : undefined;
+      if (webCur) {
+        const wi = webRows!.indexOf(webCur), webPrev = wi > 0 ? webRows![wi - 1] : undefined;
+        const ch = channelsOf(webCur);
+        const wd = (c: number | null, p: number | null | undefined) => deltaNote(c, p ?? null);
+        const last = webRows!.slice(Math.max(0, wi - 11), wi + 1);
+        sections.push({
+          kicker: `${String(sections.length + 1).padStart(2, "0")} · Sitio web`, title: "Cómo se comportó tu sitio web",
+          intro: "Datos de Google Analytics del mes.",
+          kpis: [
+            { label: "Personas", value: nf(webCur.users), ...wd(webCur.users, webPrev?.users) },
+            { label: "Visitas", value: nf(webCur.sessions), ...wd(webCur.sessions, webPrev?.sessions) },
+            { label: "Páginas vistas", value: nf(webCur.pageviews), ...wd(webCur.pageviews, webPrev?.pageviews) },
+            { label: "Tiempo por visita", value: dur(webCur.avg_session_seconds), ...wd(webCur.avg_session_seconds, webPrev?.avg_session_seconds) },
+          ],
+          chartRows: [[
+            { kind: "hbar", title: "De dónde llegan las visitas", subtitle: "Visitas por canal", items: ch.slice(0, 6).map((c) => ({ label: c.label, value: c.sessions, display: `${nf(c.share * 100, 0)}%` })) },
+            { kind: "combo", title: "Visitas y personas por mes", labels: last.map((r) => monthLabel(r.period_start.slice(0, 7))), bars: { name: "Visitas", color: "#ef6a4d", values: last.map((r) => r.sessions ?? 0) }, line: { name: "Personas", color: "#d63a8a", values: last.map((r) => r.users) } },
+          ]],
+          bullets: [{ title: "Lectura del sitio", items: webReading(webCur, webPrev) }],
+        });
+      }
       const recs = [...(learnSpec.recs ?? []), ...adsRecs.map((t) => ({ tag: "Publicidad", title: t, body: "" }))].slice(0, 6);
-      sections.push({ kicker: hasAds ? "04 · Siguientes pasos" : "03 · Siguientes pasos", title: "Lo que haremos a continuación", recs: recs.length ? recs : undefined,
+      sections.push({ kicker: `${String(sections.length + 1).padStart(2, "0")} · Siguientes pasos`, title: "Lo que haremos a continuación", recs: recs.length ? recs : undefined,
         bullets: insights.length ? [{ title: "Claves del periodo", items: insights }] : undefined });
       return {
         ...base, title: win?.kind === "week" ? "Reporte semanal de redes" : win?.kind === "month" ? "Reporte mensual de redes" : "Reporte de redes",
@@ -380,21 +410,21 @@ export default function PortalInsights({ clientId, clientName, view }: { clientI
         { label: "Inversión", value: money(aCur.spend), ...deltaNote(aCur.spend, aPrev.spend || null) },
         { label: "Resultados", value: nf(aCur.results), ...deltaNote(aCur.results, aPrev.results || null) },
         { label: "Costo por resultado", value: money(cpr), ...deltaNote(cpr, cprPrev, true) },
-        { label: "Respondidas", value: adm.cur.replies ? nf(adm.cur.replies) : "—", note: adm.cur.replyRate != null ? `${pctf(adm.cur.replyRate, 0)} de las conversaciones` : undefined },
+        { label: isMsg ? "Respondidas" : "Alcance", value: isMsg ? (adm.cur.replies ? nf(adm.cur.replies) : "—") : nf(aCur.reach), note: adm.cur.replyRate != null ? `${pctf(adm.cur.replyRate, 0)} de las conversaciones` : undefined },
       ],
       bullets: [
         ...(adsReading.length ? [{ title: "Qué pasó con la inversión", items: adsReading }] : []),
         ...(adsRecs.length ? [{ title: "Qué recomendamos", items: adsRecs }] : []),
       ],
       tables: [
-        { title: "Del anuncio a la conversación", columns: [{ h: "Etapa", w: 40 }, { h: "Cantidad", w: 20 }, { h: "Paso", w: 20 }, { h: "Costo c/u", w: 20 }],
-          rows: funnel(aCur, adm.cur.replies).map((s) => [s.label, nf(s.v), s.step == null ? "—" : pctf(s.step), money(s.v ? aCur.spend / s.v : null)]) },
+        { title: isMsg ? "Del anuncio a la conversación" : "Del anuncio al resultado", columns: [{ h: "Etapa", w: 40 }, { h: "Cantidad", w: 20 }, { h: "Paso", w: 20 }, { h: "Costo c/u", w: 20 }],
+          rows: funnel(aCur, isMsg ? adm.cur.replies : 0, isMsg ? "Conversaciones iniciadas" : resTitle).map((s) => [s.label, nf(s.v), s.step == null ? "—" : pctf(s.step), money(s.v ? aCur.spend / s.v : null)]) },
         { title: "Campañas", columns: [{ h: "Campaña", w: 26 }, { h: "Inversión", w: 12 }, { h: "Alcance", w: 11 }, { h: "Frec.", w: 8 }, { h: "CTR", w: 8 }, { h: "CPC", w: 10 }, { h: "Result.", w: 12 }, { h: "Costo c/u", w: 13 }],
           rows: campaigns.map((c) => [c.campaign_name, money(c.spend), nf(c.reach), nf(c.freq, 2), c.ctr == null ? "—" : `${nf(c.ctr, 2)}%`, money(c.cpc), nf(c.results), money(c.cost_per_result)]) },
       ],
       notes: ["CTR = clics / impresiones · CPC = costo por clic · Frecuencia = veces que cada persona vio el anuncio."],
     };
-  }, [view, win, cur, prev, followersCmp, trend, networks, aCur, aPrev, cpr, cprPrev, insights, posts, formats, filteredPosts, adm, adsReading, adsRecs, campaigns, learnSpec, clientName]);
+  }, [view, win, cur, prev, followersCmp, trend, networks, webRows, isMsg, resNoun, resTitle, aCur, aPrev, cpr, cprPrev, insights, posts, formats, filteredPosts, adm, adsReading, adsRecs, campaigns, learnSpec, clientName]);
 
   const download = async () => {
     if (!pdfRef.current) return;
@@ -651,8 +681,8 @@ export default function PortalInsights({ clientId, clientName, view }: { clientI
                   </>}
                 </Card>
                 <Card className="glass border-border/50 p-5 space-y-3 lg:col-span-2">
-                  <div className="text-sm font-semibold">Del anuncio a la conversación</div>
-                  <Funnel steps={funnel(aCur, adm.cur.replies)} spend={aCur.spend} />
+                  <div className="text-sm font-semibold">{isMsg ? "Del anuncio a la conversación" : "Del anuncio al resultado"}</div>
+                  <Funnel steps={funnel(aCur, isMsg ? adm.cur.replies : 0, isMsg ? "Conversaciones iniciadas" : resTitle)} spend={aCur.spend} />
                 </Card>
               </div>
 
@@ -758,10 +788,10 @@ export default function PortalInsights({ clientId, clientName, view }: { clientI
   );
 }
 
-function funnel(t: { impressions: number; reach: number; clicks: number; results: number }, replies: number) {
+function funnel(t: { impressions: number; reach: number; clicks: number; results: number }, replies: number, resLabel = "Conversaciones iniciadas") {
   const raw = [
     { label: "Impresiones", v: t.impressions }, { label: "Personas alcanzadas", v: t.reach }, { label: "Clics", v: t.clicks },
-    { label: "Conversaciones iniciadas", v: t.results }, { label: "Con primera respuesta", v: replies },
+    { label: resLabel, v: t.results }, { label: "Con primera respuesta", v: replies },
   ].filter((s) => s.v > 0);
   return raw.map((s, i) => ({ ...s, step: i ? s.v / raw[i - 1].v : null as number | null }));
 }

@@ -6,12 +6,13 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
-import { LogOut, ShieldAlert, Sun, Moon, CalendarDays, Megaphone, FileText, LayoutDashboard, Sparkles, Lightbulb } from "lucide-react";
+import { LogOut, ShieldAlert, Sun, Moon, CalendarDays, Megaphone, FileText, LayoutDashboard, Sparkles, Lightbulb, Globe } from "lucide-react";
 import type { ClientPortalConfig } from "@/lib/clientPortal";
 import { SERVICE_MAP, type ServiceKey } from "@/lib/services";
 import PortalParrillaNotion from "@/components/portal/PortalParrillaNotion";
 
 import PortalInsights from "@/components/portal/PortalInsights";
+import PortalWebsite from "@/components/portal/PortalWebsite";
 import { Link } from "react-router-dom";
 
 type Report = { id: string; report_date: string; title: string; type: string; summary_md: string | null };
@@ -20,7 +21,7 @@ export default function PortalCreative({ portal }: { portal: ClientPortalConfig 
   const [logoUrl, setLogoUrl] = useState<string | null>(portal.logoUrl ?? null);
   const [services, setServices] = useState<ServiceKey[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
-  const [counts, setCounts] = useState({ parrilla: 0, activos: 0, ads: 0 });
+  const [counts, setCounts] = useState({ parrilla: 0, activos: 0, ads: 0, web: 0 });
 
   const [loading, setLoading] = useState(true);
   const [denied, setDenied] = useState(false);
@@ -41,7 +42,7 @@ export default function PortalCreative({ portal }: { portal: ClientPortalConfig 
       const { data: auth } = await supabase.auth.getUser();
       const uid = auth.user?.id;
 
-      const [{ data: client }, { data: rep }, { data: roles }, { data: access }, parrilla, activos, ads] =
+      const [{ data: client }, { data: rep }, { data: roles }, { data: access }, parrilla, activos, ads, web] =
         await Promise.all([
         supabase.from("clients").select("logo_url, services").eq("id", portal.clientId).maybeSingle(),
         supabase
@@ -66,6 +67,10 @@ export default function PortalCreative({ portal }: { portal: ClientPortalConfig 
           .from("client_portal_ads_metrics")
           .select("id", { count: "exact", head: true })
           .eq("client_id", portal.clientId),
+        supabase
+          .from("client_portal_web_analytics")
+          .select("id", { count: "exact", head: true })
+          .eq("client_id", portal.clientId),
       ]);
 
       if (!alive) return;
@@ -79,6 +84,7 @@ export default function PortalCreative({ portal }: { portal: ClientPortalConfig 
         parrilla: parrilla.count ?? 0,
         activos: activos.count ?? 0,
         ads: ads.count ?? 0,
+        web: web.count ?? 0,
       });
       setLoading(false);
     })();
@@ -92,6 +98,7 @@ export default function PortalCreative({ portal }: { portal: ClientPortalConfig 
       { key: "contenido", label: "Contenido", icon: Sparkles },
     ];
     if (counts.ads > 0) list.push({ key: "publicidad", label: "Publicidad", icon: Megaphone });
+    if (counts.web > 0) list.push({ key: "web", label: "Sitio web", icon: Globe });
     if (services.includes("estrategia") && (counts.parrilla > 0 || isAdmin)) {
       list.push({ key: "parrilla", label: "Parrilla editorial", icon: CalendarDays });
     }
@@ -190,6 +197,10 @@ export default function PortalCreative({ portal }: { portal: ClientPortalConfig 
               </TabsContent>
               <TabsContent value="publicidad" className="mt-0">
                 <PortalInsights clientId={portal.clientId} clientName={portal.displayName} view="publicidad" />
+              </TabsContent>
+
+              <TabsContent value="web" className="mt-0">
+                <PortalWebsite clientId={portal.clientId} />
               </TabsContent>
 
               {services.includes("estrategia") && (
