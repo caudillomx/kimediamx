@@ -293,18 +293,73 @@ export default function PortalInsights({ clientId, clientName, view }: { clientI
       title, columns: [{ h: "Fecha", w: 8, align: "left" as const }, { h: "Red", w: 11, align: "left" as const }, { h: "Pieza", w: 41, align: "left" as const }, { h: "Interacc.", w: 10 }, { h: "Alcance", w: 10 }, { h: "Tasa", w: 9 }, { h: "Vs. red", w: 11 }],
       rows: list.map((p) => [ddmm(p.day), `${NET[p.network]?.label} · ${fmtLabel(p.format)}`, snippet(p.text, 95) || "Sin texto", nf(p.interactions), nf(p.reach), pctf(p.reach ? p.interactions / p.reach : null), `${nf(p.idx, 1)}×`]),
     });
-    if (view === "panorama") return {
-      ...base, title: "Resumen de desempeño digital",
-      kpis: [
-        { label: "Comunidad", value: nf(cur.followers), ...deltaNote(followersCmp.cur, followersCmp.prev) },
-        { label: "Interacciones", value: nf(cur.interactions), ...deltaNote(cur.interactions, prev?.interactions ?? null) },
-        { label: "Alcance orgánico", value: nf(cur.reach), ...deltaNote(cur.reach, prev?.reach ?? null) },
-        aCur.spend ? { label: "Costo por resultado", value: money(cpr), ...deltaNote(cpr, cprPrev, true) } : { label: "Publicaciones", value: nf(cur.nPosts), ...deltaNote(cur.nPosts, prev?.nPosts ?? null) },
-      ],
-      bullets: insights.length ? [{ title: "Lectura del periodo", items: insights }] : undefined,
-      tables: [netTable, postTable("Lo que mejor funcionó", [...posts].sort((a, b) => b.idx - a.idx).slice(0, 8))],
-      notes: ["Vs. red = rendimiento de la pieza contra el promedio histórico de su red (1× = lo habitual).", "Tasa = interacciones / alcance. En TikTok el alcance corresponde a reproducciones."],
-    };
+    if (view === "panorama") {
+      const HEX: Record<string, string> = { instagram: "#e1306c", facebook: "#1877f2", tiktok: "#14b8c4", youtube: "#ff0000", linkedin: "#0a66c2", x: "#334155" };
+      const nl = (n: string) => NET[n]?.label ?? n;
+      const periodKind = win?.kind === "week" ? "la semana" : win?.kind === "month" ? "el mes" : "el periodo";
+      const activeNets = cur.byNet.filter((x) => x.posts || x.followers != null);
+      const top = [...posts].sort((a, b) => b.idx - a.idx);
+      const trendLabels = trend.map((r: any) => r.mes);
+      const hasAds = aCur.spend > 0;
+      const intro = `Este reporte resume cómo se movieron tus redes durante ${periodKind} (${base.period}). `
+        + `Publicamos ${nf(cur.nPosts)} piezas que generaron ${nf(cur.interactions)} interacciones y llegaron a ${nf(cur.reach)} personas de forma orgánica`
+        + (hasAds ? `; además, la publicidad en Meta generó ${nf(aCur.results)} conversaciones con una inversión de ${money(aCur.spend)}.` : ".")
+        + (win?.prev ? ` Comparamos cada cifra contra ${win.prev.label}.` : "");
+      const sections: NonNullable<PdfSpec["sections"]> = [
+        {
+          kicker: "01 · Comunidad", title: "Cómo creció tu comunidad",
+          intro: "Seguidores por red al cierre del periodo y evolución de las interacciones.",
+          chartRows: [[
+            { kind: "donut", title: "Comunidad por red", subtitle: `${nf(cur.followers)} seguidores en total`, items: activeNets.filter((x) => x.followers).map((x) => ({ label: `${nl(x.n)} · ${nf(x.followers)}`, value: x.followers ?? 0, color: HEX[x.n] ?? "#94a3b8" })) },
+            { kind: "hbar", title: "Nuevos seguidores", subtitle: "Altas netas en el periodo", items: activeNets.filter((x) => x.growth != null).map((x) => ({ label: nl(x.n), value: Math.max(0, x.growth ?? 0), display: `+${nf(x.growth)}`, color: HEX[x.n] })) },
+          ], [
+            { kind: "stack", title: win?.kind === "week" ? "Interacciones por semana" : "Interacciones por mes", subtitle: "Reacciones, comentarios, compartidos y guardados", labels: trendLabels, series: networks.map((n) => ({ name: nl(n), color: HEX[n] ?? "#94a3b8", values: trend.map((r: any) => r[`i_${n}`] ?? 0) })) },
+          ]],
+          tables: [netTable],
+        },
+        {
+          kicker: "02 · Contenido", title: "Qué contenido conectó",
+          intro: "Medimos cada pieza contra el promedio de su propia red: 1× es lo habitual; 2× es el doble.",
+          chartRows: [[
+            { kind: "hbar", title: "Rendimiento por formato", subtitle: "Veces su promedio habitual", items: formats.slice(0, 6).map((f) => ({ label: `${f.formato} (${f.publicaciones})`, value: f.indice, display: `${nf(f.indice, 1)}×` })) },
+            { kind: "hbar", title: "Interacciones por red", subtitle: "Total del periodo", items: activeNets.filter((x) => x.inter).map((x) => ({ label: nl(x.n), value: x.inter, display: nf(x.inter), color: HEX[x.n] })) },
+          ]],
+          tables: [postTable("Las piezas que mejor funcionaron", top.slice(0, 6)), ...(top.length > 8 ? [postTable("Las que menos conectaron", top.slice(-4).reverse())] : [])],
+        },
+      ];
+      if (hasAds) {
+        const fn = funnel(aCur, adm.cur.replies);
+        sections.push({
+          kicker: "03 · Publicidad", title: "Qué logró la inversión en anuncios",
+          kpis: [
+            { label: "Inversión", value: money(aCur.spend), ...deltaNote(aCur.spend, aPrev.spend || null) },
+            { label: "Conversaciones", value: nf(aCur.results), ...deltaNote(aCur.results, aPrev.results || null) },
+            { label: "Costo por conversación", value: money(cpr), ...deltaNote(cpr, cprPrev, true) },
+            { label: "Con respuesta", value: adm.cur.replies ? nf(adm.cur.replies) : "—", note: adm.cur.replyRate != null ? `${pctf(adm.cur.replyRate, 0)} de las iniciadas` : undefined },
+          ],
+          chartRows: [[
+            { kind: "hbar", title: "Del anuncio a la conversación", subtitle: "Cuántas personas avanzaron en cada paso", items: fn.map((x) => ({ label: x.label, value: x.v, display: nf(x.v) })) },
+            { kind: "combo", title: win?.kind === "week" ? "Inversión y conversaciones por semana" : "Inversión y conversaciones por mes", labels: trendLabels, bars: { name: "Inversión", color: "#f5b942", values: trend.map((r: any) => r.spend ?? 0) }, line: { name: "Conversaciones", color: "#d63a8a", values: trend.map((r: any) => r.results) } },
+          ]],
+          bullets: adsReading.length ? [{ title: "Lectura de la inversión", items: adsReading }] : undefined,
+        });
+      }
+      const recs = [...(learnSpec.recs ?? []), ...adsRecs.map((t) => ({ tag: "Publicidad", title: t, body: "" }))].slice(0, 6);
+      sections.push({ kicker: hasAds ? "04 · Siguientes pasos" : "03 · Siguientes pasos", title: "Lo que haremos a continuación", recs: recs.length ? recs : undefined,
+        bullets: insights.length ? [{ title: "Claves del periodo", items: insights }] : undefined });
+      return {
+        ...base, title: win?.kind === "week" ? "Reporte semanal de redes" : win?.kind === "month" ? "Reporte mensual de redes" : "Reporte de redes",
+        intro,
+        kpis: [
+          { label: "Comunidad", value: nf(cur.followers), ...deltaNote(followersCmp.cur, followersCmp.prev) },
+          { label: "Interacciones", value: nf(cur.interactions), ...deltaNote(cur.interactions, prev?.interactions ?? null) },
+          { label: "Alcance orgánico", value: nf(cur.reach), ...deltaNote(cur.reach, prev?.reach ?? null) },
+          { label: "Publicaciones", value: nf(cur.nPosts), ...deltaNote(cur.nPosts, prev?.nPosts ?? null) },
+        ],
+        sections,
+        notes: ["Datos de tus cuentas vía Metricool. Tasa = interacciones / alcance. En TikTok el alcance corresponde a reproducciones.", "Los seguidores se comparan solo en redes con dato en ambos periodos."],
+      };
+    }
     if (view === "contenido") return {
       ...base, title: "Contenido publicado",
       kpis: [
@@ -339,13 +394,13 @@ export default function PortalInsights({ clientId, clientName, view }: { clientI
       ],
       notes: ["CTR = clics / impresiones · CPC = costo por clic · Frecuencia = veces que cada persona vio el anuncio."],
     };
-  }, [view, win, cur, prev, followersCmp, aCur, aPrev, cpr, cprPrev, insights, posts, formats, filteredPosts, adm, adsReading, adsRecs, campaigns, learnSpec, clientName]);
+  }, [view, win, cur, prev, followersCmp, trend, networks, aCur, aPrev, cpr, cprPrev, insights, posts, formats, filteredPosts, adm, adsReading, adsRecs, campaigns, learnSpec, clientName]);
 
   const download = async () => {
     if (!pdfRef.current) return;
     setDownloading(true);
     try {
-      await downloadPdf(pdfRef.current, `${clientName.replace(/\s+/g, "-").toLowerCase()}-${view}-${from}${win?.kind === "week" ? "-semana" : ""}.pdf`);
+      await downloadPdf(pdfRef.current, `${clientName.replace(/\s+/g, "-").toLowerCase()}-reporte-${from}${win?.kind === "week" ? "-semana" : ""}.pdf`);
     } catch { toast.error("No se pudo generar el PDF"); } finally { setDownloading(false); }
   };
 
@@ -383,9 +438,11 @@ export default function PortalInsights({ clientId, clientName, view }: { clientI
         </SelectContent>
       </Select>
       {win?.prev && <span className="text-xs text-muted-foreground">Comparado con {win.prev.label}</span>}
-      <Button size="sm" variant="outline" className="ml-auto h-9" onClick={download} disabled={downloading}>
-        <Download className="w-4 h-4 mr-2" /> {downloading ? "Generando…" : "Descargar PDF"}
-      </Button>
+      {view === "panorama" && (
+        <Button size="sm" className="ml-auto h-9" onClick={download} disabled={downloading}>
+          <Download className="w-4 h-4 mr-2" /> {downloading ? "Generando…" : win?.kind === "week" ? "Descargar reporte semanal" : "Descargar reporte"}
+        </Button>
+      )}
     </div>
   );
 
