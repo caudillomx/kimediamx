@@ -245,7 +245,7 @@ export default function PortalAprendizajes({
             <div className="text-[11px] text-muted-foreground pt-1">Por debajo de lo habitual</div>
             <div className="flex flex-wrap gap-1.5">{a.themesDown.map((t) => <Badge key={t.w} variant="outline" className="border-coral/40 text-coral">{t.w} · {x(t.lift)}</Badge>)}</div>
           </>}
-          <p className="text-[11px] text-muted-foreground">Palabras y hashtags presentes en 4+ piezas de al menos 2 meses del año, sin palabras de relleno. Comparado contra el promedio de cada red.</p>
+          <p className="text-[11px] text-muted-foreground">Palabras y hashtags presentes en 5+ piezas de al menos 2 meses del año, sin palabras de relleno. Se usa la pieza típica (mediana) para que un viral no distorsione.</p>
         </Card>
         <Card className="glass border-border/50 p-5 space-y-3">
           <div className="flex items-center gap-2 text-sm font-semibold"><Type className="w-4 h-4 text-coral" /> Cómo se escribe</div>

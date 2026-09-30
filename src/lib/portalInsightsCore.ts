@@ -51,6 +51,7 @@ export const isMonthly = (r: { period_start: string; period_end: string; raw?: a
   r.raw?.granularity !== "week" && r.period_start.endsWith("-01") && r.period_end.slice(0, 7) === r.period_start.slice(0, 7) && Number(r.period_end.slice(8, 10)) >= 28;
 export const isWeekly = (r: { raw?: any }) => r.raw?.granularity === "week";
 
+const median = (xs: number[]) => { if (!xs.length) return 0; const a = [...xs].sort((x, y) => x - y); const m = a.length >> 1; return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2; };
 const avg = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
 
 /** Publicaciones únicas con hora local y su índice vs. el promedio de su red. */
@@ -175,11 +176,11 @@ export function sumAds(rows: Ad[]) {
 }
 
 // ---------- Temas ----------
-const STOP_WORDS = `de la que el en y a los del se las por un para con no una su al lo como mas pero sus le ya o este si porque esta entre cuando muy sin sobre tambien me hasta hay donde quien desde todo nos durante todos uno les ni contra otros ese eso ante ellos e esto mi antes algunos que unos yo otro otras otra el tanto esa estos mucho quienes nada muchos cual poco ella estar estas algunas algo nosotros mis tu te ti tus ellas nosotras vosotros os mio mia tuyo suyo nuestro nuestra es son fue ser hoy dia dias vez veces cada tiene tienen hace hacen puede pueden solo asi bien como cual todas estas estan tan sea aqui ahi aunque tarde entrega nuevo nueva nuestros nuestras siempre hacer tener sentir mismo misma mismos puedes quieres queremos vamos parte gracias ahora luego despues mejor mayor menos cosas cosa manera forma momento momentos favor solamente todavia ademas incluso mientras hacia traves embargo grande grandes pequeno pequena pequenos reales real seguro segura dejate deja dejar dejarte quiere quieren necesitas necesita necesitamos buscar busca puedo podemos podria debemos debe deben sabes saber sabemos cuanto cuanta cuantos alguien nadie ningun ninguna mucha muchas otro aquel aquella aquellos gran bueno buena buenos buenas nunca jamas tanta tantos tantas dentro fuera cerca lejos arriba abajo mismo casi quiza quizas tal tales toda entonces pues hecho hecha hemos habia haber estoy estamos estaba estuvo eres somos seria sido siendo tengo tenemos tenia van voy vas dice dicen decir digo pasa pasar dar dame damos doy vemos veces verdad sobre ultimo ultima primera primero segundo semana semanas mundo vida vidas persona personas gente todos algunos alguna quien quienes cualquier demas ella ellos usted ustedes aqui alla asi mismo realmente simplemente cuenta cuentas lugar tiempo tiempos camino hablar hablamos pensar creer creo cree`;
+const STOP_WORDS = `de la que el en y a los del se las por un para con no una su al lo como mas pero sus le ya o este si porque esta entre cuando muy sin sobre tambien me hasta hay donde quien desde todo nos durante todos uno les ni contra otros ese eso ante ellos e esto mi antes algunos que unos yo otro otras otra el tanto esa estos mucho quienes nada muchos cual poco ella estar estas algunas algo nosotros mis tu te ti tus ellas nosotras vosotros os mio mia tuyo suyo nuestro nuestra es son fue ser hoy dia dias vez veces cada tiene tienen hace hacen puede pueden solo asi bien como cual todas estas estan tan sea aqui ahi aunque tarde entrega nuevo nueva nuestros nuestras siempre hacer tener sentir mismo misma mismos puedes quieres queremos vamos parte gracias ahora luego despues mejor mayor menos cosas cosa manera forma momento momentos favor solamente todavia ademas incluso mientras hacia traves embargo grande grandes pequeno pequena pequenos reales real seguro segura dejate deja dejar dejarte quiere quieren necesitas necesita necesitamos buscar busca puedo podemos podria debemos debe deben sabes saber sabemos cuanto cuanta cuantos alguien nadie ningun ninguna mucha muchas otro aquel aquella aquellos gran bueno buena buenos buenas nunca jamas tanta tantos tantas dentro fuera cerca lejos arriba abajo mismo casi quiza quizas tal tales toda entonces pues hecho hecha hemos habia haber estoy estamos estaba estuvo eres somos seria sido siendo tengo tenemos tenia van voy vas dice dicen decir digo pasa pasar dar dame damos doy vemos veces verdad sobre ultimo ultima primera primero segundo semana semanas mundo vida vidas persona personas gente todos algunos alguna quien quienes cualquier demas ella ellos usted ustedes aqui alla asi mismo realmente simplemente cuenta cuentas lugar tiempo tiempos camino hablar hablamos pensar creer creo cree decia decir dijo dificil facil haces hacemos hago hizo firme verdadero verdadera valor personal transforme transformar conversacion importante posible necesario claro clara pequenas propia propio sola solos juntos juntas lleno llena mejores peores medio siguiente distintos distintas diferente diferentes nueva nuevos nuevas cierto cierta hablo sientes sentimos quieras puedas vuelve volver empezar comienza sigue seguir pide pedir llega llegar mira mirar miramos`;
 const STOP = new Set(STOP_WORDS.split(/\s+/));
 const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
-/** Temas con evidencia: palabra en ≥4 piezas, ≥2 meses, no presente en >30% de las piezas; rendimiento normalizado por red. */
+/** Temas con evidencia (mediana, resistente a virales): palabra en ≥5 piezas, ≥2 meses, no presente en >30% de las piezas; rendimiento normalizado por red. */
 export function themes(all: Post[], exclude: string[] = []) {
   const ex = new Set(exclude.map(norm));
   const words = new Map<string, { idx: number[]; months: Set<string>; nets: Set<string> }>();
@@ -202,7 +203,7 @@ export function themes(all: Post[], exclude: string[] = []) {
     else merged.set(w, { idx: [...x.idx], months: new Set(x.months), nets: new Set(x.nets) });
   });
   return [...merged.entries()]
-    .filter(([, x]) => x.idx.length >= 4 && x.idx.length <= maxN && x.months.size >= 2)
-    .map(([w, x]) => ({ w, n: x.idx.length, lift: avg(x.idx), nets: [...x.nets] }))
+    .filter(([, x]) => x.idx.length >= 5 && x.idx.length <= maxN && x.months.size >= 2)
+    .map(([w, x]) => ({ w, n: x.idx.length, lift: median(x.idx), nets: [...x.nets] }))
     .sort((a, b) => b.lift - a.lift);
 }
