@@ -75,7 +75,7 @@ const InsightsPdf = forwardRef<HTMLDivElement, { spec: PdfSpec }>(({ spec }, ref
         {spec.recs.map((r, i) => (
           <table key={i} className="pdf-avoid" style={{ width: "100%", borderCollapse: "separate", border: `1px solid ${C.line}`, borderRadius: 8, marginBottom: 6, pageBreakInside: "avoid" }}><tbody><tr>
             <td style={{ width: 26, verticalAlign: "top", padding: "9px 0 9px 10px" }}>
-              <table style={{ borderCollapse: "collapse" }}><tbody><tr><td style={{ width: 18, height: 18, borderRadius: 9, background: C.coral, color: "#fff", fontSize: 9, fontWeight: 700, textAlign: "center", verticalAlign: "middle", padding: 0, lineHeight: 1 }}>{i + 1}</td></tr></tbody></table>
+              <div style={{ fontFamily: display, fontSize: 15, fontWeight: 700, color: C.coral, lineHeight: 1.1 }}>{String(i + 1).padStart(2, "0")}</div>
             </td>
             <td style={{ padding: "8px 12px 8px 6px" }}>
               <div style={{ fontSize: 7.5, textTransform: "uppercase", letterSpacing: 0.8, color: C.coral, fontWeight: 700 }}>{r.tag}</div>
