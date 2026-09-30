@@ -1030,40 +1030,7 @@ export default function ClientPortalAdmin() {
           </TabsContent>
 
           <TabsContent value="accesos" className="space-y-4">
-            <Card className="p-4 space-y-3">
-              <div>
-                <Label>Otorgar acceso por User ID</Label>
-                <p className="text-xs text-muted-foreground mb-2">
-                  Pega el UUID del usuario (Cloud → Users). Debe ya haberse registrado.
-                </p>
-                <div className="flex gap-2">
-                  <Input value={newUserId} onChange={(e) => setNewUserId(e.target.value)} placeholder="uuid del usuario" />
-                  <Button onClick={grantAccess}>Otorgar</Button>
-                </div>
-              </div>
-            </Card>
-
-            {loading ? (
-              <div className="text-center py-10 text-muted-foreground">Cargando...</div>
-            ) : access.length === 0 ? (
-              <Card className="p-10 text-center text-muted-foreground">Nadie tiene acceso aún.</Card>
-            ) : (
-              <div className="space-y-2">
-                {access.map((a) => (
-                  <Card key={a.id} className="p-3 flex items-center justify-between gap-3">
-                    <div className="text-sm">
-                      <div className="font-mono text-xs">{a.user_id}</div>
-                      <div className="text-xs text-muted-foreground">
-                        Otorgado {new Date(a.created_at).toLocaleDateString("es-MX")}
-                      </div>
-                    </div>
-                    <Button variant="ghost" size="sm" onClick={() => revokeAccess(a.id)}>
-                      <Trash2 className="w-4 h-4 text-destructive" />
-                    </Button>
-                  </Card>
-                ))}
-              </div>
-            )}
+            <PortalMembers clientId={clientId!} onChange={load} />
           </TabsContent>
         </Tabs>
       </div>
