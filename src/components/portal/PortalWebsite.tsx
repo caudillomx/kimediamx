@@ -134,7 +134,7 @@ export default function PortalWebsite({ clientId }: { clientId: string }) {
               <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8 }} />
               <Legend />
               <Bar dataKey="visitas" name="Visitas" fill="hsl(var(--coral))" radius={[4, 4, 0, 0]} />
-              <Line dataKey="personas" name="Personas" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
+              <Line dataKey="personas" name="Personas" stroke="hsl(var(--foreground))" strokeWidth={2} dot={{ r: 3 }} />
             </ComposedChart>
           </ResponsiveContainer>
         </div>

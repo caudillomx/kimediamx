@@ -335,7 +335,7 @@ export default function PortalInsights({ clientId, clientName, view }: { clientI
         },
       ];
       if (hasAds) {
-        const fn = funnel(aCur, adm.cur.replies);
+        const fn = funnel(aCur, isMsg ? adm.cur.replies : 0, isMsg ? "Conversaciones iniciadas" : resTitle);
         sections.push({
           kicker: "03 · Publicidad", title: "Qué logró la inversión en anuncios",
           kpis: [
@@ -418,7 +418,7 @@ export default function PortalInsights({ clientId, clientName, view }: { clientI
       ],
       tables: [
         { title: isMsg ? "Del anuncio a la conversación" : "Del anuncio al resultado", columns: [{ h: "Etapa", w: 40 }, { h: "Cantidad", w: 20 }, { h: "Paso", w: 20 }, { h: "Costo c/u", w: 20 }],
-          rows: funnel(aCur, adm.cur.replies).map((s) => [s.label, nf(s.v), s.step == null ? "—" : pctf(s.step), money(s.v ? aCur.spend / s.v : null)]) },
+          rows: funnel(aCur, isMsg ? adm.cur.replies : 0, isMsg ? "Conversaciones iniciadas" : resTitle).map((s) => [s.label, nf(s.v), s.step == null ? "—" : pctf(s.step), money(s.v ? aCur.spend / s.v : null)]) },
         { title: "Campañas", columns: [{ h: "Campaña", w: 26 }, { h: "Inversión", w: 12 }, { h: "Alcance", w: 11 }, { h: "Frec.", w: 8 }, { h: "CTR", w: 8 }, { h: "CPC", w: 10 }, { h: "Result.", w: 12 }, { h: "Costo c/u", w: 13 }],
           rows: campaigns.map((c) => [c.campaign_name, money(c.spend), nf(c.reach), nf(c.freq, 2), c.ctr == null ? "—" : `${nf(c.ctr, 2)}%`, money(c.cpc), nf(c.results), money(c.cost_per_result)]) },
       ],
@@ -682,7 +682,7 @@ export default function PortalInsights({ clientId, clientName, view }: { clientI
                 </Card>
                 <Card className="glass border-border/50 p-5 space-y-3 lg:col-span-2">
                   <div className="text-sm font-semibold">{isMsg ? "Del anuncio a la conversación" : "Del anuncio al resultado"}</div>
-                  <Funnel steps={funnel(aCur, adm.cur.replies)} spend={aCur.spend} />
+                  <Funnel steps={funnel(aCur, isMsg ? adm.cur.replies : 0, isMsg ? "Conversaciones iniciadas" : resTitle)} spend={aCur.spend} />
                 </Card>
               </div>
 
@@ -788,10 +788,10 @@ export default function PortalInsights({ clientId, clientName, view }: { clientI
   );
 }
 
-function funnel(t: { impressions: number; reach: number; clicks: number; results: number }, replies: number) {
+function funnel(t: { impressions: number; reach: number; clicks: number; results: number }, replies: number, resLabel = "Conversaciones iniciadas") {
   const raw = [
     { label: "Impresiones", v: t.impressions }, { label: "Personas alcanzadas", v: t.reach }, { label: "Clics", v: t.clicks },
-    { label: "Conversaciones iniciadas", v: t.results }, { label: "Con primera respuesta", v: replies },
+    { label: resLabel, v: t.results }, { label: "Con primera respuesta", v: replies },
   ].filter((s) => s.v > 0);
   return raw.map((s, i) => ({ ...s, step: i ? s.v / raw[i - 1].v : null as number | null }));
 }
