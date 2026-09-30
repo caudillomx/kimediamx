@@ -170,6 +170,12 @@ Deno.serve(async (req) => {
             reach: p.viewCount ?? 0, impressions: p.viewCount ?? 0, views: p.viewCount ?? 0,
             duration: p.duration ?? null, engagement: p.engagement ?? null,
           };
+        }).filter((p) => {
+          // Algunas redes (YouTube) devuelven todo el histórico: nos quedamos con lo publicado en el mes (hora CDMX).
+          const t = Date.parse(String(p.date ?? "").replace(/([+-]\d{2})(\d{2})$/, "$1:$2"));
+          if (Number.isNaN(t)) return true;
+          const lo = Date.parse(`${start}T06:00:00Z`), hi = Date.parse(`${until}T06:00:00Z`) + 86400000;
+          return t >= lo && t < hi;
         }).map((p) => ({ ...p, text: Array.from(String(p.text ?? "")).slice(0, 400).join("") }));
         const followers = fol.length ? fol[fol.length - 1].value : null;
         const first = fol.length ? fol[0].value : null;
