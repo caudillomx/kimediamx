@@ -47,6 +47,95 @@ Deno.serve(async (req) => {
       return json({ data: await mc(path, params) });
     }
 
+    if (action === "sync") {
+      const clientId = String(body?.clientId ?? "");
+      const blogId = String(body?.blogId ?? "");
+      const month = String(body?.month ?? "");
+      if (!/^[0-9a-f-]{36}$/.test(clientId) || !/^\d+$/.test(blogId) || !/^\d{4}-\d{2}$/.test(month))
+        return json({ error: "Parámetros inválidos" }, 400);
+
+      const brands: any[] = await mc("/admin/simpleProfiles", {});
+      const brand = brands.find((b) => String(b.id) === blogId);
+      if (!brand) return json({ error: "Marca no encontrada en Metricool" }, 404);
+
+      const [y, m] = month.split("-").map(Number);
+      const start = `${month}-01`;
+      const lastDay = new Date(Date.UTC(y, m, 0)).getUTCDate();
+      const today = new Date().toISOString().slice(0, 10);
+      let end = `${month}-${String(lastDay).padStart(2, "0")}`;
+      if (end > today) end = today;
+      if (start > today) return json({ saved: 0 });
+      const base = { blogId, from: `${start}T00:00:00`, to: `${end}T23:59:59`, timezone: "America/Mexico_City" };
+      const MESES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+      const label = `${MESES[m - 1][0].toUpperCase()}${MESES[m - 1].slice(1)} ${y}`;
+
+      const series = async (network: string, metric: string) => {
+        try {
+          const d = await mc("/v2/analytics/timelines", { ...base, network, subject: "account", metric });
+          const vals = (d?.data?.[0]?.values ?? []) as { dateTime: string; value: number }[];
+          return vals.filter((v) => v.value != null && v.value > 0).sort((a, b) => (a.dateTime < b.dateTime ? -1 : 1));
+        } catch (e) { console.warn(network, metric, String(e)); return []; }
+      };
+      const posts = async (network: string) => {
+        try { const d = await mc(`/v2/analytics/posts/${network}`, base); return (d?.data ?? []) as any[]; }
+        catch (e) { console.warn("posts", network, String(e)); return []; }
+      };
+
+      const nets: { key: string; metric: string; handle?: string }[] = [];
+      if (brand.instagram) nets.push({ key: "instagram", metric: "Followers", handle: brand.instagram });
+      if (brand.facebook || brand.facebookPageId) nets.push({ key: "facebook", metric: "pageFollows", handle: brand.facebook });
+      if (brand.tiktok) nets.push({ key: "tiktok", metric: "followers_count", handle: brand.tiktok });
+
+      const rows: any[] = [];
+      for (const n of nets) {
+        const [fol, ps] = await Promise.all([series(n.key, n.metric), posts(n.key)]);
+        const norm = ps.map((p) => {
+          if (n.key === "instagram") return {
+            url: p.url, text: p.content, date: p.publishedAt?.dateTime, image: p.imageUrl,
+            interactions: p.interactions ?? 0, reach: p.reach ?? 0, impressions: p.impressionsTotal ?? p.views ?? 0,
+          };
+          if (n.key === "facebook") return {
+            url: p.link, text: p.text, date: p.created?.dateTime, image: p.picture,
+            interactions: (p.reactions ?? 0) + (p.comments ?? 0) + (p.shares ?? 0),
+            reach: p.impressionsUnique ?? 0, impressions: p.impressions ?? 0,
+          };
+          return {
+            url: p.shareUrl, text: p.videoDescription, date: p.createTime, image: p.coverImageUrl,
+            interactions: (p.likeCount ?? 0) + (p.commentCount ?? 0) + (p.shareCount ?? 0),
+            reach: p.viewCount ?? 0, impressions: p.viewCount ?? 0,
+          };
+        });
+        const followers = fol.length ? fol[fol.length - 1].value : null;
+        const first = fol.length ? fol[0].value : null;
+        const growth = followers != null && first != null ? followers - first : null;
+        const inter = norm.reduce((a, p) => a + p.interactions, 0);
+        const reach = norm.reduce((a, p) => a + p.reach, 0);
+        const impr = norm.reduce((a, p) => a + p.impressions, 0);
+        if (!norm.length && followers == null) continue;
+        const er = followers && norm.length ? (inter / norm.length / followers) * 100 : null;
+        rows.push({
+          client_id: clientId, network: n.key, account_key: `metricool:${blogId}:${n.key}`,
+          account_name: brand.label, account_handle: n.handle ?? null,
+          period_start: start, period_end: end, period_label: label, source: "metricool",
+          followers, follower_growth: growth,
+          follower_growth_rate: growth != null && first ? (growth / first) * 100 : null,
+          posts: norm.length, interactions: inter, reach, impressions: impr, engagement_rate: er,
+          raw: {
+            blog_id: blogId,
+            top_posts: [...norm].sort((a, b) => b.interactions - a.interactions).slice(0, 5)
+              .map((p) => ({ ...p, text: (p.text ?? "").slice(0, 220) })),
+          },
+          created_by: u.user.id,
+        });
+      }
+      if (rows.length) {
+        const { error } = await admin.from("client_portal_social_metrics")
+          .upsert(rows, { onConflict: "client_id,network,account_key,period_start,period_end" });
+        if (error) throw error;
+      }
+      return json({ saved: rows.length, brand: brand.label });
+    }
+
     return json({ error: "Acción desconocida" }, 400);
   } catch (e) {
     console.error("metricool-sync", e);
