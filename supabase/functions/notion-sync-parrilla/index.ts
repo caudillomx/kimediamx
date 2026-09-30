@@ -178,6 +178,7 @@ Deno.serve(async (req) => {
           }
         }
         if (!clientId) { skipped++; continue; }
+        if (onlyClientId && clientId !== onlyClientId) continue;
 
         const title = pick(props, ["Tema", "Título", "Titulo", "Name", "Nombre", "Copy"]);
         const dateStr = pick(props, ["Fecha", "Date", "Fecha de publicación"]) || firstDate(props) || "";
