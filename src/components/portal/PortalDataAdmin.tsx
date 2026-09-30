@@ -27,6 +27,8 @@ import {
   type AdPlatform,
 } from "@/lib/portalDataImport";
 
+import MetricoolSyncCard from "./MetricoolSyncCard";
+
 type Period = { start: string; end: string; label: string };
 
 function currentMonth(): string {
@@ -537,6 +539,7 @@ export default function PortalDataAdmin({ clientId }: { clientId: string }) {
 
         {/* -------- Redes -------- */}
         <TabsContent value="redes" className="mt-0 space-y-4">
+          <MetricoolSyncCard clientId={clientId} onDone={load} />
           <Card className="p-4 space-y-3">
             <div className="text-sm font-semibold">Subir performance de redes</div>
             <p className="text-xs text-muted-foreground">

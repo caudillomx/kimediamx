@@ -164,6 +164,13 @@ export default function PortalResumen({ clientId, clientName }: { clientId: stri
     const audience = rows.find((x) => x.mb.audience)?.mb.audience ?? null;
     return { visits, clicks, audience };
   }, [sCur]);
+  const topPosts = useMemo(
+    () => sCur
+      .flatMap((r) => ((r.raw?.top_posts ?? []) as any[]).map((p) => ({ ...p, network: r.network })))
+      .sort((a, b) => (b.interactions ?? 0) - (a.interactions ?? 0))
+      .slice(0, 6),
+    [sCur]
+  );
 
 
   const download = async () => {
@@ -268,6 +275,24 @@ export default function PortalResumen({ clientId, clientName }: { clientId: stri
                 })}
               </tbody>
             </table>
+          </div>
+        </Card>
+      )}
+
+      {topPosts.length > 0 && (
+        <Card className="glass border-border/50 p-5 space-y-3">
+          <div className="text-sm font-semibold">Lo que mejor funcionó</div>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {topPosts.map((p, i) => (
+              <a key={i} href={p.url ?? undefined} target="_blank" rel="noreferrer" className="rounded-xl border border-border/50 p-3 space-y-2 hover:border-coral/50 transition-colors">
+                <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                  <Badge variant="outline" className="text-[10px]">{NETWORK_LABELS[p.network] ?? p.network}</Badge>
+                  <span>{p.date ? String(p.date).slice(0, 10) : ""}</span>
+                </div>
+                <p className="text-xs line-clamp-3">{p.text || "Publicación sin texto"}</p>
+                <div className="text-xs text-muted-foreground">{nf(p.interactions)} interacciones · {nf(p.reach)} alcance</div>
+              </a>
+            ))}
           </div>
         </Card>
       )}
