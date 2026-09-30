@@ -6,15 +6,13 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
-import { LogOut, ShieldAlert, Sun, Moon, CalendarDays, Workflow, Megaphone, Film, FileText, LayoutDashboard } from "lucide-react";
+import { LogOut, ShieldAlert, Sun, Moon, CalendarDays, Megaphone, FileText, LayoutDashboard, Sparkles } from "lucide-react";
 import type { ClientPortalConfig } from "@/lib/clientPortal";
 import { SERVICE_MAP, type ServiceKey } from "@/lib/services";
 import PortalParrilla from "@/components/portal/PortalParrilla";
 import PortalParrillaNotion from "@/components/portal/PortalParrillaNotion";
 
-import PortalActivos from "@/components/portal/PortalActivos";
-import PortalAdsModule from "@/components/portal/PortalAdsModule";
-import PortalResumen from "@/components/portal/PortalResumen";
+import PortalInsights from "@/components/portal/PortalInsights";
 import { Link } from "react-router-dom";
 
 type Report = { id: string; report_date: string; title: string; type: string; summary_md: string | null };
@@ -91,22 +89,15 @@ export default function PortalCreative({ portal }: { portal: ClientPortalConfig 
   const tabs = useMemo(() => {
     const list: { key: string; label: string; icon: any }[] = [
       { key: "resumen", label: "Resumen", icon: LayoutDashboard },
+      { key: "contenido", label: "Contenido", icon: Sparkles },
     ];
-    // Un módulo solo se muestra si el servicio está contratado Y ya hay datos
-    // cargados (los admins siempre lo ven para poder alimentarlo).
-    const show = (service: ServiceKey, hasData: boolean) => services.includes(service) && (hasData || isAdmin);
-    if (show("estrategia", counts.parrilla > 0)) {
+    if (counts.ads > 0) list.push({ key: "publicidad", label: "Publicidad", icon: Megaphone });
+    if (services.includes("estrategia") && (counts.parrilla > 0 || isAdmin)) {
       list.push({ key: "parrilla", label: "Parrilla editorial", icon: CalendarDays });
     }
-    if (show("estrategia", counts.activos > 0)) {
-      list.push({ key: "activos", label: "Funnel y activos", icon: Workflow });
-    }
-    if (show("ads", counts.ads > 0)) list.push({ key: "ads", label: "Ads", icon: Megaphone });
-    if (show("audiovisual", counts.activos > 0)) list.push({ key: "audiovisual", label: "Audiovisual", icon: Film });
     if (reports.length) list.push({ key: "reportes", label: "Reportes", icon: FileText });
     return list;
   }, [services, reports.length, counts, isAdmin]);
-
 
   const [tab, setTab] = useState<string>("resumen");
   useEffect(() => {
@@ -189,10 +180,14 @@ export default function PortalCreative({ portal }: { portal: ClientPortalConfig 
               </TabsList>
 
               <TabsContent value="resumen" className="mt-0">
-                <PortalResumen clientId={portal.clientId} clientName={portal.displayName} />
+                <PortalInsights clientId={portal.clientId} clientName={portal.displayName} view="panorama" />
               </TabsContent>
-
-
+              <TabsContent value="contenido" className="mt-0">
+                <PortalInsights clientId={portal.clientId} clientName={portal.displayName} view="contenido" />
+              </TabsContent>
+              <TabsContent value="publicidad" className="mt-0">
+                <PortalInsights clientId={portal.clientId} clientName={portal.displayName} view="publicidad" />
+              </TabsContent>
 
               {services.includes("estrategia") && (
                 <>
@@ -211,28 +206,7 @@ export default function PortalCreative({ portal }: { portal: ClientPortalConfig 
                     </Tabs>
                   </TabsContent>
 
-                  <TabsContent value="activos" className="mt-0">
-                    <PortalActivos clientId={portal.clientId} canEdit={isAdmin} />
-                  </TabsContent>
                 </>
-              )}
-
-              {services.includes("ads") && (
-                <TabsContent value="ads" className="mt-0">
-                  <PortalAdsModule clientId={portal.clientId} />
-                </TabsContent>
-              )}
-
-              {services.includes("audiovisual") && (
-                <TabsContent value="audiovisual" className="mt-0">
-                  <Card className="glass border-border/50 p-14 text-center space-y-2">
-                    <Film className="w-8 h-8 text-coral mx-auto" />
-                    <h3 className="font-semibold">Entregables audiovisuales</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Aquí publicaremos rodajes, cortes y piezas finales de cada ciclo.
-                    </p>
-                  </Card>
-                </TabsContent>
               )}
 
               <TabsContent value="reportes" className="mt-0 space-y-3">
