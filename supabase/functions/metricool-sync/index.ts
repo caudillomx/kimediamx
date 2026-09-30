@@ -101,19 +101,28 @@ Deno.serve(async (req) => {
         const norm = ps.map((p) => {
           if (n.key === "instagram") return {
             url: p.url, text: p.content, date: p.publishedAt?.dateTime, image: p.imageUrl,
+            format: String(p.type ?? "").replace("FEED_", "").replace("CAROUSEL_ALBUM", "CARRUSEL").toLowerCase(),
+            likes: p.likes ?? 0, comments: p.comments ?? 0, shares: p.shares ?? 0, saves: p.saved ?? 0,
             interactions: p.interactions ?? 0, reach: p.reach ?? 0, impressions: p.impressionsTotal ?? p.views ?? 0,
+            views: p.views ?? 0, engagement: p.engagement ?? null,
           };
           if (n.key === "facebook") return {
             url: p.link, text: p.text, date: p.created?.dateTime, image: p.picture,
+            format: String(p.type ?? "post").toLowerCase(),
+            likes: p.reactions ?? 0, comments: p.comments ?? 0, shares: p.shares ?? 0, saves: 0,
             interactions: (p.reactions ?? 0) + (p.comments ?? 0) + (p.shares ?? 0),
             reach: p.impressionsUnique ?? 0, impressions: p.impressions ?? 0,
+            views: p.videoViews ?? 0, clicks: p.clicks ?? 0, engagement: p.engagement ?? null,
           };
           return {
-            url: p.shareUrl, text: p.videoDescription, date: p.createTime, image: p.coverImageUrl,
+            url: p.shareUrl, text: p.videoDescription ?? p.title, date: p.createTime, image: p.coverImageUrl,
+            format: "video",
+            likes: p.likeCount ?? 0, comments: p.commentCount ?? 0, shares: p.shareCount ?? 0, saves: 0,
             interactions: (p.likeCount ?? 0) + (p.commentCount ?? 0) + (p.shareCount ?? 0),
-            reach: p.viewCount ?? 0, impressions: p.viewCount ?? 0,
+            reach: p.viewCount ?? 0, impressions: p.viewCount ?? 0, views: p.viewCount ?? 0,
+            duration: p.duration ?? null, engagement: p.engagement ?? null,
           };
-        });
+        }).map((p) => ({ ...p, text: String(p.text ?? "").slice(0, 400) }));
         const followers = fol.length ? fol[fol.length - 1].value : null;
         const first = fol.length ? fol[0].value : null;
         const growth = followers != null && first != null ? followers - first : null;
@@ -131,8 +140,16 @@ Deno.serve(async (req) => {
           posts: norm.length, interactions: inter, reach, impressions: impr, engagement_rate: er,
           raw: {
             blog_id: blogId,
-            top_posts: [...norm].sort((a, b) => b.interactions - a.interactions).slice(0, 5)
-              .map((p) => ({ ...p, text: (p.text ?? "").slice(0, 220) })),
+            top_posts: [...norm].sort((a, b) => b.interactions - a.interactions).slice(0, 5),
+            posts: norm,
+            followers_daily: fol.map((f) => ({ d: String(f.dateTime).slice(0, 10), v: f.value })),
+            totals: {
+              likes: norm.reduce((a, p) => a + (p.likes ?? 0), 0),
+              comments: norm.reduce((a, p) => a + (p.comments ?? 0), 0),
+              shares: norm.reduce((a, p) => a + (p.shares ?? 0), 0),
+              saves: norm.reduce((a, p) => a + (p.saves ?? 0), 0),
+              views: norm.reduce((a, p) => a + (p.views ?? 0), 0),
+            },
           },
           created_by: u.user.id,
         });
@@ -142,7 +159,42 @@ Deno.serve(async (req) => {
           .upsert(rows, { onConflict: "client_id,network,account_key,period_start,period_end" });
         if (error) throw error;
       }
-      return json({ saved: rows.length, brand: brand.label });
+      // Publicidad en Meta (si la marca tiene cuenta de anuncios conectada)
+      let adsSaved = 0;
+      try {
+        const d = await mc("/v2/analytics/campaigns/facebookads", base);
+        const camps = ((d?.data ?? []) as any[]).filter((c) => (c.spent ?? 0) > 0 || (c.impressions ?? 0) > 0);
+        const RESULT_LABELS: Record<string, string> = {
+          "onsite_conversion.messaging_conversation_started_7d": "conversaciones iniciadas",
+          link_click: "clics al enlace", post_engagement: "interacciones", video_view: "reproducciones",
+          reach: "personas alcanzadas", lead: "registros", "offsite_conversion.fb_pixel_purchase": "compras",
+        };
+        const labelOf = (l: string | null) => {
+          if (!l) return "resultados";
+          const k = l.toLowerCase().replace(/ /g, "_");
+          return RESULT_LABELS[k] ?? RESULT_LABELS[Object.keys(RESULT_LABELS).find((x) => k.includes(x.replace(/\./g, "_").slice(-20))) ?? ""] ?? l.toLowerCase();
+        };
+        const adRows = camps.map((c) => ({
+          client_id: clientId, platform: "meta", campaign_key: String(c.providerCampaignId ?? c.id),
+          campaign_name: c.name ?? "Campaña", objective: c.objective ?? null,
+          period_start: start, period_end: end, period_label: label,
+          spend: c.spent ?? null, impressions: c.impressions ?? null, reach: c.reach ?? null, clicks: c.clicks ?? null,
+          ctr: c.ctr ?? null, cpc: c.cpc ?? null, cpm: c.cpm ?? null, results: c.results ?? null,
+          result_type: labelOf(c.resultsLabel ?? null),
+          cost_per_result: c.results ? (c.spent ?? 0) / c.results : null, conversions: c.conversions ?? null,
+          raw: { source: "metricool", blog_id: blogId, status: c.status, actions: c.actions ?? {},
+            start: c.start?.dateTime ?? null, stop: c.stop?.dateTime ?? null },
+          created_by: u.user.id,
+        }));
+        if (adRows.length) {
+          const { error } = await admin.from("client_portal_ads_metrics")
+            .upsert(adRows, { onConflict: "client_id,platform,campaign_key,period_start,period_end" });
+          if (error) throw error;
+          adsSaved = adRows.length;
+        }
+      } catch (e) { console.warn("ads", String(e)); }
+
+      return json({ saved: rows.length, ads: adsSaved, brand: brand.label });
     }
 
     return json({ error: "Acción desconocida" }, 400);
