@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import PortalAprendizajes from "./PortalAprendizajes";
 import {
   ResponsiveContainer, LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend,
 } from "recharts";
@@ -30,7 +31,7 @@ type Post = {
   likes?: number; comments?: number; shares?: number; saves?: number; interactions: number; reach: number; views?: number;
 };
 
-export type InsightsView = "panorama" | "contenido" | "publicidad";
+export type InsightsView = "panorama" | "contenido" | "publicidad" | "aprendizajes";
 
 const NET: Record<string, { label: string; color: string }> = {
   instagram: { label: "Instagram", color: "hsl(330 85% 60%)" },
@@ -189,6 +190,11 @@ export default function PortalInsights({ clientId, clientName, view }: { clientI
     [sCur]
   );
 
+  const allPosts: Post[] = useMemo(
+    () => social.filter((r) => r.period_start.endsWith("-01")).flatMap((r) => ((r.raw?.posts ?? []) as any[]).map((p) => ({ ...p, network: r.network }))),
+    [social]
+  );
+
   // Tendencia mensual (todo el histórico disponible)
   const trend = useMemo(() => months.map((m) => {
     const row: any = { mes: monthLabel(m) };
@@ -343,6 +349,9 @@ export default function PortalInsights({ clientId, clientName, view }: { clientI
     <div className="space-y-6">
       {header}
       <div ref={pdfRef} className="space-y-6">
+        {view === "aprendizajes" && (
+          <PortalAprendizajes clientId={clientId} posts={posts} allPosts={allPosts} periodLabel={sel?.label ?? ""} months={selMonths} />
+        )}
         {view === "panorama" && (
           <>
             <div className="grid gap-3 grid-cols-2 xl:grid-cols-4">
