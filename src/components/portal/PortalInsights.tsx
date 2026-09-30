@@ -1,35 +1,24 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import PortalAprendizajes from "./PortalAprendizajes";
+import InsightsPdf, { downloadPdf, type PdfSpec } from "./InsightsPdf";
 import {
-  ResponsiveContainer, LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend,
+  type Social, type Ad, type Post, type Win, NET_LABEL, SAVES_NETWORKS,
+  buildPosts, buildFollowers, buildWindows, aggregate, adsIn, sumAds, isMonthly, isWeekly, monthLabel, dayLabel,
+} from "@/lib/portalInsightsCore";
+import {
+  ResponsiveContainer, LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend, ComposedChart,
 } from "recharts";
 import {
   Users, TrendingUp, MessageCircle, Eye, Megaphone, Download, Sparkles, ArrowUpRight, ArrowDownRight,
-  Heart, Share2, Bookmark, Play, ExternalLink, Clock, CalendarDays,
+  Heart, Share2, Bookmark, Play, ExternalLink, Clock, CalendarDays, LayoutGrid, Table2, Info, ArrowUpDown,
 } from "lucide-react";
-
-type Social = {
-  id: string; network: string; account_name: string; period_start: string; period_end: string; period_label: string | null;
-  followers: number | null; follower_growth: number | null; posts: number | null; interactions: number | null;
-  reach: number | null; impressions: number | null; engagement_rate: number | null; raw: any;
-};
-type Ad = {
-  id: string; platform: string; campaign_key: string; campaign_name: string; objective: string | null;
-  period_start: string; period_end: string; period_label: string | null; spend: number | null; impressions: number | null;
-  reach: number | null; clicks: number | null; ctr: number | null; cpc: number | null; cpm: number | null;
-  results: number | null; result_type: string | null; cost_per_result: number | null; raw: any;
-};
-type Post = {
-  network: string; url?: string; text?: string; date?: string; image?: string; format?: string;
-  likes?: number; comments?: number; shares?: number; saves?: number; interactions: number; reach: number; views?: number;
-};
 
 export type InsightsView = "panorama" | "contenido" | "publicidad" | "aprendizajes";
 
@@ -45,30 +34,36 @@ const FORMAT_LABEL: Record<string, string> = {
   carrusel: "Carrusel", image: "Imagen", video: "Video", reel: "Reel", album: "Álbum", photo: "Foto",
   status: "Texto", link: "Enlace", post: "Publicación",
 };
-const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
 const DIAS = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
 
 const nf = (v: number | null | undefined, d = 0) =>
-  v == null || Number.isNaN(v) ? "—" : Number(v).toLocaleString("es-MX", { maximumFractionDigits: d, minimumFractionDigits: 0 });
+  v == null || !Number.isFinite(v) ? "—" : Number(v).toLocaleString("es-MX", { maximumFractionDigits: d, minimumFractionDigits: 0 });
 const money = (v: number | null | undefined) =>
-  v == null ? "—" : `$${Number(v).toLocaleString("es-MX", { maximumFractionDigits: 2, minimumFractionDigits: 2 })}`;
-const sum = (xs: (number | null | undefined)[]) => xs.reduce<number>((a, x) => a + (Number(x) || 0), 0);
-const monthKey = (d: string) => d.slice(0, 7);
-const monthLabel = (k: string) => `${MESES[Number(k.slice(5, 7)) - 1]} ${k.slice(2, 4)}`;
+  v == null || !Number.isFinite(v) ? "—" : `$${Number(v).toLocaleString("es-MX", { maximumFractionDigits: 2, minimumFractionDigits: 2 })}`;
+const pctf = (v: number | null | undefined, d = 1) => (v == null || !Number.isFinite(v) ? "—" : `${nf(v * 100, d)}%`);
 const fmtLabel = (f?: string) => FORMAT_LABEL[(f ?? "").toLowerCase()] ?? (f ? f[0].toUpperCase() + f.slice(1) : "Otro");
+const snippet = (t?: string, n = 90) => { const a = Array.from((t ?? "").replace(/\s+/g, " ").trim()); return a.length > n ? a.slice(0, n).join("") + "…" : a.join(""); };
+const ddmm = (d: string) => d.slice(5).split("-").reverse().join("/");
+const change = (cur: number | null, prev: number | null) => (cur == null || prev == null || !prev ? null : (cur - prev) / Math.abs(prev));
 
-function Delta({ cur, prev, invert }: { cur: number | null; prev: number | null; invert?: boolean }) {
-  if (cur == null || prev == null || !prev) return null;
-  const p = ((cur - prev) / Math.abs(prev)) * 100;
-  if (!Number.isFinite(p) || Math.abs(p) < 0.5) return <span className="text-[11px] text-muted-foreground">sin cambio</span>;
+function Delta({ cur, prev, invert, label = "vs. periodo anterior" }: { cur: number | null; prev: number | null; invert?: boolean; label?: string }) {
+  const p = change(cur, prev);
+  if (p == null) return null;
+  if (Math.abs(p) < 0.005) return <span className="text-[11px] text-muted-foreground">sin cambio</span>;
   const good = invert ? p < 0 : p > 0;
   const Icon = p > 0 ? ArrowUpRight : ArrowDownRight;
   return (
     <span className={`inline-flex items-center gap-0.5 text-[11px] font-medium ${good ? "text-emerald-500" : "text-red-500"}`}>
-      <Icon className="w-3 h-3" />{nf(Math.abs(p), 1)}% vs. periodo anterior
+      <Icon className="w-3 h-3" />{nf(Math.abs(p) * 100, 1)}% {label}
     </span>
   );
 }
+const deltaNote = (cur: number | null, prev: number | null, invert = false): { note?: string; tone?: "up" | "down" | "flat" } => {
+  const p = change(cur, prev);
+  if (p == null) return {};
+  if (Math.abs(p) < 0.005) return { note: "sin cambio", tone: "flat" };
+  return { note: `${p > 0 ? "▲" : "▼"} ${nf(Math.abs(p) * 100, 1)}% vs. anterior`, tone: (invert ? p < 0 : p > 0) ? "up" : "down" };
+};
 
 function Kpi({ icon: Icon, label, value, cur, prev, hint, invert }: any) {
   return (
@@ -87,6 +82,9 @@ const tooltipStyle = {
   contentStyle: { background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, fontSize: 12 },
   labelStyle: { color: "hsl(var(--foreground))" },
 };
+const axis = { tick: { fontSize: 11, fill: "hsl(var(--muted-foreground))" } };
+
+type SortKey = "day" | "interactions" | "reach" | "rate" | "saves" | "shares" | "comments" | "views" | "idx";
 
 export default function PortalInsights({ clientId, clientName, view }: { clientId: string; clientName: string; view: InsightsView }) {
   const [social, setSocial] = useState<Social[]>([]);
@@ -95,8 +93,10 @@ export default function PortalInsights({ clientId, clientName, view }: { clientI
   const [range, setRange] = useState<string>("");
   const [netFilter, setNetFilter] = useState("all");
   const [fmtFilter, setFmtFilter] = useState("all");
-  const [sortBy, setSortBy] = useState<"interactions" | "reach" | "date">("interactions");
+  const [sortBy, setSortBy] = useState<SortKey>("interactions");
+  const [layout, setLayout] = useState<"cards" | "table">("cards");
   const [downloading, setDownloading] = useState(false);
+  const [learnSpec, setLearnSpec] = useState<Partial<PdfSpec>>({});
   const pdfRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -105,7 +105,7 @@ export default function PortalInsights({ clientId, clientName, view }: { clientI
       setLoading(true);
       const [s, a] = await Promise.all([
         supabase.from("client_portal_social_metrics").select("*").eq("client_id", clientId).order("period_start").limit(1000),
-        supabase.from("client_portal_ads_metrics").select("*").eq("client_id", clientId).order("period_start").limit(1000),
+        supabase.from("client_portal_ads_metrics").select("*").eq("client_id", clientId).order("period_start").limit(2000),
       ]);
       if (!alive) return;
       setSocial((s.data ?? []) as Social[]);
@@ -115,214 +115,242 @@ export default function PortalInsights({ clientId, clientName, view }: { clientI
     return () => { alive = false; };
   }, [clientId]);
 
-  // Solo cortes mensuales (inicio día 1)
-  const months = useMemo(() => {
-    const set = new Set<string>();
-    [...social, ...ads].forEach((r) => { if (r.period_start.endsWith("-01")) set.add(monthKey(r.period_start)); });
-    return [...set].sort();
-  }, [social, ads]);
-
-  const ranges = useMemo(() => {
-    if (!months.length) return [] as { key: string; label: string; months: string[] }[];
-    const last = months[months.length - 1];
-    const year = last.slice(0, 4);
-    const list = [
-      ...[...months].reverse().map((m) => ({ key: m, label: `${monthLabel(m)} (mes)`, months: [m] })),
-      { key: "q", label: "Últimos 3 meses", months: months.slice(-3) },
-      { key: "ytd", label: `Año ${year} a la fecha`, months: months.filter((m) => m.startsWith(year)) },
-    ];
-    return list;
-  }, [months]);
+  const allPosts = useMemo(() => buildPosts(social), [social]);
+  const followers = useMemo(() => buildFollowers(social), [social]);
+  const networks = useMemo(() => [...new Set(social.map((r) => r.network))], [social]);
+  const windows = useMemo(() => buildWindows(social, ads, allPosts), [social, ads, allPosts]);
 
   useEffect(() => {
-    if (ranges.length && !ranges.some((r) => r.key === range)) setRange(ranges[0].key);
-  }, [ranges, range]);
+    if (windows.length && !windows.some((w) => w.key === range)) setRange(windows[0].key);
+  }, [windows, range]);
 
-  const sel = ranges.find((r) => r.key === range);
-  const selMonths = sel?.months ?? [];
-  const prevMonths = useMemo(() => {
-    if (!selMonths.length) return [];
-    const i = months.indexOf(selMonths[0]);
-    const n = selMonths.length;
-    return i - n >= 0 ? months.slice(i - n, i) : [];
-  }, [selMonths, months]);
+  const win: Win | undefined = windows.find((w) => w.key === range);
+  const from = win?.from ?? "", to = win?.to ?? "";
+  const cur = useMemo(() => (win ? aggregate(allPosts, followers, networks, win.from, win.to) : null), [win, allPosts, followers, networks]);
+  const prev = useMemo(() => (win?.prev ? aggregate(allPosts, followers, networks, win.prev.from, win.prev.to) : null), [win, allPosts, followers, networks]);
+  const aCurRows = useMemo(() => (win ? adsIn(ads, win, win.kind) : []), [ads, win]);
+  const aPrevRows = useMemo(() => (win?.prev ? adsIn(ads, win.prev, win.kind) : []), [ads, win]);
+  const aCur = sumAds(aCurRows), aPrev = sumAds(aPrevRows);
+  const posts = cur?.posts ?? [];
 
-  const inMonths = <T extends { period_start: string }>(rows: T[], ms: string[]) =>
-    rows.filter((r) => r.period_start.endsWith("-01") && ms.includes(monthKey(r.period_start)));
+  // Seguidores comparables: solo redes con dato en ambos cortes
+  const followersCmp = useMemo(() => {
+    if (!cur || !prev) return { cur: null, prev: null };
+    const nets = cur.byNet.filter((x) => x.followers != null && prev.byNet.find((y) => y.n === x.n)?.followers != null).map((x) => x.n);
+    if (!nets.length) return { cur: null, prev: null };
+    const s = (agg: typeof cur) => agg.byNet.filter((x) => nets.includes(x.n)).reduce((a, x) => a + (x.followers ?? 0), 0);
+    return { cur: s(cur), prev: s(prev) };
+  }, [cur, prev]);
 
-  const sCur = inMonths(social, selMonths);
-  const sPrev = inMonths(social, prevMonths);
-  const aCur = inMonths(ads, selMonths);
-  const aPrev = inMonths(ads, prevMonths);
-  const networks = [...new Set(social.map((r) => r.network))];
+  const cpr = aCur.results ? aCur.spend / aCur.results : null;
+  const cprPrev = aPrev.results ? aPrev.spend / aPrev.results : null;
 
-  /** Seguidores al cierre: último valor conocido por red dentro del rango. */
-  const followersAt = (rows: Social[], only?: string[]) => {
-    let total = 0; let any = false;
-    for (const n of only ?? networks) {
-      const v = rows.filter((r) => r.network === n && r.followers != null).sort((a, b) => (a.period_start < b.period_start ? 1 : -1))[0];
-      if (v) { total += Number(v.followers); any = true; }
+  // Serie temporal: por semana si el corte es semanal, por mes en lo demás
+  const trend = useMemo(() => {
+    if (!win) return [];
+    const weekly = win.kind === "week";
+    const buckets: { label: string; from: string; to: string; kind: Win["kind"] }[] = [];
+    if (weekly) {
+      windows.filter((w) => w.kind === "week" && w.from <= win.from).slice(0, 12).reverse().forEach((w) => buckets.push({ label: dayLabel(w.from), from: w.from, to: w.to, kind: "week" }));
+    } else {
+      windows.filter((w) => w.kind === "month").slice().reverse().forEach((w) => buckets.push({ label: monthLabel(w.months[0]), from: w.from, to: w.to, kind: "month" }));
     }
-    return any ? total : null;
-  };
-
-  const agg = (s: Social[], a: Ad[]) => ({
-    followers: followersAt(s),
-    growth: sum(s.map((r) => r.follower_growth)),
-    posts: sum(s.map((r) => r.posts)),
-    interactions: sum(s.map((r) => r.interactions)),
-    reach: sum(s.map((r) => r.reach)),
-    views: sum(s.map((r) => r.raw?.totals?.views)),
-    spend: sum(a.map((r) => r.spend)),
-    results: sum(a.map((r) => r.results)),
-  });
-  const cur = agg(sCur, aCur);
-  const prev = agg(sPrev, aPrev);
-  // Comparar seguidores solo con las redes que tienen dato en ambos periodos
-  const hasF = (rows: Social[], n: string) => rows.some((r) => r.network === n && r.followers != null);
-  const common = networks.filter((n) => hasF(sCur, n) && hasF(sPrev, n));
-  const followersCmp = common.length ? { cur: followersAt(sCur, common), prev: followersAt(sPrev, common) } : { cur: null, prev: null };
-  const cpr = cur.results ? cur.spend / cur.results : null;
-  const cprPrev = prev.results ? prev.spend / prev.results : null;
-
-  const posts: Post[] = useMemo(
-    () => sCur.flatMap((r) => ((r.raw?.posts ?? r.raw?.top_posts ?? []) as any[]).map((p) => ({ ...p, network: r.network }))),
-    [sCur]
-  );
-
-  const allPosts: Post[] = useMemo(
-    () => social.filter((r) => r.period_start.endsWith("-01")).flatMap((r) => ((r.raw?.posts ?? []) as any[]).map((p) => ({ ...p, network: r.network }))),
-    [social]
-  );
-
-  // Tendencia mensual (todo el histórico disponible)
-  const trend = useMemo(() => months.map((m) => {
-    const row: any = { mes: monthLabel(m) };
-    const rs = social.filter((r) => r.period_start === `${m}-01`);
-    for (const n of networks) {
-      const x = rs.find((r) => r.network === n);
-      row[`f_${n}`] = x?.followers ?? null;
-      row[`i_${n}`] = x?.interactions ?? 0;
-    }
-    const as = ads.filter((r) => r.period_start === `${m}-01`);
-    row.spend = sum(as.map((r) => r.spend));
-    row.results = sum(as.map((r) => r.results));
-    return row;
-  }), [months, social, ads, networks]);
-
-  const byNetwork = networks.map((n) => {
-    const rs = sCur.filter((r) => r.network === n);
-    const ps = rs.filter((r) => r.network === n);
-    const p = sPrev.filter((r) => r.network === n);
-    const inter = sum(ps.map((r) => r.interactions));
-    const nposts = sum(ps.map((r) => r.posts));
-    return {
-      n, followers: followersAt(rs), growth: sum(rs.map((r) => r.follower_growth)), posts: nposts, inter,
-      reach: sum(rs.map((r) => r.reach)), perPost: nposts ? inter / nposts : null,
-      prevInter: sum(p.map((r) => r.interactions)),
-      totals: rs.reduce((acc, r) => {
-        const t = r.raw?.totals ?? {};
-        for (const k of ["likes", "comments", "shares", "saves", "views"]) acc[k] = (acc[k] ?? 0) + (t[k] ?? 0);
-        return acc;
-      }, {} as Record<string, number>),
-    };
-  }).filter((x) => x.posts || x.followers != null);
+    return buckets.map((b) => {
+      const g = aggregate(allPosts, followers, networks, b.from, b.to);
+      const ad = sumAds(adsIn(ads, b, b.kind));
+      const row: any = { mes: b.label, spend: ad.spend || null, results: ad.results || null, cpr: ad.results ? ad.spend / ad.results : null, ctr: ad.impressions ? (ad.clicks / ad.impressions) * 100 : null };
+      g.byNet.forEach((x) => { row[`f_${x.n}`] = x.followers; row[`i_${x.n}`] = x.inter; });
+      return row;
+    });
+  }, [win, windows, allPosts, followers, networks, ads]);
 
   const formats = useMemo(() => {
-    const m = new Map<string, { n: number; inter: number; reach: number }>();
+    const m = new Map<string, { n: number; inter: number; reach: number; idx: number }>();
     posts.forEach((p) => {
       const k = fmtLabel(p.format);
-      const x = m.get(k) ?? { n: 0, inter: 0, reach: 0 };
-      x.n++; x.inter += p.interactions || 0; x.reach += p.reach || 0; m.set(k, x);
+      const x = m.get(k) ?? { n: 0, inter: 0, reach: 0, idx: 0 };
+      x.n++; x.inter += p.interactions; x.reach += p.reach; x.idx += p.idx; m.set(k, x);
     });
-    return [...m.entries()].map(([k, v]) => ({ formato: k, publicaciones: v.n, promedio: Math.round(v.inter / v.n), alcance: Math.round(v.reach / v.n) }))
-      .sort((a, b) => b.promedio - a.promedio);
+    return [...m.entries()].map(([k, v]) => ({ formato: k, publicaciones: v.n, promedio: Math.round(v.inter / v.n), alcance: Math.round(v.reach / v.n), indice: +(v.idx / v.n).toFixed(2) }))
+      .sort((a, b) => b.indice - a.indice);
   }, [posts]);
 
   const weekdays = useMemo(() => {
-    const m = Array.from({ length: 7 }, (_, i) => ({ dia: DIAS[i], n: 0, inter: 0 }));
-    posts.forEach((p) => {
-      if (!p.date) return;
-      const d = new Date(String(p.date).slice(0, 19));
-      if (Number.isNaN(d.getTime())) return;
-      m[d.getDay()].n++; m[d.getDay()].inter += p.interactions || 0;
-    });
-    return m.map((x) => ({ dia: x.dia.slice(0, 3), promedio: x.n ? Math.round(x.inter / x.n) : 0, n: x.n, full: x.dia }));
+    const m = Array.from({ length: 7 }, (_, i) => ({ dia: DIAS[i], n: 0, idx: 0 }));
+    posts.forEach((p) => { m[p.dow].n++; m[p.dow].idx += p.idx; });
+    return m.map((x) => ({ dia: x.dia.slice(0, 3), indice: x.n ? +(x.idx / x.n).toFixed(2) : 0, n: x.n, full: x.dia }));
   }, [posts]);
 
   const campaigns = useMemo(() => {
-    const m = new Map<string, Ad & { months: number }>();
-    aCur.forEach((r) => {
+    const m = new Map<string, Ad & { periods: number }>();
+    aCurRows.forEach((r) => {
       const k = `${r.platform}|${r.campaign_key}`;
       const x = m.get(k);
-      if (!x) m.set(k, { ...r, months: 1, raw: { ...r.raw, actions: { ...(r.raw?.actions ?? {}) } } });
+      if (!x) m.set(k, { ...r, periods: 1, raw: { ...r.raw, actions: { ...(r.raw?.actions ?? {}) } } });
       else {
-        x.spend = sum([x.spend, r.spend]); x.impressions = sum([x.impressions, r.impressions]); x.reach = sum([x.reach, r.reach]);
-        x.clicks = sum([x.clicks, r.clicks]); x.results = sum([x.results, r.results]); x.months++;
+        x.spend = (x.spend ?? 0) + (r.spend ?? 0); x.impressions = (x.impressions ?? 0) + (r.impressions ?? 0); x.reach = (x.reach ?? 0) + (r.reach ?? 0);
+        x.clicks = (x.clicks ?? 0) + (r.clicks ?? 0); x.results = (x.results ?? 0) + (r.results ?? 0); x.periods++;
         for (const [a, v] of Object.entries(r.raw?.actions ?? {})) x.raw.actions[a] = (x.raw.actions[a] ?? 0) + (v as number);
       }
     });
-    return [...m.values()].map((c) => ({ ...c, cost_per_result: c.results ? (c.spend ?? 0) / c.results : null,
-      ctr: c.impressions ? ((c.clicks ?? 0) / c.impressions) * 100 : null, cpm: c.impressions ? ((c.spend ?? 0) / c.impressions) * 1000 : null }))
-      .sort((a, b) => (b.spend ?? 0) - (a.spend ?? 0));
-  }, [aCur]);
+    return [...m.values()].map((c) => ({
+      ...c, cost_per_result: c.results ? (c.spend ?? 0) / c.results : null,
+      ctr: c.impressions ? ((c.clicks ?? 0) / c.impressions) * 100 : null, cpm: c.impressions ? ((c.spend ?? 0) / c.impressions) * 1000 : null,
+      cpc: c.clicks ? (c.spend ?? 0) / c.clicks : null, freq: c.reach ? (c.impressions ?? 0) / c.reach : null,
+      replies: c.raw?.actions?.["onsite_conversion.messaging_first_reply"] ?? 0,
+    })).sort((a, b) => (b.spend ?? 0) - (a.spend ?? 0));
+  }, [aCurRows]);
 
-  const adActions = useMemo(() => {
-    const t: Record<string, number> = {};
-    campaigns.forEach((c) => Object.entries(c.raw?.actions ?? {}).forEach(([k, v]) => { t[k] = (t[k] ?? 0) + (v as number); }));
-    const pick = (k: string) => t[k] ?? 0;
-    return [
-      { label: "Conversaciones iniciadas", v: pick("onsite_conversion.messaging_conversation_started_7d") },
-      { label: "Primeras respuestas", v: pick("onsite_conversion.messaging_first_reply") },
-      { label: "Clics al enlace", v: pick("link_click") },
-      { label: "Interacciones con publicaciones", v: pick("post_engagement") },
-      { label: "Reproducciones de video", v: pick("video_play_actions.video_views") || pick("video_view") },
-      { label: "Reacciones", v: pick("post_reaction") },
-      { label: "Guardados", v: pick("onsite_conversion.post_save") },
-      { label: "Comentarios", v: pick("comment") },
-    ].filter((x) => x.v > 0);
-  }, [campaigns]);
+  // ---------- Métricas de publicidad ----------
+  const adm = useMemo(() => {
+    const k = (t: typeof aCur, key: string) => t.actions[key] ?? 0;
+    const mk = (t: typeof aCur) => ({
+      ctr: t.impressions ? t.clicks / t.impressions : null,
+      cpc: t.clicks ? t.spend / t.clicks : null,
+      cpm: t.impressions ? (t.spend / t.impressions) * 1000 : null,
+      freq: t.reach ? t.impressions / t.reach : null,
+      convRate: t.clicks ? t.results / t.clicks : null,
+      replies: k(t, "onsite_conversion.messaging_first_reply"),
+      depth2: k(t, "onsite_conversion.messaging_user_depth_2_message_send"),
+      replyRate: t.results ? k(t, "onsite_conversion.messaging_first_reply") / t.results : null,
+      costPerReply: k(t, "onsite_conversion.messaging_first_reply") ? t.spend / k(t, "onsite_conversion.messaging_first_reply") : null,
+      linkClicks: k(t, "link_click"), engagement: k(t, "post_engagement"), saves: k(t, "onsite_conversion.post_save"),
+      videoViews: k(t, "video_play_actions.video_views"), reactions: k(t, "post_reaction"),
+    });
+    return { cur: mk(aCur), prev: mk(aPrev) };
+  }, [aCur, aPrev]);
 
-  // Lectura automática: solo hechos calculados de los datos cargados
+  const adsReading = useMemo(() => {
+    const out: string[] = [];
+    if (!aCur.spend) return out;
+    const rt = campaigns[0]?.result_type ?? "resultados";
+    out.push(`Se invirtieron ${money(aCur.spend)} y se obtuvieron ${nf(aCur.results)} ${rt}: cada una costó ${money(cpr)}${cprPrev ? `, ${cpr! < cprPrev ? "más barato" : "más caro"} que el periodo anterior (${money(cprPrev)})` : ""}.`);
+    if (adm.cur.replyRate != null && adm.cur.replies) out.push(`De cada 10 conversaciones iniciadas, ${nf(adm.cur.replyRate * 10, 1)} recibieron primera respuesta (${nf(adm.cur.replies)} en total). Costo real por conversación respondida: ${money(adm.cur.costPerReply)}.`);
+    if (adm.cur.ctr != null) out.push(`El ${pctf(adm.cur.ctr, 2)} de quienes vieron el anuncio dio clic (CTR). ${adm.cur.ctr >= 0.03 ? "Es un nivel alto: el creativo está llamando la atención." : adm.cur.ctr >= 0.01 ? "Es un nivel sano para campañas de mensajes." : "Es bajo: conviene probar otro creativo o mensaje."}`);
+    if (adm.cur.freq != null) out.push(`Cada persona vio el anuncio ${nf(adm.cur.freq, 2)} veces en promedio. ${adm.cur.freq > 3 ? "Hay riesgo de cansancio: renovar creativos o ampliar público." : "Frecuencia sana: todavía hay espacio para repetir el mensaje."}`);
+    if (adm.cur.convRate != null) out.push(`${pctf(adm.cur.convRate)} de los clics terminó en ${rt}.`);
+    if (cur?.reach) out.push(`El alcance pagado (${nf(aCur.reach)} personas) equivale a ${nf(aCur.reach / cur.reach, 1)}× el alcance orgánico del mismo periodo (${nf(cur.reach)}).`);
+    const best = [...campaigns].filter((c) => c.results).sort((a, b) => (a.cost_per_result ?? 1e9) - (b.cost_per_result ?? 1e9));
+    if (best.length > 1) out.push(`La campaña más eficiente fue "${best[0].campaign_name}" con ${money(best[0].cost_per_result)} por resultado; la menos eficiente, "${best[best.length - 1].campaign_name}" con ${money(best[best.length - 1].cost_per_result)}.`);
+    return out;
+  }, [aCur, adm, campaigns, cpr, cprPrev, cur]);
+
+  const adsRecs = useMemo(() => {
+    const out: string[] = [];
+    if (!aCur.spend) return out;
+    if (adm.cur.replyRate != null && adm.cur.replyRate < 0.8) out.push(`Responder más rápido en WhatsApp: ${nf((1 - adm.cur.replyRate) * 100)}% de las conversaciones pagadas no recibió primera respuesta registrada.`);
+    if (adm.cur.freq != null && adm.cur.freq > 2.5) out.push("Rotar el creativo: la frecuencia ya supera 2.5 vistas por persona.");
+    if (cprPrev && cpr && cpr > cprPrev * 1.15) out.push(`Revisar segmentación o creativo: el costo por resultado subió ${nf(((cpr - cprPrev) / cprPrev) * 100)}% vs. el periodo anterior.`);
+    if (cprPrev && cpr && cpr < cprPrev * 0.9) out.push("Considerar subir presupuesto: el costo por resultado bajó y la campaña está respondiendo.");
+    if (adm.cur.ctr != null && adm.cur.ctr < 0.01) out.push("Probar un creativo nuevo (video corto o testimonio): el CTR está por debajo de 1%.");
+    const top = [...posts].sort((a, b) => b.idx - a.idx)[0];
+    if (top) out.push(`Probar como anuncio la pieza orgánica que mejor funcionó: "${snippet(top.text, 70)}" (${NET_LABEL[top.network]}).`);
+    return out;
+  }, [aCur, adm, cpr, cprPrev, posts]);
+
+  // Lectura automática del periodo
   const insights = useMemo(() => {
     const out: string[] = [];
-    const topNet = [...byNetwork].sort((a, b) => b.inter - a.inter)[0];
-    if (topNet && cur.interactions) out.push(`${NET[topNet.n]?.label ?? topNet.n} concentra el ${nf((topNet.inter / cur.interactions) * 100)}% de las interacciones del periodo (${nf(topNet.inter)} de ${nf(cur.interactions)}).`);
-    const perPost = byNetwork.filter((x) => x.perPost).sort((a, b) => (b.perPost ?? 0) - (a.perPost ?? 0))[0];
-    if (perPost && perPost.n !== topNet?.n) out.push(`Por publicación, ${NET[perPost.n]?.label} rinde más: ${nf(perPost.perPost)} interacciones en promedio.`);
-    if (formats.length > 1) out.push(`El formato con mejor promedio es ${formats[0].formato} (${nf(formats[0].promedio)} interacciones por pieza, ${formats[0].publicaciones} publicaciones).`);
-    const bestDay = [...weekdays].filter((d) => d.n >= 2).sort((a, b) => b.promedio - a.promedio)[0];
-    if (bestDay) out.push(`Las publicaciones del ${bestDay.full} tuvieron el mejor promedio (${nf(bestDay.promedio)} interacciones, ${bestDay.n} piezas).`);
-    const best = [...posts].sort((a, b) => b.interactions - a.interactions)[0];
-    if (best) out.push(`La pieza más fuerte fue en ${NET[best.network]?.label}: "${Array.from(best.text ?? "").slice(0, 70).join("")}…" con ${nf(best.interactions)} interacciones.`);
-    if (cur.spend && cur.results) out.push(`La publicidad generó ${nf(cur.results)} resultados con ${money(cur.spend)} de inversión: ${money(cpr)} por resultado${cprPrev ? ` (antes ${money(cprPrev)})` : ""}.`);
-    const missing = byNetwork.filter((x) => x.followers == null).map((x) => NET[x.n]?.label);
-    if (missing.length) out.push(`Metricool no registró el total de seguidores de ${missing.join(" y ")} en este periodo; se muestran publicaciones e interacciones reales.`);
+    if (!cur) return out;
+    const topNet = [...cur.byNet].sort((a, b) => b.inter - a.inter)[0];
+    if (topNet && cur.interactions) out.push(`${NET[topNet.n]?.label ?? topNet.n} concentra el ${nf((topNet.inter / cur.interactions) * 100)}% de las interacciones (${nf(topNet.inter)} de ${nf(cur.interactions)}).`);
+    if (prev && prev.interactions) {
+      const p = change(cur.interactions, prev.interactions)!;
+      out.push(`Las interacciones ${p >= 0 ? "subieron" : "bajaron"} ${nf(Math.abs(p) * 100)}% vs. ${win?.prev?.label}, con ${nf(cur.nPosts)} publicaciones (antes ${nf(prev.nPosts)}).`);
+    }
+    const rate = cur.reach ? cur.interactions / cur.reach : null;
+    if (rate != null) out.push(`De cada 100 personas alcanzadas, ${nf(rate * 100, 1)} interactuaron.`);
+    if (formats.length > 1 && formats[0].publicaciones >= 2) out.push(`El formato que mejor rinde es ${formats[0].formato}: ${nf(formats[0].indice, 1)}× el promedio de su red (${formats[0].publicaciones} piezas).`);
+    const bestDay = [...weekdays].filter((d) => d.n >= 2).sort((a, b) => b.indice - a.indice)[0];
+    if (bestDay) out.push(`Las publicaciones del ${bestDay.full} rindieron ${nf(bestDay.indice, 1)}× lo habitual (${bestDay.n} piezas).`);
+    const best = [...posts].sort((a, b) => b.idx - a.idx)[0];
+    if (best) out.push(`La pieza más fuerte fue en ${NET[best.network]?.label} (${ddmm(best.day)}): "${snippet(best.text, 70)}", ${nf(best.idx, 1)}× su promedio.`);
+    if (aCur.spend && aCur.results) out.push(`Publicidad: ${nf(aCur.results)} resultados con ${money(aCur.spend)}, a ${money(cpr)} cada uno.`);
+    const missing = cur.byNet.filter((x) => x.posts && x.followers == null).map((x) => NET[x.n]?.label);
+    if (missing.length) out.push(`Metricool no registró el total de seguidores de ${missing.join(" y ")} en este corte; la comunidad total solo suma las redes con dato.`);
     return out;
-  }, [byNetwork, cur, formats, weekdays, posts, cpr, cprPrev]);
+  }, [cur, prev, formats, weekdays, posts, aCur, cpr, win]);
 
-  const filteredPosts = useMemo(() => posts
-    .filter((p) => netFilter === "all" || p.network === netFilter)
-    .filter((p) => fmtFilter === "all" || fmtLabel(p.format) === fmtFilter)
-    .sort((a, b) => sortBy === "date" ? String(b.date ?? "").localeCompare(String(a.date ?? "")) : (b[sortBy] ?? 0) - (a[sortBy] ?? 0)),
-    [posts, netFilter, fmtFilter, sortBy]);
+  const filteredPosts = useMemo(() => {
+    const val = (p: Post, k: SortKey): number | string => k === "day" ? p.day : k === "rate" ? (p.reach ? p.interactions / p.reach : -1) : (Number((p as any)[k]) || 0);
+    return posts
+      .filter((p) => netFilter === "all" || p.network === netFilter)
+      .filter((p) => fmtFilter === "all" || fmtLabel(p.format) === fmtFilter)
+      .sort((a, b) => { const x = val(a, sortBy), y = val(b, sortBy); return typeof x === "string" ? String(y).localeCompare(x) : (y as number) - (x as number); });
+  }, [posts, netFilter, fmtFilter, sortBy]);
+
+  // ---------- PDF ----------
+  const onLearnSpec = useCallback((s: Partial<PdfSpec>) => setLearnSpec(s), []);
+  const spec: PdfSpec = useMemo(() => {
+    const base = { client: clientName, period: win?.label.replace(" (mes)", "") ?? "", compare: win?.prev?.label };
+    if (!cur) return { ...base, title: "Reporte" };
+    if (view === "aprendizajes") return { ...base, title: "Qué funciona · Aprendizajes", ...learnSpec };
+    const netTable = {
+      title: "Desempeño por red", columns: [{ h: "Red", w: 16 }, { h: "Seguidores", w: 13 }, { h: "Nuevos", w: 11 }, { h: "Piezas", w: 9 }, { h: "Interacc.", w: 13 }, { h: "Alcance", w: 13 }, { h: "Por pieza", w: 12 }, { h: "Tasa", w: 13 }],
+      rows: cur.byNet.filter((x) => x.posts || x.followers != null).map((x) => [NET[x.n]?.label ?? x.n, nf(x.followers), x.growth == null ? "—" : `+${nf(x.growth)}`, x.posts, nf(x.inter), nf(x.reach), nf(x.perPost), pctf(x.rate)]),
+    };
+    const postTable = (title: string, list: Post[]) => ({
+      title, columns: [{ h: "Fecha", w: 8, align: "left" as const }, { h: "Red", w: 11, align: "left" as const }, { h: "Pieza", w: 41, align: "left" as const }, { h: "Interacc.", w: 10 }, { h: "Alcance", w: 10 }, { h: "Tasa", w: 9 }, { h: "Vs. red", w: 11 }],
+      rows: list.map((p) => [ddmm(p.day), `${NET[p.network]?.label} · ${fmtLabel(p.format)}`, snippet(p.text, 95) || "Sin texto", nf(p.interactions), nf(p.reach), pctf(p.reach ? p.interactions / p.reach : null), `${nf(p.idx, 1)}×`]),
+    });
+    if (view === "panorama") return {
+      ...base, title: "Resumen de desempeño digital",
+      kpis: [
+        { label: "Comunidad", value: nf(cur.followers), ...deltaNote(followersCmp.cur, followersCmp.prev) },
+        { label: "Interacciones", value: nf(cur.interactions), ...deltaNote(cur.interactions, prev?.interactions ?? null) },
+        { label: "Alcance orgánico", value: nf(cur.reach), ...deltaNote(cur.reach, prev?.reach ?? null) },
+        aCur.spend ? { label: "Costo por resultado", value: money(cpr), ...deltaNote(cpr, cprPrev, true) } : { label: "Publicaciones", value: nf(cur.nPosts), ...deltaNote(cur.nPosts, prev?.nPosts ?? null) },
+      ],
+      bullets: insights.length ? [{ title: "Lectura del periodo", items: insights }] : undefined,
+      tables: [netTable, postTable("Lo que mejor funcionó", [...posts].sort((a, b) => b.idx - a.idx).slice(0, 8))],
+      notes: ["Vs. red = rendimiento de la pieza contra el promedio histórico de su red (1× = lo habitual).", "Tasa = interacciones / alcance. En TikTok el alcance corresponde a reproducciones."],
+    };
+    if (view === "contenido") return {
+      ...base, title: "Contenido publicado",
+      kpis: [
+        { label: "Publicaciones", value: nf(cur.nPosts), ...deltaNote(cur.nPosts, prev?.nPosts ?? null) },
+        { label: "Interacciones por pieza", value: nf(cur.nPosts ? cur.interactions / cur.nPosts : null), ...deltaNote(cur.nPosts ? cur.interactions / cur.nPosts : null, prev?.nPosts ? prev.interactions / prev.nPosts : null) },
+        { label: "Mejor formato", value: formats[0]?.formato ?? "—", note: formats[0] ? `${nf(formats[0].indice, 1)}× su red` : undefined },
+        { label: "Reproducciones", value: nf(cur.views) },
+      ],
+      tables: [
+        { title: "Rendimiento por formato", columns: [{ h: "Formato", w: 28 }, { h: "Piezas", w: 14 }, { h: "Interacc. prom.", w: 20 }, { h: "Alcance prom.", w: 20 }, { h: "Vs. red", w: 18 }],
+          rows: formats.map((f) => [f.formato, f.publicaciones, nf(f.promedio), nf(f.alcance), `${nf(f.indice, 1)}×`]) },
+        postTable(`Todas las publicaciones (${filteredPosts.length})`, filteredPosts),
+      ],
+    };
+    return {
+      ...base, title: "Publicidad en Meta",
+      kpis: [
+        { label: "Inversión", value: money(aCur.spend), ...deltaNote(aCur.spend, aPrev.spend || null) },
+        { label: "Resultados", value: nf(aCur.results), ...deltaNote(aCur.results, aPrev.results || null) },
+        { label: "Costo por resultado", value: money(cpr), ...deltaNote(cpr, cprPrev, true) },
+        { label: "Respondidas", value: adm.cur.replies ? nf(adm.cur.replies) : "—", note: adm.cur.replyRate != null ? `${pctf(adm.cur.replyRate, 0)} de las conversaciones` : undefined },
+      ],
+      bullets: [
+        ...(adsReading.length ? [{ title: "Qué pasó con la inversión", items: adsReading }] : []),
+        ...(adsRecs.length ? [{ title: "Qué recomendamos", items: adsRecs }] : []),
+      ],
+      tables: [
+        { title: "Del anuncio a la conversación", columns: [{ h: "Etapa", w: 40 }, { h: "Cantidad", w: 20 }, { h: "Paso", w: 20 }, { h: "Costo c/u", w: 20 }],
+          rows: funnel(aCur, adm.cur.replies).map((s) => [s.label, nf(s.v), s.step == null ? "—" : pctf(s.step), money(s.v ? aCur.spend / s.v : null)]) },
+        { title: "Campañas", columns: [{ h: "Campaña", w: 26 }, { h: "Inversión", w: 12 }, { h: "Alcance", w: 11 }, { h: "Frec.", w: 8 }, { h: "CTR", w: 8 }, { h: "CPC", w: 10 }, { h: "Result.", w: 12 }, { h: "Costo c/u", w: 13 }],
+          rows: campaigns.map((c) => [c.campaign_name, money(c.spend), nf(c.reach), nf(c.freq, 2), c.ctr == null ? "—" : `${nf(c.ctr, 2)}%`, money(c.cpc), nf(c.results), money(c.cost_per_result)]) },
+      ],
+      notes: ["CTR = clics / impresiones · CPC = costo por clic · Frecuencia = veces que cada persona vio el anuncio."],
+    };
+  }, [view, win, cur, prev, followersCmp, aCur, aPrev, cpr, cprPrev, insights, posts, formats, filteredPosts, adm, adsReading, adsRecs, campaigns, learnSpec, clientName]);
 
   const download = async () => {
     if (!pdfRef.current) return;
     setDownloading(true);
     try {
-      const html2pdf = (await import("html2pdf.js")).default;
-      const bg = getComputedStyle(document.body).backgroundColor;
-      await html2pdf().set({
-        margin: 6, filename: `${clientName.replace(/\s+/g, "-").toLowerCase()}-${view}-${range}.pdf`,
-        image: { type: "jpeg", quality: 0.95 }, html2canvas: { scale: 2, useCORS: true, backgroundColor: bg },
-        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" } as any,
-      }).from(pdfRef.current).save();
+      await downloadPdf(pdfRef.current, `${clientName.replace(/\s+/g, "-").toLowerCase()}-${view}-${from}${win?.kind === "week" ? "-semana" : ""}.pdf`);
     } catch { toast.error("No se pudo generar el PDF"); } finally { setDownloading(false); }
   };
 
   if (loading) return <div className="grid gap-3 md:grid-cols-4">{Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-2xl" />)}</div>;
-  if (!months.length) {
+  if (!windows.length || !cur) {
     return (
       <Card className="glass border-border/50 p-14 text-center space-y-2">
         <Users className="w-8 h-8 text-coral mx-auto" />
@@ -332,13 +360,18 @@ export default function PortalInsights({ clientId, clientName, view }: { clientI
     );
   }
 
+  const group = (k: Win["kind"]) => windows.filter((w) => w.kind === k);
   const header = (
     <div className="flex flex-wrap items-center gap-3">
       <Select value={range} onValueChange={setRange}>
-        <SelectTrigger className="h-9 w-56"><CalendarDays className="w-4 h-4 mr-2 text-coral" /><SelectValue /></SelectTrigger>
-        <SelectContent>{ranges.map((r) => <SelectItem key={r.key} value={r.key}>{r.label}</SelectItem>)}</SelectContent>
+        <SelectTrigger className="h-9 w-72"><CalendarDays className="w-4 h-4 mr-2 text-coral" /><SelectValue /></SelectTrigger>
+        <SelectContent className="max-h-80">
+          <SelectGroup><SelectLabel>Por mes</SelectLabel>{group("month").map((r) => <SelectItem key={r.key} value={r.key}>{r.label}</SelectItem>)}</SelectGroup>
+          <SelectGroup><SelectLabel>Por semana (lun–dom)</SelectLabel>{group("week").map((r) => <SelectItem key={r.key} value={r.key}>{r.label}</SelectItem>)}</SelectGroup>
+          <SelectGroup><SelectLabel>Acumulados</SelectLabel>{group("multi").map((r) => <SelectItem key={r.key} value={r.key}>{r.label}</SelectItem>)}</SelectGroup>
+        </SelectContent>
       </Select>
-      {prevMonths.length > 0 && <span className="text-xs text-muted-foreground">Comparado con {prevMonths.map(monthLabel).join(" – ")}</span>}
+      {win?.prev && <span className="text-xs text-muted-foreground">Comparado con {win.prev.label}</span>}
       <Button size="sm" variant="outline" className="ml-auto h-9" onClick={download} disabled={downloading}>
         <Download className="w-4 h-4 mr-2" /> {downloading ? "Generando…" : "Descargar PDF"}
       </Button>
@@ -348,20 +381,27 @@ export default function PortalInsights({ clientId, clientName, view }: { clientI
   return (
     <div className="space-y-6">
       {header}
-      <div ref={pdfRef} className="space-y-6">
+      {/* Plantilla PDF oculta */}
+      <div aria-hidden style={{ position: "fixed", left: -10000, top: 0, pointerEvents: "none" }}>
+        <InsightsPdf ref={pdfRef} spec={spec} />
+      </div>
+
+      <div className="space-y-6">
         {view === "aprendizajes" && (
-          <PortalAprendizajes clientId={clientId} posts={posts} allPosts={allPosts} periodLabel={sel?.label ?? ""} months={selMonths} />
+          <PortalAprendizajes clientId={clientId} posts={posts} allPosts={allPosts} periodLabel={win?.label ?? ""} from={from} to={to} onSpec={onLearnSpec} />
         )}
+
         {view === "panorama" && (
           <>
             <div className="grid gap-3 grid-cols-2 xl:grid-cols-4">
-              <Kpi icon={Users} label="Comunidad total" value={nf(cur.followers)} cur={followersCmp.cur} prev={followersCmp.prev} hint={`${cur.growth >= 0 ? "+" : ""}${nf(cur.growth)} seguidores nuevos`} />
-              <Kpi icon={Heart} label="Interacciones" value={nf(cur.interactions)} cur={cur.interactions} prev={prev.interactions} hint={`${nf(cur.posts)} publicaciones`} />
-              <Kpi icon={Eye} label="Alcance orgánico" value={nf(cur.reach)} cur={cur.reach} prev={prev.reach} hint={cur.views ? `${nf(cur.views)} reproducciones` : undefined} />
-              {cur.spend ? (
-                <Kpi icon={Megaphone} label="Costo por resultado" value={money(cpr)} cur={cpr} prev={cprPrev} invert hint={`${nf(cur.results)} resultados · ${money(cur.spend)}`} />
+              <Kpi icon={Users} label="Comunidad total" value={nf(cur.followers)} cur={followersCmp.cur} prev={followersCmp.prev}
+                hint={cur.followers == null ? "Sin dato de seguidores en este corte" : `${cur.growth != null ? `${cur.growth >= 0 ? "+" : ""}${nf(cur.growth)} nuevos · ` : ""}${cur.followersNets.map((n) => NET[n]?.label).join(", ")}`} />
+              <Kpi icon={Heart} label="Interacciones" value={nf(cur.interactions)} cur={cur.interactions} prev={prev?.interactions ?? null} hint={`${nf(cur.nPosts)} publicaciones`} />
+              <Kpi icon={Eye} label="Alcance orgánico" value={nf(cur.reach)} cur={cur.reach} prev={prev?.reach ?? null} hint={cur.views ? `${nf(cur.views)} reproducciones` : undefined} />
+              {aCur.spend ? (
+                <Kpi icon={Megaphone} label="Costo por resultado" value={money(cpr)} cur={cpr} prev={cprPrev} invert hint={`${nf(aCur.results)} resultados · ${money(aCur.spend)}`} />
               ) : (
-                <Kpi icon={TrendingUp} label="Interacciones por pieza" value={nf(cur.posts ? cur.interactions / cur.posts : null)} cur={cur.posts ? cur.interactions / cur.posts : null} prev={prev.posts ? prev.interactions / prev.posts : null} />
+                <Kpi icon={TrendingUp} label="Interacciones por pieza" value={nf(cur.nPosts ? cur.interactions / cur.nPosts : null)} cur={cur.nPosts ? cur.interactions / cur.nPosts : null} prev={prev?.nPosts ? prev.interactions / prev.nPosts : null} />
               )}
             </div>
 
@@ -376,29 +416,29 @@ export default function PortalInsights({ clientId, clientName, view }: { clientI
 
             <div className="grid gap-4 lg:grid-cols-2">
               <Card className="glass border-border/50 p-5 space-y-3">
-                <div className="text-sm font-semibold">Crecimiento de comunidad por red</div>
+                <div className="text-sm font-semibold">Seguidores por red {win?.kind === "week" ? "(por semana)" : "(por mes)"}</div>
                 <div className="h-64">
                   <ResponsiveContainer>
                     <LineChart data={trend}>
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                      <XAxis dataKey="mes" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
-                      <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} width={48} />
+                      <XAxis dataKey="mes" {...axis} />
+                      <YAxis {...axis} width={48} />
                       <Tooltip {...tooltipStyle} formatter={(v: any) => nf(v)} />
                       <Legend wrapperStyle={{ fontSize: 11 }} />
                       {networks.map((n) => <Line key={n} type="monotone" dataKey={`f_${n}`} name={NET[n]?.label ?? n} stroke={NET[n]?.color} strokeWidth={2} dot={{ r: 3 }} connectNulls />)}
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
-                <p className="text-[11px] text-muted-foreground">Los meses sin punto son meses en que Metricool no registró el total de seguidores.</p>
+                <p className="text-[11px] text-muted-foreground">Los huecos son cortes en que Metricool no registró el total de seguidores de esa red.</p>
               </Card>
               <Card className="glass border-border/50 p-5 space-y-3">
-                <div className="text-sm font-semibold">Interacciones por mes</div>
+                <div className="text-sm font-semibold">Interacciones {win?.kind === "week" ? "por semana" : "por mes"}</div>
                 <div className="h-64">
                   <ResponsiveContainer>
                     <BarChart data={trend}>
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                      <XAxis dataKey="mes" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
-                      <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} width={48} />
+                      <XAxis dataKey="mes" {...axis} />
+                      <YAxis {...axis} width={48} />
                       <Tooltip {...tooltipStyle} formatter={(v: any) => nf(v)} />
                       <Legend wrapperStyle={{ fontSize: 11 }} />
                       {networks.map((n) => <Bar key={n} dataKey={`i_${n}`} name={NET[n]?.label ?? n} stackId="a" fill={NET[n]?.color} />)}
@@ -409,32 +449,36 @@ export default function PortalInsights({ clientId, clientName, view }: { clientI
             </div>
 
             <div className="grid gap-3 md:grid-cols-3">
-              {byNetwork.map((x) => (
-                <Card key={x.n} className="glass border-border/50 p-5 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="font-semibold" style={{ color: NET[x.n]?.color }}>{NET[x.n]?.label ?? x.n}</div>
-                    <Delta cur={x.inter} prev={x.prevInter || null} />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3 text-sm">
-                    <div><div className="text-[11px] text-muted-foreground">Seguidores</div><div className="font-semibold">{nf(x.followers)}</div></div>
-                    <div><div className="text-[11px] text-muted-foreground">Nuevos</div><div className="font-semibold">{x.followers == null ? "—" : `+${nf(x.growth)}`}</div></div>
-                    <div><div className="text-[11px] text-muted-foreground">Publicaciones</div><div className="font-semibold">{nf(x.posts)}</div></div>
-                    <div><div className="text-[11px] text-muted-foreground">Interacciones</div><div className="font-semibold">{nf(x.inter)}</div></div>
-                    <div><div className="text-[11px] text-muted-foreground">Alcance</div><div className="font-semibold">{nf(x.reach)}</div></div>
-                    <div><div className="text-[11px] text-muted-foreground">Por pieza</div><div className="font-semibold">{nf(x.perPost)}</div></div>
-                  </div>
-                  <div className="flex flex-wrap gap-3 text-[11px] text-muted-foreground border-t border-border/40 pt-2">
-                    <span className="inline-flex items-center gap-1"><Heart className="w-3 h-3" />{nf(x.totals.likes)}</span>
-                    <span className="inline-flex items-center gap-1"><MessageCircle className="w-3 h-3" />{nf(x.totals.comments)}</span>
-                    <span className="inline-flex items-center gap-1"><Share2 className="w-3 h-3" />{nf(x.totals.shares)}</span>
-                    {!!x.totals.saves && <span className="inline-flex items-center gap-1"><Bookmark className="w-3 h-3" />{nf(x.totals.saves)}</span>}
-                    {!!x.totals.views && <span className="inline-flex items-center gap-1"><Play className="w-3 h-3" />{nf(x.totals.views)}</span>}
-                  </div>
-                </Card>
-              ))}
+              {cur.byNet.filter((x) => x.posts || x.followers != null).map((x) => {
+                const p = prev?.byNet.find((y) => y.n === x.n);
+                return (
+                  <Card key={x.n} className="glass border-border/50 p-5 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="font-semibold" style={{ color: NET[x.n]?.color }}>{NET[x.n]?.label ?? x.n}</div>
+                      <Delta cur={x.inter} prev={p?.inter || null} />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <Stat k="Seguidores" v={nf(x.followers)} />
+                      <Stat k="Nuevos" v={x.growth == null ? "—" : `${x.growth >= 0 ? "+" : ""}${nf(x.growth)}`} />
+                      <Stat k="Publicaciones" v={nf(x.posts)} />
+                      <Stat k="Interacciones" v={nf(x.inter)} />
+                      <Stat k={x.n === "tiktok" ? "Reproducciones" : "Alcance"} v={nf(x.reach)} />
+                      <Stat k="Tasa de interacción" v={pctf(x.rate)} />
+                    </div>
+                    <div className="flex flex-wrap gap-3 text-[11px] text-muted-foreground border-t border-border/40 pt-2">
+                      <span className="inline-flex items-center gap-1"><Heart className="w-3 h-3" />{nf(x.likes)}</span>
+                      <span className="inline-flex items-center gap-1"><MessageCircle className="w-3 h-3" />{nf(x.comments)}</span>
+                      <span className="inline-flex items-center gap-1"><Share2 className="w-3 h-3" />{nf(x.shares)}</span>
+                      {x.saves != null && <span className="inline-flex items-center gap-1"><Bookmark className="w-3 h-3" />{nf(x.saves)}</span>}
+                      {!!x.views && x.n !== "tiktok" && <span className="inline-flex items-center gap-1"><Play className="w-3 h-3" />{nf(x.views)}</span>}
+                    </div>
+                  </Card>
+                );
+              })}
             </div>
 
-            <TopPosts posts={[...posts].sort((a, b) => b.interactions - a.interactions).slice(0, 6)} title="Lo que mejor funcionó" />
+            <TopPosts posts={[...posts].sort((a, b) => b.idx - a.idx).slice(0, 6)} title="Lo que mejor funcionó" subtitle="Ordenado por rendimiento contra el promedio de su red" />
+            <DataNotes />
           </>
         )}
 
@@ -447,61 +491,73 @@ export default function PortalInsights({ clientId, clientName, view }: { clientI
                   <div className="h-56">
                     <ResponsiveContainer>
                       <BarChart data={formats} layout="vertical" margin={{ left: 10 }}>
-                        <XAxis type="number" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
-                        <YAxis type="category" dataKey="formato" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} width={80} />
-                        <Tooltip {...tooltipStyle} formatter={(v: any, k: any) => [nf(v), k === "promedio" ? "Interacciones promedio" : k]} />
-                        <Bar dataKey="promedio" fill="hsl(var(--coral, 15 95% 55%))" radius={[0, 6, 6, 0]} />
+                        <XAxis type="number" {...axis} />
+                        <YAxis type="category" dataKey="formato" {...axis} width={80} />
+                        <Tooltip {...tooltipStyle} formatter={(v: any) => [`${nf(v, 2)}×`, "Vs. promedio de su red"]} />
+                        <Bar dataKey="indice" fill="hsl(15 95% 55%)" radius={[0, 6, 6, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
                 ) : <p className="text-sm text-muted-foreground">Sin publicaciones en el periodo.</p>}
-                <div className="text-[11px] text-muted-foreground">{formats.map((f) => `${f.formato}: ${f.publicaciones} piezas`).join(" · ")}</div>
+                <div className="text-[11px] text-muted-foreground">{formats.map((f) => `${f.formato}: ${f.publicaciones} piezas, ${nf(f.promedio)} interacc. prom.`).join(" · ")}</div>
               </Card>
               <Card className="glass border-border/50 p-5 space-y-3">
                 <div className="flex items-center gap-2 text-sm font-semibold"><Clock className="w-4 h-4 text-coral" /> Mejor día para publicar</div>
                 <div className="h-56">
                   <ResponsiveContainer>
                     <BarChart data={weekdays}>
-                      <XAxis dataKey="dia" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
-                      <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} width={40} />
-                      <Tooltip {...tooltipStyle} formatter={(v: any) => [nf(v), "Interacciones promedio"]} />
-                      <Bar dataKey="promedio" fill="hsl(185 85% 50%)" radius={[6, 6, 0, 0]} />
+                      <XAxis dataKey="dia" {...axis} />
+                      <YAxis {...axis} width={40} />
+                      <Tooltip {...tooltipStyle} formatter={(v: any, _k: any, it: any) => [`${nf(v, 2)}× (${it?.payload?.n} piezas)`, "Vs. promedio de su red"]} />
+                      <Bar dataKey="indice" fill="hsl(185 85% 50%)" radius={[6, 6, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
-                <div className="text-[11px] text-muted-foreground">Promedio de interacciones por pieza según el día de publicación.</div>
+                <div className="text-[11px] text-muted-foreground">Rendimiento vs. el promedio de su red según el día (hora de CDMX). 1× = lo habitual.</div>
               </Card>
             </div>
 
             <Card className="glass border-border/50 p-5 space-y-4">
               <div className="flex flex-wrap items-center gap-2">
-                <div className="text-sm font-semibold mr-auto">Todas las publicaciones ({filteredPosts.length})</div>
+                <div className="text-sm font-semibold mr-auto">Publicaciones ({filteredPosts.length})</div>
+                <div className="flex rounded-lg border border-border/60 p-0.5">
+                  <Button size="sm" variant={layout === "cards" ? "secondary" : "ghost"} className="h-7 px-2" onClick={() => setLayout("cards")}><LayoutGrid className="w-3.5 h-3.5 mr-1" />Tarjetas</Button>
+                  <Button size="sm" variant={layout === "table" ? "secondary" : "ghost"} className="h-7 px-2" onClick={() => setLayout("table")}><Table2 className="w-3.5 h-3.5 mr-1" />Tabla</Button>
+                </div>
                 <Select value={netFilter} onValueChange={setNetFilter}>
-                  <SelectTrigger className="h-8 w-44"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="h-8 w-40"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todas las redes</SelectItem>
                     {networks.map((n) => <SelectItem key={n} value={n}>{NET[n]?.label ?? n}</SelectItem>)}
                   </SelectContent>
                 </Select>
                 <Select value={fmtFilter} onValueChange={setFmtFilter}>
-                  <SelectTrigger className="h-8 w-44"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="h-8 w-40"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos los formatos</SelectItem>
                     {formats.map((f) => <SelectItem key={f.formato} value={f.formato}>{f.formato}</SelectItem>)}
                   </SelectContent>
                 </Select>
-                <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
+                <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortKey)}>
                   <SelectTrigger className="h-8 w-44"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="interactions">Más interacciones</SelectItem>
+                    <SelectItem value="idx">Mejor vs. su red</SelectItem>
+                    <SelectItem value="rate">Mayor tasa</SelectItem>
                     <SelectItem value="reach">Más alcance</SelectItem>
-                    <SelectItem value="date">Más recientes</SelectItem>
+                    <SelectItem value="shares">Más compartidos</SelectItem>
+                    <SelectItem value="saves">Más guardados</SelectItem>
+                    <SelectItem value="day">Más recientes</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                {filteredPosts.slice(0, 60).map((p, i) => <PostCard key={i} p={p} />)}
-              </div>
+              {layout === "cards" ? (
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                  {filteredPosts.slice(0, 60).map((p, i) => <PostCard key={i} p={p} />)}
+                </div>
+              ) : (
+                <PostTable posts={filteredPosts} sortBy={sortBy} setSortBy={setSortBy} />
+              )}
             </Card>
           </>
         )}
@@ -510,43 +566,69 @@ export default function PortalInsights({ clientId, clientName, view }: { clientI
           campaigns.length ? (
             <>
               <div className="grid gap-3 grid-cols-2 xl:grid-cols-4">
-                <Kpi icon={Megaphone} label="Inversión" value={money(cur.spend)} cur={cur.spend} prev={prev.spend} />
-                <Kpi icon={MessageCircle} label="Resultados" value={nf(cur.results)} cur={cur.results} prev={prev.results} hint={campaigns[0]?.result_type ?? undefined} />
+                <Kpi icon={Megaphone} label="Inversión" value={money(aCur.spend)} cur={aCur.spend} prev={aPrev.spend || null} hint={`${campaigns.length} campaña${campaigns.length > 1 ? "s" : ""}`} />
+                <Kpi icon={MessageCircle} label={campaigns[0]?.result_type ? campaigns[0].result_type[0].toUpperCase() + campaigns[0].result_type.slice(1) : "Resultados"} value={nf(aCur.results)} cur={aCur.results} prev={aPrev.results || null} />
                 <Kpi icon={TrendingUp} label="Costo por resultado" value={money(cpr)} cur={cpr} prev={cprPrev} invert />
-                <Kpi icon={Eye} label="Impresiones" value={nf(sum(campaigns.map((c) => c.impressions)))} cur={sum(campaigns.map((c) => c.impressions))} prev={sum(aPrev.map((c) => c.impressions)) || null} hint={`CPM ${money(sum(campaigns.map((c) => c.impressions)) ? (cur.spend / sum(campaigns.map((c) => c.impressions))) * 1000 : null)}`} />
+                <Kpi icon={Users} label="Conversaciones respondidas" value={adm.cur.replies ? nf(adm.cur.replies) : "—"} cur={adm.cur.replies || null} prev={adm.prev.replies || null}
+                  hint={adm.cur.replyRate != null ? `${pctf(adm.cur.replyRate, 0)} de las iniciadas · ${money(adm.cur.costPerReply)} c/u` : undefined} />
               </div>
 
-              <Card className="glass border-border/50 p-5 space-y-3">
-                <div className="text-sm font-semibold">Inversión y resultados por mes</div>
-                <div className="h-60">
-                  <ResponsiveContainer>
-                    <BarChart data={trend.filter((t) => t.spend)}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                      <XAxis dataKey="mes" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
-                      <YAxis yAxisId="l" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} width={48} />
-                      <YAxis yAxisId="r" orientation="right" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} width={40} />
-                      <Tooltip {...tooltipStyle} formatter={(v: any, k: any) => [k === "Inversión" ? money(v) : nf(v), k]} />
-                      <Legend wrapperStyle={{ fontSize: 11 }} />
-                      <Bar yAxisId="l" dataKey="spend" name="Inversión" fill="hsl(45 100% 55%)" radius={[6, 6, 0, 0]} />
-                      <Bar yAxisId="r" dataKey="results" name="Resultados" fill="hsl(330 85% 60%)" radius={[6, 6, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </Card>
+              <div className="grid gap-4 lg:grid-cols-5">
+                <Card className="glass border-coral/30 p-5 space-y-3 lg:col-span-3">
+                  <div className="flex items-center gap-2 text-sm font-semibold"><Sparkles className="w-4 h-4 text-coral" /> Qué pasó con la inversión</div>
+                  <ul className="space-y-2 text-sm">{adsReading.map((t, i) => <li key={i} className="flex gap-2"><span className="text-coral">•</span><span>{t}</span></li>)}</ul>
+                  {adsRecs.length > 0 && <>
+                    <div className="text-xs font-semibold pt-2">Qué recomendamos</div>
+                    <ul className="space-y-1.5 text-sm">{adsRecs.map((t, i) => <li key={i} className="flex gap-2"><span className="text-emerald-500">→</span><span>{t}</span></li>)}</ul>
+                  </>}
+                </Card>
+                <Card className="glass border-border/50 p-5 space-y-3 lg:col-span-2">
+                  <div className="text-sm font-semibold">Del anuncio a la conversación</div>
+                  <Funnel steps={funnel(aCur, adm.cur.replies)} spend={aCur.spend} />
+                </Card>
+              </div>
 
-              {adActions.length > 0 && (
+              <div className="grid gap-3 grid-cols-2 xl:grid-cols-4">
+                <Explain label="CTR" value={pctf(adm.cur.ctr, 2)} cur={adm.cur.ctr} prev={adm.prev.ctr} text="De cada 100 personas que vieron el anuncio, cuántas dieron clic. Mide qué tan atractivo es el creativo." />
+                <Explain label="Costo por clic" value={money(adm.cur.cpc)} cur={adm.cur.cpc} prev={adm.prev.cpc} invert text="Lo que pagamos por cada clic. Más bajo = el anuncio convence con menos dinero." />
+                <Explain label="Costo por mil (CPM)" value={money(adm.cur.cpm)} cur={adm.cur.cpm} prev={adm.prev.cpm} invert text="Lo que cuesta mostrar el anuncio mil veces. Sube cuando hay más competencia por el público." />
+                <Explain label="Frecuencia" value={nf(adm.cur.freq, 2)} cur={adm.cur.freq} prev={adm.prev.freq} text="Veces que cada persona vio el anuncio. Arriba de 3, el público se cansa." />
+              </div>
+
+              <div className="grid gap-4 lg:grid-cols-2">
                 <Card className="glass border-border/50 p-5 space-y-3">
-                  <div className="text-sm font-semibold">Lo que generó la publicidad</div>
-                  <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
-                    {adActions.map((a) => (
-                      <div key={a.label} className="rounded-xl border border-border/50 p-3">
-                        <div className="text-[11px] text-muted-foreground">{a.label}</div>
-                        <div className="text-lg font-semibold">{nf(a.v)}</div>
-                      </div>
-                    ))}
+                  <div className="text-sm font-semibold">Inversión y resultados {win?.kind === "week" ? "por semana" : "por mes"}</div>
+                  <div className="h-60">
+                    <ResponsiveContainer>
+                      <ComposedChart data={trend.filter((t) => t.spend)}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                        <XAxis dataKey="mes" {...axis} />
+                        <YAxis yAxisId="l" {...axis} width={48} />
+                        <YAxis yAxisId="r" orientation="right" {...axis} width={40} />
+                        <Tooltip {...tooltipStyle} formatter={(v: any, k: any) => [k === "Inversión" ? money(v) : nf(v), k]} />
+                        <Legend wrapperStyle={{ fontSize: 11 }} />
+                        <Bar yAxisId="l" dataKey="spend" name="Inversión" fill="hsl(45 100% 55%)" radius={[6, 6, 0, 0]} />
+                        <Line yAxisId="r" dataKey="results" name="Resultados" stroke="hsl(330 85% 60%)" strokeWidth={2} dot={{ r: 3 }} />
+                      </ComposedChart>
+                    </ResponsiveContainer>
                   </div>
                 </Card>
-              )}
+                <Card className="glass border-border/50 p-5 space-y-3">
+                  <div className="text-sm font-semibold">Costo por resultado {win?.kind === "week" ? "por semana" : "por mes"}</div>
+                  <div className="h-60">
+                    <ResponsiveContainer>
+                      <LineChart data={trend.filter((t) => t.cpr)}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                        <XAxis dataKey="mes" {...axis} />
+                        <YAxis {...axis} width={48} />
+                        <Tooltip {...tooltipStyle} formatter={(v: any) => [money(v), "Costo por resultado"]} />
+                        <Line dataKey="cpr" stroke="hsl(15 95% 55%)" strokeWidth={2} dot={{ r: 3 }} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">Más bajo es mejor: cada resultado cuesta menos.</p>
+                </Card>
+              </div>
 
               <Card className="glass border-border/50 p-5 space-y-3">
                 <div className="text-sm font-semibold">Campañas</div>
@@ -554,13 +636,7 @@ export default function PortalInsights({ clientId, clientName, view }: { clientI
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="text-[11px] uppercase tracking-wide text-muted-foreground border-b border-border/50">
-                        <th className="text-left py-2 font-medium">Campaña</th>
-                        <th className="text-right py-2 font-medium">Inversión</th>
-                        <th className="text-right py-2 font-medium">Alcance</th>
-                        <th className="text-right py-2 font-medium">Clics</th>
-                        <th className="text-right py-2 font-medium">CTR</th>
-                        <th className="text-right py-2 font-medium">Resultados</th>
-                        <th className="text-right py-2 font-medium">Costo c/u</th>
+                        {["Campaña", "Inversión", "% del total", "Alcance", "Frecuencia", "CTR", "CPC", "Resultados", "Costo c/u", "Respondidas"].map((h, i) => <th key={h} className={`py-2 font-medium ${i ? "text-right" : "text-left"}`}>{h}</th>)}
                       </tr>
                     </thead>
                     <tbody>
@@ -571,27 +647,140 @@ export default function PortalInsights({ clientId, clientName, view }: { clientI
                             <div className="text-[11px] text-muted-foreground">Meta · {c.raw?.status === "ACTIVE" ? "Activa" : "Finalizada"}</div>
                           </td>
                           <td className="text-right py-2">{money(c.spend)}</td>
+                          <td className="text-right py-2">{pctf(aCur.spend ? (c.spend ?? 0) / aCur.spend : null, 0)}</td>
                           <td className="text-right py-2">{nf(c.reach)}</td>
-                          <td className="text-right py-2">{nf(c.clicks)}</td>
+                          <td className="text-right py-2">{nf(c.freq, 2)}</td>
                           <td className="text-right py-2">{c.ctr == null ? "—" : `${nf(c.ctr, 2)}%`}</td>
-                          <td className="text-right py-2">{nf(c.results)} <span className="text-[11px] text-muted-foreground">{c.result_type}</span></td>
+                          <td className="text-right py-2">{money(c.cpc)}</td>
+                          <td className="text-right py-2">{nf(c.results)}</td>
                           <td className="text-right py-2">{money(c.cost_per_result)}</td>
+                          <td className="text-right py-2">{c.replies ? nf(c.replies) : "—"}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
+                {win?.kind === "week" && <p className="text-[11px] text-muted-foreground">Cifras de la semana; una campaña puede aparecer en varias semanas.</p>}
               </Card>
+
+              {(adm.cur.engagement > 0 || adm.cur.videoViews > 0) && (
+                <Card className="glass border-border/50 p-5 space-y-3">
+                  <div className="text-sm font-semibold">Efecto secundario de los anuncios</div>
+                  <div className="grid gap-3 grid-cols-2 md:grid-cols-5">
+                    {[["Clics al enlace", adm.cur.linkClicks], ["Interacciones con la publicación", adm.cur.engagement], ["Reacciones", adm.cur.reactions], ["Reproducciones de video", adm.cur.videoViews], ["Guardados", adm.cur.saves]].filter(([, v]) => (v as number) > 0).map(([l, v]) => (
+                      <div key={l as string} className="rounded-xl border border-border/50 p-3">
+                        <div className="text-[11px] text-muted-foreground">{l}</div>
+                        <div className="text-lg font-semibold">{nf(v as number)}</div>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              )}
             </>
           ) : (
             <Card className="glass border-border/50 p-14 text-center space-y-2">
               <Megaphone className="w-8 h-8 text-coral mx-auto" />
               <h3 className="font-semibold">Sin campañas en este periodo</h3>
-              <p className="text-sm text-muted-foreground">Elige otro mes o el año completo para ver la publicidad.</p>
+              <p className="text-sm text-muted-foreground">Elige otro mes, otra semana o el año completo para ver la publicidad.</p>
             </Card>
           )
         )}
       </div>
+    </div>
+  );
+}
+
+function funnel(t: { impressions: number; reach: number; clicks: number; results: number }, replies: number) {
+  const raw = [
+    { label: "Impresiones", v: t.impressions }, { label: "Personas alcanzadas", v: t.reach }, { label: "Clics", v: t.clicks },
+    { label: "Conversaciones iniciadas", v: t.results }, { label: "Con primera respuesta", v: replies },
+  ].filter((s) => s.v > 0);
+  return raw.map((s, i) => ({ ...s, step: i ? s.v / raw[i - 1].v : null as number | null }));
+}
+
+function Funnel({ steps, spend }: { steps: ReturnType<typeof funnel>; spend: number }) {
+  const max = Math.max(1, ...steps.map((s) => s.v));
+  return (
+    <div className="space-y-2.5">
+      {steps.map((s) => (
+        <div key={s.label} className="space-y-1">
+          <div className="flex justify-between text-xs"><span className="text-muted-foreground">{s.label}</span><span className="font-semibold">{nf(s.v)}</span></div>
+          <div className="h-2.5 rounded-full bg-muted/50 overflow-hidden"><div className="h-full rounded-full bg-gradient-to-r from-coral to-pink-500" style={{ width: `${Math.max(2, Math.sqrt(s.v / max) * 100)}%` }} /></div>
+          <div className="flex justify-between text-[10px] text-muted-foreground">
+            <span>{s.step != null ? `${pctf(s.step)} del paso anterior` : ""}</span><span>{money(spend / s.v)} c/u</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Explain({ label, value, text, cur, prev, invert }: { label: string; value: string; text: string; cur: number | null; prev: number | null; invert?: boolean }) {
+  return (
+    <Card className="glass border-border/50 p-4 space-y-1.5">
+      <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-muted-foreground"><Info className="w-3.5 h-3.5 text-coral" />{label}</div>
+      <div className="text-xl font-display font-bold">{value}</div>
+      <Delta cur={cur} prev={prev} invert={invert} />
+      <p className="text-[11px] text-muted-foreground leading-snug">{text}</p>
+    </Card>
+  );
+}
+
+function Stat({ k, v }: { k: string; v: string }) {
+  return <div><div className="text-[11px] text-muted-foreground">{k}</div><div className="font-semibold">{v}</div></div>;
+}
+
+function DataNotes() {
+  return (
+    <Card className="glass border-border/50 p-4 text-[11px] text-muted-foreground space-y-1">
+      <div className="font-semibold text-foreground text-xs flex items-center gap-1.5"><Info className="w-3.5 h-3.5 text-coral" />Cómo leer estos datos</div>
+      <p>Interacciones = reacciones + comentarios + compartidos (+ guardados en Instagram). Tasa = interacciones / alcance.</p>
+      <p>TikTok no entrega alcance: usamos reproducciones. Facebook y TikTok no entregan guardados. Horas en hora de CDMX.</p>
+      <p>"Vs. su red" compara cada pieza con el promedio histórico de su propia red, para no mezclar TikTok con Facebook.</p>
+    </Card>
+  );
+}
+
+function PostTable({ posts, sortBy, setSortBy }: { posts: Post[]; sortBy: SortKey; setSortBy: (k: SortKey) => void }) {
+  const cols: { k: SortKey | null; h: string; right?: boolean }[] = [
+    { k: "day", h: "Fecha" }, { k: null, h: "Red · formato" }, { k: null, h: "Publicación" },
+    { k: "interactions", h: "Interacc.", right: true }, { k: "reach", h: "Alcance", right: true }, { k: "rate", h: "Tasa", right: true },
+    { k: "comments", h: "Coment.", right: true }, { k: "shares", h: "Compart.", right: true }, { k: "saves", h: "Guard.", right: true },
+    { k: "views", h: "Reprod.", right: true }, { k: "idx", h: "Vs. red", right: true },
+  ];
+  return (
+    <div className="overflow-x-auto -mx-2">
+      <table className="w-full text-xs min-w-[900px]">
+        <thead>
+          <tr className="text-[10px] uppercase tracking-wide text-muted-foreground border-b border-border/50">
+            {cols.map((c) => (
+              <th key={c.h} className={`py-2 px-2 font-medium ${c.right ? "text-right" : "text-left"}`}>
+                {c.k ? <button className={`inline-flex items-center gap-0.5 hover:text-foreground ${sortBy === c.k ? "text-coral" : ""}`} onClick={() => setSortBy(c.k!)}>{c.h}<ArrowUpDown className="w-3 h-3" /></button> : c.h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {posts.map((p, i) => (
+            <tr key={i} className="border-b border-border/30 last:border-0 hover:bg-muted/30">
+              <td className="py-2 px-2 whitespace-nowrap">{ddmm(p.day)} <span className="text-muted-foreground">{String(p.hour).padStart(2, "0")}h</span></td>
+              <td className="py-2 px-2 whitespace-nowrap"><span style={{ color: NET[p.network]?.color }}>{NET[p.network]?.label}</span> <span className="text-muted-foreground">· {fmtLabel(p.format)}</span></td>
+              <td className="py-2 px-2 max-w-[320px]">
+                <a href={p.url} target="_blank" rel="noreferrer" className="line-clamp-2 hover:text-coral">{p.text || "Sin texto"}</a>
+              </td>
+              <td className="py-2 px-2 text-right font-semibold">{nf(p.interactions)}</td>
+              <td className="py-2 px-2 text-right">{nf(p.reach)}</td>
+              <td className="py-2 px-2 text-right">{pctf(p.reach ? p.interactions / p.reach : null)}</td>
+              <td className="py-2 px-2 text-right">{nf(p.comments)}</td>
+              <td className="py-2 px-2 text-right">{nf(p.shares)}</td>
+              <td className="py-2 px-2 text-right">{SAVES_NETWORKS.has(p.network) ? nf(p.saves) : <span className="text-muted-foreground">n/d</span>}</td>
+              <td className="py-2 px-2 text-right">{p.views ? nf(p.views) : "—"}</td>
+              <td className={`py-2 px-2 text-right font-medium ${p.idx >= 1.2 ? "text-emerald-500" : p.idx < 0.8 ? "text-coral" : ""}`}>{nf(p.idx, 1)}×</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="text-[11px] text-muted-foreground px-2 pt-2">n/d = la red no entrega ese dato. Da clic en los encabezados para ordenar.</p>
     </div>
   );
 }
@@ -608,12 +797,13 @@ function PostCard({ p }: { p: Post }) {
         <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
           <Badge variant="outline" className="text-[10px]" style={{ color: NET[p.network]?.color }}>{NET[p.network]?.label ?? p.network}</Badge>
           <span>{fmtLabel(p.format)}</span>
-          <span className="ml-auto">{p.date ? new Date(String(p.date).slice(0, 19)).toLocaleDateString("es-MX", { day: "numeric", month: "short" }) : ""}</span>
+          <span className="ml-auto">{ddmm(p.day)}</span>
         </div>
         <p className="text-xs line-clamp-3 flex-1">{p.text || "Publicación sin texto"}</p>
         <div className="flex flex-wrap gap-3 text-[11px] text-muted-foreground">
           <span className="font-semibold text-foreground">{nf(p.interactions)} interacciones</span>
-          <span>{nf(p.reach)} alcance</span>
+          <span>{nf(p.reach)} {p.network === "tiktok" ? "reprod." : "alcance"}</span>
+          <span className={p.idx >= 1.2 ? "text-emerald-500" : p.idx < 0.8 ? "text-coral" : ""}>{nf(p.idx, 1)}× su red</span>
           {!!p.saves && <span className="inline-flex items-center gap-1"><Bookmark className="w-3 h-3" />{nf(p.saves)}</span>}
           {!!p.shares && <span className="inline-flex items-center gap-1"><Share2 className="w-3 h-3" />{nf(p.shares)}</span>}
           <ExternalLink className="w-3 h-3 ml-auto opacity-0 group-hover:opacity-100" />
@@ -623,11 +813,11 @@ function PostCard({ p }: { p: Post }) {
   );
 }
 
-function TopPosts({ posts, title }: { posts: Post[]; title: string }) {
+function TopPosts({ posts, title, subtitle }: { posts: Post[]; title: string; subtitle?: string }) {
   if (!posts.length) return null;
   return (
     <Card className="glass border-border/50 p-5 space-y-3">
-      <div className="text-sm font-semibold">{title}</div>
+      <div><div className="text-sm font-semibold">{title}</div>{subtitle && <div className="text-[11px] text-muted-foreground">{subtitle}</div>}</div>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{posts.map((p, i) => <PostCard key={i} p={p} />)}</div>
     </Card>
   );
