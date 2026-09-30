@@ -194,6 +194,42 @@ Deno.serve(async (req) => {
           if (error) throw error;
           adsSaved = adRows.length;
         }
+
+        // Cortes semanales (lunes a domingo) que tocan este mes
+        if (camps.length) {
+          const iso = (d: Date) => d.toISOString().slice(0, 10);
+          const d0 = new Date(`${start}T00:00:00Z`);
+          d0.setUTCDate(d0.getUTCDate() - ((d0.getUTCDay() + 6) % 7));
+          const weekRows: any[] = [];
+          for (let w = new Date(d0); iso(w) <= until; w.setUTCDate(w.getUTCDate() + 7)) {
+            const ws = iso(w);
+            const we = new Date(w); we.setUTCDate(we.getUTCDate() + 6);
+            const weS = iso(we);
+            const wUntil = weS > today ? today : weS;
+            try {
+              const wd = await mc("/v2/analytics/campaigns/facebookads", { ...base, from: `${ws}T00:00:00`, to: `${wUntil}T23:59:59` });
+              const wc = ((wd?.data ?? []) as any[]).filter((c) => (c.spent ?? 0) > 0 || (c.impressions ?? 0) > 0);
+              for (const c of wc) weekRows.push({
+                client_id: clientId, platform: "meta", campaign_key: String(c.providerCampaignId ?? c.id),
+                campaign_name: c.name ?? "Campaña", objective: c.objective ?? null,
+                period_start: ws, period_end: weS, period_label: `Semana ${ws}`,
+                spend: c.spent ?? null, impressions: c.impressions ?? null, reach: c.reach ?? null, clicks: c.clicks ?? null,
+                ctr: c.ctr ?? null, cpc: c.cpc ?? null, cpm: c.cpm ?? null, results: c.results ?? null,
+                result_type: labelOf(c.resultsLabel ?? null),
+                cost_per_result: c.results ? (c.spent ?? 0) / c.results : null, conversions: c.conversions ?? null,
+                raw: { source: "metricool", granularity: "week", blog_id: blogId, status: c.status, actions: c.actions ?? {},
+                  start: c.start?.dateTime ?? null, stop: c.stop?.dateTime ?? null },
+                created_by: u.user.id,
+              });
+            } catch (e) { console.warn("ads week", ws, String(e)); }
+          }
+          if (weekRows.length) {
+            const { error } = await admin.from("client_portal_ads_metrics")
+              .upsert(weekRows, { onConflict: "client_id,platform,campaign_key,period_start,period_end" });
+            if (error) throw error;
+            adsSaved += weekRows.length;
+          }
+        }
       } catch (e) { console.warn("ads", String(e)); }
 
       return json({ saved: rows.length, ads: adsSaved, brand: brand.label });
