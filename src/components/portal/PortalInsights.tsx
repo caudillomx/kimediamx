@@ -468,21 +468,21 @@ export default function PortalInsights({ clientId, clientName, view }: { clientI
               <div className="flex flex-wrap items-center gap-2">
                 <div className="text-sm font-semibold mr-auto">Todas las publicaciones ({filteredPosts.length})</div>
                 <Select value={netFilter} onValueChange={setNetFilter}>
-                  <SelectTrigger className="h-8 w-36"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="h-8 w-44"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todas las redes</SelectItem>
                     {networks.map((n) => <SelectItem key={n} value={n}>{NET[n]?.label ?? n}</SelectItem>)}
                   </SelectContent>
                 </Select>
                 <Select value={fmtFilter} onValueChange={setFmtFilter}>
-                  <SelectTrigger className="h-8 w-36"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="h-8 w-44"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos los formatos</SelectItem>
                     {formats.map((f) => <SelectItem key={f.formato} value={f.formato}>{f.formato}</SelectItem>)}
                   </SelectContent>
                 </Select>
                 <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
-                  <SelectTrigger className="h-8 w-40"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="h-8 w-44"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="interactions">Más interacciones</SelectItem>
                     <SelectItem value="reach">Más alcance</SelectItem>
