@@ -127,6 +127,47 @@ Deno.serve(async (req) => {
       return json({ ok: true });
     }
 
+    // Usuarios adicionales: solo ven ESTE portal (client_access), sin rol de Operación.
+    if ((action as string) === 'list_members') {
+      const { data: rows } = await admin.from('client_access').select('id, user_id, created_at').eq('client_id', client_id);
+      const { data: usersRes } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+      const members = (rows ?? []).map((r: any) => {
+        const u = usersRes?.users?.find((x) => x.id === r.user_id);
+        return { ...r, email: u?.email ?? null, full_name: (u?.user_metadata as any)?.full_name ?? null, last_sign_in_at: u?.last_sign_in_at ?? null };
+      });
+      return json({ members });
+    }
+
+    if ((action as string) === 'add_member') {
+      const email = String(body.email ?? '').trim().toLowerCase();
+      const password = String(body.password ?? '');
+      const full_name = String(body.full_name ?? '').trim();
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return json({ error: 'Correo inválido' }, 400);
+      if (password.length < 8) return json({ error: 'Contraseña mín 8 caracteres' }, 400);
+      const { data: existing } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+      const found = existing?.users?.find((u) => (u.email ?? '').toLowerCase() === email);
+      let uid: string;
+      if (found) {
+        uid = found.id;
+        const { error } = await admin.auth.admin.updateUserById(uid, { password, email_confirm: true });
+        if (error) throw error;
+      } else {
+        const { data: created, error } = await admin.auth.admin.createUser({
+          email, password, email_confirm: true,
+          user_metadata: { portal_client_id: client_id, ...(full_name ? { full_name } : {}) },
+        });
+        if (error) throw error;
+        uid = created.user!.id;
+      }
+      const { data: ex } = await admin.from('client_access').select('id')
+        .eq('client_id', client_id).eq('user_id', uid).maybeSingle();
+      if (!ex) {
+        const { error } = await admin.from('client_access').insert({ client_id, user_id: uid });
+        if (error) throw error;
+      }
+      return json({ ok: true, user_id: uid });
+    }
+
     return json({ error: 'Acción inválida' }, 400);
   } catch (e: any) {
     return json({ error: e.message ?? String(e) }, 500);
