@@ -361,14 +361,25 @@ export default function PortalInsights({ clientId, clientName, view }: { clientI
   }
 
   const group = (k: Win["kind"]) => windows.filter((w) => w.kind === k);
+  const kind: Win["kind"] = win?.kind ?? "month";
+  const KINDS: { k: Win["kind"]; label: string }[] = [
+    { k: "week", label: "Semanal" }, { k: "month", label: "Mensual" }, { k: "multi", label: "Acumulado" },
+  ];
   const header = (
     <div className="flex flex-wrap items-center gap-3">
+      <div className="inline-flex rounded-lg border border-border p-0.5 bg-muted/40">
+        {KINDS.filter((o) => group(o.k).length).map((o) => (
+          <button
+            key={o.k}
+            onClick={() => setRange(group(o.k)[0].key)}
+            className={`px-3 h-8 rounded-md text-sm transition-colors ${kind === o.k ? "bg-background text-foreground shadow-sm font-medium" : "text-muted-foreground hover:text-foreground"}`}
+          >{o.label}</button>
+        ))}
+      </div>
       <Select value={range} onValueChange={setRange}>
-        <SelectTrigger className="h-9 w-72"><CalendarDays className="w-4 h-4 mr-2 text-coral" /><SelectValue /></SelectTrigger>
+        <SelectTrigger className="h-9 w-64"><CalendarDays className="w-4 h-4 mr-2 text-coral" /><SelectValue /></SelectTrigger>
         <SelectContent className="max-h-80">
-          <SelectGroup><SelectLabel>Por mes</SelectLabel>{group("month").map((r) => <SelectItem key={r.key} value={r.key}>{r.label}</SelectItem>)}</SelectGroup>
-          <SelectGroup><SelectLabel>Por semana (lun–dom)</SelectLabel>{group("week").map((r) => <SelectItem key={r.key} value={r.key}>{r.label}</SelectItem>)}</SelectGroup>
-          <SelectGroup><SelectLabel>Acumulados</SelectLabel>{group("multi").map((r) => <SelectItem key={r.key} value={r.key}>{r.label}</SelectItem>)}</SelectGroup>
+          {group(kind).map((r) => <SelectItem key={r.key} value={r.key}>{r.label}</SelectItem>)}
         </SelectContent>
       </Select>
       {win?.prev && <span className="text-xs text-muted-foreground">Comparado con {win.prev.label}</span>}
