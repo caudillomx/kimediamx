@@ -12,6 +12,7 @@ import { SERVICE_MAP, type ServiceKey } from "@/lib/services";
 import PortalParrillaNotion from "@/components/portal/PortalParrillaNotion";
 
 import PortalInsights from "@/components/portal/PortalInsights";
+import EfemeridesRadar from "@/components/portal/EfemeridesRadar";
 import PortalWebsite from "@/components/portal/PortalWebsite";
 import { Link } from "react-router-dom";
 
@@ -187,6 +188,7 @@ export default function PortalCreative({ portal }: { portal: ClientPortalConfig 
               </TabsList>
 
               <TabsContent value="resumen" className="mt-0">
+                <EfemeridesRadar clientId={portal.clientId} />
                 <PortalInsights clientId={portal.clientId} clientName={portal.displayName} view="panorama" />
               </TabsContent>
               <TabsContent value="aprendizajes" className="mt-0">

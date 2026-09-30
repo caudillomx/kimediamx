@@ -707,6 +707,50 @@ export type Database = {
           },
         ]
       }
+      client_efemeride_decisions: {
+        Row: {
+          client_id: string
+          created_at: string
+          decided_by: string | null
+          decision: string
+          efemeride_date: string
+          efemeride_name: string
+          id: string
+          note: string | null
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          decided_by?: string | null
+          decision: string
+          efemeride_date: string
+          efemeride_name: string
+          id?: string
+          note?: string | null
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          decided_by?: string | null
+          decision?: string
+          efemeride_date?: string
+          efemeride_name?: string
+          id?: string
+          note?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_efemeride_decisions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_ga4_properties: {
         Row: {
           active: boolean

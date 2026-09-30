@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+import { efemeridesFor, useEfemerideDecisions } from "@/lib/efemerides";
+import { EfemerideRow } from "@/components/portal/EfemeridesRadar";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -47,6 +49,10 @@ export default function PortalParrillaNotion({ clientId, clientName, canSync }: 
   const [cursor, setCursor] = useState<Date>(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });
   const [day, setDay] = useState<string | null>(null);
   const [open, setOpen] = useState<NotionItem | null>(null);
+  const [showEf, setShowEf] = useState(true);
+  const efs = useMemo(() => efemeridesFor(clientId), [clientId]);
+  const efByDay = useMemo(() => { const m = new Map<string, typeof efs>(); for (const e of efs) m.set(e.date, [...(m.get(e.date) ?? []), e]); return m; }, [efs]);
+  const { decisions, decide, canEdit: canDecide } = useEfemerideDecisions(clientId);
 
   const load = async () => {
     const [{ data }, { data: s }] = await Promise.all([
@@ -137,6 +143,7 @@ export default function PortalParrillaNotion({ clientId, clientName, canSync }: 
             <Button variant={mode === "mes" ? "secondary" : "ghost"} size="sm" className="h-7 px-2" onClick={() => setMode("mes")}><LayoutGrid className="w-4 h-4" /></Button>
             <Button variant={mode === "lista" ? "secondary" : "ghost"} size="sm" className="h-7 px-2" onClick={() => setMode("lista")}><List className="w-4 h-4" /></Button>
           </div>
+          <Button variant={showEf ? "secondary" : "ghost"} size="sm" className="h-8 text-xs" onClick={() => setShowEf(!showEf)} title="Mostrar efemérides">★ Efemérides</Button>
           <Button variant="ghost" size="sm" onClick={exportCsv}><Download className="w-4 h-4" /></Button>
           {canSync && <Button variant="ghost" size="sm" onClick={sync} disabled={syncing}><RefreshCw className={`w-4 h-4 ${syncing ? "animate-spin" : ""}`} /></Button>}
         </div>
@@ -160,13 +167,20 @@ export default function PortalParrillaNotion({ clientId, clientName, canSync }: 
               {cells.map((d) => {
                 const k = iso(d); const list = byDay.get(k) ?? []; const inMonth = d.getMonth() === cursor.getMonth();
                 const published = (pubByDay.get(k) ?? []).length > 0;
+                const dayEf = showEf ? (efByDay.get(k) ?? []).filter((e) => decisions.get(e.key)?.decision !== "no") : [];
+                const efTop = dayEf.find((e) => decisions.get(e.key)?.decision === "si") ?? dayEf.find((e) => e.affinity) ?? dayEf[0];
                 return (
-                  <button key={k} onClick={() => list.length && setDay(k)}
-                    className={`min-h-[112px] rounded-xl border p-1.5 text-left flex flex-col gap-1 transition-colors ${inMonth ? "border-border/50 bg-card/40" : "border-transparent opacity-40"} ${k === today ? "ring-1 ring-coral" : ""} ${list.length ? "hover:border-coral/50 cursor-pointer" : "cursor-default"}`}>
+                  <button key={k} onClick={() => (list.length || dayEf.length) && setDay(k)}
+                    className={`min-h-[112px] rounded-xl border p-1.5 text-left flex flex-col gap-1 transition-colors ${inMonth ? "border-border/50 bg-card/40" : "border-transparent opacity-40"} ${k === today ? "ring-1 ring-coral" : ""} ${list.length || dayEf.length ? "hover:border-coral/50 cursor-pointer" : "cursor-default"}`}>
                     <div className="flex items-center justify-between text-[11px]">
                       <span className={k === today ? "font-bold text-coral" : "text-muted-foreground"}>{d.getDate()}</span>
                       {list.length > 0 && k < today && (published ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> : <Clock className="w-3.5 h-3.5 text-muted-foreground" />)}
                     </div>
+                    {efTop && inMonth && (
+                      <div className={`rounded-md px-1.5 py-0.5 text-[10px] leading-tight border border-dashed line-clamp-2 ${decisions.get(efTop.key)?.decision === "si" ? "border-emerald-500/60 text-emerald-600 dark:text-emerald-400" : efTop.affinity ? "border-coral/60 text-coral" : "border-border text-muted-foreground"}`} title={dayEf.map((e) => e.name).join(" · ")}>
+                        ★ {efTop.name}{dayEf.length > 1 ? ` +${dayEf.length - 1}` : ""}
+                      </div>
+                    )}
                     {list.slice(0, 3).map((i) => (
                       <div key={i.id} className="rounded-md px-1.5 py-1 text-[11px] leading-tight bg-muted/50 border-l-2" style={{ borderColor: netsOf(i.network)[0]?.color ?? "hsl(var(--coral))" }}>
                         <div className="line-clamp-2 font-medium">{i.title ?? i.theme}</div>
@@ -182,6 +196,7 @@ export default function PortalParrillaNotion({ clientId, clientName, canSync }: 
           <div className="flex items-center gap-4 text-[11px] text-muted-foreground px-1 pt-3">
             <span className="inline-flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Hubo publicación ese día</span>
             <span className="inline-flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> Sin publicación registrada</span>
+            {showEf && <span className="inline-flex items-center gap-1 text-coral">★ Efeméride sugerida (clic en el día para decidir)</span>}
           </div>
         </Card>
       ) : (
@@ -208,6 +223,12 @@ export default function PortalParrillaNotion({ clientId, clientName, canSync }: 
         <SheetContent className="w-full sm:max-w-md overflow-y-auto">
           <SheetHeader><SheetTitle className="capitalize">{open ? longDate(open.scheduled_date!) : day ? longDate(day) : ""}</SheetTitle></SheetHeader>
           <div className="mt-4 space-y-3">
+            {!open && day && (efByDay.get(day) ?? []).length > 0 && (
+              <div className="space-y-2">
+                <div className="text-xs font-semibold text-muted-foreground">Efemérides de este día</div>
+                {(efByDay.get(day) ?? []).map((e) => <EfemerideRow key={e.key} e={e} dec={decisions.get(e.key)?.decision} hasPost={dayList.length > 0} canEdit={canDecide} decide={decide} />)}
+              </div>
+            )}
             {(open ? [open] : dayList).map((i) => (
               <div key={i.id} className="rounded-xl border border-border/60 p-4 space-y-2">
                 <div className="flex items-start justify-between gap-2">
