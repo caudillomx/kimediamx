@@ -235,7 +235,7 @@ export default function PortalInsights({ clientId, clientName, view }: { clientI
     if (isMsg && adm.cur.replyRate != null && adm.cur.replies) out.push(`De cada 10 conversaciones iniciadas, ${nf(adm.cur.replyRate * 10, 1)} recibieron primera respuesta (${nf(adm.cur.replies)} en total). Costo real por conversación respondida: ${money(adm.cur.costPerReply)}.`);
     if (adm.cur.ctr != null) out.push(`El ${pctf(adm.cur.ctr, 2)} de quienes vieron el anuncio dio clic (CTR). ${adm.cur.ctr >= 0.03 ? "Es un nivel alto: el creativo está llamando la atención." : adm.cur.ctr >= 0.01 ? "Es un nivel sano para campañas de mensajes." : "Es bajo: conviene probar otro creativo o mensaje."}`);
     if (adm.cur.freq != null) out.push(`Cada persona vio el anuncio ${nf(adm.cur.freq, 2)} veces en promedio. ${adm.cur.freq > 3 ? "Hay riesgo de cansancio: renovar creativos o ampliar público." : "Frecuencia sana: todavía hay espacio para repetir el mensaje."}`);
-    if (adm.cur.convRate != null) out.push(`${pctf(adm.cur.convRate)} de los clics terminó en ${rt}.`);
+    if (adm.cur.convRate != null && adm.cur.convRate <= 1) out.push(`${pctf(adm.cur.convRate)} de los clics terminó en ${rt}.`);
     if (cur?.reach) out.push(`El alcance pagado (${nf(aCur.reach)} personas) equivale a ${nf(aCur.reach / cur.reach, 1)}× el alcance orgánico del mismo periodo (${nf(cur.reach)}).`);
     const best = [...campaigns].filter((c) => c.results).sort((a, b) => (a.cost_per_result ?? 1e9) - (b.cost_per_result ?? 1e9));
     if (best.length > 1) out.push(`La campaña más eficiente fue "${best[0].campaign_name}" con ${money(best[0].cost_per_result)} por resultado; la menos eficiente, "${best[best.length - 1].campaign_name}" con ${money(best[best.length - 1].cost_per_result)}.`);
