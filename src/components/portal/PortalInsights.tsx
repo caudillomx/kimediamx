@@ -306,7 +306,7 @@ export default function PortalInsights({ clientId, clientName, view }: { clientI
       await html2pdf().set({
         margin: 6, filename: `${clientName.replace(/\s+/g, "-").toLowerCase()}-${view}-${range}.pdf`,
         image: { type: "jpeg", quality: 0.95 }, html2canvas: { scale: 2, useCORS: true, backgroundColor: bg },
-        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" }, pagebreak: { mode: ["css", "legacy"] },
+        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" } as any,
       }).from(pdfRef.current).save();
     } catch { toast.error("No se pudo generar el PDF"); } finally { setDownloading(false); }
   };
