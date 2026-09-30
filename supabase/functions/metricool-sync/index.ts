@@ -62,10 +62,10 @@ Deno.serve(async (req) => {
       const start = `${month}-01`;
       const lastDay = new Date(Date.UTC(y, m, 0)).getUTCDate();
       const today = new Date().toISOString().slice(0, 10);
-      let end = `${month}-${String(lastDay).padStart(2, "0")}`;
-      if (end > today) end = today;
+      const end = `${month}-${String(lastDay).padStart(2, "0")}`;
+      const until = end > today ? today : end;
       if (start > today) return json({ saved: 0 });
-      const base = { blogId, from: `${start}T00:00:00`, to: `${end}T23:59:59`, timezone: "America/Mexico_City" };
+      const base = { blogId, from: `${start}T00:00:00`, to: `${until}T23:59:59`, timezone: "America/Mexico_City" };
       const MESES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
       const label = `${MESES[m - 1][0].toUpperCase()}${MESES[m - 1].slice(1)} ${y}`;
 
