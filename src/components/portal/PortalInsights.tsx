@@ -156,9 +156,9 @@ export default function PortalInsights({ clientId, clientName, view }: { clientI
   const networks = [...new Set(social.map((r) => r.network))];
 
   /** Seguidores al cierre: último valor conocido por red dentro del rango. */
-  const followersAt = (rows: Social[]) => {
+  const followersAt = (rows: Social[], only?: string[]) => {
     let total = 0; let any = false;
-    for (const n of networks) {
+    for (const n of only ?? networks) {
       const v = rows.filter((r) => r.network === n && r.followers != null).sort((a, b) => (a.period_start < b.period_start ? 1 : -1))[0];
       if (v) { total += Number(v.followers); any = true; }
     }
@@ -177,6 +177,10 @@ export default function PortalInsights({ clientId, clientName, view }: { clientI
   });
   const cur = agg(sCur, aCur);
   const prev = agg(sPrev, aPrev);
+  // Comparar seguidores solo con las redes que tienen dato en ambos periodos
+  const hasF = (rows: Social[], n: string) => rows.some((r) => r.network === n && r.followers != null);
+  const common = networks.filter((n) => hasF(sCur, n) && hasF(sPrev, n));
+  const followersCmp = common.length ? { cur: followersAt(sCur, common), prev: followersAt(sPrev, common) } : { cur: null, prev: null };
   const cpr = cur.results ? cur.spend / cur.results : null;
   const cprPrev = prev.results ? prev.spend / prev.results : null;
 
@@ -342,7 +346,7 @@ export default function PortalInsights({ clientId, clientName, view }: { clientI
         {view === "panorama" && (
           <>
             <div className="grid gap-3 grid-cols-2 xl:grid-cols-4">
-              <Kpi icon={Users} label="Comunidad total" value={nf(cur.followers)} cur={cur.followers} prev={prev.followers} hint={`${cur.growth >= 0 ? "+" : ""}${nf(cur.growth)} seguidores nuevos`} />
+              <Kpi icon={Users} label="Comunidad total" value={nf(cur.followers)} cur={followersCmp.cur} prev={followersCmp.prev} hint={`${cur.growth >= 0 ? "+" : ""}${nf(cur.growth)} seguidores nuevos`} />
               <Kpi icon={Heart} label="Interacciones" value={nf(cur.interactions)} cur={cur.interactions} prev={prev.interactions} hint={`${nf(cur.posts)} publicaciones`} />
               <Kpi icon={Eye} label="Alcance orgánico" value={nf(cur.reach)} cur={cur.reach} prev={prev.reach} hint={cur.views ? `${nf(cur.views)} reproducciones` : undefined} />
               {cur.spend ? (
