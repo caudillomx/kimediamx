@@ -204,6 +204,23 @@ export function themes(all: Post[], exclude: string[] = []) {
   });
   return [...merged.entries()]
     .filter(([, x]) => x.idx.length >= 5 && x.idx.length <= maxN && x.months.size >= 2)
-    .map(([w, x]) => ({ w, n: x.idx.length, lift: median(x.idx), nets: [...x.nets] }))
+    .map(([w, x]) => ({ w, n: x.idx.length, lift: median(x.idx), nets: [...x.nets], sample: themeSample(all, w, x.idx) }))
     .sort((a, b) => b.lift - a.lift);
+}
+
+/** Frase real donde aparece el tema (en la pieza más representativa), para que "pablo" se lea "…la conversión de San Pablo…". */
+function themeSample(all: Post[], w: string, idxs: number[]): string | null {
+  const target = median(idxs);
+  const cands = all.filter((p) => {
+    const t = norm(p.text ?? "");
+    return t.includes(w);
+  }).sort((a, b) => Math.abs(a.idx - target) - Math.abs(b.idx - target));
+  for (const p of cands) {
+    const tokens = (p.text ?? "").replace(/\s+/g, " ").split(" ");
+    const i = tokens.findIndex((t) => { const n = norm(t).replace(/[^a-z0-9ñ#]/g, "").replace(/^#/, ""); return n === w || n === `${w}s` || n === `${w}es`; });
+    if (i < 0) continue;
+    const a = Math.max(0, i - 5), b = Math.min(tokens.length, i + 7);
+    return `${a > 0 ? "…" : ""}${tokens.slice(a, b).join(" ")}${b < tokens.length ? "…" : ""}`;
+  }
+  return null;
 }
