@@ -101,24 +101,54 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   try {
-    const authHeader = req.headers.get('Authorization') ?? '';
-    if (!authHeader.startsWith('Bearer ')) return json({ error: 'No auth token' }, 401);
-    const userClient = createClient(SUPABASE_URL, ANON_KEY, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data: userData, error: userErr } = await userClient.auth.getUser();
-    if (userErr || !userData?.user) return json({ error: 'Invalid session' }, 401);
-
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
-    const { data: roleRow } = await admin
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', userData.user.id)
-      .in('role', ['admin', 'editor'])
-      .maybeSingle();
-    if (!roleRow) return json({ error: 'Se requiere rol de operaciones' }, 403);
-
     const body = await req.json().catch(() => ({}));
+    let actorId: string | null = null;
+
+    const cronHeader = req.headers.get('x-cron-secret');
+    if (cronHeader) {
+      const { data: cs } = await admin.from('app_settings').select('value').eq('key', 'cron_secret').maybeSingle();
+      if (!cs?.value || cs.value !== cronHeader) return json({ error: 'No autorizado' }, 401);
+    } else {
+      const authHeader = req.headers.get('Authorization') ?? '';
+      if (!authHeader.startsWith('Bearer ')) return json({ error: 'No auth token' }, 401);
+      const userClient = createClient(SUPABASE_URL, ANON_KEY, {
+        global: { headers: { Authorization: authHeader } },
+      });
+      const { data: userData, error: userErr } = await userClient.auth.getUser();
+      if (userErr || !userData?.user) return json({ error: 'Invalid session' }, 401);
+      const { data: roleRow } = await admin
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userData.user.id)
+        .in('role', ['admin', 'editor'])
+        .limit(1)
+        .maybeSingle();
+      if (!roleRow) return json({ error: 'Se requiere rol de operaciones' }, 403);
+      actorId = userData.user.id;
+    }
+
+    // Modo diario: todos los clientes con Analytics, mes anterior y mes en curso (hora CDMX).
+    if (body.all_clients === true) {
+      const { data: all } = await admin.from('client_ga4_properties').select('client_id').eq('active', true);
+      const ids = [...new Set((all ?? []).map((r: any) => r.client_id as string))];
+      const mx = new Date(Date.now() - 6 * 3600 * 1000);
+      const months: { s: string; e: string; l: string }[] = [];
+      for (const off of [-1, 0]) {
+        const d = new Date(Date.UTC(mx.getUTCFullYear(), mx.getUTCMonth() + off, 1));
+        const last = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0));
+        const today = mx.toISOString().slice(0, 10);
+        const e = last.toISOString().slice(0, 10);
+        months.push({ s: d.toISOString().slice(0, 10), e: e > today ? today : e, l: d.toISOString().slice(0, 7) });
+      }
+      const out: unknown[] = [];
+      for (const id of ids) for (const m of months) {
+        try { out.push({ id, m: m.l, ...(await syncOne(admin, id, m.s, m.e, m.l, null)) }); }
+        catch (e) { out.push({ id, m: m.l, error: e instanceof Error ? e.message : String(e) }); }
+      }
+      return json({ ok: true, results: out });
+    }
+
     const clientId = String(body.client_id ?? '');
     const start = String(body.period_start ?? '');
     const end = String(body.period_end ?? '');
@@ -127,6 +157,16 @@ Deno.serve(async (req) => {
     if (!ISO.test(start) || !ISO.test(end) || start > end) {
       return json({ error: 'Periodo inválido' }, 400);
     }
+    return json({ ok: true, ...(await syncOne(admin, clientId, start, end, label, actorId)) });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error('ga4-sync failed:', msg);
+    return json({ error: msg }, 500);
+  }
+});
+
+async function syncOne(admin: any, clientId: string, start: string, end: string, label: string | null, actorId: string | null) {
+  {
 
     const { data: props, error: propErr } = await admin
       .from('client_ga4_properties')
