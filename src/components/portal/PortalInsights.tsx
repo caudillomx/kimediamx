@@ -166,21 +166,36 @@ export default function PortalInsights({ clientId, clientName, view }: { clientI
     });
   }, [win, windows, allPosts, followers, networks, ads]);
 
-  // Formato por red: "Video en TikTok" no se mezcla con "Imagen en Instagram"; el índice
-  // compara cada pieza contra lo habitual en SU red, por eso se muestra también el promedio bruto.
+  // Formato por red: "Video en TikTok" no se mezcla con "Imagen en Instagram". Se puede leer
+  // por interacciones, alcance o vistas; el índice compara contra lo habitual en SU red en esa métrica.
+  const [fmtMetric, setFmtMetric] = useState<"interactions" | "reach" | "views">("interactions");
   const formats = useMemo(() => {
-    const m = new Map<string, { n: number; inter: number; reach: number; idx: number; net: string; fmt: string }>();
+    const val = (p: Post) => Number((p as any)[fmtMetric]) || 0;
+    const netAvg: Record<string, number> = {};
+    for (const n of new Set(posts.map((p) => p.network))) {
+      const xs = posts.filter((p) => p.network === n && val(p) > 0).map(val);
+      netAvg[n] = xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0;
+    }
+    const m = new Map<string, { n: number; inter: number; reach: number; views: number; nv: number; mv: number; nm: number; net: string; fmt: string }>();
     posts.forEach((p) => {
       const fmt = fmtLabel(p.format);
       const k = `${fmt}|${p.network}`;
-      const x = m.get(k) ?? { n: 0, inter: 0, reach: 0, idx: 0, net: p.network, fmt };
-      x.n++; x.inter += p.interactions; x.reach += p.reach; x.idx += p.idx; m.set(k, x);
+      const x = m.get(k) ?? { n: 0, inter: 0, reach: 0, views: 0, nv: 0, mv: 0, nm: 0, net: p.network, fmt };
+      x.n++; x.inter += p.interactions; x.reach += p.reach;
+      if ((p.views ?? 0) > 0) { x.views += p.views!; x.nv++; }
+      if (val(p) > 0) { x.mv += val(p); x.nm++; }
+      m.set(k, x);
     });
-    return [...m.values()].map((v) => ({
-      formato: `${v.fmt} · ${NET_LABEL[v.net] ?? v.net}`, publicaciones: v.n,
-      promedio: Math.round(v.inter / v.n), alcance: Math.round(v.reach / v.n), indice: +(v.idx / v.n).toFixed(2),
-    })).sort((a, b) => b.indice - a.indice);
-  }, [posts]);
+    return [...m.values()].filter((v) => v.nm > 0).map((v) => {
+      const prom = v.mv / v.nm;
+      return {
+        formato: `${v.fmt} · ${NET_LABEL[v.net] ?? v.net}`, publicaciones: v.n,
+        promedio: Math.round(v.inter / v.n), alcance: Math.round(v.reach / v.n), vistas: v.nv ? Math.round(v.views / v.nv) : null,
+        valor: Math.round(prom), indice: netAvg[v.net] ? +(prom / netAvg[v.net]).toFixed(2) : 0,
+      };
+    }).sort((a, b) => b.valor - a.valor);
+  }, [posts, fmtMetric]);
+  const fmtMetricLabel = { interactions: "interacciones", reach: "alcance", views: "vistas" }[fmtMetric];
 
   const weekdays = useMemo(() => {
     const m = Array.from({ length: 7 }, (_, i) => ({ dia: DIAS[i], n: 0, idx: 0 }));
