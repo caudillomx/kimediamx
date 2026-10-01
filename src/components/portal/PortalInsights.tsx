@@ -166,15 +166,20 @@ export default function PortalInsights({ clientId, clientName, view }: { clientI
     });
   }, [win, windows, allPosts, followers, networks, ads]);
 
+  // Formato por red: "Video en TikTok" no se mezcla con "Imagen en Instagram"; el índice
+  // compara cada pieza contra lo habitual en SU red, por eso se muestra también el promedio bruto.
   const formats = useMemo(() => {
-    const m = new Map<string, { n: number; inter: number; reach: number; idx: number }>();
+    const m = new Map<string, { n: number; inter: number; reach: number; idx: number; net: string; fmt: string }>();
     posts.forEach((p) => {
-      const k = fmtLabel(p.format);
-      const x = m.get(k) ?? { n: 0, inter: 0, reach: 0, idx: 0 };
+      const fmt = fmtLabel(p.format);
+      const k = `${fmt}|${p.network}`;
+      const x = m.get(k) ?? { n: 0, inter: 0, reach: 0, idx: 0, net: p.network, fmt };
       x.n++; x.inter += p.interactions; x.reach += p.reach; x.idx += p.idx; m.set(k, x);
     });
-    return [...m.entries()].map(([k, v]) => ({ formato: k, publicaciones: v.n, promedio: Math.round(v.inter / v.n), alcance: Math.round(v.reach / v.n), indice: +(v.idx / v.n).toFixed(2) }))
-      .sort((a, b) => b.indice - a.indice);
+    return [...m.values()].map((v) => ({
+      formato: `${v.fmt} · ${NET_LABEL[v.net] ?? v.net}`, publicaciones: v.n,
+      promedio: Math.round(v.inter / v.n), alcance: Math.round(v.reach / v.n), indice: +(v.idx / v.n).toFixed(2),
+    })).sort((a, b) => b.indice - a.indice);
   }, [posts]);
 
   const weekdays = useMemo(() => {
@@ -584,20 +589,31 @@ export default function PortalInsights({ clientId, clientName, view }: { clientI
           <>
             <div className="grid gap-4 lg:grid-cols-2">
               <Card className="glass border-border/50 p-5 space-y-3">
-                <div className="text-sm font-semibold">Qué formato rinde más</div>
+                <div>
+                  <div className="text-sm font-semibold">Qué formato rinde más en cada red</div>
+                  <p className="text-[11px] text-muted-foreground">La barra compara cada formato contra lo que normalmente logra esa red. 1× = lo habitual.</p>
+                </div>
                 {formats.length ? (
-                  <div className="h-56">
+                  <div style={{ height: Math.max(180, formats.length * 34) }}>
                     <ResponsiveContainer>
-                      <BarChart data={formats} layout="vertical" margin={{ left: 10 }}>
+                      <BarChart data={formats} layout="vertical" margin={{ left: 10, right: 40 }}>
                         <XAxis type="number" {...axis} />
-                        <YAxis type="category" dataKey="formato" {...axis} width={80} />
-                        <Tooltip {...tooltipStyle} formatter={(v: any) => [`${nf(v, 2)}×`, "Vs. promedio de su red"]} />
-                        <Bar dataKey="indice" fill="hsl(15 95% 55%)" radius={[0, 6, 6, 0]} />
+                        <YAxis type="category" dataKey="formato" {...axis} width={130} />
+                        <Tooltip {...tooltipStyle} formatter={(v: any, _n: any, it: any) => [`${nf(v, 2)}× lo habitual en su red · ${nf(it?.payload?.promedio)} interacc. promedio · ${it?.payload?.publicaciones} piezas`, ""]} />
+                        <Bar dataKey="indice" fill="hsl(15 95% 55%)" radius={[0, 6, 6, 0]} label={{ position: "right", fontSize: 11, formatter: (v: any) => `${nf(v, 1)}×` }} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
                 ) : <p className="text-sm text-muted-foreground">Sin publicaciones en el periodo.</p>}
-                <div className="text-[11px] text-muted-foreground">{formats.map((f) => `${f.formato}: ${f.publicaciones} piezas, ${nf(f.promedio)} interacc. prom.`).join(" · ")}</div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-[11px]">
+                    <thead className="text-muted-foreground"><tr className="text-left"><th className="py-1 font-normal">Formato</th><th className="font-normal text-right">Piezas</th><th className="font-normal text-right">Interacc. promedio</th><th className="font-normal text-right">Vs. su red</th></tr></thead>
+                    <tbody>{formats.map((f) => (
+                      <tr key={f.formato} className="border-t border-border/40"><td className="py-1">{f.formato}</td><td className="text-right tabular-nums">{f.publicaciones}</td><td className="text-right tabular-nums">{nf(f.promedio)}</td><td className="text-right tabular-nums">{nf(f.indice, 1)}×</td></tr>
+                    ))}</tbody>
+                  </table>
+                </div>
+                <p className="text-[11px] text-muted-foreground">Ojo: un formato puede tener muchas interacciones y aun así quedar abajo si su red suele dar todavía más (por ejemplo, un video de TikTok con 300 interacciones cuando lo normal en TikTok son 800).</p>
               </Card>
               <Card className="glass border-border/50 p-5 space-y-3">
                 <div className="flex items-center gap-2 text-sm font-semibold"><Clock className="w-4 h-4 text-coral" /> Mejor día para publicar</div>
