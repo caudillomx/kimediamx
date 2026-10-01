@@ -42,7 +42,7 @@ export default function PortalRouter({ portal }: { portal: ClientPortalConfig })
 
   // Clientes con Análisis (listening/prensa/benchmark) usan el portal analítico.
   // El resto (estrategia, ads, audiovisual) usa el portal operativo.
-  const Home = services.includes("analisis") ? PortalHome : PortalCreative;
+  const Home = (services ?? []).includes("analisis") ? PortalHome : PortalCreative;
 
   return (
     <Routes>
