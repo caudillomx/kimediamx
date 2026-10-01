@@ -24,6 +24,16 @@ const avg = (xs: number[]) => xs.length ? xs.reduce((a, b) => a + b, 0) / xs.len
 const er = (p: Post) => (p.reach ? p.interactions / p.reach : null);
 const snippet = (t?: string, n = 90) => { const a = Array.from((t ?? "").replace(/\s+/g, " ").trim()); return a.length > n ? a.slice(0, n).join("") + "…" : a.join(""); };
 const x = (v: number) => `${nf(v, 1)}×`;
+/** Traduce un índice vs. su red a lenguaje claro. */
+const veces = (v: number) => {
+  if (!Number.isFinite(v)) return "—";
+  if (v >= 1.9 && v < 2.15) return "casi el doble de interacciones de lo normal";
+  if (v >= 2.15) return `${nf(v, 1)} veces las interacciones de lo normal`;
+  if (v >= 1.1) return `${Math.round((v - 1) * 100)}% más interacciones de lo normal`;
+  if (v <= 0.9) return `${Math.round((1 - v) * 100)}% menos interacciones de lo normal`;
+  return "lo normal en su red";
+};
+const corto = (v: number) => (v >= 1.1 ? `+${Math.round((v - 1) * 100)}%` : v <= 0.9 ? `−${Math.round((1 - v) * 100)}%` : "igual");
 
 type ParrillaItem = { scheduled_date: string | null; network: string | null; status: string | null; title: string | null };
 
@@ -109,9 +119,9 @@ export default function PortalAprendizajes({
       const up = a.qEffect.withQ > a.qEffect.noQ;
       out.push({ tipo: up ? "hacer" : "probar", titulo: up ? "Cierra con una pregunta" : "Revisa cómo se formulan las preguntas", porque: `Con pregunta rinden ${x(a.qEffect.withQ)} el promedio de su red; sin pregunta, ${x(a.qEffect.noQ)} (${a.qEffect.nQ} piezas con pregunta).` });
     }
-    const ej = (t: any) => (t?.sample ? ` Ejemplo: «${t.sample}».` : "");
-    if (a.themesUp[0]) out.push({ tipo: "hacer", titulo: `Más piezas que hablen de "${a.themesUp[0].w}"${a.themesUp[1] ? ` y "${a.themesUp[1].w}"` : ""}`, porque: `En el año, ${a.themesUp[0].n} publicaciones mencionaron esa palabra y la pieza típica logró ${x(a.themesUp[0].lift)} las interacciones habituales de su red.${ej(a.themesUp[0])}` });
-    if (a.themesDown[0]) out.push({ tipo: "dejar", titulo: `Replantear las piezas que hablan de "${a.themesDown[0].w}"`, porque: `${a.themesDown[0].n} publicaciones la mencionaron y la típica logró solo ${x(a.themesDown[0].lift)} lo habitual de su red; conviene cambiar el ángulo o el formato.${ej(a.themesDown[0])}` });
+    // Temas: nunca "haz más de X" (vuelve la cuenta monotemática). Se recomienda replicar el ENFOQUE.
+    const tu = a.themesUp.find((t: any) => t.sample);
+    if (tu) out.push({ tipo: "probar", titulo: "Llevar el enfoque de las piezas que más conectaron a otros temas", porque: `Las ${tu.n} publicaciones del año como «${tu.sample}» lograron ${veces(tu.lift)}. No se trata de repetir ese tema (la cuenta se volvería monotemática), sino de identificar qué tenían —personaje, historia concreta, pregunta, formato— y usarlo en los demás temas del calendario.` });
     if (a.days >= 14) a.freq.filter((f) => f.perWeek < 2).forEach((f) => out.push({ tipo: "probar", titulo: `Subir frecuencia en ${NET[f.n] ?? f.n}`, porque: `Hoy se publica ${nf(f.perWeek, 1)} veces por semana (${f.c} en el periodo); con tan poco volumen el algoritmo tiene poco que distribuir.` }));
     if (a.planned && a.delivered / a.planned < 0.8) out.push({ tipo: "dejar", titulo: "Cerrar la brecha entre parrilla y publicación", porque: `De ${a.planned} piezas planeadas en Notion para el periodo, ${a.delivered} coinciden con un día publicado.` });
     return out;
