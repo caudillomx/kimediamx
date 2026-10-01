@@ -23,16 +23,20 @@ export default function PortalRouter({ portal }: { portal: ClientPortalConfig })
     return () => sub.subscription.unsubscribe();
   }, []);
 
+  const uid = session?.user?.id ?? null;
   useEffect(() => {
+    if (!ready) return;
+    if (!uid) { setServices([]); return; }
+    setServices(null);
     supabase
       .from("clients")
       .select("services")
       .eq("id", portal.clientId)
       .maybeSingle()
       .then(({ data }) => setServices(((data as any)?.services ?? []) as string[]));
-  }, [portal.clientId]);
+  }, [portal.clientId, uid, ready]);
 
-  if (!ready || services === null) {
+  if (!ready || (uid && services === null)) {
     return <div className="min-h-screen bg-background" />;
   }
 
