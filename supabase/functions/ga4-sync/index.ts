@@ -174,7 +174,7 @@ async function syncOne(admin: any, clientId: string, start: string, end: string,
       .eq('client_id', clientId)
       .eq('active', true);
     if (propErr) throw propErr;
-    if (!props?.length) return json({ error: 'Este cliente no tiene propiedad de Analytics configurada' }, 400);
+    if (!props?.length) throw new Error('Este cliente no tiene propiedad de Analytics configurada');
 
     const token = await getAccessToken();
     const dateRanges = [{ startDate: start, endDate: end }];
@@ -236,9 +236,14 @@ async function syncOne(admin: any, clientId: string, start: string, end: string,
           .from('client_ga4_properties')
           .update({ last_sync_error: msg.slice(0, 500) })
           .eq('id', p.id);
-        return json({ error: msg }, 502);
+        throw new Error(msg);
       }
     }
+
+    // Mes en curso: sustituye el corte parcial anterior del mismo mes (evita duplicados).
+    await admin.from('client_portal_web_analytics').delete()
+      .eq('client_id', clientId).eq('period_start', start).neq('period_end', end)
+      .like('notes', 'Lectura automática%');
 
     const { error: upErr } = await admin.from('client_portal_web_analytics').upsert(
       {
@@ -255,16 +260,12 @@ async function syncOne(admin: any, clientId: string, start: string, end: string,
         bounce_rate: sessionWeight ? bounceWeighted / sessionWeight : null,
         channels,
         notes: 'Lectura automática desde Google Analytics',
-        created_by: userData.user.id,
+        created_by: actorId,
       },
       { onConflict: 'client_id,period_start,period_end' },
     );
     if (upErr) throw upErr;
 
-    return json({ ok: true, properties: results, sessions, users });
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    console.error('ga4-sync failed:', msg);
-    return json({ error: msg }, 500);
+    return { properties: results, sessions, users };
   }
-});
+}
