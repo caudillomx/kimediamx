@@ -158,11 +158,11 @@ export default function PortalAprendizajes({
       mejor_franja_cdmx: a.bestSlot ? { dia: DIAS_L[a.bestSlot.d], franja: FRANJAS[a.bestSlot.f].k, veces_promedio: +a.bestSlot.v.toFixed(2), piezas: a.bestSlot.n } : null,
       largo_texto: a.lenBuckets.map((b) => ({ tipo: b.k, piezas: b.n, veces_promedio: +b.avg.toFixed(2) })),
       efecto_preguntas: a.qEffect && { con_pregunta: +a.qEffect.withQ.toFixed(2), sin_pregunta: +a.qEffect.noQ.toFixed(2), piezas_con_pregunta: a.qEffect.nQ },
-      temas_que_rinden: a.themesUp.map((t: any) => ({ tema: t.w, piezas: t.n, veces_promedio: +t.lift.toFixed(2), ejemplo_de_uso: t.sample })),
-      temas_debiles: a.themesDown.map((t: any) => ({ tema: t.w, piezas: t.n, veces_promedio: +t.lift.toFixed(2), ejemplo_de_uso: t.sample })),
+      piezas_que_conectaron_ejemplos: a.themesUp.filter((t: any) => t.sample).slice(0, 4).map((t: any) => ({ ejemplo: t.sample, piezas_parecidas: t.n, veces_promedio: +t.lift.toFixed(2) })),
       frecuencia_semanal: a.freq.map((f) => ({ red: NET[f.n], por_semana: +f.perWeek.toFixed(1) })),
-      mejores: a.top.map((p) => ({ red: NET[p.network], formato: fmtL(p.format), texto: snippet(p.text, 140), interacciones: p.interactions, alcance: p.reach })),
-      peores: a.bottom.map((p) => ({ red: NET[p.network], formato: fmtL(p.format), texto: snippet(p.text, 140), interacciones: p.interactions, alcance: p.reach })),
+      mejores: a.top.map((p) => ({ red: NET[p.network], formato: fmtL(p.format), texto: snippet(p.text, 220), interacciones: p.interactions, alcance: p.reach, vistas: p.views || null, compartidos: p.shares ?? null, guardados: p.saves ?? null })),
+      peores: a.bottom.map((p) => ({ red: NET[p.network], formato: fmtL(p.format), texto: snippet(p.text, 220), interacciones: p.interactions, alcance: p.reach, vistas: p.views || null })),
+      mas_vistas: [...posts].filter((p) => (p.views ?? 0) > 0).sort((p, q) => (q.views ?? 0) - (p.views ?? 0)).slice(0, 4).map((p) => ({ red: NET[p.network], formato: fmtL(p.format), texto: snippet(p.text, 160), vistas: p.views, interacciones: p.interactions })),
       parrilla: { planeadas: a.planned, coinciden_con_publicacion: a.delivered },
     };
     const { data, error } = await supabase.functions.invoke("portal-strategy-ai", { body: { data: payload } });
