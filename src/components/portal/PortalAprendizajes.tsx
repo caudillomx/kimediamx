@@ -246,44 +246,41 @@ export default function PortalAprendizajes({
 
       <div className="grid lg:grid-cols-3 gap-5">
         <Card className="glass border-border/50 p-5 space-y-3">
-          <div className="flex items-center gap-2 text-sm font-semibold"><Hash className="w-4 h-4 text-coral" /> Temas que mueven a la comunidad</div>
-          {a.themesUp.length ? (
-            <div className="space-y-2">
-              {a.themesUp.map((t: any) => (
-                <div key={t.w} className="text-xs">
-                  <Badge variant="outline" className="border-emerald-500/40 text-emerald-600 dark:text-emerald-400">{t.w} · {x(t.lift)} · {t.n} pzs</Badge>
-                  {t.sample && <p className="text-[11px] text-muted-foreground italic mt-0.5">«{t.sample}»</p>}
+          <div>
+            <div className="flex items-center gap-2 text-sm font-semibold"><Hash className="w-4 h-4 text-coral" /> Las piezas que más conectaron en el año</div>
+            <p className="text-[11px] text-muted-foreground mt-1">Ejemplos reales de publicaciones que lograron más interacciones de lo normal en su red. Sirven para entender qué enfoque funciona, no para repetir el mismo tema.</p>
+          </div>
+          {a.themesUp.filter((t: any) => t.sample).length ? (
+            <div className="space-y-2.5">
+              {a.themesUp.filter((t: any) => t.sample).slice(0, 4).map((t: any) => (
+                <div key={t.w} className="rounded-lg border border-border/50 p-2.5 text-xs space-y-1">
+                  <p className="italic">«{t.sample}»</p>
+                  <p className="text-[11px] text-emerald-600 dark:text-emerald-400">{t.n} publicaciones parecidas · {veces(t.lift)}</p>
                 </div>
               ))}
             </div>
-          ) : <p className="text-xs text-muted-foreground">Ningún tema destaca con evidencia suficiente todavía.</p>}
-          {!!a.themesDown.length && <>
-            <div className="text-[11px] text-muted-foreground pt-1">Por debajo de lo habitual</div>
-            <div className="space-y-2">
-              {a.themesDown.map((t: any) => (
-                <div key={t.w} className="text-xs">
-                  <Badge variant="outline" className="border-coral/40 text-coral">{t.w} · {x(t.lift)} · {t.n} pzs</Badge>
-                  {t.sample && <p className="text-[11px] text-muted-foreground italic mt-0.5">«{t.sample}»</p>}
-                </div>
-              ))}
-            </div>
-          </>}
-          <p className="text-[11px] text-muted-foreground">Palabras que se repiten en 5 o más publicaciones del año. "1.9×" = la publicación típica con esa palabra logró casi el doble de interacciones de lo normal en su red. La frase muestra cómo se usó.</p>
+          ) : <p className="text-xs text-muted-foreground">Todavía no hay suficientes publicaciones parecidas para sacar un patrón.</p>}
         </Card>
         <Card className="glass border-border/50 p-5 space-y-3">
-          <div className="flex items-center gap-2 text-sm font-semibold"><Type className="w-4 h-4 text-coral" /> Cómo se escribe</div>
-          {a.lenBuckets.map((b) => <Row key={b.k} k={b.k} v={b.n ? `${x(b.avg)} · ${b.n} pzs` : "—"} />)}
+          <div>
+            <div className="flex items-center gap-2 text-sm font-semibold"><Type className="w-4 h-4 text-coral" /> Cómo están escritos los textos</div>
+            <p className="text-[11px] text-muted-foreground mt-1">Cuántas interacciones logran los textos según su largo y si invitan a responder, comparado con lo normal en su red.</p>
+          </div>
+          {a.lenBuckets.filter((b) => b.n).map((b) => <Row key={b.k} k={`${b.k} · ${b.n} piezas`} v={corto(b.avg)} />)}
           {a.qEffect && <>
-            <Row k="Con pregunta" v={`${x(a.qEffect.withQ)} · ${a.qEffect.nQ} pzs`} />
-            <Row k="Sin pregunta" v={x(a.qEffect.noQ)} />
+            <Row k={`Terminan con pregunta · ${a.qEffect.nQ} piezas`} v={corto(a.qEffect.withQ)} />
+            <Row k="Sin pregunta" v={corto(a.qEffect.noQ)} />
           </>}
-          <p className="text-[11px] text-muted-foreground">Rendimiento vs. el promedio de su red.</p>
+          <p className="text-[11px] text-muted-foreground">"+30%" = 30% más interacciones de lo normal; "igual" = sin diferencia relevante.</p>
         </Card>
         <Card className="glass border-border/50 p-5 space-y-3">
-          <div className="flex items-center gap-2 text-sm font-semibold"><CalendarCheck className="w-4 h-4 text-coral" /> Ritmo y cumplimiento</div>
-          {a.freq.map((f) => <Row key={f.n} k={NET[f.n] ?? f.n} v={`${nf(f.perWeek, 1)} por semana · ${f.c} pzs`} />)}
-          {a.planned > 0 && <Row k="Parrilla cumplida" v={`${a.delivered} de ${a.planned} (${pct(a.delivered / a.planned)})`} />}
-          <Row k="Rendimiento del periodo" v={`${x(a.cur)} su promedio`} />
+          <div>
+            <div className="flex items-center gap-2 text-sm font-semibold"><CalendarCheck className="w-4 h-4 text-coral" /> Cuánto publicamos</div>
+            <p className="text-[11px] text-muted-foreground mt-1">Publicaciones por red en el periodo y qué tanto del calendario planeado salió.</p>
+          </div>
+          {a.freq.map((f) => <Row key={f.n} k={NET[f.n] ?? f.n} v={`${f.c} piezas (${nf(f.perWeek, 1)} a la semana)`} />)}
+          {a.planned > 0 && <Row k="Del calendario planeado" v={`se publicaron ${a.delivered} de ${a.planned}`} />}
+          <Row k="Respuesta frente a lo normal" v={corto(a.cur)} />
         </Card>
       </div>
 
