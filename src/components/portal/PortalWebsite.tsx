@@ -69,6 +69,12 @@ export default function PortalWebsite({ clientId }: { clientId: string }) {
 
   if (!rows) return <div className="grid gap-3 md:grid-cols-4">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-2xl" />)}</div>;
   if (!cur) return <Card className="glass p-12 text-center text-sm text-muted-foreground">Aún no hay datos del sitio web.</Card>;
+  if (rows.every((r: any) => !Number(r.sessions))) return (
+    <Card className="glass p-12 text-center text-sm text-muted-foreground space-y-1">
+      <p className="font-medium text-foreground">Google Analytics aún no registra visitas en este sitio.</p>
+      <p>La medición está conectada; en cuanto el sitio empiece a enviar datos aparecerán aquí automáticamente (se actualiza cada día).</p>
+    </Card>
+  );
 
   const kpis = [
     { icon: Users, label: "Personas", v: nf(cur.users), d: delta(cur.users, prev?.users) },
