@@ -55,13 +55,13 @@ export default function PortalAprendizajes({
     // Así TikTok (que rinde más en absoluto) no infla temas, horarios ni estilos.
     const cur = avg(posts.map((p) => p.idx));
 
-    const matrix = new Map<string, Map<string, number[]>>();
+    const matrix = new Map<string, Map<string, Post[]>>();
     posts.forEach((p) => {
       const f = fmtL(p.format); const m = matrix.get(p.network) ?? new Map(); const xs = m.get(f) ?? [];
-      xs.push(p.interactions || 0); m.set(f, xs); matrix.set(p.network, m);
+      xs.push(p); m.set(f, xs); matrix.set(p.network, m);
     });
     const formatNet = [...matrix.entries()].map(([n, m]) => ({
-      n, rows: [...m.entries()].map(([f, xs]) => ({ f, n: xs.length, avg: avg(xs) })).sort((x, y) => y.avg - x.avg),
+      n, rows: [...m.entries()].map(([f, xs]) => { const v = xs.filter((p) => (p.views ?? 0) > 0); return { f, n: xs.length, avg: avg(xs.map((p) => p.interactions || 0)), reach: avg(xs.map((p) => p.reach || 0)), views: v.length ? avg(v.map((p) => p.views!)) : 0 }; }).sort((x, y) => y.avg - x.avg),
     }));
 
     const heat = DIAS.map(() => FRANJAS.map(() => [] as number[]));
@@ -154,7 +154,7 @@ export default function PortalAprendizajes({
       periodo: periodLabel,
       nota: "Los 'veces_promedio' comparan cada pieza con el promedio histórico de SU red (1 = promedio).",
       rendimiento_periodo_vs_red: +a.cur.toFixed(2),
-      formato_por_red: a.formatNet.map((x) => ({ red: NET[x.n], formatos: x.rows.map((r) => ({ formato: r.f, piezas: r.n, promedio_interacciones: Math.round(r.avg) })) })),
+      formato_por_red: a.formatNet.map((x) => ({ red: NET[x.n], formatos: x.rows.map((r: any) => ({ formato: r.f, piezas: r.n, promedio_interacciones: Math.round(r.avg), promedio_alcance: Math.round(r.reach), promedio_vistas: r.views ? Math.round(r.views) : null })) })),
       mejor_franja_cdmx: a.bestSlot ? { dia: DIAS_L[a.bestSlot.d], franja: FRANJAS[a.bestSlot.f].k, veces_promedio: +a.bestSlot.v.toFixed(2), piezas: a.bestSlot.n } : null,
       largo_texto: a.lenBuckets.map((b) => ({ tipo: b.k, piezas: b.n, veces_promedio: +b.avg.toFixed(2) })),
       efecto_preguntas: a.qEffect && { con_pregunta: +a.qEffect.withQ.toFixed(2), sin_pregunta: +a.qEffect.noQ.toFixed(2), piezas_con_pregunta: a.qEffect.nQ },
