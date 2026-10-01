@@ -24,6 +24,16 @@ const avg = (xs: number[]) => xs.length ? xs.reduce((a, b) => a + b, 0) / xs.len
 const er = (p: Post) => (p.reach ? p.interactions / p.reach : null);
 const snippet = (t?: string, n = 90) => { const a = Array.from((t ?? "").replace(/\s+/g, " ").trim()); return a.length > n ? a.slice(0, n).join("") + "…" : a.join(""); };
 const x = (v: number) => `${nf(v, 1)}×`;
+/** Traduce un índice vs. su red a lenguaje claro. */
+const veces = (v: number) => {
+  if (!Number.isFinite(v)) return "—";
+  if (v >= 1.9 && v < 2.15) return "casi el doble de interacciones de lo normal";
+  if (v >= 2.15) return `${nf(v, 1)} veces las interacciones de lo normal`;
+  if (v >= 1.1) return `${Math.round((v - 1) * 100)}% más interacciones de lo normal`;
+  if (v <= 0.9) return `${Math.round((1 - v) * 100)}% menos interacciones de lo normal`;
+  return "lo normal en su red";
+};
+const corto = (v: number) => (v >= 1.1 ? `+${Math.round((v - 1) * 100)}%` : v <= 0.9 ? `−${Math.round((1 - v) * 100)}%` : "igual");
 
 type ParrillaItem = { scheduled_date: string | null; network: string | null; status: string | null; title: string | null };
 
@@ -45,13 +55,13 @@ export default function PortalAprendizajes({
     // Así TikTok (que rinde más en absoluto) no infla temas, horarios ni estilos.
     const cur = avg(posts.map((p) => p.idx));
 
-    const matrix = new Map<string, Map<string, number[]>>();
+    const matrix = new Map<string, Map<string, Post[]>>();
     posts.forEach((p) => {
       const f = fmtL(p.format); const m = matrix.get(p.network) ?? new Map(); const xs = m.get(f) ?? [];
-      xs.push(p.interactions || 0); m.set(f, xs); matrix.set(p.network, m);
+      xs.push(p); m.set(f, xs); matrix.set(p.network, m);
     });
     const formatNet = [...matrix.entries()].map(([n, m]) => ({
-      n, rows: [...m.entries()].map(([f, xs]) => ({ f, n: xs.length, avg: avg(xs) })).sort((x, y) => y.avg - x.avg),
+      n, rows: [...m.entries()].map(([f, xs]) => { const v = xs.filter((p) => (p.views ?? 0) > 0); return { f, n: xs.length, avg: avg(xs.map((p) => p.interactions || 0)), reach: avg(xs.map((p) => p.reach || 0)), views: v.length ? avg(v.map((p) => p.views!)) : 0 }; }).sort((x, y) => y.avg - x.avg),
     }));
 
     const heat = DIAS.map(() => FRANJAS.map(() => [] as number[]));
@@ -109,9 +119,9 @@ export default function PortalAprendizajes({
       const up = a.qEffect.withQ > a.qEffect.noQ;
       out.push({ tipo: up ? "hacer" : "probar", titulo: up ? "Cierra con una pregunta" : "Revisa cómo se formulan las preguntas", porque: `Con pregunta rinden ${x(a.qEffect.withQ)} el promedio de su red; sin pregunta, ${x(a.qEffect.noQ)} (${a.qEffect.nQ} piezas con pregunta).` });
     }
-    const ej = (t: any) => (t?.sample ? ` Ejemplo: «${t.sample}».` : "");
-    if (a.themesUp[0]) out.push({ tipo: "hacer", titulo: `Más piezas que hablen de "${a.themesUp[0].w}"${a.themesUp[1] ? ` y "${a.themesUp[1].w}"` : ""}`, porque: `En el año, ${a.themesUp[0].n} publicaciones mencionaron esa palabra y la pieza típica logró ${x(a.themesUp[0].lift)} las interacciones habituales de su red.${ej(a.themesUp[0])}` });
-    if (a.themesDown[0]) out.push({ tipo: "dejar", titulo: `Replantear las piezas que hablan de "${a.themesDown[0].w}"`, porque: `${a.themesDown[0].n} publicaciones la mencionaron y la típica logró solo ${x(a.themesDown[0].lift)} lo habitual de su red; conviene cambiar el ángulo o el formato.${ej(a.themesDown[0])}` });
+    // Temas: nunca "haz más de X" (vuelve la cuenta monotemática). Se recomienda replicar el ENFOQUE.
+    const tu = a.themesUp.find((t: any) => t.sample);
+    if (tu) out.push({ tipo: "probar", titulo: "Llevar el enfoque de las piezas que más conectaron a otros temas", porque: `Las ${tu.n} publicaciones del año como «${tu.sample}» lograron ${veces(tu.lift)}. No se trata de repetir ese tema (la cuenta se volvería monotemática), sino de identificar qué tenían —personaje, historia concreta, pregunta, formato— y usarlo en los demás temas del calendario.` });
     if (a.days >= 14) a.freq.filter((f) => f.perWeek < 2).forEach((f) => out.push({ tipo: "probar", titulo: `Subir frecuencia en ${NET[f.n] ?? f.n}`, porque: `Hoy se publica ${nf(f.perWeek, 1)} veces por semana (${f.c} en el periodo); con tan poco volumen el algoritmo tiene poco que distribuir.` }));
     if (a.planned && a.delivered / a.planned < 0.8) out.push({ tipo: "dejar", titulo: "Cerrar la brecha entre parrilla y publicación", porque: `De ${a.planned} piezas planeadas en Notion para el periodo, ${a.delivered} coinciden con un día publicado.` });
     return out;
@@ -144,15 +154,15 @@ export default function PortalAprendizajes({
       periodo: periodLabel,
       nota: "Los 'veces_promedio' comparan cada pieza con el promedio histórico de SU red (1 = promedio).",
       rendimiento_periodo_vs_red: +a.cur.toFixed(2),
-      formato_por_red: a.formatNet.map((x) => ({ red: NET[x.n], formatos: x.rows.map((r) => ({ formato: r.f, piezas: r.n, promedio_interacciones: Math.round(r.avg) })) })),
+      formato_por_red: a.formatNet.map((x) => ({ red: NET[x.n], formatos: x.rows.map((r: any) => ({ formato: r.f, piezas: r.n, promedio_interacciones: Math.round(r.avg), promedio_alcance: Math.round(r.reach), promedio_vistas: r.views ? Math.round(r.views) : null })) })),
       mejor_franja_cdmx: a.bestSlot ? { dia: DIAS_L[a.bestSlot.d], franja: FRANJAS[a.bestSlot.f].k, veces_promedio: +a.bestSlot.v.toFixed(2), piezas: a.bestSlot.n } : null,
       largo_texto: a.lenBuckets.map((b) => ({ tipo: b.k, piezas: b.n, veces_promedio: +b.avg.toFixed(2) })),
       efecto_preguntas: a.qEffect && { con_pregunta: +a.qEffect.withQ.toFixed(2), sin_pregunta: +a.qEffect.noQ.toFixed(2), piezas_con_pregunta: a.qEffect.nQ },
-      temas_que_rinden: a.themesUp.map((t: any) => ({ tema: t.w, piezas: t.n, veces_promedio: +t.lift.toFixed(2), ejemplo_de_uso: t.sample })),
-      temas_debiles: a.themesDown.map((t: any) => ({ tema: t.w, piezas: t.n, veces_promedio: +t.lift.toFixed(2), ejemplo_de_uso: t.sample })),
+      piezas_que_conectaron_ejemplos: a.themesUp.filter((t: any) => t.sample).slice(0, 4).map((t: any) => ({ ejemplo: t.sample, piezas_parecidas: t.n, veces_promedio: +t.lift.toFixed(2) })),
       frecuencia_semanal: a.freq.map((f) => ({ red: NET[f.n], por_semana: +f.perWeek.toFixed(1) })),
-      mejores: a.top.map((p) => ({ red: NET[p.network], formato: fmtL(p.format), texto: snippet(p.text, 140), interacciones: p.interactions, alcance: p.reach })),
-      peores: a.bottom.map((p) => ({ red: NET[p.network], formato: fmtL(p.format), texto: snippet(p.text, 140), interacciones: p.interactions, alcance: p.reach })),
+      mejores: a.top.map((p) => ({ red: NET[p.network], formato: fmtL(p.format), texto: snippet(p.text, 220), interacciones: p.interactions, alcance: p.reach, vistas: p.views || null, compartidos: p.shares ?? null, guardados: p.saves ?? null })),
+      peores: a.bottom.map((p) => ({ red: NET[p.network], formato: fmtL(p.format), texto: snippet(p.text, 220), interacciones: p.interactions, alcance: p.reach, vistas: p.views || null })),
+      mas_vistas: [...posts].filter((p) => (p.views ?? 0) > 0).sort((p, q) => (q.views ?? 0) - (p.views ?? 0)).slice(0, 4).map((p) => ({ red: NET[p.network], formato: fmtL(p.format), texto: snippet(p.text, 160), vistas: p.views, interacciones: p.interactions })),
       parrilla: { planeadas: a.planned, coinciden_con_publicacion: a.delivered },
     };
     const { data, error } = await supabase.functions.invoke("portal-strategy-ai", { body: { data: payload } });
@@ -236,44 +246,41 @@ export default function PortalAprendizajes({
 
       <div className="grid lg:grid-cols-3 gap-5">
         <Card className="glass border-border/50 p-5 space-y-3">
-          <div className="flex items-center gap-2 text-sm font-semibold"><Hash className="w-4 h-4 text-coral" /> Temas que mueven a la comunidad</div>
-          {a.themesUp.length ? (
-            <div className="space-y-2">
-              {a.themesUp.map((t: any) => (
-                <div key={t.w} className="text-xs">
-                  <Badge variant="outline" className="border-emerald-500/40 text-emerald-600 dark:text-emerald-400">{t.w} · {x(t.lift)} · {t.n} pzs</Badge>
-                  {t.sample && <p className="text-[11px] text-muted-foreground italic mt-0.5">«{t.sample}»</p>}
+          <div>
+            <div className="flex items-center gap-2 text-sm font-semibold"><Hash className="w-4 h-4 text-coral" /> Las piezas que más conectaron en el año</div>
+            <p className="text-[11px] text-muted-foreground mt-1">Ejemplos reales de publicaciones que lograron más interacciones de lo normal en su red. Sirven para entender qué enfoque funciona, no para repetir el mismo tema.</p>
+          </div>
+          {a.themesUp.filter((t: any) => t.sample).length ? (
+            <div className="space-y-2.5">
+              {a.themesUp.filter((t: any) => t.sample).slice(0, 4).map((t: any) => (
+                <div key={t.w} className="rounded-lg border border-border/50 p-2.5 text-xs space-y-1">
+                  <p className="italic">«{t.sample}»</p>
+                  <p className="text-[11px] text-emerald-600 dark:text-emerald-400">{t.n} publicaciones parecidas · {veces(t.lift)}</p>
                 </div>
               ))}
             </div>
-          ) : <p className="text-xs text-muted-foreground">Ningún tema destaca con evidencia suficiente todavía.</p>}
-          {!!a.themesDown.length && <>
-            <div className="text-[11px] text-muted-foreground pt-1">Por debajo de lo habitual</div>
-            <div className="space-y-2">
-              {a.themesDown.map((t: any) => (
-                <div key={t.w} className="text-xs">
-                  <Badge variant="outline" className="border-coral/40 text-coral">{t.w} · {x(t.lift)} · {t.n} pzs</Badge>
-                  {t.sample && <p className="text-[11px] text-muted-foreground italic mt-0.5">«{t.sample}»</p>}
-                </div>
-              ))}
-            </div>
-          </>}
-          <p className="text-[11px] text-muted-foreground">Palabras que se repiten en 5 o más publicaciones del año. "1.9×" = la publicación típica con esa palabra logró casi el doble de interacciones de lo normal en su red. La frase muestra cómo se usó.</p>
+          ) : <p className="text-xs text-muted-foreground">Todavía no hay suficientes publicaciones parecidas para sacar un patrón.</p>}
         </Card>
         <Card className="glass border-border/50 p-5 space-y-3">
-          <div className="flex items-center gap-2 text-sm font-semibold"><Type className="w-4 h-4 text-coral" /> Cómo se escribe</div>
-          {a.lenBuckets.map((b) => <Row key={b.k} k={b.k} v={b.n ? `${x(b.avg)} · ${b.n} pzs` : "—"} />)}
+          <div>
+            <div className="flex items-center gap-2 text-sm font-semibold"><Type className="w-4 h-4 text-coral" /> Cómo están escritos los textos</div>
+            <p className="text-[11px] text-muted-foreground mt-1">Cuántas interacciones logran los textos según su largo y si invitan a responder, comparado con lo normal en su red.</p>
+          </div>
+          {a.lenBuckets.filter((b) => b.n).map((b) => <Row key={b.k} k={`${b.k} · ${b.n} piezas`} v={corto(b.avg)} />)}
           {a.qEffect && <>
-            <Row k="Con pregunta" v={`${x(a.qEffect.withQ)} · ${a.qEffect.nQ} pzs`} />
-            <Row k="Sin pregunta" v={x(a.qEffect.noQ)} />
+            <Row k={`Terminan con pregunta · ${a.qEffect.nQ} piezas`} v={corto(a.qEffect.withQ)} />
+            <Row k="Sin pregunta" v={corto(a.qEffect.noQ)} />
           </>}
-          <p className="text-[11px] text-muted-foreground">Rendimiento vs. el promedio de su red.</p>
+          <p className="text-[11px] text-muted-foreground">"+30%" = 30% más interacciones de lo normal; "igual" = sin diferencia relevante.</p>
         </Card>
         <Card className="glass border-border/50 p-5 space-y-3">
-          <div className="flex items-center gap-2 text-sm font-semibold"><CalendarCheck className="w-4 h-4 text-coral" /> Ritmo y cumplimiento</div>
-          {a.freq.map((f) => <Row key={f.n} k={NET[f.n] ?? f.n} v={`${nf(f.perWeek, 1)} por semana · ${f.c} pzs`} />)}
-          {a.planned > 0 && <Row k="Parrilla cumplida" v={`${a.delivered} de ${a.planned} (${pct(a.delivered / a.planned)})`} />}
-          <Row k="Rendimiento del periodo" v={`${x(a.cur)} su promedio`} />
+          <div>
+            <div className="flex items-center gap-2 text-sm font-semibold"><CalendarCheck className="w-4 h-4 text-coral" /> Cuánto publicamos</div>
+            <p className="text-[11px] text-muted-foreground mt-1">Publicaciones por red en el periodo y qué tanto del calendario planeado salió.</p>
+          </div>
+          {a.freq.map((f) => <Row key={f.n} k={NET[f.n] ?? f.n} v={`${f.c} piezas (${nf(f.perWeek, 1)} a la semana)`} />)}
+          {a.planned > 0 && <Row k="Del calendario planeado" v={`se publicaron ${a.delivered} de ${a.planned}`} />}
+          <Row k="Respuesta frente a lo normal" v={corto(a.cur)} />
         </Card>
       </div>
 
