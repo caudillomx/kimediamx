@@ -264,7 +264,7 @@ const slides: { title: string; render: () => ReactNode }[] = [
         </div>
         <div className="mt-12 text-[28px]"><b>Jesús Caudillo</b> · hola@kimedia.mx · www.kimedia.mx</div>
       </div>
-      <div className="relative w-[560px] self-stretch shrink-0"><Side src={imgCierre} className="absolute inset-0" /><div className="absolute bottom-6 right-6 rounded-2xl bg-card p-4 border border-border text-center"><QRCodeSVG value={PARTICIPA()} size={170} bgColor="transparent" fgColor="currentColor" className="text-foreground" /><div className="text-[20px] font-semibold mt-2">Su kit</div></div></div>
+      <div className="relative w-[560px] self-stretch shrink-0"><img src={imgCierre} alt="" className="absolute inset-0 w-full h-full object-cover rounded-3xl border border-border" /><div className="absolute bottom-6 right-6 rounded-2xl bg-card p-4 border border-border text-center"><QRCodeSVG value={PARTICIPA()} size={170} bgColor="transparent" fgColor="currentColor" className="text-foreground" /><div className="text-[20px] font-semibold mt-2">Su kit</div></div></div>
     </div>
   ) },
 ];
