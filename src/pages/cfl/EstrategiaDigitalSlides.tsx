@@ -8,7 +8,7 @@ import {
   POLLS, ERAS, QUOTES, MEXICO, DATA_MX, PRINCIPIOS, RIESGOS, HERRAMIENTAS, PROMPTS, PREGUNTAS, NIVELES, type PollKey,
 } from "@/data/cflEstrategiaDigital";
 
-const PARTICIPA = () => `${window.location.origin}/cfl/participa`;
+const PARTICIPA = () => (/kimedia\.mx$/.test(window.location.hostname) ? `${window.location.origin}/cfl/participa` : "https://www.kimedia.mx/cfl/participa");
 
 function Photo({ wiki, className = "" }: { wiki: string; className?: string }) {
   const src = useWikiPhoto(wiki);
@@ -303,7 +303,7 @@ export default function EstrategiaDigitalSlides() {
           style={{ transform: `scale(${scale})`, background: "radial-gradient(1200px 700px at 85% 10%, hsl(var(--coral) / 0.18), transparent 60%), radial-gradient(900px 600px at 5% 95%, hsl(var(--magenta) / 0.16), transparent 60%), hsl(var(--background))" }}>
           <Frame n={idx} total={slides.length}>{slides[idx].render()}</Frame>
         </div>
-        <div className="fixed bottom-3 right-3 flex gap-1 opacity-30 hover:opacity-100 transition-opacity">
+        <div className="fixed top-3 right-3 flex gap-1 opacity-20 hover:opacity-100 transition-opacity">
           <button onClick={() => go(-1)} className="p-2 rounded-lg bg-card border border-border" aria-label="Anterior"><ChevronLeft className="w-4 h-4" /></button>
           <button onClick={() => go(1)} className="p-2 rounded-lg bg-card border border-border" aria-label="Siguiente"><ChevronRight className="w-4 h-4" /></button>
           <button onClick={() => document.documentElement.requestFullscreen?.()} className="p-2 rounded-lg bg-card border border-border" aria-label="Pantalla completa"><Maximize2 className="w-4 h-4" /></button>
