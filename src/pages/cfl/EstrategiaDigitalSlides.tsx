@@ -197,13 +197,13 @@ const slides: { title: string; render: () => ReactNode }[] = [
   { title: "Nuevas reglas", render: () => (
     <>
       <Kicker>Lo que cambió</Kicker>
-      <h2 className="font-display text-[80px] leading-none font-bold tracking-tight mb-12">Cinco reglas del nuevo juego</h2>
+      <h2 className="font-display text-[80px] leading-none font-bold tracking-tight mb-8">Cinco reglas del nuevo juego</h2>
       <div className="flex gap-12 flex-1 min-h-0">
-      <div className="space-y-5 flex-1">
+      <div className="space-y-3 flex-1">
         {PRINCIPIOS.map((p, i) => (
-          <div key={p.t} className="grid grid-cols-[100px_420px_1fr] items-baseline gap-6 border-b border-border/60 pb-5">
+          <div key={p.t} className="grid grid-cols-[100px_420px_1fr] items-baseline gap-6 border-b border-border/60 pb-3">
             <span className="font-display text-[56px] font-bold text-coral leading-none">0{i + 1}</span>
-            <span className="text-[40px] font-semibold">{p.t}</span>
+            <span className="text-[34px] font-semibold leading-tight">{p.t}</span>
             <span className="text-[26px] text-muted-foreground">{p.d}</span>
           </div>
         ))}
@@ -264,7 +264,7 @@ const slides: { title: string; render: () => ReactNode }[] = [
         </div>
         <div className="mt-12 text-[28px]"><b>Jesús Caudillo</b> · hola@kimedia.mx · www.kimedia.mx</div>
       </div>
-      <div className="relative w-[560px] h-full shrink-0"><Side src={imgCierre} className="absolute inset-0" /><div className="absolute bottom-6 right-6 rounded-2xl bg-card p-4 border border-border text-center"><QRCodeSVG value={PARTICIPA()} size={170} bgColor="transparent" fgColor="currentColor" className="text-foreground" /><div className="text-[20px] font-semibold mt-2">Su kit</div></div></div>
+      <div className="relative w-[560px] self-stretch shrink-0"><Side src={imgCierre} className="absolute inset-0" /><div className="absolute bottom-6 right-6 rounded-2xl bg-card p-4 border border-border text-center"><QRCodeSVG value={PARTICIPA()} size={170} bgColor="transparent" fgColor="currentColor" className="text-foreground" /><div className="text-[20px] font-semibold mt-2">Su kit</div></div></div>
     </div>
   ) },
 ];
