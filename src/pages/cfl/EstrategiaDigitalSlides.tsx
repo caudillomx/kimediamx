@@ -3,6 +3,16 @@ import { useSearchParams } from "react-router-dom";
 import { QRCodeSVG } from "qrcode.react";
 import { ChevronLeft, ChevronRight, Maximize2 } from "lucide-react";
 import kimediaLogo from "@/assets/kimedia-logo-full.png";
+import imgPregunta from "@/assets/cfl/pregunta.jpg";
+import imgPlaza from "@/assets/cfl/plaza.jpg";
+import imgAlgoritmo from "@/assets/cfl/algoritmo.jpg";
+import imgRiesgo from "@/assets/cfl/riesgo.jpg";
+import imgHerramienta from "@/assets/cfl/herramienta.jpg";
+import imgCierre from "@/assets/cfl/cierre.jpg";
+
+function Side({ src, className = "" }: { src: string; className?: string }) {
+  return <div className={`relative rounded-3xl overflow-hidden border border-border shrink-0 ${className}`}><img src={src} alt="" className="absolute inset-0 w-full h-full object-cover" /><div className="absolute inset-0 bg-gradient-to-t from-background/50 to-transparent" /></div>;
+}
 import { useCflVotes, useWikiPhoto } from "@/hooks/useCflVotes";
 import {
   POLLS, ERAS, QUOTES, MEXICO, DATA_MX, PRINCIPIOS, RIESGOS, HERRAMIENTAS, PROMPTS, PREGUNTAS, NIVELES, type PollKey,
@@ -106,10 +116,13 @@ const slides: { title: string; render: () => ReactNode }[] = [
   ) },
   { title: "Votación: fuentes", render: () => <><Kicker>Votación en vivo</Kicker><Poll k="fuente" /></> },
   { title: "Pregunta", render: () => (
-    <div className="flex-1 flex flex-col justify-center">
-      <Kicker>Para pensar</Kicker>
-      <h2 className="font-display text-[112px] leading-[1.02] font-bold tracking-tight max-w-[1600px]">{PREGUNTAS[0]}</h2>
-      <p className="text-[34px] text-muted-foreground mt-10">Saque su celular y búsquese. Tiene 60 segundos.</p>
+    <div className="flex-1 flex gap-16 items-center min-h-0">
+      <div className="flex-1">
+        <Kicker>Para pensar</Kicker>
+        <h2 className="font-display text-[100px] leading-[1.02] font-bold tracking-tight">{PREGUNTAS[0]}</h2>
+        <p className="text-[34px] text-muted-foreground mt-10">Saque su celular y búsquese. Tiene 60 segundos.</p>
+      </div>
+      <Side src={imgPregunta} className="w-[620px] h-full" />
     </div>
   ) },
   { title: "Cada era tiene su medio", render: () => (
@@ -150,17 +163,18 @@ const slides: { title: string; render: () => ReactNode }[] = [
   { title: "México conectado", render: () => (
     <>
       <Kicker>México hoy</Kicker>
-      <h2 className="font-display text-[80px] leading-none font-bold tracking-tight mb-14">La plaza pública ya está en el celular</h2>
+      <h2 className="font-display text-[80px] leading-none font-bold tracking-tight mb-8">La plaza pública ya está en el celular</h2>
+      <Side src={imgPlaza} className="h-[230px] w-full mb-8" />
       <div className="grid grid-cols-3 gap-8">
         {DATA_MX.map((d) => (
-          <div key={d.n} className="rounded-3xl border border-border bg-card/60 p-10 min-h-[340px] flex flex-col">
-            <div className="font-display text-[110px] font-bold leading-none bg-gradient-to-r from-coral to-magenta bg-clip-text text-transparent">{d.n}</div>
+          <div key={d.n} className="rounded-3xl border border-border bg-card/60 p-8 min-h-[250px] flex flex-col">
+            <div className="font-display text-[90px] font-bold leading-none bg-gradient-to-r from-coral to-magenta bg-clip-text text-transparent">{d.n}</div>
             <div className="text-[34px] mt-6 leading-tight">{d.t}</div>
             <div className="text-[20px] text-muted-foreground mt-auto">{d.s}</div>
           </div>
         ))}
       </div>
-      <p className="text-[32px] mt-12 max-w-[1500px]">La pregunta ya no es <i>si</i> estar en digital, sino <b>con qué propósito</b> y <b>con qué sistema</b>.</p>
+      <p className="text-[30px] mt-6 max-w-[1500px]">La pregunta ya no es <i>si</i> estar en digital, sino <b>con qué propósito</b> y <b>con qué sistema</b>.</p>
     </>
   ) },
   { title: "Casos México", render: () => (
@@ -183,25 +197,28 @@ const slides: { title: string; render: () => ReactNode }[] = [
   { title: "Nuevas reglas", render: () => (
     <>
       <Kicker>Lo que cambió</Kicker>
-      <h2 className="font-display text-[80px] leading-none font-bold tracking-tight mb-12">Cinco reglas del nuevo juego</h2>
-      <div className="space-y-5">
+      <h2 className="font-display text-[80px] leading-none font-bold tracking-tight mb-8">Cinco reglas del nuevo juego</h2>
+      <div className="flex gap-12 flex-1 min-h-0">
+      <div className="space-y-3 flex-1">
         {PRINCIPIOS.map((p, i) => (
-          <div key={p.t} className="grid grid-cols-[110px_620px_1fr] items-baseline gap-6 border-b border-border/60 pb-5">
+          <div key={p.t} className="grid grid-cols-[100px_420px_1fr] items-baseline gap-6 border-b border-border/60 pb-3">
             <span className="font-display text-[56px] font-bold text-coral leading-none">0{i + 1}</span>
-            <span className="text-[40px] font-semibold">{p.t}</span>
-            <span className="text-[30px] text-muted-foreground">{p.d}</span>
+            <span className="text-[34px] font-semibold leading-tight">{p.t}</span>
+            <span className="text-[26px] text-muted-foreground">{p.d}</span>
           </div>
         ))}
+      </div>
+      <Side src={imgAlgoritmo} className="w-[420px] h-full" />
       </div>
     </>
   ) },
   { title: "Riesgos", render: () => (
     <>
       <Kicker>El lado oscuro</Kicker>
-      <h2 className="font-display text-[80px] leading-none font-bold tracking-tight mb-12">Lo que puede tirar una carrera</h2>
+      <div className="flex gap-10 items-end mb-8"><h2 className="font-display text-[80px] leading-none font-bold tracking-tight flex-1">Lo que puede tirar una carrera</h2><Side src={imgRiesgo} className="w-[700px] h-[200px]" /></div>
       <div className="grid grid-cols-2 gap-8">
         {RIESGOS.map((r) => (
-          <div key={r.t} className="rounded-3xl border border-border bg-card/60 p-9 min-h-[250px]">
+          <div key={r.t} className="rounded-3xl border border-border bg-card/60 p-7 min-h-[200px]">
             <div className="text-[38px] font-semibold mb-3">{r.t}</div>
             <div className="text-[28px] text-muted-foreground leading-snug">{r.d}</div>
             {"s" in r && r.s && <div className="text-[20px] text-muted-foreground mt-4">Fuente: {r.s}</div>}
@@ -213,13 +230,13 @@ const slides: { title: string; render: () => ReactNode }[] = [
   { title: "Votación: frenos", render: () => <><Kicker>Votación en vivo</Kicker><Poll k="reto" /></> },
   { title: "Autodiagnóstico", render: () => <DiagResults /> },
   { title: "Herramienta 01", render: () => { const h = HERRAMIENTAS[0]; return (
-    <div className="flex-1 flex flex-col justify-center">
+    <div className="flex-1 flex gap-14 items-center min-h-0"><div className="flex-1">
       <Kicker>Herramienta {h.n}</Kicker>
       <h2 className="font-display text-[96px] leading-none font-bold tracking-tight">{h.t}</h2>
       <p className="text-[34px] text-muted-foreground mt-6">{h.sub}</p>
-      <div className="mt-12 rounded-3xl border-2 border-coral bg-coral/10 p-10 text-[44px] leading-snug font-medium max-w-[1600px]">{"formula" in h && h.formula}</div>
+      <div className="mt-12 rounded-3xl border-2 border-coral bg-coral/10 p-10 text-[40px] leading-snug font-medium">{"formula" in h && h.formula}</div>
       <p className="mt-10 text-[30px] max-w-[1500px]"><span className="text-coral font-semibold">Ejemplo: </span>{"ejemplo" in h && h.ejemplo}</p>
-    </div>
+    </div><Side src={imgHerramienta} className="w-[480px] h-full" /></div>
   ); } },
   { title: "Herramientas 02 y 03", render: () => <TwoTools a={1} b={2} /> },
   { title: "Herramientas 04 y 05", render: () => <TwoTools a={3} b={4} /> },
@@ -247,7 +264,7 @@ const slides: { title: string; render: () => ReactNode }[] = [
         </div>
         <div className="mt-12 text-[28px]"><b>Jesús Caudillo</b> · hola@kimedia.mx · www.kimedia.mx</div>
       </div>
-      <QrBox label="Su kit de herramientas" />
+      <div className="relative w-[560px] self-stretch shrink-0"><img src={imgCierre} alt="" className="absolute inset-0 w-full h-full object-cover rounded-3xl border border-border" /><div className="absolute bottom-6 right-6 rounded-2xl bg-card p-4 border border-border text-center"><QRCodeSVG value={PARTICIPA()} size={170} bgColor="transparent" fgColor="currentColor" className="text-foreground" /><div className="text-[20px] font-semibold mt-2">Su kit</div></div></div>
     </div>
   ) },
 ];
