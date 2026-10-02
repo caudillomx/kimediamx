@@ -31,6 +31,8 @@ import RetoInfluenSER from "./pages/RetoInfluenSER";
 import ResultadosICatalyze from "./pages/resultados/ResultadosICatalyze";
 import AuditoriaUAEM from "./pages/resultados/AuditoriaUAEM";
 import ClientPortalAdmin from "./pages/admin/ClientPortalAdmin";
+import EstrategiaDigitalSlides from "./pages/cfl/EstrategiaDigitalSlides";
+import CflParticipa from "./pages/cfl/Participa";
 import PortalRouter from "./pages/portal/PortalRouter";
 import { detectClientPortal } from "./lib/clientPortal";
 
@@ -83,6 +85,8 @@ const App = () => {
           <Route path="/curso/ia-gobierno-gto/entregables" element={<CursoGtoEntregables />} />
           <Route path="/reto-influenser" element={<RetoInfluenSER />} />
           <Route path="/resultados/icatalyze" element={<ResultadosICatalyze />} />
+          <Route path="/cfl/estrategia-digital" element={<EstrategiaDigitalSlides />} />
+          <Route path="/cfl/participa" element={<CflParticipa />} />
           <Route path="/casos/uaem" element={<AuditoriaUAEM />} />
 
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

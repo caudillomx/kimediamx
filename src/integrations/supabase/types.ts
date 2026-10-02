@@ -589,6 +589,30 @@ export type Database = {
         }
         Relationships: []
       }
+      cfl_votes: {
+        Row: {
+          created_at: string
+          id: string
+          option: string
+          question: string
+          voter: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          option: string
+          question: string
+          voter: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          option?: string
+          question?: string
+          voter?: string
+        }
+        Relationships: []
+      }
       client_access: {
         Row: {
           client_id: string
