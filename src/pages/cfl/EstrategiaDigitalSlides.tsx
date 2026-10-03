@@ -106,10 +106,10 @@ const slides: { title: string; render: () => ReactNode }[] = [
     <div className="flex flex-1 gap-16 items-center">
       <div className="flex-1">
         <img src={kimediaLogo} alt="KiMedia" className="h-[70px] mb-16 dark:invert-0" />
-        <Kicker>Sesión 11 · Estrategia digital</Kicker>
+        <Kicker>Sesión 7 · Estrategia digital</Kicker>
         <h1 className="font-display text-[132px] leading-[0.95] font-bold tracking-tight">Incidir en la era<br /><span className="bg-gradient-to-r from-coral to-magenta bg-clip-text text-transparent">del algoritmo</span></h1>
         <p className="text-[36px] text-muted-foreground mt-10 max-w-[1000px]">Cómo usar lo digital para que su liderazgo llegue más lejos y pese más en la vida pública.</p>
-        <div className="mt-14 text-[28px]"><b>Jesús Caudillo</b> <span className="text-muted-foreground">· Socio fundador de KiMedia · Sigma Awards 2020</span></div>
+        <div className="mt-14 text-[28px]"><b>Jesús Caudillo</b> <span className="text-muted-foreground">· Socio fundador de KiMedia</span></div>
       </div>
       <QrBox label="Escanee y participe" />
     </div>
