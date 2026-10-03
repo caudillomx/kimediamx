@@ -1,0 +1,1 @@
+DELETE FROM public.cfl_votes WHERE true;
