@@ -174,14 +174,16 @@ export function useGabineteData(clientId: string, pressDays = 30) {
           fetchAllPages<Post>((from, to) =>
             supabase.from("client_portal_benchmark_posts")
               .select("period_id,competitor_id,network,profile_name,posted_at,message,interactions,link")
-              .in("period_id", ids)
+              // Todos los periodos del cliente: filtrar por cliente usa el índice (cliente, orden).
+              .eq("client_id", clientId)
               .order("interactions", { ascending: false })
               .order("id", { ascending: true })
               .range(from, to), 1000, 6000),
           fetchAllPages<Post>((from, to) =>
             supabase.from("client_portal_benchmark_posts")
               .select("period_id,competitor_id,network,profile_name,posted_at,message,interactions,link")
-              .in("period_id", ids)
+              // Todos los periodos del cliente: filtrar por cliente usa el índice (cliente, orden).
+              .eq("client_id", clientId)
               .gte("posted_at", desdeReciente)
               .order("posted_at", { ascending: false })
               .order("id", { ascending: true })
@@ -189,7 +191,7 @@ export function useGabineteData(clientId: string, pressDays = 30) {
           supabase.from("client_portal_benchmark_narratives")
             .select("profile_name,network,narratives").eq("client_id", clientId).limit(500),
           supabase.from("client_portal_benchmark_posts")
-            .select("posted_at").in("period_id", ids)
+            .select("posted_at").eq("client_id", clientId)
             .not("posted_at", "is", null)
             .order("posted_at", { ascending: false }).limit(1),
         ]);
@@ -277,7 +279,6 @@ export function useGabineteData(clientId: string, pressDays = 30) {
    */
   const fetchPostsWindow = useCallback(async (from: string, to: string): Promise<Post[]> => {
     if (!periods.length) return [];
-    const ids = periods.map((p) => p.id);
     const PAGE = 1000;
     const out: Post[] = [];
     // PostgREST corta en 1000 filas por respuesta: se pagina hasta agotar la ventana.
@@ -285,10 +286,11 @@ export function useGabineteData(clientId: string, pressDays = 30) {
       const { data, error } = await supabase
         .from("client_portal_benchmark_posts")
         .select("period_id,competitor_id,network,profile_name,posted_at,message,interactions,link")
-        .in("period_id", ids)
+        .eq("client_id", clientId)
         .gte("posted_at", mxRangeBounds(from, to).gte)
         .lte("posted_at", mxRangeBounds(from, to).lte)
         .order("posted_at", { ascending: true })
+        .order("id", { ascending: true })
         .range(offset, offset + PAGE - 1);
       if (error) throw error;
       const rows = (data ?? []) as Post[];
@@ -296,7 +298,7 @@ export function useGabineteData(clientId: string, pressDays = 30) {
       if (rows.length < PAGE) break;
     }
     return out;
-  }, [periods]);
+  }, [periods, clientId]);
 
   const depById = useMemo(() => new Map(dependencias.map((d) => [d.id, d])), [dependencias]);
 
