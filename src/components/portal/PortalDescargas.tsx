@@ -163,7 +163,7 @@ export default function PortalDescargas({
           fetchAllPages<Post>((from, to) =>
             supabase.from("client_portal_benchmark_posts")
               .select("period_id,competitor_id,network,profile_name,posted_at,message,interactions,link")
-              .in("period_id", ids).order("interactions", { ascending: false }).order("id").range(from, to), 1000, 8000),
+              .eq("client_id", clientId).order("interactions", { ascending: false }).order("id").range(from, to), 1000, 8000),
           supabase.from("client_portal_benchmark_narratives").select("profile_name,network,narratives").eq("client_id", clientId).limit(500),
         ]);
         setMetrics(m);
@@ -875,6 +875,7 @@ export default function PortalDescargas({
       ? await fetchAllPages<Post>((from, to) =>
           supabase.from("client_portal_benchmark_posts")
             .select("period_id,competitor_id,network,profile_name,posted_at,message,interactions,link")
+            .eq("client_id", clientId)
             .in("period_id", postPeriodIds)
             .gte("posted_at", bounds.gte)
             .lte("posted_at", bounds.lte)
