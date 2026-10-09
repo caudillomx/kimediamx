@@ -4,8 +4,9 @@ import { ChevronLeft, ChevronRight, Maximize2, Printer } from "lucide-react";
 import kimediaLogo from "@/assets/kimedia-logo-full.png";
 import { DOIG as D, mxn } from "@/data/propuestaDoig";
 
+// Color sólido: el texto con degradado recortado se rompe en visores PDF de iPhone.
 const Grad = ({ children }: { children: ReactNode }) => (
-  <span className="bg-gradient-to-r from-coral to-magenta bg-clip-text text-transparent">{children}</span>
+  <span className="text-coral">{children}</span>
 );
 const Kicker = ({ children }: { children: ReactNode }) => (
   <div className="text-[22px] uppercase tracking-[0.18em] text-coral font-semibold mb-5">{children}</div>
