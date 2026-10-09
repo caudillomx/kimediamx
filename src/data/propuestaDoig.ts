@@ -48,7 +48,7 @@ export const DOIG = {
   segmentos: {
     titulo: "Hipersegmentación",
     intro: "No es lo mismo pautar a «mujeres de 25 a 44» que a «amas de casa de la capital».",
-    nota: "Los dolores son hipótesis; se validan con escucha y encuesta antes de pautar.",
+    nota: "Segmentos iniciales; sus preocupaciones y mensajes se definen y ajustan con escucha social y encuesta antes de pautar.",
     lista: [
       { s: "Amas de casa de la capital", dolor: "[dolor a validar]", msg: "[mensaje por definir]" },
       { s: "Emprendedores y MiPyMEs", dolor: "[dolor a validar]", msg: "[mensaje por definir]" },
