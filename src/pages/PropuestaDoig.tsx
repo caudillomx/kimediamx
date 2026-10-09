@@ -146,21 +146,10 @@ const slides: { title: string; render: () => ReactNode }[] = [
     <>
       <Kicker>Propuesta económica</Kicker>
       <Title>Inversión</Title>
-      <div className="rounded-3xl border border-border overflow-hidden text-[30px]">
-        <div className="grid grid-cols-[1.1fr_1.5fr_1fr_1fr_1fr] bg-card/80 text-[20px] uppercase tracking-[0.14em] text-muted-foreground px-10 py-5">
-          <span>Pago</span><span>Fecha</span><span className="text-right">Honorarios</span><span className="text-right">IVA</span><span className="text-right">Total</span>
-        </div>
-        {D.inversion.pagos.map((p) => (
-          <div key={p.p} className="grid grid-cols-[1.1fr_1.5fr_1fr_1fr_1fr] px-10 py-6 border-t border-border tabular-nums">
-            <span className="font-semibold">{p.p}</span><span className="text-muted-foreground">{p.fecha}</span>
-            <span className="text-right">{mxn(p.base)}</span><span className="text-right">{mxn(p.iva)}</span><span className="text-right">{mxn(p.total)}</span>
-          </div>
-        ))}
-        <div className="grid grid-cols-[1.1fr_1.5fr_1fr_1fr_1fr] px-10 py-7 border-t-2 border-coral bg-coral/10 tabular-nums font-display font-bold">
-          <span>Total</span><span className="text-muted-foreground font-sans font-normal text-[24px] self-center">MXN</span>
-          <span className="text-right">{mxn(D.inversion.total.base)}</span><span className="text-right">{mxn(D.inversion.total.iva)}</span><span className="text-right text-coral">{mxn(D.inversion.total.total)}</span>
-        </div>
-      </div>
+      <Card className="!p-16 max-w-[1400px]">
+        <div className="font-display text-[150px] font-bold leading-none tabular-nums"><Grad>$80,000</Grad></div>
+        <div className="font-display text-[52px] font-bold mt-6">MXN + IVA mensuales</div>
+      </Card>
       <p className="text-[26px] text-muted-foreground mt-8">{D.inversion.nota}</p>
     </>
   ) },
