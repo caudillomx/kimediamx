@@ -81,7 +81,7 @@ const App = () => {
           <Route path="/parrilla/:profileId" element={<ContentCycleDetail />} />
           <Route path="/propuesta-pan-yucatan" element={<PropuestaPanYucatan />} />
           <Route path="/propuesta/ortega-asociados" element={<PropuestaOrtega />} />
-          <Route path="/propuesta/christian-doig" element={<PropuestaDoig />} />
+          {import.meta.env.DEV && <Route path="/propuesta/christian-doig" element={<PropuestaDoig />} />}
           <Route path="/curso/ia-gobierno-gto" element={<CursoIaGobiernoGto />} />
           <Route path="/curso/ia-gobierno-gto/admin" element={<CursoIaGobiernoGtoAdmin />} />
           <Route path="/curso/ia-gobierno-gto/entregables" element={<CursoGtoEntregables />} />
