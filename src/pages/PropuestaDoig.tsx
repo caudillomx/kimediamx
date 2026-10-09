@@ -266,7 +266,7 @@ export default function PropuestaDoig() {
         <div className="absolute left-1/2 top-1/2 -ml-[960px] -mt-[540px] origin-center" style={{ transform: `scale(${scale})` }}>
           <Slide i={idx} />
         </div>
-        <div className="fixed bottom-3 right-3 flex gap-1 opacity-30 hover:opacity-100 transition-opacity text-foreground">
+        <div className="fixed bottom-3 left-1/2 -translate-x-1/2 flex gap-1 opacity-30 hover:opacity-100 transition-opacity text-foreground">
           <button onClick={() => go(-1)} className="p-2 rounded-lg bg-card border border-border" aria-label="Lámina anterior"><ChevronLeft className="w-4 h-4" /></button>
           <button onClick={() => go(1)} className="p-2 rounded-lg bg-card border border-border" aria-label="Lámina siguiente"><ChevronRight className="w-4 h-4" /></button>
           <button onClick={() => document.documentElement.requestFullscreen?.()} className="p-2 rounded-lg bg-card border border-border" aria-label="Pantalla completa"><Maximize2 className="w-4 h-4" /></button>
