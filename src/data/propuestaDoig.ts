@@ -109,7 +109,7 @@ export const DOIG = {
     vigencia: "Vigencia de la propuesta: 15 días.",
   },
 
-  pasos: ["Aprobación de la propuesta", "Firma del contrato", "Pago 1", "Sesión de arranque · 10 de octubre"],
+  pasos: ["Aprobación de la propuesta", "Firma del contrato", "Primer pago", "Sesión de arranque · 10 de octubre"],
 
   cierre: {
     frase: "Producir más ya no diferencia;",
