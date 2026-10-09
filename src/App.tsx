@@ -22,6 +22,7 @@ import MyStrategy from "./pages/MyStrategy";
 import MyStrategyDetail from "./pages/MyStrategyDetail";
 import PropuestaPanYucatan from "./pages/PropuestaPanYucatan";
 import PropuestaOrtega from "./pages/PropuestaOrtega";
+import PropuestaDoig from "./pages/PropuestaDoig";
 import CursoIaGobiernoGto from "./pages/CursoIaGobiernoGto";
 import CursoIaGobiernoGtoAdmin from "./pages/CursoIaGobiernoGtoAdmin";
 import CursoGtoEntregables from "./pages/CursoGtoEntregables";
@@ -80,6 +81,7 @@ const App = () => {
           <Route path="/parrilla/:profileId" element={<ContentCycleDetail />} />
           <Route path="/propuesta-pan-yucatan" element={<PropuestaPanYucatan />} />
           <Route path="/propuesta/ortega-asociados" element={<PropuestaOrtega />} />
+          <Route path="/propuesta/christian-doig" element={<PropuestaDoig />} />
           <Route path="/curso/ia-gobierno-gto" element={<CursoIaGobiernoGto />} />
           <Route path="/curso/ia-gobierno-gto/admin" element={<CursoIaGobiernoGtoAdmin />} />
           <Route path="/curso/ia-gobierno-gto/entregables" element={<CursoGtoEntregables />} />
