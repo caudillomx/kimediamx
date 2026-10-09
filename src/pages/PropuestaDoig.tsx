@@ -86,10 +86,8 @@ const slides: { title: string; render: () => ReactNode }[] = [
       <h2 className="font-display text-[60px] leading-[1.05] font-bold tracking-tight mb-10 max-w-[1500px]">{D.segmentos.intro}</h2>
       <div className="grid grid-cols-3 gap-6">
         {D.segmentos.lista.map((s) => (
-          <Card key={s.s} className="!p-7 min-h-[220px]">
-            <div className="font-display text-[32px] font-bold">{s.s}</div>
-            <div className="text-[22px] mt-4"><span className="text-coral font-semibold">Dolor · </span><span className="text-muted-foreground">{s.dolor}</span></div>
-            <div className="text-[22px] mt-2"><span className="text-coral font-semibold">Mensaje · </span><span className="text-muted-foreground">{s.msg}</span></div>
+          <Card key={s.s} className="!p-7 min-h-[160px] flex items-center">
+            <div className="font-display text-[34px] font-bold">{s.s}</div>
           </Card>
         ))}
       </div>
@@ -138,7 +136,6 @@ const slides: { title: string; render: () => ReactNode }[] = [
             <div className="w-16 h-16 rounded-full bg-gradient-to-br from-coral to-magenta" />
             <div>
               <div className="font-display text-[30px] font-bold leading-tight">{e.rol}</div>
-              <div className="text-[22px] text-muted-foreground mt-3">{e.nombre}</div>
             </div>
           </Card>
         ))}
