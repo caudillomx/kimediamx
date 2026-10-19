@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { parrillaReturnPath } from "@/lib/observatory";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +17,7 @@ const OperationsLogin = () => {
   const [fullName, setFullName] = useState("");
   const [isForgot, setIsForgot] = useState(false);
   const navigate = useNavigate();
+  const [params] = useSearchParams();
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,7 +45,7 @@ const OperationsLogin = () => {
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        navigate("/admin/operaciones");
+        navigate(parrillaReturnPath(params.get('redirect')));
       }
     } catch (err: any) {
       toast.error(err.message || "Error de autenticación");

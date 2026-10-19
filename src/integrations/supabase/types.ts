@@ -3929,6 +3929,127 @@ export type Database = {
           },
         ]
       }
+      observatory_keywords: {
+        Row: {
+          id: string
+          keyword: string
+          scope: string
+          vertical_slug: string
+        }
+        Insert: {
+          id?: string
+          keyword: string
+          scope?: string
+          vertical_slug: string
+        }
+        Update: {
+          id?: string
+          keyword?: string
+          scope?: string
+          vertical_slug?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "observatory_keywords_vertical_slug_fkey"
+            columns: ["vertical_slug"]
+            isOneToOne: false
+            referencedRelation: "observatory_verticals"
+            referencedColumns: ["slug"]
+          },
+        ]
+      }
+      observatory_signals: {
+        Row: {
+          channel: string
+          content_angle: string
+          created_at: string
+          geographic_scope: string
+          hook: string
+          id: string
+          insights: Json
+          is_milestone: boolean
+          is_reference: boolean
+          key_fact: string
+          published_at: string | null
+          relevance: number
+          source_name: string
+          source_url: string
+          summary: string
+          title: string
+          vertical_slug: string
+          why_it_matters: string
+        }
+        Insert: {
+          channel?: string
+          content_angle: string
+          created_at?: string
+          geographic_scope: string
+          hook: string
+          id?: string
+          insights?: Json
+          is_milestone?: boolean
+          is_reference?: boolean
+          key_fact?: string
+          published_at?: string | null
+          relevance?: number
+          source_name: string
+          source_url: string
+          summary: string
+          title: string
+          vertical_slug: string
+          why_it_matters?: string
+        }
+        Update: {
+          channel?: string
+          content_angle?: string
+          created_at?: string
+          geographic_scope?: string
+          hook?: string
+          id?: string
+          insights?: Json
+          is_milestone?: boolean
+          is_reference?: boolean
+          key_fact?: string
+          published_at?: string | null
+          relevance?: number
+          source_name?: string
+          source_url?: string
+          summary?: string
+          title?: string
+          vertical_slug?: string
+          why_it_matters?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "observatory_signals_vertical_slug_fkey"
+            columns: ["vertical_slug"]
+            isOneToOne: false
+            referencedRelation: "observatory_verticals"
+            referencedColumns: ["slug"]
+          },
+        ]
+      }
+      observatory_verticals: {
+        Row: {
+          description: string
+          name: string
+          slug: string
+          sort_order: number
+        }
+        Insert: {
+          description?: string
+          name: string
+          slug: string
+          sort_order?: number
+        }
+        Update: {
+          description?: string
+          name?: string
+          slug?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
       participants: {
         Row: {
           access_code_used: string

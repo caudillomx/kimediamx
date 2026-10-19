@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import { ParrillaSignalImport } from "@/components/observatory/ParrillaSignalImport";
 import { supabase } from "@/integrations/supabase/client";
 import { useContentEngine, useContentCycles, ContentProfile } from "@/hooks/useContentEngine";
 import { useThemeToggle } from "@/hooks/useThemeToggle";
@@ -136,6 +137,8 @@ const ClientCard = ({ profile, onClick, onDelete, onEdit }: { profile: ContentPr
 
 const ContentEngine = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const loginPath = `/admin/operaciones/login?redirect=${encodeURIComponent(location.pathname + location.search)}`;
   const { profiles, loading, fetchProfiles, createProfile, updateProfile, deleteProfile } = useContentEngine();
   const { clients, createClient } = useClientsData();
   const { isDark, toggle: toggleTheme } = useThemeToggle();
@@ -220,15 +223,15 @@ const ContentEngine = () => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, s) => {
       setSession(s);
       setCheckingAuth(false);
-      if (!s) navigate("/admin/operaciones/login");
+      if (!s) navigate(loginPath);
     });
     supabase.auth.getSession().then(({ data: { session: s } }) => {
       setSession(s);
       setCheckingAuth(false);
-      if (!s) navigate("/admin/operaciones/login");
+      if (!s) navigate(loginPath);
     });
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, [navigate, loginPath]);
 
   if (checkingAuth) {
     return (
@@ -403,6 +406,7 @@ const ContentEngine = () => {
           </div>
         </motion.div>
 
+        {session && <ParrillaSignalImport profiles={profiles} />}
         {/* Search + Actions */}
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 0.4 }}
           className="flex items-center gap-3">
