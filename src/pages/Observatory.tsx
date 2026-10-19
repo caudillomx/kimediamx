@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input';
 import { SignalCard } from '@/components/observatory/SignalCard';
 import { useObservatory } from '@/hooks/useObservatory';
 import { useThemeToggle } from '@/hooks/useThemeToggle';
-import { balancedSignals, dailyMilestone, signalBrief, signalsCsv, verticalAccents, verticalLabels } from '@/lib/observatory';
+import { balancedSignals, dailyMilestone, signalBrief, signalsCsv, verticalAccents, verticalLabels, canDiscoverObservatories } from '@/lib/observatory';
+import { useOpsRole } from '@/hooks/useOpsRole';
 import editorial from '@/assets/observatorio-editorial.jpg';
 import logo from '@/assets/kimedia-logo.png';
 import NotFound from './NotFound';
@@ -15,7 +16,9 @@ import { toast } from 'sonner';
 const icons = [GraduationCap,Building2,TrendingUp,MessageCircle,Cpu,Users,BriefcaseBusiness];
 export default function Observatory() {
   const { vertical } = useParams();
-  const { data, isLoading, isError, refetch, isFetching } = useObservatory();
+  const { role, loading: roleLoading } = useOpsRole();
+  const internal = canDiscoverObservatories(role);
+  const { data, isLoading, isError, refetch, isFetching } = useObservatory(vertical, vertical ? Boolean(verticalLabels[vertical]) : internal);
   const { isDark, toggle } = useThemeToggle();
   const [scope, setScope] = useState('Todos');
   const [mode, setMode] = useState('feed');
@@ -38,10 +41,11 @@ export default function Observatory() {
   const insights = headline && Array.isArray(headline.insights) ? headline.insights.filter((i): i is string => typeof i === 'string').slice(0,3) : [];
   function download() { const url = URL.createObjectURL(new Blob([signalsCsv(visible)], {type:'text/csv;charset=utf-8;'})); const a = document.createElement('a'); a.href = url; a.download = `observatorio-${vertical || 'industrias'}.csv`; a.click(); URL.revokeObjectURL(url); }
   if(vertical && !verticalLabels[vertical]) return <NotFound />;
+  if (!vertical && !internal) return <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-5 px-5"><img src={logo} alt="KiMedia" className="h-8 w-auto" /><h1 className="font-display text-2xl">Acceso del equipo KiMedia</h1>{roleLoading ? <p className="text-muted-foreground">Verificando acceso…</p> : <Button asChild><Link to="/admin/operaciones/login">Iniciar sesión</Link></Button>}</div>;
   return <div className="min-h-screen bg-background">
     <header className="border-b border-border"><div className="max-w-7xl mx-auto px-5 md:px-8 h-20 flex items-center justify-between gap-4"><Link to="/"><img src={logo} alt="KiMedia" className="h-8 w-auto" /></Link><div className="flex gap-2 items-center"><span className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground"><Radar className="w-4 h-4 text-primary" /> Inteligencia editorial</span><Button variant="ghost" size="icon" title="Cambiar tema" aria-label="Cambiar tema" onClick={toggle}>{isDark ? <Sun /> : <Moon />}</Button></div></div></header>
     <main className="max-w-7xl mx-auto px-5 md:px-8 pb-16">
-      <nav aria-label="Industrias" className="flex gap-2 py-5 overflow-x-auto"><Button asChild variant={!vertical ? 'secondary':'ghost'} size="sm"><Link to="/observatorio"><Radar /> Panorama</Link></Button>{Object.entries(verticalLabels).map(([slug,label]) => <Button key={slug} asChild size="sm" variant={vertical === slug ? 'default':'ghost'} className="rounded-full"><Link to={`/observatorio/${slug}`}>{label}</Link></Button>)}</nav>
+      {internal && <nav aria-label="Industrias" className="flex gap-2 py-5 overflow-x-auto"><Button asChild variant={!vertical ? 'secondary':'ghost'} size="sm"><Link to="/observatorio"><Radar /> Panorama</Link></Button>{Object.entries(verticalLabels).map(([slug,label]) => <Button key={slug} asChild size="sm" variant={vertical === slug ? 'default':'ghost'} className="rounded-full"><Link to={`/observatorio/${slug}`}>{label}</Link></Button>)}</nav>}
       {!vertical ? <section className="relative overflow-hidden border-y border-border mb-8 min-h-64 flex items-center"><img src={editorial} width={1536} height={512} className="absolute inset-0 w-full h-full object-cover" alt="Mesa editorial con reportes, datos y notas de trabajo" /><div className="observatory-cover relative px-6 md:px-10 py-10 w-full"><p className="text-primary text-xs uppercase tracking-widest font-semibold mb-4">KiMedia / Observatorio</p><h1 className="font-display text-3xl md:text-5xl font-semibold max-w-xl leading-tight">Industrias<br />y Tendencias</h1><p className="text-sm mt-5 max-w-md">México y Latinoamérica · Estados Unidos y Global</p></div></section> : <section className="py-5 md:py-8 border-b border-border mb-6"><Link to="/observatorio" className="text-xs text-muted-foreground">Observatorio / {verticalLabels[vertical]}</Link><h1 className={`font-display text-3xl md:text-4xl font-semibold mt-4 ${verticalAccents[vertical]}`}>{data?.verticals.find(v => v.slug === vertical)?.name || verticalLabels[vertical]}</h1><p className="text-muted-foreground mt-3 max-w-2xl">{data?.verticals.find(v => v.slug === vertical)?.description}</p><div className="flex flex-wrap gap-x-4 gap-y-2 mt-5 text-xs text-muted-foreground">{data?.keywords.filter(k => k.vertical_slug === vertical).map(k => <span key={k.id}>#{k.keyword}</span>)}</div></section>}
       <div className="flex flex-wrap justify-between items-center gap-3 mb-7"><div className="flex bg-secondary rounded-lg p-1" role="group" aria-label="Ámbito">{['Todos','México','Global'].map(s => <Button key={s} size="sm" variant={scope === s ? 'default':'ghost'} aria-pressed={scope === s} onClick={() => setScope(s)}>{s === 'México' ? <MapPin /> : <Globe2 />}{s}</Button>)}</div><div className="text-xs text-muted-foreground flex gap-4 items-center"><span>{scope === 'Todos' ? 'Edición balanceada 50 / 50' : scope === 'México' ? 'México y Latinoamérica' : 'Estados Unidos y Global'}</span><Button variant="ghost" size="icon" aria-label="Actualizar señales" title="Actualizar señales" onClick={() => refetch()} disabled={isFetching}><RefreshCw className={isFetching ? 'animate-spin':''} /></Button></div></div>
       <div className="mb-6 text-xs text-muted-foreground flex flex-wrap gap-3"><span>Monitoreo diario · 07:00 CDMX</span>{latestRun && <span>Última revisión: {new Date(latestRun.started_at).toLocaleString('es-MX', {timeZone:'America/Mexico_City'})} · {latestRun.status === 'running' ? (staleRun ? 'Revisión interrumpida' : 'En curso') : latestRun.status === 'completed' ? `${latestRun.signals_saved} señales guardadas` : latestRun.status === 'empty' ? 'Sin fuentes nuevas verificables' : latestRun.status === 'paused' ? 'En pausa' : 'Revisión con incidencias'}</span>}</div>

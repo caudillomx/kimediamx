@@ -1,7 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { balancedSignals, dailyMilestone, signalBrief, signalsCsv, type Signal } from './observatory';
+import { balancedSignals, dailyMilestone, signalBrief, signalsCsv, canDiscoverObservatories, type Signal } from './observatory';
 const make = (geographic_scope: string, relevance = 80) => ({ geographic_scope, relevance, title:'=unsafe', source_name:'Fuente', source_url:'https://example.com', vertical_slug:'educacion', summary:'Resumen', content_angle:'Ángulo', hook:'Gancho', channel:'Medios', published_at:'2026-10-19T12:00:00Z', is_milestone:true, is_reference:false } as Signal);
 describe('Observatorio editorial', () => {
+  it('reserva el panorama y la navegación entre observatorios al equipo interno', () => {
+    expect(canDiscoverObservatories(null)).toBe(false);
+    expect(canDiscoverObservatories('client')).toBe(false);
+    for (const role of ['admin', 'editor', 'viewer']) expect(canDiscoverObservatories(role)).toBe(true);
+  });
   it('mantiene 50/50 México/LatAm y Global en la edición mixta', () => {
     const result = balancedSignals([make('México/LatAm'), make('México/LatAm', 90), make('Global')]);
     expect(result.map(s => s.geographic_scope)).toEqual(['México/LatAm','Global']);
