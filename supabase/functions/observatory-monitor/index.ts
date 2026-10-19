@@ -66,11 +66,11 @@ Deno.serve(async req => {
   }else{
    for(const scope of ['México/LatAm','Global']){
     const q=`${scope==='Global'?lenses[vertical].global:lenses[vertical].local} ${terms}`;
-    const res=await fetch('https://api.firecrawl.dev/v2/search',{method:'POST',headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/json'},body:JSON.stringify({query:q,limit:4,tbs:'qdr:d',lang:scope==='Global'?'en':'es',scrapeOptions:{formats:['markdown']}})});
+    const res=await fetch('https://api.firecrawl.dev/v2/search',{method:'POST',headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/json'},body:JSON.stringify({query:q,limit:2,tbs:'qdr:d',lang:scope==='Global'?'en':'es',scrapeOptions:{formats:['markdown']}})});
     if(!res.ok){const e=await res.json().catch(()=>({}));throw Object.assign(new Error(e.message || e.error || `Búsqueda no disponible (${res.status})`),{status:res.status});}
     const result=await res.json();if(result.success===false)throw new Error('La búsqueda no se pudo completar');
     const rows=Array.isArray(result.data)?result.data:(result.data?.web||[]);
-    sources.push(...rows.filter((r:any)=>r.markdown && canonicalUrl(r.url)).map((r:any)=>({url:canonicalUrl(r.url),title:String(r.title||''),markdown:String(r.markdown).slice(0,10000),description:String(r.description||''),metadata:r.metadata||{},scope})));
+    sources.push(...rows.filter((r:any)=>r.markdown && canonicalUrl(r.url)).map((r:any)=>({url:canonicalUrl(r.url),title:String(r.title||''),markdown:String(r.markdown).slice(0,5000),description:String(r.description||''),metadata:r.metadata||{},scope})));
    }
    const seen=new Set<string>();sources=sources.filter(s=>{if(seen.has(s.url))return false;seen.add(s.url);return true;});
   }
