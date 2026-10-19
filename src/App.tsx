@@ -36,6 +36,7 @@ import EstrategiaDigitalSlides from "./pages/cfl/EstrategiaDigitalSlides";
 import CflParticipa from "./pages/cfl/Participa";
 import PortalRouter from "./pages/portal/PortalRouter";
 import { detectClientPortal } from "./lib/clientPortal";
+import Observatory from "./pages/Observatory";
 
 const queryClient = new QueryClient();
 
@@ -60,6 +61,8 @@ const App = () => {
         ) : (
         <Routes>
           <Route path="/" element={<Index />} />
+          <Route path="/observatorio" element={<Observatory />} />
+          <Route path="/observatorio/:vertical" element={<Observatory />} />
           <Route path="/guias/marca-personal" element={<GuidePersonalBrand />} />
           <Route path="/guias/pyme" element={<GuidePyme />} />
           <Route path="/aviso-de-privacidad" element={<PrivacyPolicy />} />

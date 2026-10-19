@@ -4,6 +4,7 @@ import { Menu, X, Sparkles, Sun, Moon } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useThemeToggle } from "@/hooks/useThemeToggle";
 import kimediaLogo from "@/assets/kimedia-logo.png";
+import { Button } from "@/components/ui/button";
 const navLinks = [
   { href: "metodologia", label: "Metodología" },
   { href: "servicios", label: "Servicios" },
@@ -50,6 +51,7 @@ export function Header() {
 
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-8">
+            <Button asChild variant="link" className="text-muted-foreground"><Link to="/observatorio">Observatorio</Link></Button>
             {navLinks.map((link) => (
               <a
                 key={link.href}
@@ -97,6 +99,7 @@ export function Header() {
             className="md:hidden glass-strong border-t border-border"
           >
             <div className="container mx-auto px-6 py-6 flex flex-col gap-4">
+              <Button asChild variant="link" className="justify-start px-0 text-lg text-muted-foreground"><Link to="/observatorio" onClick={() => setIsOpen(false)}>Observatorio</Link></Button>
               {navLinks.map((link, i) => (
                 <motion.a
                   key={link.href}
