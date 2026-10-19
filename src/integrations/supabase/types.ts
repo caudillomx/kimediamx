@@ -3958,10 +3958,52 @@ export type Database = {
           },
         ]
       }
+      observatory_monitor_runs: {
+        Row: {
+          finished_at: string | null
+          id: string
+          message: string | null
+          signals_saved: number
+          sources_found: number
+          started_at: string
+          status: string
+          vertical_slug: string
+        }
+        Insert: {
+          finished_at?: string | null
+          id?: string
+          message?: string | null
+          signals_saved?: number
+          sources_found?: number
+          started_at?: string
+          status?: string
+          vertical_slug: string
+        }
+        Update: {
+          finished_at?: string | null
+          id?: string
+          message?: string | null
+          signals_saved?: number
+          sources_found?: number
+          started_at?: string
+          status?: string
+          vertical_slug?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "observatory_monitor_runs_vertical_slug_fkey"
+            columns: ["vertical_slug"]
+            isOneToOne: false
+            referencedRelation: "observatory_verticals"
+            referencedColumns: ["slug"]
+          },
+        ]
+      }
       observatory_signals: {
         Row: {
           channel: string
           content_angle: string
+          content_plan: Json
           created_at: string
           geographic_scope: string
           hook: string
@@ -3982,6 +4024,7 @@ export type Database = {
         Insert: {
           channel?: string
           content_angle: string
+          content_plan?: Json
           created_at?: string
           geographic_scope: string
           hook: string
@@ -4002,6 +4045,7 @@ export type Database = {
         Update: {
           channel?: string
           content_angle?: string
+          content_plan?: Json
           created_at?: string
           geographic_scope?: string
           hook?: string
@@ -4680,6 +4724,7 @@ export type Database = {
         Returns: boolean
       }
       increment_code_usage: { Args: { code_text: string }; Returns: boolean }
+      observatory_dispatch_monitor: { Args: never; Returns: undefined }
     }
     Enums: {
       app_role:
