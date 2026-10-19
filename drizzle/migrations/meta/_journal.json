@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1792442112440,
+      "tag": "0000_create_industry_observatory",
+      "breakpoints": true
+    }
+  ]
+}
