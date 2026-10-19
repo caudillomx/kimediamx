@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ParrillaSignalImport } from "@/components/observatory/ParrillaSignalImport";
 import { supabase } from "@/integrations/supabase/client";
 import { useContentEngine, useContentCycles, ContentProfile } from "@/hooks/useContentEngine";
 import { useThemeToggle } from "@/hooks/useThemeToggle";
@@ -406,7 +405,6 @@ const ContentEngine = () => {
           </div>
         </motion.div>
 
-        {session && <ParrillaSignalImport profiles={profiles} />}
         {/* Search + Actions */}
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 0.4 }}
           className="flex items-center gap-3">

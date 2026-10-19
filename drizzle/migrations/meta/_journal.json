@@ -8,6 +8,34 @@
       "when": 1792442112440,
       "tag": "0000_create_industry_observatory",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792443051953,
+      "tag": "0001_observatory_monitor_and_content_plans",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792443236930,
+      "tag": "0002_observatory_dispatch_monitor",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1792443252695,
+      "tag": "0003_observatory_dispatch_config",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792443356301,
+      "tag": "0004_observatory_sequential_dispatch",
+      "breakpoints": true
     }
   ]
 }

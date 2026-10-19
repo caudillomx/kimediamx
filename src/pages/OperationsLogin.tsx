@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { parrillaReturnPath } from "@/lib/observatory";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,7 +44,7 @@ const OperationsLogin = () => {
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        navigate(parrillaReturnPath(params.get('redirect')));
+        navigate(params.get('redirect') === '/parrilla' ? '/parrilla' : '/admin/operaciones');
       }
     } catch (err: any) {
       toast.error(err.message || "Error de autenticación");
