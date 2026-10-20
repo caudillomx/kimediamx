@@ -5,3 +5,4 @@
 - Monitor all verticals through one named scheduled batch with authenticated per-vertical workers, sourced date validation and persistent run status; pause the batch on terminal provider or credit failures.
 - Mixed Observatorio editions contain matched geographic pairs and daily milestones require verified non-reference publication timestamps within 24 hours; this prevents false balance and stale daily claims.
 - Scope public Observatorio queries to the current vertical and expose hub/cross-vertical navigation only through existing authenticated ops roles; public data remains public, but discovery stays internal.
+- Validate each monitored Observatorio association against explicit per-vertical central-topic criteria and a literal source citation before persistence; keyword overlap and creative angles are not evidence of topical fit.
