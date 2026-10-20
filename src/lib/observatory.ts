@@ -2,6 +2,7 @@ import type { Database } from '@/integrations/supabase/types';
 
 export type Signal = Database['public']['Tables']['observatory_signals']['Row'];
 export type Vertical = Database['public']['Tables']['observatory_verticals']['Row'];
+export function canDiscoverObservatories(role: string | null) { return role === 'admin' || role === 'editor' || role === 'viewer'; }
 export type ContentPlan = { audience: string; objective: string; format: string; outline: string[]; brand_application: string; alternative_hooks: string[]; cta: string; caution: string };
 export function contentPlan(s: Signal): ContentPlan {
   const raw = s.content_plan && typeof s.content_plan === 'object' && !Array.isArray(s.content_plan) ? s.content_plan : {};
