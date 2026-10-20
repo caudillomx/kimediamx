@@ -7,4 +7,4 @@
 - [x] Automatizar el monitoreo de las siete verticales y comprobar una ejecución real.
 - [x] Aislar la navegación pública y reservar el panorama al equipo KiMedia.
 - [x] Ejecutar una revisión extraordinaria hoy y conservar el horario diario de 07:00 CDMX.
-- [ ] Exigir relación temática directa y evidencia antes de asociar nuevas notas a cada observatorio.
+- [x] Exigir relación temática directa y evidencia antes de asociar nuevas notas a cada observatorio.
