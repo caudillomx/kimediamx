@@ -36,6 +36,13 @@
       "when": 1792443356301,
       "tag": "0004_observatory_sequential_dispatch",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792694559688,
+      "tag": "0005_observatory_signal_keyword",
+      "breakpoints": true
     }
   ]
 }

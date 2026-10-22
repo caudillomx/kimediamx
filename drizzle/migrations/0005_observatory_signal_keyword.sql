@@ -1,0 +1,1 @@
+ALTER TABLE public.observatory_signals ADD COLUMN IF NOT EXISTS keyword text;

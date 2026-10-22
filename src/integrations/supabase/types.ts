@@ -4012,6 +4012,7 @@ export type Database = {
           is_milestone: boolean
           is_reference: boolean
           key_fact: string
+          keyword: string | null
           published_at: string | null
           relevance: number
           source_name: string
@@ -4033,6 +4034,7 @@ export type Database = {
           is_milestone?: boolean
           is_reference?: boolean
           key_fact?: string
+          keyword?: string | null
           published_at?: string | null
           relevance?: number
           source_name: string
@@ -4054,6 +4056,7 @@ export type Database = {
           is_milestone?: boolean
           is_reference?: boolean
           key_fact?: string
+          keyword?: string | null
           published_at?: string | null
           relevance?: number
           source_name?: string
