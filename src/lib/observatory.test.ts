@@ -12,11 +12,12 @@ describe('Observatorio editorial', () => {
     expect(result.map(s => s.geographic_scope)).toEqual(['México/LatAm','Global']);
     expect(result[0].relevance).toBe(90);
   });
-  it('el hito solo corresponde a las últimas 24 horas, no referencias históricas', () => {
+  it('el hito acepta notas de hasta 48 horas, no referencias históricas', () => {
     const now = Date.parse('2026-10-19T20:00:00Z');
     expect(dailyMilestone([make('Global')], now)?.title).toBe('=unsafe');
     expect(dailyMilestone([{ ...make('Global'), is_reference:true }], now)).toBeUndefined();
-    expect(dailyMilestone([{ ...make('Global'), published_at:'2026-10-18T19:59:59Z' }], now)).toBeUndefined();
+    expect(dailyMilestone([{ ...make('Global'), published_at:'2026-10-18T08:00:00Z' }], now)?.title).toBe('=unsafe');
+    expect(dailyMilestone([{ ...make('Global'), published_at:'2026-10-17T19:59:59Z' }], now)).toBeUndefined();
     expect(dailyMilestone([{ ...make('Global'), published_at:'2026-10-20T00:00:00Z' }], now)).toBeUndefined();
   });
   it('conserva la fuente y el guion editorial al copiar un brief', () => {

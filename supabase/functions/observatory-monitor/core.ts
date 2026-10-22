@@ -15,7 +15,7 @@ export function verifiedDate(value: string | null, evidence: string, source: str
 export function isRecent(value: string | null, now = Date.now()) {
   if (!value) return false;
   const age = now - Date.parse(value);
-  return age >= 0 && age <= 86400000;
+  return age >= 0 && age <= 172800000;
 }
 export function monitorSchedule() { return '0 13 * * *'; }
 

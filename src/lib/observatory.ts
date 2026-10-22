@@ -20,7 +20,8 @@ export function balancedSignals(signals: Signal[]) {
   return local.slice(0, Math.min(local.length, global.length)).flatMap((s,i) => [s, global[i]]);
 }
 export function dailyMilestone(signals: Signal[], now = Date.now()) {
-  return signals.filter(s => !s.is_reference && s.is_milestone && s.published_at && now - Date.parse(s.published_at) >= 0 && now - Date.parse(s.published_at) <= 86400000).sort((a,b) => b.relevance - a.relevance)[0];
+  // Most recent verified publication within 48 h; relevance breaks ties.
+  return signals.filter(s => !s.is_reference && s.is_milestone && s.published_at && now - Date.parse(s.published_at) >= 0 && now - Date.parse(s.published_at) <= 172800000).sort((a,b) => Date.parse(b.published_at!) - Date.parse(a.published_at!) || b.relevance - a.relevance)[0];
 }
 export function signalBrief(s: Signal) {
   const p = contentPlan(s);

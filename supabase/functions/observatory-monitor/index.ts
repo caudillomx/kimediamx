@@ -94,7 +94,7 @@ Deno.serve(async req => {
    const {error}=await db.from('observatory_signals').upsert({vertical_slug:vertical,title:source.title||item.title,source_name:new URL(source.url).hostname.replace(/^www\./,''),source_url:source.url,published_at:date,summary:item.summary,content_angle:item.content_angle,hook:item.hook,relevance:Math.round(Math.max(0,Math.min(100,item.relevance))),geographic_scope:item.geographic_scope,channel:item.channel,is_milestone:true,is_reference:false,key_fact:item.key_fact,why_it_matters:item.why_it_matters,insights:item.insights.slice(0,3),content_plan:item.content_plan},{onConflict:'source_url'});
    if(error)throw error;saved++;
   }
-  await db.from('observatory_monitor_runs').update({status:saved?'completed':'empty',finished_at:new Date().toISOString(),sources_found:found,signals_saved:saved,message:saved?null:'No hubo publicaciones pertinentes con fecha y evidencia verificables en las últimas 24 horas.'}).eq('id',run.id);
+  await db.from('observatory_monitor_runs').update({status:saved?'completed':'empty',finished_at:new Date().toISOString(),sources_found:found,signals_saved:saved,message:saved?null:'No hubo publicaciones pertinentes con fecha y evidencia verificables en las últimas 48 horas.'}).eq('id',run.id);
   return json({status:saved?'completed':'empty',saved,found});
  }catch(e){
   const err=e as {status?:number;statusCode?:number;message?:string;responseBody?:string};const status=err.status || err.statusCode || 500;
