@@ -11,7 +11,7 @@ const topicMatchSchema = z.object({ vertical:z.enum(['educacion','pymes','finanz
 const itemSchema = z.object({ index:z.number(), relevant:z.boolean(), topic_matches:z.array(topicMatchSchema), title:z.string(), published_at:z.string().nullable(), date_evidence:z.string(), summary:z.string(), content_angle:z.string(), hook:z.string(), relevance:z.number(), channel:z.string(), geographic_scope:z.enum(['México/LatAm','Global']), key_fact:z.string(), fact_evidence:z.string(), why_it_matters:z.string(), insights:z.array(z.string()), content_plan:planSchema });
 const schema = z.object({signals:z.array(itemSchema)});
 declare const EdgeRuntime: { waitUntil: (promise: Promise<unknown>) => void };
-const requestSchema = z.object({vertical:z.string().optional(),enrich:z.boolean().optional(),dispatch:z.boolean().optional(),batch:z.boolean().optional(),chain:z.boolean().optional()}).strict();
+const requestSchema = z.object({vertical:z.string().optional(),enrich:z.boolean().optional(),dispatch:z.boolean().optional(),batch:z.boolean().optional(),chain:z.boolean().optional(),keywordIndex:z.number().int().min(0).max(30).optional()}).strict();
 const json = (body:unknown,status=200) => new Response(JSON.stringify(body),{status,headers:{...corsHeaders,'Content-Type':'application/json'}});
 const lenses:Record<string,{local:string;global:string}> = {
  educacion:{local:'educación SEP México noticias',global:'education policy schools news'},
@@ -40,7 +40,7 @@ Deno.serve(async req => {
  // One dispatcher wakes the seven workers sequentially; a terminal pause stops the whole batch.
  if(body.batch){
   if(!cronSecret)return json({error:'Solo ejecución programada'},403);
-  EdgeRuntime.waitUntil(fetch(`${url}/functions/v1/observatory-monitor`,{method:'POST',headers:{'Content-Type':'application/json','x-cron-secret':cronSecret},body:JSON.stringify({vertical:'educacion',chain:true})}).then(r=>r.text()));
+  EdgeRuntime.waitUntil(fetch(`${url}/functions/v1/observatory-monitor`,{method:'POST',headers:{'Content-Type':'application/json','x-cron-secret':cronSecret},body:JSON.stringify({vertical:'educacion',keywordIndex:0,chain:true})}).then(r=>r.text()));
   return json({status:'queued',verticals:7});
  }
  if(body.dispatch){
@@ -52,12 +52,18 @@ Deno.serve(async req => {
  const {data:run,error:runError}=await db.from('observatory_monitor_runs').insert({vertical_slug:vertical}).select('id').single();
  if(runError || !run) return json({error:'No se pudo registrar la revisión'},500);
  let found=0;
+ let keywordCount=0;
+ const keywordIndex=body.keywordIndex ?? 0;
+ let activeKeyword:string|null=null;
  let continueChain=true;
  try{
   const key=Deno.env.get('FIRECRAWL_API_KEY');const aiKey=Deno.env.get('LOVABLE_API_KEY');
   if(!key || !aiKey) throw Object.assign(new Error('Servicios de búsqueda o análisis sin configurar'),{status:401});
-  const {data:keywords}=await db.from('observatory_keywords').select('keyword').eq('vertical_slug',vertical).limit(4);
-  const terms=(keywords || []).slice(0,1).map(k=>k.keyword).join(' ');
+  const {data:keywords}=await db.from('observatory_keywords').select('keyword').eq('vertical_slug',vertical).order('keyword');
+  keywordCount=(keywords||[]).length;
+  // One worker hop per keyword keeps each analysis small enough for the function limits.
+  activeKeyword=keywords?.[keywordIndex]?.keyword ?? null;
+  const terms=activeKeyword || '';
   type Source={url:string;title:string;markdown:string;description:string;metadata:Record<string,unknown>;scope:string};
   let sources:Source[]=[];
   if(body.enrich){
@@ -67,7 +73,7 @@ Deno.serve(async req => {
   }else{
    for(const scope of ['México/LatAm','Global']){
     const q=`${scope==='Global'?lenses[vertical].global:lenses[vertical].local} ${terms}`;
-    const res=await fetch('https://api.firecrawl.dev/v2/search',{method:'POST',headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/json'},body:JSON.stringify({query:q,limit:5,tbs:'qdr:d',lang:scope==='Global'?'en':'es',scrapeOptions:{formats:['markdown']}})});
+    const res=await fetch('https://api.firecrawl.dev/v2/search',{method:'POST',headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/json'},body:JSON.stringify({query:q,limit:3,tbs:'qdr:d',lang:scope==='Global'?'en':'es',scrapeOptions:{formats:['markdown']}})});
     if(!res.ok){const e=await res.json().catch(()=>({}));throw Object.assign(new Error(e.message || e.error || `Búsqueda no disponible (${res.status})`),{status:res.status});}
     const result=await res.json();if(result.success===false)throw new Error('La búsqueda no se pudo completar');
     const rows=Array.isArray(result.data)?result.data:(result.data?.web||[]);
@@ -91,7 +97,7 @@ Deno.serve(async req => {
    const date=verifiedDate(item.published_at,item.date_evidence,source.markdown+'\n'+JSON.stringify(Object.fromEntries(Object.entries(source.metadata).filter(([k])=>/published|publication|datePublished|article:published/i.test(k)))));
    // Fresh signals only: search recency alone never establishes publication recency.
    if(!isRecent(date))continue;
-   const {error}=await db.from('observatory_signals').upsert({vertical_slug:vertical,title:source.title||item.title,source_name:new URL(source.url).hostname.replace(/^www\./,''),source_url:source.url,published_at:date,summary:item.summary,content_angle:item.content_angle,hook:item.hook,relevance:Math.round(Math.max(0,Math.min(100,item.relevance))),geographic_scope:item.geographic_scope,channel:item.channel,is_milestone:true,is_reference:false,key_fact:item.key_fact,why_it_matters:item.why_it_matters,insights:item.insights.slice(0,3),content_plan:item.content_plan},{onConflict:'source_url'});
+   const {error}=await db.from('observatory_signals').upsert({vertical_slug:vertical,title:source.title||item.title,source_name:new URL(source.url).hostname.replace(/^www\./,''),source_url:source.url,published_at:date,summary:item.summary,content_angle:item.content_angle,hook:item.hook,relevance:Math.round(Math.max(0,Math.min(100,item.relevance))),geographic_scope:item.geographic_scope,channel:item.channel,is_milestone:true,is_reference:false,key_fact:item.key_fact,why_it_matters:item.why_it_matters,insights:item.insights.slice(0,3),content_plan:item.content_plan,keyword:activeKeyword},{onConflict:'source_url'});
    if(error)throw error;saved++;
   }
   await db.from('observatory_monitor_runs').update({status:saved?'completed':'empty',finished_at:new Date().toISOString(),sources_found:found,signals_saved:saved,message:saved?null:'No hubo publicaciones pertinentes con fecha y evidencia verificables en las últimas 48 horas.'}).eq('id',run.id);
@@ -106,8 +112,9 @@ Deno.serve(async req => {
   return json({error:terminal?'Monitoreo pausado por una incidencia del servicio de búsqueda o análisis.':'No se pudo completar la revisión.',status},status);
  } finally {
   if(body.chain && cronSecret && continueChain){
-   const next=Object.keys(lenses)[Object.keys(lenses).indexOf(vertical)+1];
-   if(next)EdgeRuntime.waitUntil(fetch(`${url}/functions/v1/observatory-monitor`,{method:'POST',headers:{'Content-Type':'application/json','x-cron-secret':cronSecret},body:JSON.stringify({vertical:next,chain:true})}).then(r=>r.text()));
+   const sameVertical=keywordIndex+1<keywordCount;
+   const next=sameVertical?vertical:Object.keys(lenses)[Object.keys(lenses).indexOf(vertical)+1];
+   if(next)EdgeRuntime.waitUntil(fetch(`${url}/functions/v1/observatory-monitor`,{method:'POST',headers:{'Content-Type':'application/json','x-cron-secret':cronSecret},body:JSON.stringify({vertical:next,keywordIndex:sameVertical?keywordIndex+1:0,chain:true})}).then(r=>r.text()));
   }
  }
 });
