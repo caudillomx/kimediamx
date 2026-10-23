@@ -13,6 +13,7 @@ import risk from '@/assets/cfl/riesgo.jpg';
 import work from '@/assets/cfl/herramienta.jpg';
 import plaza from '@/assets/cfl/plaza.jpg';
 import algorithm from '@/assets/cfl/algoritmo.jpg';
+import SourceVisuals from '@/components/centro-fox/SourceVisuals';
 const images = { community, social, risk, work, plaza, algorithm };
 
 function Workshop({ slide }: { slide: FoxSlide }) {
@@ -35,6 +36,7 @@ function Case({ id }: { id: string }) {
 function Content({ slide }: { slide: FoxSlide }) {
   if(slide.kind==='cover') return <div className="fox-cover"><div><h1 className="fox-cover-title">{slide.title}</h1><p className="fox-lead mt-8">{slide.lead}</p><p className="fox-lead">Programa de Alto Nivel en Liderazgo Electoral<br/>Jesús Caudillo · Expositor</p><img className="fox-cover-image" src={community} alt="Ilustración de personas en conversación" /></div><Qr /></div>;
   if(slide.kind==='chapter') return <div className="fox-chapter"><img src={images[slide.image ?? 'community']} alt="Ilustración conceptual del bloque"/><div><span className="fox-chapter-number">{slide.axis==='micro'?'01':slide.axis==='verification'?'02':'03'}</span><h2 className="fox-title">{slide.title}</h2><p className="fox-lead">{slide.lead}</p></div></div>;
+  if(['narrative','channels','media-example','pyramid','reminders','ladder','practices'].includes(slide.kind??''))return <><h2 className="fox-title">{slide.title}</h2>{slide.lead&&<p className="fox-lead">{slide.lead}</p>}<SourceVisuals slide={slide}/></>;
   const body = slide.poll?<LiveResults poll={slide.poll}/>:slide.kind==='diagnosis'?<DiagnosisResults/>:slide.caseId?<Case key={slide.caseId} id={slide.caseId}/>:slide.kind==='workshop'?<Workshop key={slide.title} slide={slide}/>:<div className={slide.kind==='flow'?'fox-flow':slide.kind==='funnel'?'fox-funnel':`fox-items ${slide.items?.length===4?'four':''} ${slide.kind==='agenda'?'fox-agenda':''} ${slide.kind==='example'?'fox-example':''}`}>{slide.items?.map((item,i)=><Fragment key={item.title}><div className="fox-item"><span className="fox-item-number">{String(i+1).padStart(2,'0')}</span><h3>{item.title}</h3><p>{item.text}</p></div>{slide.kind==='flow'&&i<(slide.items?.length??0)-1&&<ArrowRight size={32} className="fox-flow-arrow"/>}</Fragment>)}</div>;
   return <><h2 className="fox-title">{slide.title}</h2>{slide.lead&&<p className="fox-lead">{slide.lead}</p>}{slide.image?<div className={`fox-illustrated ${slide.kind==='flow'?'fox-image-band':''}`}><div>{body}</div><img src={images[slide.image]} alt="Ilustración conceptual, no evidencia de un caso real"/></div>:body}</>;
 }
