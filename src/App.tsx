@@ -37,6 +37,8 @@ import CflParticipa from "./pages/cfl/Participa";
 import PortalRouter from "./pages/portal/PortalRouter";
 import { detectClientPortal } from "./lib/clientPortal";
 import Observatory from "./pages/Observatory";
+import FoxSessionSlides from "./pages/centro-fox/SessionSlides";
+import FoxParticipate from "./pages/centro-fox/Participate";
 
 const queryClient = new QueryClient();
 
@@ -93,6 +95,8 @@ const App = () => {
           <Route path="/resultados/icatalyze" element={<ResultadosICatalyze />} />
           <Route path="/cfl/estrategia-digital" element={<EstrategiaDigitalSlides />} />
           <Route path="/cfl/participa" element={<CflParticipa />} />
+          <Route path="/centro-fox/estrategia-digital" element={<FoxSessionSlides />} />
+          <Route path="/centro-fox/participa" element={<FoxParticipate />} />
           <Route path="/casos/uaem" element={<AuditoriaUAEM />} />
 
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
