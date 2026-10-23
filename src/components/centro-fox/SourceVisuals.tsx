@@ -27,10 +27,16 @@ function Ladder() {
   const [active,setActive]=useState(1);const stages=[['Exposición','Personas alcanzadas por la convocatoria.'],['Interés','Personas que consultan los detalles.'],['Registro o compromiso','Personas que completan la acción previa.'],['Participación efectiva','Personas que realizan la actividad.'],['Seguimiento','Resultados, respuesta y continuidad.']];
   return <><div className="fox-ladder">{stages.map(([title,text],i)=><Button key={title} variant={active===i?'default':'secondary'} className={`fox-ladder-stage stage-${i}`} onClick={()=>setActive(i)}><small>NIVEL {i+1}</small><h3>{title}</h3><p>{text}</p></Button>)}</div><div className="fox-ladder-summary">{active===4?'El proceso no termina con la asistencia: hay resultados y continuidad.':'Cada nivel tiene una medida distinta. No sumar clics, registros y asistentes como si fueran lo mismo.'}</div></>;
 }
+function Hypotheses({slide}:{slide:FoxSlide}) {
+  const [open,setOpen]=useState<number[]>([]);
+  return <><div className="fox-hypotheses">{slide.items?.map((x,i)=>{const on=open.includes(i);return <Button key={x.title} variant={on?'default':'secondary'} aria-expanded={on} onClick={()=>setOpen(o=>on?o.filter(v=>v!==i):[...o,i])}><small>HIPÓTESIS {String.fromCharCode(65+i)}</small><h3>{x.title}</h3>{on?<p>{x.text}</p>:<span>Ver cómo comprobarlo</span>}</Button>;})}</div>{open.length===slide.items?.length&&<div className="fox-ladder-summary">{slide.debrief}</div>}</>;
+}
 export default function SourceVisuals({slide}:{slide:FoxSlide}) {
   if(slide.kind==='channels')return <ChannelExplorer/>;
   if(slide.kind==='media-example')return <MediaExample/>;
   if(slide.kind==='pyramid')return <Pyramid/>;
+  if(slide.kind==='hypotheses')return <Hypotheses slide={slide}/>;
+  if(slide.kind==='matrix')return <div className="fox-matrix"><aside><small>MATRIZ DE RESPUESTA</small><p>Primero clasifica qué tienes enfrente. Después decide si respondes, monitoreas o corriges.</p></aside><ol>{slide.items?.map((x,i)=><li key={x.title}><span>{i+1}</span><div><h3>{x.title}</h3><p>{x.text}</p></div></li>)}</ol></div>;
   if(slide.kind==='ladder')return <Ladder/>;
   if(slide.kind==='narrative'){const icons=[MessageCircle,Search,Zap,CalendarDays];return <div className="fox-narrative">{slide.items?.map((x,i)=>{const Icon=icons[i]??MessageCircle;return <div key={x.title}><Icon/><h3>{x.title}</h3><p>{x.text}</p></div>;})}</div>;}
   if(slide.kind==='reminders')return <div className="fox-reminders">{slide.items?.map((x,i)=><div key={x.title}><span>{i+1}</span><h3>{x.title}</h3><p>{x.text}</p></div>)}</div>;
