@@ -7,6 +7,18 @@ import FoxBrand from '@/components/centro-fox/FoxBrand';
 import { FOX_CASES, FOX_POLLS, FOX_SLIDES, type FoxSlide } from '@/data/centroFoxSession';
 import { useFoxVotes } from '@/hooks/useFoxVotes';
 import frame from '@/assets/centro-fox/frame.png.asset.json';
+import community from '@/assets/slides/slide-community.jpg';
+import social from '@/assets/slides/slide-social.jpg';
+import risk from '@/assets/cfl/riesgo.jpg';
+import work from '@/assets/cfl/herramienta.jpg';
+import plaza from '@/assets/cfl/plaza.jpg';
+import algorithm from '@/assets/cfl/algoritmo.jpg';
+const images = { community, social, risk, work, plaza, algorithm };
+
+function Workshop({ slide }: { slide: FoxSlide }) {
+  const [open, setOpen] = useState(false);
+  return <div className="fox-workshop"><p>{slide.prompt}</p><Button variant="secondary" className="h-auto py-4 px-6 text-2xl" onClick={() => setOpen(v => !v)}>{open ? 'Ocultar pistas' : 'Poner en común'}</Button>{open && <div className="fox-answer">{slide.debrief}</div>}</div>;
+}
 
 const participantUrl = () => `${window.location.origin}/centro-fox/participa`;
 function Qr() { return <div className="fox-qr"><QRCodeSVG value={participantUrl()} size={280} bgColor="transparent" fgColor="currentColor" /><strong>Participación en la sesión</strong><small>{participantUrl().replace(/^https?:\/\//, '')}</small></div>; }
@@ -21,8 +33,10 @@ function Case({ id }: { id: string }) {
   return <div className="fox-cover"><div className="fox-cases grid gap-4">{item.options.map((o,i)=><Button variant="outline" key={o} onClick={()=>setReveal(true)}>{String.fromCharCode(65+i)} · {o}</Button>)}<Button variant="secondary" onClick={()=>setReveal(v=>!v)}>{reveal?'Ocultar análisis':'Mostrar análisis'}</Button>{reveal&&<div className="fox-answer"><b>{item.options[item.answer]}</b><p>{item.why}</p></div>}</div><Qr /></div>;
 }
 function Content({ slide }: { slide: FoxSlide }) {
-  if(slide.kind==='cover') return <div className="fox-cover"><div><h1 className="fox-cover-title">{slide.title}</h1><p className="fox-lead mt-10">{slide.lead}</p><p className="fox-lead">Programa de Alto Nivel en Liderazgo Electoral<br />Sesión formativa · 90 minutos</p><p className="fox-lead">Jesús Caudillo · Expositor</p></div><Qr /></div>;
-  return <><h2 className="fox-title">{slide.title}</h2>{slide.lead&&<p className="fox-lead">{slide.lead}</p>}{slide.poll?<LiveResults poll={slide.poll}/>:slide.kind==='diagnosis'?<DiagnosisResults/>:slide.caseId?<Case key={slide.caseId} id={slide.caseId}/>:<div className={slide.kind==='flow'?'fox-flow':`fox-items ${slide.items?.length===4?'four':''}`}>{slide.items?.map((item,i)=><Fragment key={item.title}><div className="fox-item"><h3>{item.title}</h3><p>{item.text}</p></div>{slide.kind==='flow'&&i<(slide.items?.length??0)-1&&<ArrowRight size={32} className="fox-flow-arrow"/>}</Fragment>)}</div>}</>;
+  if(slide.kind==='cover') return <div className="fox-cover"><div><h1 className="fox-cover-title">{slide.title}</h1><p className="fox-lead mt-8">{slide.lead}</p><p className="fox-lead">Programa de Alto Nivel en Liderazgo Electoral<br/>Jesús Caudillo · Expositor</p><img className="fox-cover-image" src={community} alt="Ilustración de personas en conversación" /></div><Qr /></div>;
+  if(slide.kind==='chapter') return <div className="fox-chapter"><img src={images[slide.image ?? 'community']} alt="Ilustración conceptual del bloque"/><div><span className="fox-chapter-number">{slide.axis==='micro'?'01':slide.axis==='verification'?'02':'03'}</span><h2 className="fox-title">{slide.title}</h2><p className="fox-lead">{slide.lead}</p></div></div>;
+  const body = slide.poll?<LiveResults poll={slide.poll}/>:slide.kind==='diagnosis'?<DiagnosisResults/>:slide.caseId?<Case key={slide.caseId} id={slide.caseId}/>:slide.kind==='workshop'?<Workshop key={slide.title} slide={slide}/>:<div className={slide.kind==='flow'?'fox-flow':slide.kind==='funnel'?'fox-funnel':`fox-items ${slide.items?.length===4?'four':''} ${slide.kind==='agenda'?'fox-agenda':''} ${slide.kind==='example'?'fox-example':''}`}>{slide.items?.map((item,i)=><Fragment key={item.title}><div className="fox-item"><span className="fox-item-number">{String(i+1).padStart(2,'0')}</span><h3>{item.title}</h3><p>{item.text}</p></div>{slide.kind==='flow'&&i<(slide.items?.length??0)-1&&<ArrowRight size={32} className="fox-flow-arrow"/>}</Fragment>)}</div>;
+  return <><h2 className="fox-title">{slide.title}</h2>{slide.lead&&<p className="fox-lead">{slide.lead}</p>}{slide.image?<div className={`fox-illustrated ${slide.kind==='flow'?'fox-image-band':''}`}><div>{body}</div><img src={images[slide.image]} alt="Ilustración conceptual, no evidencia de un caso real"/></div>:body}</>;
 }
 function Slide({index}: {index:number}) { const slide=FOX_SLIDES[index]; return <><img className="fox-frame" src={`https://www.kimedia.mx${frame.url}`} alt=""/><FoxBrand/><div className="fox-kicker">{slide.section}</div><Content slide={slide}/><footer className="fox-footer"><span>{slide.source??'Centro Fox · Paulina Amozurrutia · Estrategia digital y redes sociales'}</span><span>{index+1} / {FOX_SLIDES.length}</span></footer></>; }
 export default function SessionSlides() {
