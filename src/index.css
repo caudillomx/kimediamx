@@ -401,3 +401,12 @@
 .fox-slide > .fox-progress { position:absolute; left:0; right:0; bottom:0; height:8px; background:hsl(var(--secondary)); }
 .fox-progress > div { height:100%; background:hsl(var(--primary)); }
 .fox-chapter .fox-title { font-size:84px; }
+.fox-table { width:100%; border-collapse:separate; border-spacing:4px; font-size:27px; line-height:1.3; }
+.fox-table thead th { background:hsl(var(--primary)); color:hsl(var(--primary-foreground)); padding:18px 20px; font-weight:700; text-align:center; }
+.fox-table tbody th { background:hsl(var(--primary)); color:hsl(var(--primary-foreground)); width:250px; font-weight:700; font-size:30px; }
+.fox-table td { background:hsl(var(--secondary)); padding:16px 22px; }
+.fox-table tbody tr { cursor:pointer; transition:opacity .2s; }
+.fox-table tbody tr:not(.active) td { opacity:.72; }
+.fox-table tbody tr.active td { opacity:1; box-shadow:inset 0 0 0 3px hsl(var(--primary)); }
+.fox-media-meta { display:grid; grid-template-columns:auto 1fr; gap:10px 24px; font-size:28px; margin-top:22px; }
+.fox-media-meta dt { font-weight:700; color:hsl(var(--primary)); }
