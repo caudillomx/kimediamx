@@ -80,6 +80,7 @@
 .fox-funnel { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:24px; align-items:start; }
 .fox-funnel .fox-item { background:hsl(var(--secondary)); border-bottom:12px solid hsl(var(--primary)); min-height:330px; }
 .fox-funnel .fox-item:nth-child(2) { margin-top:40px; border-color:hsl(var(--fox-blue)); }.fox-funnel .fox-item:nth-child(3) { margin-top:80px; border-color:hsl(var(--fox-magenta)); }.fox-funnel .fox-item:nth-child(4) { margin-top:120px; border-color:hsl(var(--fox-orange)); }
+.fox-print .fox-slide { position:relative; left:0; top:0; margin:0; transform:none; }
 @media print {
   @page { size:1920px 1080px; margin:0; }
   .fox-print .fox-slide { position:relative; left:0; top:0; margin:0; transform:none!important; break-after:page; }
