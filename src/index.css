@@ -442,3 +442,15 @@
 .fox-hypotheses button[aria-expanded=true] { background:hsl(var(--primary)) !important; color:hsl(var(--primary-foreground)) !important; opacity:1 !important; }
 .fox-hypotheses button[aria-expanded=false] { background:hsl(var(--secondary)); color:hsl(var(--primary)); }
 .fox-hypotheses + .fox-ladder-summary { margin-top:22px; }
+.fox-scenarios { display:flex; gap:14px; margin-bottom:22px; }
+.fox-scenarios button { height:58px; font-size:24px; padding:10px 24px; }
+.fox-steps { display:flex; gap:20px; margin-bottom:22px; }
+.fox-steps > div { display:flex; align-items:baseline; gap:14px; font-size:26px; }
+.fox-steps b { font-size:52px; font-weight:800; color:hsl(var(--primary)); }
+.fox-steps svg { color:hsl(var(--primary)); margin-left:10px; align-self:center; }
+.fox-hypotheses button { min-height:150px; padding:22px 28px; }
+.fox-hypotheses h3 { font-size:31px; }
+.fox-hypotheses p { font-size:25px; }
+.fox-hypotheses + .fox-ladder-summary { margin-top:16px; padding:16px 24px; font-size:25px; }
+.fox-slide .fox-hypotheses > button { opacity:1; filter:none; background:hsl(var(--secondary)); color:hsl(var(--primary)); }
+.fox-slide .fox-hypotheses > button[aria-expanded=true] { background:hsl(var(--primary)); color:hsl(var(--primary-foreground)); }
