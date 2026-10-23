@@ -10,6 +10,7 @@
 - [x] Exigir relación temática directa y evidencia antes de asociar nuevas notas a cada observatorio.
 
 # Sesión Centro Fox
+- [ ] Recuperar el hilo y ejemplos del PPTX, con pirámide, selector de redes, piezas visuales y recorrido de participación; comprobar cada diseño nuevo.
 - [x] Reequilibrar los tres ejes con ejemplos neutros, imágenes y ejercicios para cada bloque; comprobar lectura y navegación.
 - [x] Adaptar el material recibido a una presentación formativa de 90 minutos con identidad Centro Fox y Paulina, sin KiMedia.
 - [x] Implementar participación independiente: votaciones, autodiagnóstico y casos de verificación.
