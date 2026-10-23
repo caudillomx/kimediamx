@@ -113,10 +113,10 @@
 }
 @media(prefers-reduced-motion:reduce) { .fox-bar > div { transition:none; } }
 /* Pulido v3: textos dentro de su caja, imágenes a resolución nativa, mejor uso del alto */
-.fox-slide h2,.fox-slide h3,.fox-slide p,.fox-slide button { overflow-wrap:break-word; hyphens:auto; }
+.fox-slide p { overflow-wrap:break-word; }
 .fox-image-band .fox-item { display:block; padding:26px; }
 .fox-image-band > img { height:230px; max-width:1024px; align-self:flex-end; }
-.fox-agenda .fox-item h3 { font-size:28px; } .fox-agenda .fox-item p { font-size:26px; }
+.fox-agenda .fox-item h3 { font-size:25px; } .fox-agenda .fox-item p { font-size:26px; }
 .fox-items .fox-item { min-height:330px; }
 .fox-flow .fox-item { min-height:300px; }
 .fox-item p.fox-title { font-size:110px; margin:10px 0 0; color:hsl(var(--primary)); }
@@ -400,3 +400,4 @@
 }
 .fox-slide > .fox-progress { position:absolute; left:0; right:0; bottom:0; height:8px; background:hsl(var(--secondary)); }
 .fox-progress > div { height:100%; background:hsl(var(--primary)); }
+.fox-chapter .fox-title { font-size:84px; }
