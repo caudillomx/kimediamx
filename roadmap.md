@@ -8,3 +8,8 @@
 - [x] Aislar la navegación pública y reservar el panorama al equipo KiMedia.
 - [x] Ejecutar una revisión extraordinaria hoy y conservar el horario diario de 07:00 CDMX.
 - [x] Exigir relación temática directa y evidencia antes de asociar nuevas notas a cada observatorio.
+
+# Sesión Centro Fox
+- [ ] Adaptar el material recibido a una presentación formativa de 90 minutos con identidad Centro Fox y Paulina, sin KiMedia.
+- [ ] Implementar participación independiente: votaciones, autodiagnóstico y casos de verificación.
+- [ ] Verificar presentación y participación sin alterar CFL ni portales.
