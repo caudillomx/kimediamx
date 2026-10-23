@@ -438,3 +438,7 @@
 .fox-hypotheses h3 { font-size:36px; font-weight:700; }
 .fox-hypotheses p { font-size:27px; line-height:1.35; font-weight:400; }
 .fox-hypotheses span { font-size:24px; text-decoration:underline; }
+.fox-hypotheses button { min-height:190px; }
+.fox-hypotheses button[aria-expanded=true] { background:hsl(var(--primary)); color:hsl(var(--primary-foreground)); }
+.fox-hypotheses button[aria-expanded=false] { background:hsl(var(--secondary)); color:hsl(var(--primary)); }
+.fox-hypotheses + .fox-ladder-summary { margin-top:22px; }
