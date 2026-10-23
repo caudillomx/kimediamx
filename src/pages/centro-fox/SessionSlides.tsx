@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import FoxBrand from '@/components/centro-fox/FoxBrand';
 import { FOX_CASES, FOX_POLLS, FOX_SLIDES, type FoxSlide } from '@/data/centroFoxSession';
 import { useFoxVotes } from '@/hooks/useFoxVotes';
+import frame from '@/assets/centro-fox/frame.png.asset.json';
 
 const participantUrl = () => `${window.location.origin}/centro-fox/participa`;
 function Qr() { return <div className="fox-qr"><QRCodeSVG value={participantUrl()} size={280} bgColor="transparent" fgColor="currentColor" /><strong>Participación en la sesión</strong><small>{participantUrl().replace(/^https?:\/\//, '')}</small></div>; }
@@ -23,7 +24,7 @@ function Content({ slide }: { slide: FoxSlide }) {
   if(slide.kind==='cover') return <div className="fox-cover"><div><h1 className="fox-cover-title">{slide.title}</h1><p className="fox-lead mt-10">{slide.lead}</p><p className="fox-lead">Programa de Alto Nivel en Liderazgo Electoral<br />Sesión formativa · 90 minutos</p><p className="fox-lead">Jesús Caudillo · Expositor</p></div><Qr /></div>;
   return <><h2 className="fox-title">{slide.title}</h2>{slide.lead&&<p className="fox-lead">{slide.lead}</p>}{slide.poll?<LiveResults poll={slide.poll}/>:slide.kind==='diagnosis'?<DiagnosisResults/>:slide.caseId?<Case key={slide.caseId} id={slide.caseId}/>:<div className={slide.kind==='flow'?'fox-flow':`fox-items ${slide.items?.length===4?'four':''}`}>{slide.items?.map((item,i)=><Fragment key={item.title}><div className="fox-item"><h3>{item.title}</h3><p>{item.text}</p></div>{slide.kind==='flow'&&i<(slide.items?.length??0)-1&&<ArrowRight size={32} className="fox-flow-arrow"/>}</Fragment>)}</div>}</>;
 }
-function Slide({index}: {index:number}) { const slide=FOX_SLIDES[index]; return <><FoxBrand/><div className="fox-kicker">{slide.section}</div><Content slide={slide}/><footer className="fox-footer"><span>{slide.source??'Centro Fox · Paulina Amozurrutia · Estrategia digital y redes sociales'}</span><span>{index+1} / {FOX_SLIDES.length}</span></footer></>; }
+function Slide({index}: {index:number}) { const slide=FOX_SLIDES[index]; return <><img className="fox-frame" src={`https://www.kimedia.mx${frame.url}`} alt=""/><FoxBrand/><div className="fox-kicker">{slide.section}</div><Content slide={slide}/><footer className="fox-footer"><span>{slide.source??'Centro Fox · Paulina Amozurrutia · Estrategia digital y redes sociales'}</span><span>{index+1} / {FOX_SLIDES.length}</span></footer></>; }
 export default function SessionSlides() {
   const [params,setParams]=useSearchParams(); const raw=Number(params.get('slide')??1); const index=Number.isFinite(raw)?Math.min(FOX_SLIDES.length-1,Math.max(0,Math.floor(raw)-1)):0;
   const [grid,setGrid]=useState(false); const [scale,setScale]=useState(1); const [fullscreen,setFullscreen]=useState(false); const box=useRef<HTMLDivElement>(null); const touch=useRef<number|null>(null);

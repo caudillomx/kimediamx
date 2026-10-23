@@ -10,6 +10,6 @@
 - [x] Exigir relación temática directa y evidencia antes de asociar nuevas notas a cada observatorio.
 
 # Sesión Centro Fox
-- [ ] Adaptar el material recibido a una presentación formativa de 90 minutos con identidad Centro Fox y Paulina, sin KiMedia.
-- [ ] Implementar participación independiente: votaciones, autodiagnóstico y casos de verificación.
-- [ ] Verificar presentación y participación sin alterar CFL ni portales.
+- [x] Adaptar el material recibido a una presentación formativa de 90 minutos con identidad Centro Fox y Paulina, sin KiMedia.
+- [x] Implementar participación independiente: votaciones, autodiagnóstico y casos de verificación.
+- [x] Verificar presentación y participación sin alterar CFL ni portales.
