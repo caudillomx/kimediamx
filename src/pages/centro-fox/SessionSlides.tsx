@@ -18,7 +18,7 @@ const images = { community, social, risk, work, plaza, algorithm };
 
 function Workshop({ slide }: { slide: FoxSlide }) {
   const [open, setOpen] = useState(false);
-  return <div className="fox-workshop"><p>{slide.prompt}</p><Button variant="secondary" className="h-auto py-4 px-6 text-2xl" onClick={() => setOpen(v => !v)}>{open ? 'Ocultar pistas' : 'Poner en común'}</Button>{open && <div className="fox-answer">{slide.debrief}</div>}</div>;
+  return <div className="fox-workshop"><p>{slide.prompt}</p><Button variant="secondary" className="h-auto py-5 px-8 text-3xl" onClick={() => setOpen(v => !v)}>{open ? 'Ocultar pistas' : 'Poner en común'}</Button>{open && <div className="fox-answer">{slide.debrief}</div>}</div>;
 }
 
 const participantUrl = () => `${window.location.origin}/centro-fox/participa`;
@@ -40,7 +40,7 @@ function Content({ slide }: { slide: FoxSlide }) {
   const body = slide.poll?<LiveResults poll={slide.poll}/>:slide.kind==='diagnosis'?<DiagnosisResults/>:slide.caseId?<Case key={slide.caseId} id={slide.caseId}/>:slide.kind==='workshop'?<Workshop key={slide.title} slide={slide}/>:<div className={slide.kind==='flow'?'fox-flow':slide.kind==='funnel'?'fox-funnel':`fox-items ${slide.items?.length===4?'four':''} ${slide.kind==='agenda'?'fox-agenda':''} ${slide.kind==='example'?'fox-example':''}`}>{slide.items?.map((item,i)=><Fragment key={item.title}><div className="fox-item"><span className="fox-item-number">{String(i+1).padStart(2,'0')}</span><h3>{item.title}</h3><p>{item.text}</p></div>{slide.kind==='flow'&&i<(slide.items?.length??0)-1&&<ArrowRight size={32} className="fox-flow-arrow"/>}</Fragment>)}</div>;
   return <><h2 className="fox-title">{slide.title}</h2>{slide.lead&&<p className="fox-lead">{slide.lead}</p>}{slide.image?<div className={`fox-illustrated ${slide.kind==='flow'?'fox-image-band':''}`}><div>{body}</div><img src={images[slide.image]} alt="Ilustración conceptual, no evidencia de un caso real"/></div>:body}</>;
 }
-function Slide({index}: {index:number}) { const slide=FOX_SLIDES[index]; return <><img className="fox-frame" src={`https://www.kimedia.mx${frame.url}`} alt=""/><FoxBrand/><div className="fox-kicker">{slide.section}</div><Content slide={slide}/><footer className="fox-footer"><span>{slide.source??'Centro Fox · Paulina Amozurrutia · Estrategia digital y redes sociales'}</span><span>{index+1} / {FOX_SLIDES.length}</span></footer></>; }
+function Slide({index}: {index:number}) { const slide=FOX_SLIDES[index]; return <><img className="fox-frame" src={`https://www.kimedia.mx${frame.url}`} alt=""/><FoxBrand/><div className="fox-kicker">{slide.section}</div><Content slide={slide}/><footer className="fox-footer"><span>{slide.source??'Centro Fox · Paulina Amozurrutia · Estrategia digital y redes sociales'}</span><span>{index+1} / {FOX_SLIDES.length}</span></footer><div className="fox-progress"><div style={{width:`${(index+1)/FOX_SLIDES.length*100}%`}}/></div></>; }
 export default function SessionSlides() {
   const [params,setParams]=useSearchParams(); const raw=Number(params.get('slide')??1); const index=Number.isFinite(raw)?Math.min(FOX_SLIDES.length-1,Math.max(0,Math.floor(raw)-1)):0;
   const [grid,setGrid]=useState(false); const [scale,setScale]=useState(1); const [fullscreen,setFullscreen]=useState(false); const box=useRef<HTMLDivElement>(null); const touch=useRef<number|null>(null);
