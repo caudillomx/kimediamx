@@ -27,9 +27,17 @@ function Ladder() {
   const [active,setActive]=useState(1);const stages=[['Exposición','Personas alcanzadas por la convocatoria.'],['Interés','Personas que consultan los detalles.'],['Registro o compromiso','Personas que completan la acción previa.'],['Participación efectiva','Personas que realizan la actividad.'],['Seguimiento','Resultados, respuesta y continuidad.']];
   return <><div className="fox-ladder">{stages.map(([title,text],i)=><Button key={title} variant={active===i?'default':'secondary'} className={`fox-ladder-stage stage-${i}`} onClick={()=>setActive(i)}><small>NIVEL {i+1}</small><h3>{title}</h3><p>{text}</p></Button>)}</div><div className="fox-ladder-summary">{active===4?'El proceso no termina con la asistencia: hay resultados y continuidad.':'Cada nivel tiene una medida distinta. No sumar clics, registros y asistentes como si fueran lo mismo.'}</div></>;
 }
+const scenarios = [
+  { name: 'Limpieza en un parque', steps: [['200','dieron «me gusta»'],['60','dijeron «ahí estaré»'],['15','llegaron']], causes: [['No quedaba claro el punto de reunión','Revisar la invitación: ¿decía la entrada exacta del parque y a quién buscar?'],['Era a las 7 a. m. en domingo','Comparar con otras jornadas en otro horario.'],['No sabían qué llevar','¿Se dijo si había guantes y bolsas o si cada quien llevaba los suyos?'],['Nadie mandó recordatorio','¿Hubo mensaje un día antes a quienes dijeron «ahí estaré»?']] },
+  { name: 'Foro vecinal de seguridad', steps: [['5,000','vieron el video'],['80','pidieron la ubicación'],['20','llegaron']], causes: [['Cambió el lugar y no se avisó','¿Se avisó el cambio por el mismo canal en que se pidió la ubicación?'],['Chocaba con la salida del trabajo','Revisar la hora contra la rutina de la colonia.'],['No había dónde dejar a los niños','Preguntar de forma voluntaria y breve a quienes no fueron.'],['No se entendía para qué ir','¿El mensaje decía qué se iba a lograr en el foro?']] },
+  { name: 'Donación de sangre', steps: [['300','compartieron la publicación'],['50','se inscribieron'],['12','donaron']], causes: [['No conocían los requisitos','¿Se explicaron ayuno, edad y documentos antes de inscribirse?'],['Solo era entre semana','Comparar con una jornada en sábado.'],['El lugar quedaba lejos','Revisar transporte y distancia desde las colonias de quienes se inscribieron.'],['No hubo confirmación','¿Se envió recordatorio un día antes con hora y requisitos?']] },
+];
 function Hypotheses({slide}:{slide:FoxSlide}) {
-  const [open,setOpen]=useState<number[]>([]);
-  return <><div className="fox-hypotheses">{slide.items?.map((x,i)=>{const on=open.includes(i);return <Button key={x.title} variant={on?'default':'secondary'} aria-expanded={on} onClick={()=>setOpen(o=>on?o.filter(v=>v!==i):[...o,i])}><small>HIPÓTESIS {String.fromCharCode(65+i)}</small><h3>{x.title}</h3>{on?<p>{x.text}</p>:<span>Ver cómo comprobarlo</span>}</Button>;})}</div>{open.length===slide.items?.length&&<div className="fox-ladder-summary">{slide.debrief}</div>}</>;
+  const [sc,setSc]=useState(0); const [open,setOpen]=useState<number[]>([]); const x=scenarios[sc];
+  return <><nav className="fox-scenarios">{scenarios.map((s,i)=><Button key={s.name} variant={i===sc?'default':'secondary'} onClick={()=>{setSc(i);setOpen([]);}}>{i+1} · {s.name}</Button>)}</nav>
+  <div className="fox-steps">{x.steps.map(([n,t],i)=><div key={t}><b>{n}</b><span>{t}</span>{i<2&&<ArrowRight/>}</div>)}</div>
+  <div className="fox-hypotheses">{x.causes.map(([c,how],i)=>{const on=open.includes(i);return <Button key={c} aria-expanded={on} onClick={()=>setOpen(o=>on?o.filter(v=>v!==i):[...o,i])}><small>CAUSA {String.fromCharCode(65+i)}</small><h3>{c}</h3>{on?<p>{how}</p>:<span>¿Cómo lo comprobamos?</span>}</Button>;})}</div>
+  {open.length===4&&<div className="fox-ladder-summary">{slide.debrief}</div>}</>;
 }
 export default function SourceVisuals({slide}:{slide:FoxSlide}) {
   if(slide.kind==='channels')return <ChannelExplorer/>;
