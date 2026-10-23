@@ -452,3 +452,5 @@
 .fox-hypotheses h3 { font-size:31px; }
 .fox-hypotheses p { font-size:25px; }
 .fox-hypotheses + .fox-ladder-summary { margin-top:16px; padding:16px 24px; font-size:25px; }
+.fox-slide .fox-hypotheses > button { opacity:1; filter:none; background:hsl(var(--secondary)); color:hsl(var(--primary)); }
+.fox-slide .fox-hypotheses > button[aria-expanded=true] { background:hsl(var(--primary)); color:hsl(var(--primary-foreground)); }
