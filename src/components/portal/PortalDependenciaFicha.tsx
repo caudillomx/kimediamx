@@ -11,6 +11,9 @@ import {
   type Enfoque, type Dependencia,
 } from "./useGabineteData";
 import { mxDay } from "@/lib/tz";
+import { previousReportWindow, selectRangeReportPeriods, uniqueMetricsForPeriods } from "@/lib/benchmarkReportData";
+import { benchmarkAccountKey } from "@/lib/benchmarkAccountIdentity";
+import { orderGabineteRanking } from "@/lib/gabineteReportUtils";
 
 type Gab = ReturnType<typeof import("./useGabineteData").useGabineteData>;
 
@@ -58,14 +61,19 @@ export default function PortalDependenciaFicha({
   const postsBase = ventana && postsOverride ? postsOverride : posts;
 
   const activeIds = useMemo(
-    () => periods.filter((p) => p.period_label === periodLabel).map((p) => p.id),
-    [periods, periodLabel],
+    () => (ventana ? selectRangeReportPeriods(periods, ventana.from, ventana.to)
+      : periods.filter((p) => p.period_label === periodLabel)).map((p) => p.id),
+    [periods, periodLabel, ventana?.from, ventana?.to],
   );
   const prevIds = useMemo(() => {
+    if (ventana) {
+      const previous = previousReportWindow(ventana.from, ventana.to);
+      return selectRangeReportPeriods(periods, previous.from, previous.to).map((p) => p.id);
+    }
     const idx = periodLabels.indexOf(periodLabel);
     if (idx <= 0) return [];
     return periods.filter((p) => p.period_label === periodLabels[idx - 1]).map((p) => p.id);
-  }, [periods, periodLabels, periodLabel]);
+  }, [periods, periodLabels, periodLabel, ventana?.from, ventana?.to]);
 
   const curr = useMemo(() => aggregate(activeIds, enfoque), [aggregate, activeIds, enfoque]);
   const prev = useMemo(() => aggregate(prevIds, enfoque), [aggregate, prevIds, enfoque]);
@@ -78,27 +86,26 @@ export default function PortalDependenciaFicha({
   const compById = useMemo(() => new Map(depComps.map((c) => [c.id, c])), [depComps]);
 
   const cuentas = useMemo(() => {
-    const ids = new Set(activeIds);
-    return metrics
-      .filter((m) => ids.has(m.period_id) && compById.has(m.competitor_id))
-      .map((m) => {
-        const c = compById.get(m.competitor_id)!;
-        return {
+    const identity = new Map(competitors.map((c) => [c.id, benchmarkAccountKey(c)]));
+    return uniqueMetricsForPeriods(metrics, activeIds, identity, periods)
+      .filter((m) => compById.has(m.competitor_id))
+      .flatMap((m) => {
+        const c = compById.get(m.competitor_id);
+        if (!c) return [];
+        return [{
           perfil: c.name, red: m.network, tipo: c.account_type ?? "institucional",
           seguidores: m.followers, crecimiento: m.follower_growth_rate,
           engagement: m.engagement_rate, postsDia: m.posts_per_day,
-        };
+        }];
       })
       .sort((a, b) => (b.seguidores ?? 0) - (a.seguidores ?? 0));
-  }, [metrics, compById, activeIds]);
+  }, [metrics, compById, activeIds, competitors, periods]);
 
   const mine = dep ? curr.get(dep.id) : undefined;
   const prevMine = dep ? prev.get(dep.id) : undefined;
 
   const ranking = useMemo(
-    () => Array.from(curr.entries())
-      .filter(([, v]) => v.engagement != null)
-      .sort((a, b) => (b[1].engagement ?? 0) - (a[1].engagement ?? 0)),
+    () => orderGabineteRanking(curr),
     [curr],
   );
   const rank = dep ? ranking.findIndex(([id]) => id === dep.id) : -1;
@@ -428,8 +435,8 @@ export default function PortalDependenciaFicha({
 
         <Separator />
         <p className="text-[11px] text-muted-foreground">
-          Seguidores y engagement corresponden al periodo <b>{periodLabel || "—"}</b> con el enfoque <b>{ENFOQUE_LABEL[enfoque].toLowerCase()}</b>,
-          porque la fuente entrega esas métricas por mes. Publicaciones, interacciones y prensa usan el corte <b>{corteLabel}</b>.
+          Seguidores y engagement usan los cortes disponibles para <b>{ventana ? corteLabel : periodLabel || "—"}</b> con el enfoque <b>{ENFOQUE_LABEL[enfoque].toLowerCase()}</b>.
+          Publicaciones, interacciones y prensa usan el corte <b>{corteLabel}</b>.
           Las menciones de prensa se resuelven por coincidencia de nombre de la dependencia o de su titular.
         </p>
       </DialogContent>
