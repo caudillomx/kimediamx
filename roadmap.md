@@ -15,3 +15,9 @@
 - [x] Adaptar el material recibido a una presentación formativa de 90 minutos con identidad Centro Fox y Paulina, sin KiMedia.
 - [x] Implementar participación independiente: votaciones, autodiagnóstico y casos de verificación.
 - [x] Verificar presentación y participación sin alterar CFL ni portales.
+
+# Auditoría de rankings Guanajuato
+- [ ] Reproducir discrepancias entre semanas para CODE, DIF y Presidencia DIF y revisar todo el gabinete.
+- [ ] Unificar periodo, universo y cálculo del ranking actual y anterior en pantalla y PDF.
+- [ ] Añadir regresiones y verificar resultados históricos y flujo autenticado.
+- [ ] Documentar causas, alcance y límites de reconstrucción de reportes entregados.
