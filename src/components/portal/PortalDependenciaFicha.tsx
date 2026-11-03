@@ -11,7 +11,7 @@ import {
   type Enfoque, type Dependencia,
 } from "./useGabineteData";
 import { mxDay } from "@/lib/tz";
-import { previousReportWindow, selectRangeReportPeriods, uniqueMetricsForPeriods } from "@/lib/benchmarkReportData";
+import { uniqueMetricsForPeriods } from "@/lib/benchmarkReportData";
 import { benchmarkAccountKey } from "@/lib/benchmarkAccountIdentity";
 import { orderGabineteRanking } from "@/lib/gabineteReportUtils";
 
@@ -61,19 +61,14 @@ export default function PortalDependenciaFicha({
   const postsBase = ventana && postsOverride ? postsOverride : posts;
 
   const activeIds = useMemo(
-    () => (ventana ? selectRangeReportPeriods(periods, ventana.from, ventana.to)
-      : periods.filter((p) => p.period_label === periodLabel)).map((p) => p.id),
-    [periods, periodLabel, ventana?.from, ventana?.to],
+    () => periods.filter((p) => p.period_label === periodLabel).map((p) => p.id),
+    [periods, periodLabel],
   );
   const prevIds = useMemo(() => {
-    if (ventana) {
-      const previous = previousReportWindow(ventana.from, ventana.to);
-      return selectRangeReportPeriods(periods, previous.from, previous.to).map((p) => p.id);
-    }
     const idx = periodLabels.indexOf(periodLabel);
     if (idx <= 0) return [];
     return periods.filter((p) => p.period_label === periodLabels[idx - 1]).map((p) => p.id);
-  }, [periods, periodLabels, periodLabel, ventana?.from, ventana?.to]);
+  }, [periods, periodLabels, periodLabel]);
 
   const curr = useMemo(() => aggregate(activeIds, enfoque), [aggregate, activeIds, enfoque]);
   const prev = useMemo(() => aggregate(prevIds, enfoque), [aggregate, prevIds, enfoque]);
@@ -435,8 +430,8 @@ export default function PortalDependenciaFicha({
 
         <Separator />
         <p className="text-[11px] text-muted-foreground">
-          Seguidores y engagement usan los cortes disponibles para <b>{ventana ? corteLabel : periodLabel || "—"}</b> con el enfoque <b>{ENFOQUE_LABEL[enfoque].toLowerCase()}</b>.
-          Publicaciones, interacciones y prensa usan el corte <b>{corteLabel}</b>.
+          Seguidores y engagement corresponden al periodo <b>{periodLabel || "—"}</b> con el enfoque <b>{ENFOQUE_LABEL[enfoque].toLowerCase()}</b>,
+          porque la fuente entrega esas métricas por mes. Publicaciones, interacciones y prensa usan el corte <b>{corteLabel}</b>.
           Las menciones de prensa se resuelven por coincidencia de nombre de la dependencia o de su titular.
         </p>
       </DialogContent>
