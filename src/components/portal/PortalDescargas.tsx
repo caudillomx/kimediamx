@@ -773,6 +773,9 @@ export default function PortalDescargas({
             range_end: winTo,
             enfoque,
             contexto,
+            // A previously cached interpretation may contain the wrong week/rank.
+            // Always regenerate against the exact corrected report inputs.
+            force: true,
           },
         });
         if (error) throw error;
@@ -1072,7 +1075,7 @@ export default function PortalDescargas({
       }));
 
     /* ---- Cuentas de marca o destino (p. ej. las de promoción turística) ---- */
-    const mCurr = scopeBuckets(currIds, "marca", cutRefDate);
+    const mCurr = scopeBuckets(currIds, "marca");
     const mPrev = scopeBuckets(prevIds, "marca");
 
     const marcasFull = enfoque !== "combinado" ? [] : Array.from(mCurr.entries())
