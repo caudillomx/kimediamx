@@ -21,6 +21,26 @@ const MONTHS_ES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio
 
 const dateKey = (period: BenchmarkPeriod) => `${period.period_start}|${period.period_end}`;
 
+/** Calendar arithmetic independent of the browser timezone. */
+export function shiftReportDay(day: string, offset: number): string {
+  const date = new Date(`${day}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + offset);
+  return date.toISOString().slice(0, 10);
+}
+
+export function previousReportWindow(from: string, to: string) {
+  const days = Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86400000) + 1;
+  if (days < 1 || !Number.isFinite(days)) throw new Error("Rango de reporte inválido");
+  return { from: shiftReportDay(from, -days), to: shiftReportDay(from, -1) };
+}
+
+/** Both sides of a comparison use the SAME capture allowance (Monday imports). */
+export function selectRangeReportPeriods<T extends BenchmarkPeriod>(periods: T[], from: string, to: string): T[] {
+  const captureThrough = shiftReportDay(to, 2);
+  return periods.filter((p) => p.period_end <= to
+    || (p.period_start <= to && p.period_end >= from && p.period_end <= captureThrough));
+}
+
 /** Display month of the data cut. Accumulated exports (1 jun–25 ago) live in the month they close. */
 export function periodMonthLabel(period: Pick<BenchmarkPeriod, "period_end" | "period_label">): string {
   const end = new Date(`${period.period_end}T00:00:00`);

@@ -1,4 +1,5 @@
 # Architecture rules
+- Guanajuato report comparisons use the same calendar-window selector and capture allowance on both sides; ranks use only eligible snapshots, never display-only borrowed metrics, with stable entity-ID tie breaks to preserve weekly continuity.
 - Keep Centro Fox training content and routes separate from CFL; prefix all participation keys by session to prevent mixing public results and scope its branding tokens to the session pages.
 - Keep the Observatorio in its own page, hook and domain helpers; it publishes only public editorial references so client portals and private reports stay isolated.
 - Persist Observatorio verticals, keywords and signals in dedicated Cloud tables with public reads and existing ops-write policies; never put client-private material in these tables.

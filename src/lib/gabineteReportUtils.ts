@@ -63,3 +63,10 @@ export function weightedRate(rows: { rate: number | null; weight: number | null 
   const totalWeight = valid.reduce((sum, row) => sum + Number(row.weight), 0);
   return totalWeight ? valid.reduce((sum, row) => sum + Number(row.rate) * Number(row.weight), 0) / totalWeight : null;
 }
+
+/** Missing engagement is not a measured zero; equal scores have stable ordering. */
+export function orderGabineteRanking<T extends { engagement: number | null }>(rows: ReadonlyMap<string, T>): [string, T][] {
+  return Array.from(rows.entries())
+    .filter(([, value]) => value.engagement != null && Number.isFinite(value.engagement))
+    .sort((a, b) => (b[1].engagement ?? 0) - (a[1].engagement ?? 0) || a[0].localeCompare(b[0]));
+}
