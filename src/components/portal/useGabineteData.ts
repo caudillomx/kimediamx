@@ -324,7 +324,7 @@ export function useGabineteData(clientId: string, pressDays = 30) {
       if (enfoque !== "combinado" && tipo !== enfoque) continue;
       const e = acc.get(dep) ?? { followers: 0, eng: [], posts: [], cuentas: new Set<string>() };
       e.followers += Number(m.followers) || 0;
-      if (Number.isFinite(Number(m.engagement_rate))) e.eng.push({ rate: Number(m.engagement_rate), weight: Number(m.followers) || null });
+      if (m.engagement_rate != null && Number.isFinite(Number(m.engagement_rate))) e.eng.push({ rate: Number(m.engagement_rate), weight: Number(m.followers) || null });
       if (Number.isFinite(Number(m.posts_per_day))) e.posts.push(Number(m.posts_per_day));
       e.cuentas.add(accountIdentity.get(m.competitor_id) ?? m.competitor_id);
       acc.set(dep, e);

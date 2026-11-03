@@ -15,8 +15,11 @@ import {
   periodRangeForDisplayLabel,
   uniqueMetricsForPeriods,
   fillMissingAccountSnapshots,
+  selectRangeReportPeriods,
+  previousReportWindow,
+  shiftReportDay,
 } from "@/lib/benchmarkReportData";
-import { benchmarkPostKey, resolveGabineteMention, weightedRate } from "@/lib/gabineteReportUtils";
+import { benchmarkPostKey, resolveGabineteMention, weightedRate, orderGabineteRanking } from "@/lib/gabineteReportUtils";
 import { benchmarkAccountKey, buildValidCompetitorMaps, titularAccountIds } from "@/lib/benchmarkAccountIdentity";
 import { buildDeltaLines } from "@/lib/dependenciaDeltas";
 
@@ -56,8 +59,7 @@ async function fetchAllPages<T>(
 
 const isoToday = () => new Date().toISOString().slice(0, 10);
 const isoDaysAgo = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString().slice(0, 10);
-const shiftIso = (d: string, n: number) =>
-  new Date(new Date(d + "T00:00:00").getTime() + n * 86_400_000).toISOString().slice(0, 10);
+const shiftIso = shiftReportDay;
 const fmtDia = (d: string) => new Date(d + "T00:00:00").toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" });
 /** Una carga acumulada (p. ej. 1 jun–25 ago) debe aparecer dentro del mes de corte. */
 const monthLabelOf = periodMonthLabel;
@@ -182,20 +184,14 @@ export default function PortalDescargas({
   const selectActiveReportPeriods = (sourcePeriods: Period[]) => {
     if (!isRange) return sourcePeriods.filter((p) => periodMatchesDisplayLabel(p, periodLabel));
 
-    // Un corte por rango necesita el snapshot más reciente disponible de CADA
-    // cuenta. Las cargas suelen cerrar en lunes o en cortes mixtos, así que se
-    // aceptan periodos que terminen antes del rango o que se solapen con él
-    // con una tolerancia breve de captura posterior. Esto evita reportes en cero
-    // cuando la base sí trae el corte nuevo, pero no permite jalar un mes futuro.
-    const lookaheadTo = shiftIso(weekTo, 2);
-    return sourcePeriods.filter((p) => (
-      p.period_end <= weekTo
-      || (p.period_start <= weekTo && p.period_end >= weekFrom && p.period_end <= lookaheadTo)
-    ));
+    return selectRangeReportPeriods(sourcePeriods, weekFrom, weekTo);
   };
 
   const selectPreviousReportPeriods = (sourcePeriods: Period[], labels = periodLabels) => {
-    if (isRange) return sourcePeriods.filter((p) => p.period_end < weekFrom);
+    if (isRange) {
+      const previous = previousReportWindow(weekFrom, weekTo);
+      return selectRangeReportPeriods(sourcePeriods, previous.from, previous.to);
+    }
     const idx = labels.indexOf(periodLabel);
     return idx > 0 ? sourcePeriods.filter((p) => periodMatchesDisplayLabel(p, labels[idx - 1])) : [];
   };
@@ -206,7 +202,7 @@ export default function PortalDescargas({
   );
   const prevPeriods = useMemo(
     () => selectPreviousReportPeriods(periods),
-    [periods, periodLabels, periodLabel, cut, weekFrom],
+    [periods, periodLabels, periodLabel, cut, weekFrom, weekTo],
   );
 
   /** Corte de datos realmente usado por rango: el snapshot más reciente disponible. */
@@ -279,7 +275,7 @@ export default function PortalDescargas({
       if (!matchesScope(typeOfCompetitor.get(m.competitor_id), scope)) continue;
       const e = acc.get(dep) ?? { followers: 0, eng: [], posts: [] };
       e.followers += Number(m.followers) || 0;
-      if (Number.isFinite(Number(m.engagement_rate))) e.eng.push({ rate: Number(m.engagement_rate), weight: Number(m.followers) || null });
+      if (m.engagement_rate != null && Number.isFinite(Number(m.engagement_rate))) e.eng.push({ rate: Number(m.engagement_rate), weight: Number(m.followers) || null });
       if (Number.isFinite(Number(m.posts_per_day))) e.posts.push(Number(m.posts_per_day));
       acc.set(dep, e);
     }
@@ -452,7 +448,7 @@ export default function PortalDescargas({
         if (!matchesScope(reportTypeOfCompetitor.get(m.competitor_id), scope)) continue;
         const e = acc.get(targetDep) ?? { followers: 0, eng: [], posts: [] };
         e.followers += Number(m.followers) || 0;
-        if (Number.isFinite(Number(m.engagement_rate))) e.eng.push({ rate: Number(m.engagement_rate), weight: Number(m.followers) || null });
+        if (m.engagement_rate != null && Number.isFinite(Number(m.engagement_rate))) e.eng.push({ rate: Number(m.engagement_rate), weight: Number(m.followers) || null });
         if (Number.isFinite(Number(m.posts_per_day))) e.posts.push(Number(m.posts_per_day));
         acc.set(targetDep, e);
       }
@@ -607,13 +603,12 @@ export default function PortalDescargas({
 
     // Rankings del gabinete por ámbito.
     const rankingDe = (scope: "combinado" | ScopeKey) => {
-      const curr = aggregateForReport(periodIds, scope, winTo);
+      // Rankings must never borrow future/missing account snapshots. Display-only
+      // account fallbacks above do not participate in either ranked universe.
+      const curr = aggregateForReport(periodIds, scope);
       const prev = aggregateForReport(prevIds, scope);
-      const order = (map: typeof curr) => Array.from(map.entries())
-        .filter(([, v]) => v.engagement != null)
-        .sort((a, b) => (b[1].engagement ?? 0) - (a[1].engagement ?? 0));
-      const entries = order(curr);
-      const prevEntries = order(prev);
+      const entries = orderGabineteRanking(curr);
+      const prevEntries = orderGabineteRanking(prev);
       const idx = entries.findIndex(([id]) => id === dep.id);
       const prevIdx = prevEntries.findIndex(([id]) => id === dep.id);
       return {
@@ -651,12 +646,12 @@ export default function PortalDescargas({
 
     const postsDe = (scope: ScopeKey) => depPosts
       .filter((p) => p.competitor_id && compById.has(p.competitor_id))
-      .filter((p) => (compById.get(p.competitor_id!)?.account_type ?? "institucional") === scope)
+      .filter((p) => (compById.get(p.competitor_id ?? "")?.account_type ?? "institucional") === scope)
       .filter((p) => inMxRange(p.posted_at, winFrom, winTo))
       .sort((a, b) => (b.interactions ?? 0) - (a.interactions ?? 0))
       .slice(0, 3)
       .map((p) => ({
-        perfil: p.profile_name || compById.get(p.competitor_id!)?.name || "",
+        perfil: p.profile_name || compById.get(p.competitor_id ?? "")?.name || "",
         red: p.network, fecha: p.posted_at, texto: p.message ?? "", interacciones: p.interactions ?? 0,
       }));
 
@@ -692,7 +687,7 @@ export default function PortalDescargas({
             : dep.nombre,
         cuentas: rows,
         seguidores: rows.reduce((a, x) => a + (x.seguidores ?? 0), 0),
-        engagement: weightedRate(rows.map((x) => ({ rate: x.engagement, weight: x.seguidores }))),
+        engagement: r.mine.engagement,
         postsDia: pds.length ? pds.reduce((a, b) => a + b, 0) : null,
         publicaciones,
         variacionSeguidores: pctDelta(r.mine.followers, r.prevMine?.followers),
@@ -778,6 +773,9 @@ export default function PortalDescargas({
             range_end: winTo,
             enfoque,
             contexto,
+            // A previously cached interpretation may contain the wrong week/rank.
+            // Always regenerate against the exact corrected report inputs.
+            force: true,
           },
         });
         if (error) throw error;
@@ -844,7 +842,7 @@ export default function PortalDescargas({
         const followers = Number(m.followers);
         const hasFollowers = Number.isFinite(followers);
         if (hasFollowers) bucket.followers += followers;
-        if (Number.isFinite(Number(m.engagement_rate))) {
+        if (m.engagement_rate != null && Number.isFinite(Number(m.engagement_rate))) {
           bucket.eng.push({ rate: Number(m.engagement_rate), weight: hasFollowers ? followers : null });
         }
         const identity = accountIdentity.get(m.competitor_id) ?? m.competitor_id;
@@ -854,7 +852,7 @@ export default function PortalDescargas({
       return acc;
     };
 
-    const curr = collect(currIds, cutRefDate);
+    const curr = collect(currIds);
     const prev = collect(prevIds);
 
     // Publicaciones del corte contadas por su FECHA REAL dentro de la ventana
@@ -967,13 +965,13 @@ export default function PortalDescargas({
     const prevRowsForTier = (min: number, max: number) => Array.from(prev.entries())
       .map(([id, bucket]) => ({ id, followers: bucket.followers, engagement: weightedRate(bucket.eng) }))
       .filter((r) => r.followers >= min && r.followers < max && r.engagement != null)
-      .sort((a, b) => (b.engagement ?? 0) - (a.engagement ?? 0));
+      .sort((a, b) => (b.engagement ?? 0) - (a.engagement ?? 0) || a.id.localeCompare(b.id));
 
     const tiers = TIERS.map((t) => {
       const prevOrder = prevRowsForTier(t.min, t.max);
       const tierRows = rows
         .filter((r) => (r.seguidores ?? 0) >= t.min && (r.seguidores ?? 0) < t.max)
-        .sort((a, b) => (b.engagement ?? -1) - (a.engagement ?? -1))
+        .sort((a, b) => (b.engagement ?? -1) - (a.engagement ?? -1) || a.id.localeCompare(b.id))
         .map((r) => {
           const idx = prevOrder.findIndex((p) => p.id === r.id);
           return { ...r, lugarPrevio: idx >= 0 ? idx + 1 : null };
@@ -1013,7 +1011,7 @@ export default function PortalDescargas({
         const followers = Number(m.followers);
         const hasFollowers = Number.isFinite(followers);
         if (hasFollowers) bucket.followers += followers;
-        if (Number.isFinite(Number(m.engagement_rate))) {
+        if (m.engagement_rate != null && Number.isFinite(Number(m.engagement_rate))) {
           bucket.eng.push({ rate: Number(m.engagement_rate), weight: hasFollowers ? followers : null });
         }
         const identity = accountIdentity.get(m.competitor_id) ?? m.competitor_id;
@@ -1023,7 +1021,7 @@ export default function PortalDescargas({
       return acc;
     };
 
-    const tCurr = scopeBuckets(currIds, "titular", cutRefDate);
+    const tCurr = scopeBuckets(currIds, "titular");
     const tPrev = scopeBuckets(prevIds, "titular");
     const depById = new Map(dependencias.map((d) => [d.id, d]));
 
@@ -1077,7 +1075,7 @@ export default function PortalDescargas({
       }));
 
     /* ---- Cuentas de marca o destino (p. ej. las de promoción turística) ---- */
-    const mCurr = scopeBuckets(currIds, "marca", cutRefDate);
+    const mCurr = scopeBuckets(currIds, "marca");
     const mPrev = scopeBuckets(prevIds, "marca");
 
     const marcasFull = enfoque !== "combinado" ? [] : Array.from(mCurr.entries())

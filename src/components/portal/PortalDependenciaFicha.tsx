@@ -11,6 +11,9 @@ import {
   type Enfoque, type Dependencia,
 } from "./useGabineteData";
 import { mxDay } from "@/lib/tz";
+import { uniqueMetricsForPeriods } from "@/lib/benchmarkReportData";
+import { benchmarkAccountKey } from "@/lib/benchmarkAccountIdentity";
+import { orderGabineteRanking } from "@/lib/gabineteReportUtils";
 
 type Gab = ReturnType<typeof import("./useGabineteData").useGabineteData>;
 
@@ -78,27 +81,26 @@ export default function PortalDependenciaFicha({
   const compById = useMemo(() => new Map(depComps.map((c) => [c.id, c])), [depComps]);
 
   const cuentas = useMemo(() => {
-    const ids = new Set(activeIds);
-    return metrics
-      .filter((m) => ids.has(m.period_id) && compById.has(m.competitor_id))
-      .map((m) => {
-        const c = compById.get(m.competitor_id)!;
-        return {
+    const identity = new Map(competitors.map((c) => [c.id, benchmarkAccountKey(c)]));
+    return uniqueMetricsForPeriods(metrics, activeIds, identity, periods)
+      .filter((m) => compById.has(m.competitor_id))
+      .flatMap((m) => {
+        const c = compById.get(m.competitor_id);
+        if (!c) return [];
+        return [{
           perfil: c.name, red: m.network, tipo: c.account_type ?? "institucional",
           seguidores: m.followers, crecimiento: m.follower_growth_rate,
           engagement: m.engagement_rate, postsDia: m.posts_per_day,
-        };
+        }];
       })
       .sort((a, b) => (b.seguidores ?? 0) - (a.seguidores ?? 0));
-  }, [metrics, compById, activeIds]);
+  }, [metrics, compById, activeIds, competitors, periods]);
 
   const mine = dep ? curr.get(dep.id) : undefined;
   const prevMine = dep ? prev.get(dep.id) : undefined;
 
   const ranking = useMemo(
-    () => Array.from(curr.entries())
-      .filter(([, v]) => v.engagement != null)
-      .sort((a, b) => (b[1].engagement ?? 0) - (a[1].engagement ?? 0)),
+    () => orderGabineteRanking(curr),
     [curr],
   );
   const rank = dep ? ranking.findIndex(([id]) => id === dep.id) : -1;
