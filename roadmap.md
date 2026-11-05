@@ -24,6 +24,6 @@
 - [ ] Cotejar y reemplazar cada PDF previamente enviado: se requieren los originales o el inventario de entregas del usuario.
 
 # Ajustes del documento Falcon
-- [ ] Aplicar los ocho ajustes solicitados sin cambiar diseño, colores, estructura ni cifras.
-- [ ] Cotejar números contra el original y revisar visualmente todas las páginas.
-- [ ] Entregar una nueva versión del PDF.
+- [x] Aplicar los ocho ajustes solicitados sin cambiar diseño, colores, estructura ni cifras.
+- [x] Cotejar números contra el original y revisar visualmente todas las páginas.
+- [x] Entregar una nueva versión del PDF.
