@@ -22,3 +22,8 @@
 - [x] Añadir regresiones y verificar resultados históricos y seis descargas con sesión autorizada.
 - [x] Documentar causas, alcance y límites de reconstrucción de reportes entregados.
 - [ ] Cotejar y reemplazar cada PDF previamente enviado: se requieren los originales o el inventario de entregas del usuario.
+
+# Ajustes del documento Falcon
+- [x] Aplicar los ocho ajustes solicitados sin cambiar diseño, colores, estructura ni cifras.
+- [x] Cotejar números contra el original y revisar visualmente todas las páginas.
+- [x] Entregar una nueva versión del PDF.
