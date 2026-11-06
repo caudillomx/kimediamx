@@ -27,3 +27,8 @@
 - [x] Aplicar los ocho ajustes solicitados sin cambiar diseño, colores, estructura ni cifras.
 - [x] Cotejar números contra el original y revisar visualmente todas las páginas.
 - [x] Entregar una nueva versión del PDF.
+
+# Datos del sitio en el análisis Falcon
+- [ ] Integrar el bloque del sitio, la octava línea, medición y sexto indicador sin alterar cifras previas ni diseño.
+- [ ] Cotejar contenido y cifras y revisar visualmente todas las páginas de la nueva versión.
+- [ ] Entregar el PDF actualizado y agregarlo a la colección Falcon.
