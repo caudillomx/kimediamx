@@ -31,4 +31,4 @@
 # Datos del sitio en el análisis Falcon
 - [x] Integrar el bloque del sitio, la octava línea, medición y sexto indicador sin alterar cifras previas ni diseño.
 - [x] Cotejar contenido y cifras y revisar visualmente todas las páginas de la nueva versión.
-- [ ] Entregar el PDF actualizado y agregarlo a la colección Falcon.
+- [x] Entregar el PDF actualizado y agregarlo a la colección Falcon (archivo guardado; colección registra carga pendiente).
