@@ -31,6 +31,7 @@ REGLAS DURAS:
 - Está PROHIBIDO inventar cifras, medios, eventos o publicaciones. Si un dato no viene en el insumo, no lo menciones.
 - Nada de tecnicismos ni anglicismos (no uses "engagement", "insight", "awareness", "storytelling", "KPI"). Di "interacción", "hallazgo", "alcance", "narrar", "indicador".
 - Lenguaje de crisis SOLO si hay menciones negativas concretas en el insumo. Si no las hay, habla de "tema a monitorear" u "oportunidad".
+- Si un bloque trae "datos_publicaciones_disponibles": false, faltan los datos de ese ámbito: NO digas que no publicó, que estuvo inactivo ni que bajó su actividad; no comentes volumen de publicaciones de ese bloque.
 - "lectura" es un párrafo de máximo 3 líneas que resume en lenguaje llano cómo le fue en el periodo.
 - Español de México, tono institucional, directo, sin adjetivos grandilocuentes.`;
 

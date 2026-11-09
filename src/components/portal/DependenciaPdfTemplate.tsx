@@ -48,7 +48,9 @@ export type ScopeBlock = {
   seguidores: number;
   engagement: number | null;
   postsDia: number | null;
-  publicaciones: number;
+  publicaciones: number | null;
+  /** No se cargó la exportación de este ámbito para el periodo. */
+  sinDatosPublicaciones?: boolean;
   variacionSeguidores: number | null;
   rank: number | null;
   rankTotal: number;
@@ -171,7 +173,7 @@ const LINE = "#e2e8f0";
 
 const SCOPE = {
   institucional: { main: "#1d4ed8", soft: "#eff6ff", border: "#bfdbfe", tag: "Institución" },
-  titular:       { main: "#be123c", soft: "#fff1f2", border: "#fecdd3", tag: "Titular" },
+  titular:       { main: "#0f766e", soft: "#f0fdfa", border: "#99f6e4", tag: "Titular" },
   marca:         { main: "#0f766e", soft: "#f0fdfa", border: "#99f6e4", tag: "Marca / destino" },
   conjunto:      { main: "#0f172a", soft: "#f1f5f9", border: "#cbd5e1", tag: "Conjunto" },
 } as const;
@@ -187,7 +189,7 @@ const pf = (n: number | null | undefined, d = 2) =>
 const df = (n: number | null | undefined) =>
   n == null || !Number.isFinite(Number(n)) ? "s/d" : `${Number(n) >= 0 ? "+" : ""}${(Number(n) * 100).toFixed(1)}%`;
 const deltaColor = (n: number | null | undefined) =>
-  n == null || !Number.isFinite(Number(n)) ? MUTED : Number(n) >= 0 ? "#059669" : "#dc2626";
+  n == null || !Number.isFinite(Number(n)) ? MUTED : Number(n) >= 0 ? "#059669" : "#64748b";
 
 const page: React.CSSProperties = {
   width: 794,
@@ -308,7 +310,7 @@ function Explainer({ text, color }: { text: string; color: string }) {
   );
 }
 
-const DIR_COLOR: Record<string, string> = { up: "#059669", down: "#dc2626", flat: MUTED };
+const DIR_COLOR: Record<string, string> = { up: "#059669", down: "#64748b", flat: MUTED };
 const DIR_MARK: Record<string, string> = { up: "▲", down: "▼", flat: "=" };
 
 /** "Lo que cambió": comparativo contra el corte anterior, en frases cortas. */
@@ -515,7 +517,7 @@ function BlockSection({ b, compacto }: { b: ScopeBlock; compacto: boolean }) {
           <div style={{ fontSize: 9.5, color: "#475569", marginTop: 5, lineHeight: "14px", overflowWrap: "anywhere" }}>{b.sujeto}</div>
         </div>
         <div style={{ maxWidth: 205, fontSize: 8.8, color: MUTED, textAlign: "right", lineHeight: 1.3, overflowWrap: "anywhere" }}>
-          {b.cuentas.length} cuenta{b.cuentas.length === 1 ? "" : "s"}<br />{b.publicaciones} publicaciones en el periodo
+          {b.cuentas.length} cuenta{b.cuentas.length === 1 ? "" : "s"}<br />{b.publicaciones == null ? "Publicaciones: sin datos cargados para este periodo" : `${b.publicaciones} publicaciones en el periodo`}
         </div>
       </div>
 
@@ -622,7 +624,7 @@ function BlockSection({ b, compacto }: { b: ScopeBlock; compacto: boolean }) {
           hint="Contenido con más reacciones, comentarios y compartidos del periodo. Indica qué mensajes conectaron con la audiencia y conviene replicar."
         />
         {b.topPosts.length === 0 ? (
-          <div style={{ color: MUTED, fontSize: 10 }}>Sin publicaciones registradas en el periodo.</div>
+          <div style={{ color: MUTED, fontSize: 10 }}>{b.sinDatosPublicaciones ? "Sin datos cargados de este ámbito para el periodo." : "Sin publicaciones registradas en el periodo."}</div>
         ) : (
           b.topPosts.slice(0, maxPosts).map((p, i) => (
             <div className="pdf-avoid" key={i} style={{
@@ -686,7 +688,7 @@ export const DependenciaPdfTemplate = forwardRef<HTMLDivElement, { data: Depende
           <>
             <b>Cómo leer este reporte.</b> Incluye un bloque independiente por ámbito medido:
             {ambitos.includes("institucional") && <> en <span style={{ color: SCOPE.institucional.main, fontWeight: 700 }}>azul</span> las cuentas institucionales de la dependencia,</>}
-            {ambitos.includes("titular") && <> en <span style={{ color: SCOPE.titular.main, fontWeight: 700 }}>rojo</span> las cuentas personales del titular,</>}
+            {ambitos.includes("titular") && <> en <span style={{ color: SCOPE.titular.main, fontWeight: 700 }}>verde azulado</span> las cuentas personales del titular,</>}
             {ambitos.includes("marca") && <> en <span style={{ color: SCOPE.marca.main, fontWeight: 700 }}>verde</span> las cuentas de marca o destino,</>}
             {" "}cada uno con sus propios indicadores, cuentas, narrativas y publicaciones; el resumen conjunto de abajo los suma.
             Solo aparecen los ámbitos en los que la dependencia tiene cuentas medidas.
@@ -802,7 +804,7 @@ function TitularTable({ rows, indiceInicial = 0, ocultarEncabezado, continua }: 
       )}
       <tbody>
         {rows.map((r, i) => (
-          <tr key={i} style={{ background: (i + indiceInicial) % 2 ? "#fff7f8" : "#ffffff" }}>
+          <tr key={i} style={{ background: (i + indiceInicial) % 2 ? "#f6fdfb" : "#ffffff" }}>
             <td style={{ ...td, fontWeight: 700, color: MUTED }}>{i + indiceInicial + 1}</td>
             <td style={td}>
               {r.nombre}
@@ -1038,7 +1040,7 @@ export const GabinetePdfTemplate = forwardRef<HTMLDivElement, { data: GabineteRe
            hint="Variaciones reales comparando las mismas cuentas contra el corte anterior; a la derecha, cuentas medidas que no publicaron nada en la ventana.">
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 18 }}>
         <MoveList rows={data.suben} color="#059669" titulo="Quién creció" hint="Hasta 5 instituciones y 5 titulares" />
-        <MoveList rows={data.bajan} color="#dc2626" titulo="Quién retrocedió" hint="Hasta 5 instituciones y 5 titulares" />
+        <MoveList rows={data.bajan} color="#64748b" titulo="Quién retrocedió" hint="Hasta 5 instituciones y 5 titulares" />
         <div className="pdf-avoid">
           <SectionTitle text="Sin publicaciones en el periodo" color="#b45309"
                         hint={silencios.length ? `${silencios.length} de las entidades medidas` : "Todas publicaron"} />
