@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { hasScopeCoverage } from "@/lib/scopeCoverage";
 import { supabase } from "@/integrations/supabase/client";
 import { inMxRange, mxRangeBounds } from "@/lib/tz";
 import { Card } from "@/components/ui/card";
@@ -31,7 +32,7 @@ import {
 
 type Dependencia = { id: string; nombre: string; tipo: string | null; titular: string | null; titular_cargo: string | null; sort_order: number | null };
 type Competitor = { id: string; name: string; network: string; dependencia_id: string | null; account_type: string | null; profile_external_id: string | null; external_url: string | null };
-type Period = { id: string; period_label: string; period_start: string; period_end: string; created_at?: string | null };
+type Period = { id: string; period_label: string; period_start: string; period_end: string; created_at?: string | null; scope?: string | null };
 type Metric = { period_id: string; competitor_id: string; network: string; followers: number | null; follower_growth_rate: number | null; engagement_rate: number | null; posts_per_day: number | null; created_at?: string | null };
 type Post = { period_id: string; competitor_id: string | null; network: string; profile_name: string; posted_at: string | null; message: string | null; interactions: number | null; link?: string | null };
 type Report = { id: string; title: string; report_date: string; type: string };
@@ -143,7 +144,7 @@ export default function PortalDescargas({
             .select("id,name,network,dependencia_id,account_type,profile_external_id,external_url")
             .eq("client_id", clientId).eq("active", true)
             .order("id").range(from, to)),
-        supabase.from("client_portal_benchmark_periods").select("id,period_label,period_start,period_end,created_at").eq("client_id", clientId).order("period_start"),
+        supabase.from("client_portal_benchmark_periods").select("id,period_label,period_start,period_end,created_at,scope").eq("client_id", clientId).order("period_start"),
         supabase.from("client_portal_reports").select("id,title,report_date,type").eq("client_id", clientId).order("report_date", { ascending: false }).limit(30),
       ]);
       const ps = ((per.data ?? []) as Period[]).map((p) => ({ ...p, period_label: monthLabelOf(p) }));
@@ -402,7 +403,7 @@ export default function PortalDescargas({
     // quedar abierto antes de una importación nueva.
     const [freshPeriodsRes, freshCompetitors] = await Promise.all([
       supabase.from("client_portal_benchmark_periods")
-        .select("id,period_label,period_start,period_end,created_at")
+        .select("id,period_label,period_start,period_end,created_at,scope")
         .eq("client_id", clientId)
         .order("period_start"),
       fetchAllPages<Competitor>((from, to) =>
@@ -660,7 +661,10 @@ export default function PortalDescargas({
       const r = rankingDe(scope);
       const nar = narrativasDe(scope);
       const pds = rows.map((x) => x.postsDia).filter((v): v is number => v != null && Number.isFinite(v));
-      const publicaciones = rows.reduce((a, x) => a + (x.publicaciones ?? 0), 0);
+      // Sin la carga del ámbito en esta ventana no hay datos de publicaciones:
+      // se reporta "sin datos", nunca 0 (el 0 se lee como inactividad).
+      const cubierto = hasScopeCoverage(reportPeriods, scope, winFrom, winTo);
+      const publicaciones = cubierto ? rows.reduce((a, x) => a + (x.publicaciones ?? 0), 0) : null;
 
       // Seguidores por red, actual vs previo, para señalar la red que más se movió.
       const redes = Array.from(new Set(rows.map((x) => x.red.toLowerCase()))).map((red) => {
@@ -694,7 +698,8 @@ export default function PortalDescargas({
         rank: r.rank,
         rankTotal: r.total,
         promedioGabinete: r.promedio,
-        topPosts: postsDe(scope),
+        sinDatosPublicaciones: !cubierto,
+        topPosts: cubierto ? postsDe(scope) : [],
         narrativas: nar.axes,
         narrativasFuentes: nar.fuentes,
         cambios: buildDeltaLines({
@@ -706,7 +711,7 @@ export default function PortalDescargas({
           promedioGabinete: r.promedio,
           prevPromedioGabinete: r.prevPromedio,
           publicaciones,
-          prevPublicaciones: prevPostsByScope.get(scope) ?? (prevIds.length ? 0 : null),
+          prevPublicaciones: cubierto ? (prevPostsByScope.get(scope) ?? (prevIds.length ? 0 : null)) : null,
           rank: r.rank,
           prevRank: r.prevRank,
           rankTotal: r.total,
@@ -758,6 +763,10 @@ export default function PortalDescargas({
             lugar_en_gabinete: b.rank,
             total_dependencias: b.rankTotal,
             publicaciones: b.publicaciones,
+            datos_publicaciones_disponibles: !b.sinDatosPublicaciones,
+            nota_datos: b.sinDatosPublicaciones
+              ? "No se cargaron los datos de publicaciones de este ámbito para el periodo. No es inactividad: no comentes volumen ni ausencia de publicaciones."
+              : undefined,
             cambios: (b.cambios ?? []).map((c) => c.texto),
             temas: b.narrativas.map((n) => n.name),
             mejores_publicaciones: b.topPosts.map((p) => ({
@@ -992,7 +1001,10 @@ export default function PortalDescargas({
     const mediana = engs.length ? (engs.length % 2 ? engs[(engs.length - 1) / 2] : (engs[engs.length / 2 - 1] + engs[engs.length / 2]) / 2) : null;
     // El reporte sólo habla de quien sí está medido en el corte: las dependencias
     // sin cuentas con datos no se listan ni se cuentan en ningún indicador.
+    const cubreInst = hasScopeCoverage(periods, "institucional", winFrom, winTo);
+    const cubreTit = hasScopeCoverage(periods, "titular", winFrom, winTo);
     const silenciosInst = rows
+      .filter(() => cubreInst)
       .filter((r) => !(r.publicaciones ?? 0))
       .map((r) => ({ nombre: r.nombre, tipo: "institucional" as const, cuentas: r.cuentas, seguidores: r.seguidores }));
 
@@ -1136,9 +1148,11 @@ export default function PortalDescargas({
     const silencios = [
       ...silenciosInst,
       ...titulares
+        .filter(() => cubreTit)
         .filter((r) => !(r.publicaciones ?? 0))
         .map((r) => ({ nombre: `${r.nombre} (${r.dependencia})`, tipo: "titular" as const, cuentas: r.cuentas, seguidores: r.seguidores })),
       ...marcas
+        .filter(() => cubreInst)
         .filter((r) => !(r.publicaciones ?? 0))
         .map((r) => ({ nombre: `${r.nombre} (marca / destino)`, tipo: "marca" as const, cuentas: r.cuentas, seguidores: r.seguidores })),
     ].sort((a, b) => (b.seguidores ?? 0) - (a.seguidores ?? 0));
