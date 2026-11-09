@@ -624,7 +624,7 @@ function BlockSection({ b, compacto }: { b: ScopeBlock; compacto: boolean }) {
           hint="Contenido con más reacciones, comentarios y compartidos del periodo. Indica qué mensajes conectaron con la audiencia y conviene replicar."
         />
         {b.topPosts.length === 0 ? (
-          <div style={{ color: MUTED, fontSize: 10 }}>Sin publicaciones registradas en el periodo.</div>
+          <div style={{ color: MUTED, fontSize: 10 }}>{b.sinDatosPublicaciones ? "Sin datos cargados de este ámbito para el periodo." : "Sin publicaciones registradas en el periodo."}</div>
         ) : (
           b.topPosts.slice(0, maxPosts).map((p, i) => (
             <div className="pdf-avoid" key={i} style={{
