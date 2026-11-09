@@ -17,7 +17,7 @@
 - [x] Verificar presentación y participación sin alterar CFL ni portales.
 
 # Auditoría de rankings Guanajuato
-- [ ] Corregir y verificar la deduplicación de colaboraciones de CODE: conservar cada cuenta y sus interacciones en los reportes separados.
+- [x] Corregir la deduplicación de colaboraciones de CODE y verificar dos descargas reales: ambos enfoques conservan 24 publicaciones del titular y la publicación con 573 interacciones.
 - [x] Reproducir discrepancias entre semanas para CODE, DIF y Presidencia DIF y revisar todo el gabinete.
 - [x] Unificar selección de periodos y elegibilidad entre ranking actual y anterior de los PDF; mantener la ficha mensual identificada como mensual.
 - [x] Añadir regresiones y verificar resultados históricos y seis descargas con sesión autorizada.
