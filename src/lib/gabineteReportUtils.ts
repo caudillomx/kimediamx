@@ -50,11 +50,13 @@ export function benchmarkPostKey(post: {
   message: string | null;
   link?: string | null;
 }, accountIdentity?: ReadonlyMap<string, string>) {
-  const link = post.link?.trim().toLowerCase();
-  if (link) return `link|${link}`;
   const accountKey = post.competitor_id
     ? accountIdentity?.get(post.competitor_id) ?? post.competitor_id
     : "";
+  // A collaboration has one URL but a separate observation for each account.
+  // Deduplicate repeated imports/aliases, never discard another account's row.
+  const link = post.link?.trim().toLowerCase();
+  if (link) return [accountKey, post.network.toLowerCase(), "link", link].join("|");
   return [accountKey, post.network.toLowerCase(), post.posted_at ?? "", post.message?.trim() ?? ""].join("|");
 }
 
