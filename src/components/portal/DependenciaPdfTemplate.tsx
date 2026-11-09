@@ -634,7 +634,7 @@ function BlockSection({ b, compacto }: { b: ScopeBlock; compacto: boolean }) {
               <div style={{ display: "flex", justifyContent: "space-between", gap: 12, fontSize: 9.2, color: MUTED }}>
                 <span style={{ fontWeight: 600, color: s.main }}>{p.perfil} · {p.red}</span>
                 <span>
-                  {p.fecha ? new Date(p.fecha).toLocaleDateString("es-MX") : ""} ·{" "}
+                  {p.fecha ? new Date(p.fecha).toLocaleDateString("es-MX", { timeZone: "America/Mexico_City" }) : ""} ·{" "}
                   <b style={{ color: INK }}>{nf(p.interacciones)}</b> interacciones
                 </span>
               </div>
@@ -1084,7 +1084,7 @@ export const GabinetePdfTemplate = forwardRef<HTMLDivElement, { data: GabineteRe
                 </div>
               </div>
               <div style={{ fontSize: 8.6, color: MUTED, marginTop: 2 }}>
-                {p.dependencia}{p.fecha ? ` · ${new Date(`${String(p.fecha).slice(0, 10)}T00:00:00`).toLocaleDateString("es-MX", { day: "2-digit", month: "short" })}` : ""}
+                {p.dependencia}{p.fecha ? ` · ${new Date(p.fecha).toLocaleDateString("es-MX", { day: "2-digit", month: "short", timeZone: "America/Mexico_City" })}` : ""}
               </div>
               <div style={{ fontSize: 9.4, color: "#475569", marginTop: 5, overflowWrap: "anywhere" }}>
                 {stripEmoji(p.texto).slice(0, 230)}{p.texto.length > 230 ? "…" : ""}
