@@ -43,6 +43,13 @@
       "when": 1792694559688,
       "tag": "0005_observatory_signal_keyword",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794604060552,
+      "tag": "0006_migration",
+      "breakpoints": true
     }
   ]
 }
