@@ -24,7 +24,7 @@ export function useCf27Teams() {
   }, []);
   useEffect(() => {
     reload(); const t = setInterval(reload, 8000);
-    const ch = supabase.channel('cf27-teams').on('postgres_changes', { event: '*', schema: 'public', table: 'cf27_teams' }, reload).subscribe();
+    const ch = supabase.channel(`cf27-teams-${Math.random().toString(36).slice(2)}`).on('postgres_changes', { event: '*', schema: 'public', table: 'cf27_teams' }, reload).subscribe();
     return () => { clearInterval(t); supabase.removeChannel(ch); };
   }, [reload]);
   return { teams, loaded, reload };

@@ -3,6 +3,7 @@ import { Pause, Play, RotateCcw } from 'lucide-react';
 import { useCf27Votes } from '@/hooks/useCf27Votes';
 import { FUNNEL, type Team } from '@/data/taller2027';
 import { QR } from './Parts';
+import { readManual, useManualTick } from './Live';
 
 export const TALLER_PATH = 'taller';
 
@@ -23,19 +24,23 @@ export function Timer({ minutes, label }: { minutes: number; label?: string }) {
   </div>;
 }
 
-/** Votación de opción múltiple: cada opción es una pregunta sí/no; se muestra % de participantes. */
-export function MultiBars({ keys, labels }: { keys: string[]; labels: string[] }) {
-  const { counts } = useCf27Votes();
-  const yes = keys.map(k => counts(k)['sí'] ?? 0);
-  const people = Math.max(...keys.map(k => Object.values(counts(k)).reduce((a, b) => a + b, 0)), 0);
-  const min = Math.min(...yes);
+/** Votación de opción múltiple: cada opción es una pregunta sí/no; se muestra % de participantes. Al revelar, lo menos marcado es "La tarea de hoy". */
+export function useHabitYes(keys: string[]) {
+  const { counts } = useCf27Votes(); useManualTick();
+  const row = (k: string) => { const c = counts(k); const m = readManual(k); return { yes: (c['sí'] ?? 0) + (m['sí'] ?? 0), all: Object.values(c).reduce((a, b) => a + b, 0) + (m['sí'] ?? 0) + (m['no'] ?? 0) }; };
+  const rows = keys.map(row);
+  return { yes: rows.map(r => r.yes), people: Math.max(0, ...rows.map(r => r.all)) };
+}
+export function MultiBars({ keys, labels, revealed = false }: { keys: string[]; labels: string[]; revealed?: boolean }) {
+  const { yes, people } = useHabitYes(keys);
+  const min = Math.min(...yes); const task = people ? yes.indexOf(min) : -1;
   return <div className="cf-live">
-    {labels.map((l, i) => <div key={l} className={`cf-bar-row ${people && yes[i] === min ? 'hl' : ''}`}>
-      <span className="cf-bar-label">{l}</span>
+    {labels.map((l, i) => <div key={l} className={`cf-bar-row ${revealed && i === task ? 'hl' : ''}`}>
+      <span className="cf-bar-label">{revealed && i === task ? <><b className="cf-accent">La tarea de hoy · </b>{l}</> : l}</span>
       <div className="cf-bar-track"><div style={{ width: `${people ? (yes[i] / people) * 100 : 0}%` }} /></div>
       <b>{people ? Math.round((yes[i] / people) * 100) : 0}%</b>
     </div>)}
-    <p className="cf-live-note">{people} {people === 1 ? 'persona' : 'personas'}{people ? ' · resaltado: lo menos marcado' : ''}</p>
+    <p className="cf-live-note">{people} {people === 1 ? 'persona' : 'personas'}{revealed ? ' · votación cerrada' : ''}</p>
   </div>;
 }
 

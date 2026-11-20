@@ -103,8 +103,10 @@ const App = () => {
           <Route path="/centro-fox/estrategia-digital" element={<FoxSessionSlides />} />
           <Route path="/centro-fox/participa" element={<FoxParticipate />} />
           <Route path="/centro-fox/2027/viernes" element={<Comprender2027 />} />
+          <Route path="/centro-fox/2027/viernes/admin" element={<Comprender2027 admin />} />
           <Route path="/centro-fox/2027/participa" element={<Participa2027 />} />
           <Route path="/centro-fox/2027/sabado" element={<Taller2027 />} />
+          <Route path="/centro-fox/2027/sabado/admin" element={<Taller2027 admin />} />
           <Route path="/centro-fox/2027/taller" element={<TallerParticipa2027 />} />
           <Route path="/centro-fox/2027/hoja" element={<Hoja2027 />} />
           <Route path="/centro-fox/2027/hoja/:teamId" element={<Hoja2027 />} />

@@ -16,16 +16,17 @@ export async function castCf27Vote(id: string, option: string) {
 export function useCf27Votes() {
   const [rows, setRows] = useState<Row[]>([]);
   const [error, setError] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const reload = useCallback(async () => {
     const { data, error: e } = await db.from('cfl_votes').select('question,option,voter').like('question', `${CF27}:%`).limit(5000);
-    setError(Boolean(e)); if (!e) setRows(data ?? []);
+    setError(Boolean(e)); if (!e) setRows(data ?? []); setLoaded(true);
   }, []);
   useEffect(() => {
     reload(); const timer = setInterval(reload, 6000);
-    const channel = supabase.channel('cf27-votes').on('postgres_changes', { event: '*', schema: 'public', table: 'cfl_votes' }, reload).subscribe();
+    const channel = supabase.channel(`cf27-votes-${Math.random().toString(36).slice(2)}`).on('postgres_changes', { event: '*', schema: 'public', table: 'cfl_votes' }, reload).subscribe();
     return () => { clearInterval(timer); supabase.removeChannel(channel); };
   }, [reload]);
   const counts = useCallback((id: string) => rows.filter(r => r.question === cf27Key(id)).reduce<Record<string, number>>((m, r) => { m[r.option] = (m[r.option] ?? 0) + 1; return m; }, {}), [rows]);
   const mine = (id: string) => rows.find(r => r.question === cf27Key(id) && r.voter === localStorage.getItem(VOTER_KEY))?.option;
-  return { counts, mine, reload, error };
+  return { counts, mine, reload, error, loaded };
 }

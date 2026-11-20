@@ -4,7 +4,7 @@ import { Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { FoxLogo } from '@/components/centro-fox-2027/Parts';
 import { useCf27Teams } from '@/hooks/useCf27Teams';
-import { FUNNEL, attackerOf } from '@/data/taller2027';
+import { FUNNEL, LAYERS, attackerOf } from '@/data/taller2027';
 
 const V = ({ label, v, lines = 1 }: { label: string; v?: ReactNode; lines?: number }) => <div className="hj-f"><span>{label}</span>{v ? <p>{v}</p> : Array.from({ length: lines }).map((_, i) => <i key={i} />)}</div>;
 
@@ -38,14 +38,15 @@ export default function Hoja2027() {
           <V label="Tema" v={t?.ex1.tema} /><div className="grid grid-cols-2 gap-3"><V label="Tono" v={t?.ex1.tono} /><V label="Quién habla" v={t?.ex1.quien} /></div>
           <V label="El hueco que nadie ocupa" v={t?.ex1.hueco} lines={2} /><V label="Cuenta a seguir" v={t?.ex1.cuenta} /></section>
         <section className="hj-q"><h2>1 · Emisión: qué digo, a quién y dónde</h2>
-          {segs.map((s, i) => <V key={i} label={`Segmento ${i + 1} · necesidad · red · formato`} v={s?.nombre ? [s.nombre, s.necesidad, s.red, s.formato].filter(Boolean).join(' · ') : undefined} />)}
+          {segs.map((s, i) => <V key={i} label={`Segmento ${i + 1} · territorio · quiénes · dónde se informan · qué les preocupa · a quién le creen`} v={s && LAYERS.some(([k]) => s[k]) ? LAYERS.map(([k]) => s[k]).filter(Boolean).join(' · ') : undefined} />)}
+          <V label="Voces locales que no son políticos" v={t?.ex2.voces} />
           <div className="grid grid-cols-[1fr_2fr] gap-3"><V label="Vainilla" v={t?.ex2.vainilla} /><V label="10 palabras clave" v={t?.ex2.palabras} /></div>
           <V label="Soy quien ___ para ___" v={t?.ex2.soy ? `Soy quien ${t.ex2.soy} para ${t.ex2.para ?? ''}` : undefined} /></section>
         <section className="hj-q"><h2>3 · Reinterpretación: qué harán con mi mensaje</h2>
           <V label="Ataque probable" v={atk?.ex3.ataque} lines={2} /><div className="grid grid-cols-2 gap-3"><V label="Tipo de caso" v={t?.ex3.tipo} /><V label="¿Responder, monitorear o corregir?" v={t?.ex3.decision} /></div>
           <V label="Respuesta (máximo 40 palabras)" v={t?.ex3.respuesta} lines={3} /></section>
         <section className="hj-q"><h2>4 · Respuesta: qué haré y cómo lo convierto en acción</h2>
-          <V label="Acción" v={t?.ex4.accion} />
+          <div className="grid grid-cols-[2fr_1fr] gap-3"><V label="Acción" v={t?.ex4.accion} /><V label="Fecha (antes del 6 jun 2027)" v={t?.ex4.fecha} /></div>
           <div className="grid grid-cols-5 gap-2">{FUNNEL.map((f, i) => <V key={f} label={f} v={t?.ex4.metas?.[i] != null ? Number(t.ex4.metas[i]).toLocaleString('es-MX') : undefined} />)}</div>
           {[0, 1].map(i => <V key={i} label={`Barrera ${i + 1} y cómo la quito`} v={t?.ex4.barreras?.[i]?.barrera ? `${t.ex4.barreras[i].barrera} → ${t.ex4.barreras[i].solucion ?? ''}` : undefined} />)}
           <V label="Qué voy a medir" v={t?.ex4.indicador} /></section>

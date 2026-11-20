@@ -29,3 +29,19 @@ describe('Centro Fox 2027 · participación', () => {
     expect(isClean(normalizeWord('Pendejo'))).toBe(false);
   });
 });
+
+import { verdict, activity as act } from '@/data/centroFox2027';
+describe('Centro Fox 2027 · revelado', () => {
+  it('si la mayoría acierta, dice qué porcentaje acertó', () => {
+    expect(verdict({ A: 1, B: 3 }, ['A', 'B'], 'B')).toBe('El 75% de la sala acertó.');
+  });
+  it('si la mayoría falla, contrasta lo votado con lo que ganó', () => {
+    expect(verdict({ A: 3, B: 1 }, ['A', 'B'], 'B')).toBe('La sala votó por “A”; en realidad ganó “B”.');
+  });
+  it('sin votos no inventa un veredicto', () => {
+    expect(verdict({}, ['A', 'B'], 'B')).toBe('Todavía no hay votos de la sala.');
+  });
+  it('respuestas correctas salen de los datos: B en ambas rondas, Instagram, Sheinbaum, medios', () => {
+    expect([act('v09').correct, act('v10').correct, act('v12').correct, act('v17').correct, act('v07').correct]).toEqual(['B', 'B', 'Instagram', 'Claudia Sheinbaum', 'Medios, periodistas e influencers']);
+  });
+});

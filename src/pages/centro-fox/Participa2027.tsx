@@ -19,7 +19,7 @@ export default function Participa2027() {
     if (ok) { await reload(); toast.success('Listo, quedó tu respuesta'); } else toast.error('No se guardó. Inténtalo otra vez.');
   }
   const context = (id: string) => {
-    const r = INE.juego_cual_funciono[Number(id.slice(1)) - 9];
+    const r = ['v09', 'v10'].includes(id) ? INE.juego_cual_funciono[Number(id.slice(1)) - 9] : undefined;
     if (r) return <p className="text-sm text-muted-foreground mb-3">{r.A.perfil} · ¿la publicación A o la B tuvo más interacción? Míralas en la pantalla.</p>;
     const c = CASES.find(x => x.id === id);
     return c ? <p className="text-sm mb-3">{c.text}</p> : null;
