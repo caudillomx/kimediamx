@@ -1,0 +1,1967 @@
+{
+ "_nota": "Datos para la presentación \"Comprender, verificar, movilizar\" · Centro Fox / PAN · nov 2026. Cifras calculadas por KiMedia a partir de exports de Fanpage Karma y ExportComments.",
+ "caso_ine": {
+  "meta_ine": {
+   "fuente": "Fanpage Karma · Top 500 publicaciones por interacción",
+   "busqueda": "INE OR Instituto Nacional Electoral OR Guadalupe Taddei OR Lorenzo Córdova",
+   "periodo": "1 oct 2026 – 19 nov 2026",
+   "redes": [
+    "Facebook (400)",
+    "Instagram (100)"
+   ],
+   "publicaciones": 500,
+   "interacciones_totales": 14790477,
+   "perfiles_distintos": 169
+  },
+  "curva_diaria": [
+   {
+    "fecha": "2026-10-01",
+    "publicaciones": 2,
+    "interacciones": 43617
+   },
+   {
+    "fecha": "2026-10-02",
+    "publicaciones": 0,
+    "interacciones": 0
+   },
+   {
+    "fecha": "2026-10-03",
+    "publicaciones": 0,
+    "interacciones": 0
+   },
+   {
+    "fecha": "2026-10-04",
+    "publicaciones": 0,
+    "interacciones": 0
+   },
+   {
+    "fecha": "2026-10-05",
+    "publicaciones": 0,
+    "interacciones": 0
+   },
+   {
+    "fecha": "2026-10-06",
+    "publicaciones": 0,
+    "interacciones": 0
+   },
+   {
+    "fecha": "2026-10-07",
+    "publicaciones": 1,
+    "interacciones": 38495
+   },
+   {
+    "fecha": "2026-10-08",
+    "publicaciones": 3,
+    "interacciones": 79381
+   },
+   {
+    "fecha": "2026-10-09",
+    "publicaciones": 0,
+    "interacciones": 0
+   },
+   {
+    "fecha": "2026-10-10",
+    "publicaciones": 0,
+    "interacciones": 0
+   },
+   {
+    "fecha": "2026-10-11",
+    "publicaciones": 2,
+    "interacciones": 38443
+   },
+   {
+    "fecha": "2026-10-12",
+    "publicaciones": 0,
+    "interacciones": 0
+   },
+   {
+    "fecha": "2026-10-13",
+    "publicaciones": 1,
+    "interacciones": 11432
+   },
+   {
+    "fecha": "2026-10-14",
+    "publicaciones": 1,
+    "interacciones": 52508
+   },
+   {
+    "fecha": "2026-10-15",
+    "publicaciones": 0,
+    "interacciones": 0
+   },
+   {
+    "fecha": "2026-10-16",
+    "publicaciones": 0,
+    "interacciones": 0
+   },
+   {
+    "fecha": "2026-10-17",
+    "publicaciones": 0,
+    "interacciones": 0
+   },
+   {
+    "fecha": "2026-10-18",
+    "publicaciones": 0,
+    "interacciones": 0
+   },
+   {
+    "fecha": "2026-10-19",
+    "publicaciones": 2,
+    "interacciones": 50674
+   },
+   {
+    "fecha": "2026-10-20",
+    "publicaciones": 14,
+    "interacciones": 693614
+   },
+   {
+    "fecha": "2026-10-21",
+    "publicaciones": 6,
+    "interacciones": 177411
+   },
+   {
+    "fecha": "2026-10-22",
+    "publicaciones": 7,
+    "interacciones": 198338
+   },
+   {
+    "fecha": "2026-10-23",
+    "publicaciones": 16,
+    "interacciones": 407158
+   },
+   {
+    "fecha": "2026-10-24",
+    "publicaciones": 26,
+    "interacciones": 474267
+   },
+   {
+    "fecha": "2026-10-25",
+    "publicaciones": 15,
+    "interacciones": 475850
+   },
+   {
+    "fecha": "2026-10-26",
+    "publicaciones": 56,
+    "interacciones": 1559805
+   },
+   {
+    "fecha": "2026-10-27",
+    "publicaciones": 37,
+    "interacciones": 1117188
+   },
+   {
+    "fecha": "2026-10-28",
+    "publicaciones": 44,
+    "interacciones": 1171800
+   },
+   {
+    "fecha": "2026-10-29",
+    "publicaciones": 37,
+    "interacciones": 972535
+   },
+   {
+    "fecha": "2026-10-30",
+    "publicaciones": 34,
+    "interacciones": 1005062
+   },
+   {
+    "fecha": "2026-10-31",
+    "publicaciones": 10,
+    "interacciones": 241529
+   },
+   {
+    "fecha": "2026-11-01",
+    "publicaciones": 2,
+    "interacciones": 31191
+   },
+   {
+    "fecha": "2026-11-02",
+    "publicaciones": 10,
+    "interacciones": 424344
+   },
+   {
+    "fecha": "2026-11-03",
+    "publicaciones": 17,
+    "interacciones": 808049
+   },
+   {
+    "fecha": "2026-11-04",
+    "publicaciones": 17,
+    "interacciones": 429554
+   },
+   {
+    "fecha": "2026-11-05",
+    "publicaciones": 16,
+    "interacciones": 633300
+   },
+   {
+    "fecha": "2026-11-06",
+    "publicaciones": 17,
+    "interacciones": 516853
+   },
+   {
+    "fecha": "2026-11-07",
+    "publicaciones": 6,
+    "interacciones": 135445
+   },
+   {
+    "fecha": "2026-11-08",
+    "publicaciones": 3,
+    "interacciones": 37222
+   },
+   {
+    "fecha": "2026-11-09",
+    "publicaciones": 25,
+    "interacciones": 1266304
+   },
+   {
+    "fecha": "2026-11-10",
+    "publicaciones": 12,
+    "interacciones": 231299
+   },
+   {
+    "fecha": "2026-11-11",
+    "publicaciones": 15,
+    "interacciones": 427881
+   },
+   {
+    "fecha": "2026-11-12",
+    "publicaciones": 12,
+    "interacciones": 333458
+   },
+   {
+    "fecha": "2026-11-13",
+    "publicaciones": 5,
+    "interacciones": 102015
+   },
+   {
+    "fecha": "2026-11-14",
+    "publicaciones": 4,
+    "interacciones": 76738
+   },
+   {
+    "fecha": "2026-11-15",
+    "publicaciones": 4,
+    "interacciones": 138725
+   },
+   {
+    "fecha": "2026-11-16",
+    "publicaciones": 7,
+    "interacciones": 96771
+   },
+   {
+    "fecha": "2026-11-17",
+    "publicaciones": 6,
+    "interacciones": 105991
+   },
+   {
+    "fecha": "2026-11-18",
+    "publicaciones": 7,
+    "interacciones": 173259
+   },
+   {
+    "fecha": "2026-11-19",
+    "publicaciones": 1,
+    "interacciones": 12971
+   }
+  ],
+  "quien_se_llevo_la_conversacion": [
+   {
+    "actor": "Figuras del PAN (Anaya, Téllez, Zepeda, López Rabadán) y Xóchitl Gálvez",
+    "publicaciones": 12,
+    "interacciones": 404664,
+    "porcentaje": 2.7
+   },
+   {
+    "actor": "Morena y Gobierno de México (11 perfiles)",
+    "publicaciones": 26,
+    "interacciones": 686724,
+    "porcentaje": 4.6
+   },
+   {
+    "actor": "PRI (Alejandro Moreno, PRI Oficial, Añorve)",
+    "publicaciones": 7,
+    "interacciones": 155909,
+    "porcentaje": 1.1
+   },
+   {
+    "actor": "Ricardo Salinas (FB + IG)",
+    "publicaciones": 9,
+    "interacciones": 776065,
+    "porcentaje": 5.2
+   },
+   {
+    "actor": "INE México (cuenta oficial)",
+    "publicaciones": 1,
+    "interacciones": 46521,
+    "porcentaje": 0.3
+   },
+   {
+    "actor": "Medios, periodistas, influencers y páginas",
+    "publicaciones": 445,
+    "interacciones": 12720594,
+    "porcentaje": 86.0
+   }
+  ],
+  "top10_perfiles": [
+   {
+    "perfil": "Latinus",
+    "interacciones": 1415000,
+    "porcentaje": 9.6
+   },
+   {
+    "perfil": "latinus_us",
+    "interacciones": 1080766,
+    "porcentaje": 7.3
+   },
+   {
+    "perfil": "Radio Fórmula",
+    "interacciones": 515148,
+    "porcentaje": 3.5
+   },
+   {
+    "perfil": "ricardosalinas",
+    "interacciones": 480606,
+    "porcentaje": 3.2
+   },
+   {
+    "perfil": "La Ruta Del Rey",
+    "interacciones": 461358,
+    "porcentaje": 3.1
+   },
+   {
+    "perfil": "La Nacional",
+    "interacciones": 396232,
+    "porcentaje": 2.7
+   },
+   {
+    "perfil": "Político MX",
+    "interacciones": 388538,
+    "porcentaje": 2.6
+   },
+   {
+    "perfil": "Azteca Noticias",
+    "interacciones": 339900,
+    "porcentaje": 2.3
+   },
+   {
+    "perfil": "Ricardo Salinas",
+    "interacciones": 295459,
+    "porcentaje": 2.0
+   },
+   {
+    "perfil": "Amor por México",
+    "interacciones": 284910,
+    "porcentaje": 1.9
+   }
+  ],
+  "facebook_vs_instagram": [
+   {
+    "red": "Facebook",
+    "publicaciones": 400,
+    "mediana_interacciones": 19184,
+    "mediana_tasa_interaccion_pct": 1.58
+   },
+   {
+    "red": "Instagram",
+    "publicaciones": 100,
+    "mediana_interacciones": 24317,
+    "mediana_tasa_interaccion_pct": 3.36
+   }
+  ],
+  "ruido_busqueda": {
+   "publicaciones": 18,
+   "interacciones": 848978,
+   "porcentaje_interacciones": 5.7,
+   "tema": "El futbolista Gilberto Mora tramita su credencial del INE",
+   "perfiles_ejemplo": [
+    "Cerebros",
+    "Denuncia Los Reyes La Paz",
+    "INE México",
+    "Indie 505",
+    "alertaqro",
+    "asmexico_",
+    "clarosports",
+    "diariodemorelosoficial"
+   ]
+  },
+  "top10_publicaciones": [
+   {
+    "fecha": "2026-10-29",
+    "perfil": "La Nacional",
+    "red": "Facebook",
+    "interacciones": 241315,
+    "texto_resumen": "ÚLTIMO MOMENTO: Loret exhibe el millonario negocio de Sheinbaum y Morena con el INE\n\nComo bien lo documentó Carlos Loret de Mola con pruebas en mano, la supuesta \"solución\" de Shei"
+   },
+   {
+    "fecha": "2026-11-09",
+    "perfil": "ricardosalinas",
+    "red": "Instagram",
+    "interacciones": 192150,
+    "texto_resumen": "Andy, el que nos hace perder el tiempo eres tú, reciclando asuntos que desde hace décadas son públicos y que ya hemos respondido puntualmente.\n\nTe explico: a diferencia de ti, mi t"
+   },
+   {
+    "fecha": "2026-11-09",
+    "perfil": "Político MX",
+    "red": "Facebook",
+    "interacciones": 190787,
+    "texto_resumen": "️ Exhiben grabación de AMLO respaldando a Taddei en la mañanera\n\nDurante la conferencia matutina de la presidenta Sheinbaum, la periodista Reyna Haydee exhibió una grabación del ex"
+   },
+   {
+    "fecha": "2026-11-03",
+    "perfil": "ricardosalinas",
+    "red": "Instagram",
+    "interacciones": 183748,
+    "texto_resumen": "Ay Andy, hoy, sin mostrar una sola prueba me acusas de estar detrás de una campaña en contra tuya. Yo, con todas las pruebas en la mano te pregunto:\n\n¿Con qué dinero pagaste tus vi"
+   },
+   {
+    "fecha": "2026-11-09",
+    "perfil": "Ricardo Salinas",
+    "red": "Facebook",
+    "interacciones": 155003,
+    "texto_resumen": "Andy, el que nos hace perder el tiempo eres tú, reciclando asuntos que desde hace décadas son públicos y que ya hemos respondido puntualmente.\n\nTe explico: a diferencia de ti, mi t"
+   },
+   {
+    "fecha": "2026-10-20",
+    "perfil": "alertaqro",
+    "red": "Instagram",
+    "interacciones": 144814,
+    "texto_resumen": "⚽ ¡Morita ya fue a sacar su INE!  \n\nEl Instituto Nacional Electoral difundió imágenes de Gilberto Mora mientras tramitaba su identificación oficial, luego de que el pasado 14 de oc"
+   },
+   {
+    "fecha": "2026-10-26",
+    "perfil": "Derecha Diario México",
+    "red": "Facebook",
+    "interacciones": 124591,
+    "texto_resumen": "| TIENE QUE PAGAR: El empresario libertario Ricarso Salinas Pliego exigió que la corrupta Guadalupe Taddei sea encarcelada por traición a la patria tras sus escándalos millonarios"
+   },
+   {
+    "fecha": "2026-11-03",
+    "perfil": "La Nacional",
+    "red": "Facebook",
+    "interacciones": 116675,
+    "texto_resumen": "LORET DE MOLA A SHEINBAUM: ¡DEJE DE BUSCAR CULPABLES!\n\nEl periodista le recuerda que Guadalupe Taddei es parte de Morena y que llegó al cargo bajo el respaldo del partido. Ahora n"
+   },
+   {
+    "fecha": "2026-11-05",
+    "perfil": "Verónica Camino Farjat",
+    "red": "Facebook",
+    "interacciones": 114807,
+    "texto_resumen": "#MafiaElectoral en #México, el resumen que no te puedes perder. \n\nHasta se les borró la sonrisa porque:\n\n En #Morena, con nuestra Presidenta Claudia Sheinbaum Pardo, seguimos desma"
+   },
+   {
+    "fecha": "2026-10-27",
+    "perfil": "Armando Galera - Informado Caribe",
+    "red": "Facebook",
+    "interacciones": 109675,
+    "texto_resumen": "‼ Le consiguió chamba a su novia en el INE: ganaba 92 mil pesos mensuales por no hacer nada.\n\nY siguen los escándalos por la corrupción en el INE al frente de Guadalupe Taddei: res"
+   }
+  ],
+  "juego_cual_funciono": [
+   {
+    "ronda": 1,
+    "leccion": "Un protagonista con nombre y una acción concreta le gana a una pregunta abstracta.",
+    "A": {
+     "perfil": "Adela Micha",
+     "red": "Facebook",
+     "fecha": "2026-10-29",
+     "texto": "¡INE EN CRISIS! ¿Quién es responsable y por qué siguen culpando al pasado?",
+     "interacciones": 19826,
+     "link": "https://www.facebook.com/reel/1443325894569868/"
+    },
+    "B": {
+     "perfil": "Adela Micha",
+     "red": "Facebook",
+     "fecha": "2026-11-06",
+     "texto": "¡SHEINBAUM SEÑALA AL RESPONSABLE! ¿A quién culpa por la crisis del INE?",
+     "interacciones": 89059,
+     "link": "https://www.facebook.com/reel/3316035688786427/"
+    }
+   },
+   {
+    "ronda": 2,
+    "leccion": "El momento importa: publicar el día del hecho, con datos frescos, multiplica el alcance del mismo argumento.",
+    "A": {
+     "perfil": "Ricardo Anaya Cortés",
+     "red": "Facebook",
+     "fecha": "2026-11-18",
+     "texto": "Primero pusieron a Taddei. Después vino el escándalo. Y ahora Morena pone pretextos para no elegir a la nueva presidenta del INE.\n\n¿Qué buscan? Llegar a 2027 con un INE mocho, debilitado y a modo.\n\n¡No vamos a permitir esta trampa! ¡No al fraude electoral!",
+     "interacciones": 14470,
+     "link": "https://www.facebook.com/reel/1900207294309234/"
+    },
+    "B": {
+     "perfil": "Ricardo Anaya Cortés",
+     "red": "Facebook",
+     "fecha": "2026-10-27",
+     "texto": "Morena impuso a Taddei en el INE. Les advertimos. Hoy renuncia entre audios con un proveedor, fiestas con contratistas y una indagatoria de la ASF por contratos de 198 mdp. Y Monreal ya cocina al relevo como si nada. No se laven las manos: ustedes la pusieron.",
+     "interacciones": 58559,
+     "link": "https://www.facebook.com/reel/968827715813189/"
+    }
+   },
+   {
+    "ronda": 3,
+    "leccion": "El detalle humano y verificable (el chofer, el cocinero) viaja más que la tesis política.",
+    "A": {
+     "perfil": "Azteca Noticias",
+     "red": "Facebook",
+     "fecha": "2026-10-25",
+     "texto": "“Taddei jamás hubiera sido presidenta del INE de no haber sido por Morena”.\n\nGuadalupe Taddei llegó a la presidencia del INE con el respaldo de Morena. Hoy, su gestión está bajo la lupa por señalamientos de presuntos conflictos de interés, contratos millonarios y vínculos con proveedores del Institu",
+     "interacciones": 7676,
+     "link": "https://www.facebook.com/reel/1145177738191831/"
+    },
+    "B": {
+     "perfil": "Azteca Noticias",
+     "red": "Facebook",
+     "fecha": "2026-10-22",
+     "texto": "¡Escándalo en el INE!\n\nUna investigación del periódico Reforma reveló que el chofer y cocinero de la presidenta del INE, Guadalupe Taddei, también habría sido apoderado legal de una empresa que obtuvo contratos millonarios del instituto.\n\nSe debe investigar si hubo irregularidades en la asignación d",
+     "interacciones": 73185,
+     "link": "https://www.facebook.com/reel/1146899381625712/"
+    }
+   },
+   {
+    "ronda": 4,
+    "opcional": true,
+    "leccion": "El conflicto personal multiplica la interacción, pero no necesariamente construye reputación.",
+    "A": {
+     "perfil": "ricardosalinas",
+     "red": "Instagram",
+     "fecha": "2026-10-27",
+     "texto": "Renunciar no borra lo que pasó. Las instituciones como el INE se defienden rindiendo cuentas.\n\nQue la fgrmexico investigue a Taddei y se haga justicia!!!",
+     "interacciones": 18488,
+     "link": "https://www.instagram.com/p/DfBTUUgRfVf/"
+    },
+    "B": {
+     "perfil": "ricardosalinas",
+     "red": "Instagram",
+     "fecha": "2026-11-09",
+     "texto": "Andy, el que nos hace perder el tiempo eres tú, reciclando asuntos que desde hace décadas son públicos y que ya hemos respondido puntualmente.\n\nTe explico: a diferencia de ti, mi trayectoria está a la vista de todos. Llevo más de 40 años trabajando, innovando, invirtiendo, arriesgando mi patrimonio ",
+     "interacciones": 192150,
+     "link": "https://www.instagram.com/p/DfjBUPKRQj2/"
+    }
+   }
+  ]
+ },
+ "comentarios": {
+  "meta_comentarios": {
+   "herramienta": "ExportComments",
+   "metodo_postura": "Lectura manual, una por una, de una muestra aleatoria de 100 comentarios por publicación (400 en total). Postura medida respecto al mensaje del emisor. Margen aproximado ±10 puntos por publicación.",
+   "metodo_nube": "Todos los comentarios exportados, sin duplicados, sin menciones, enlaces, emojis, palabras vacías ni nombres de usuarios."
+  },
+  "publicaciones": [
+   {
+    "id": "fb1",
+    "emisor": "Verónica Camino Farjat",
+    "tipo": "Senadora de Morena (oficialista)",
+    "red": "Facebook (reel)",
+    "fecha_post": "2026-11-05 20:20",
+    "mensaje": "#MafiaElectoral: \"seguimos desmantelando las redes de corrupción heredadas y protegidas por el PRIAN\".",
+    "comentarios_reportados": 5362,
+    "interacciones_post": 114807,
+    "comentarios_exportados": 3525,
+    "cobertura_export_pct": 66,
+    "comentarios_unicos_analizados": 3363,
+    "respuestas_entre_usuarios_pct": 3,
+    "concentracion_likes_top3_pct": 13,
+    "postura_pct": {
+     "alineado_con_emisor": 68,
+     "en_contra": 13,
+     "neutral_o_ruido": 19
+    },
+    "narrativas": [
+     {
+      "clave": "a",
+      "narrativa": "Aplauso y agradecimiento al emisor",
+      "pct_muestra": 34,
+      "tipo": "apoyo",
+      "ejemplo": "\"Excelente información, gracias senadora\""
+     },
+     {
+      "clave": "b",
+      "narrativa": "La culpa es del PRIAN / del pasado",
+      "pct_muestra": 19,
+      "tipo": "argumento",
+      "ejemplo": "\"Los prianistas se valen de eso para echarle a nuestra presidenta\""
+     },
+     {
+      "clave": "c",
+      "narrativa": "Cárcel y que devuelva lo robado",
+      "pct_muestra": 15,
+      "tipo": "exigencia",
+      "ejemplo": "\"Cárcel para los corruptos\""
+     },
+     {
+      "clave": "o",
+      "narrativa": "Otros temas, ruido o sin postura",
+      "pct_muestra": 14,
+      "tipo": "—",
+      "ejemplo": ""
+     },
+     {
+      "clave": "f",
+      "narrativa": "\"No va a pasar nada\": impunidad",
+      "pct_muestra": 5,
+      "tipo": "argumento",
+      "ejemplo": "\"No va a pasar nada… solo show y que siga la impunidad\""
+     },
+     {
+      "clave": "d",
+      "narrativa": "\"Taddei es de Morena / la pusieron ustedes\"",
+      "pct_muestra": 5,
+      "tipo": "argumento",
+      "ejemplo": "\"Taddei sí es de Morena, si no, expliquen\""
+     },
+     {
+      "clave": "e",
+      "narrativa": "Burla, insulto o pleito entre usuarios",
+      "pct_muestra": 5,
+      "tipo": "burla/insulto",
+      "ejemplo": ""
+     },
+     {
+      "clave": "g",
+      "narrativa": "Halago personal al emisor",
+      "pct_muestra": 3,
+      "tipo": "apoyo",
+      "ejemplo": ""
+     }
+    ],
+    "nube_palabras": [
+     {
+      "palabra": "gracias",
+      "frecuencia": 555
+     },
+     {
+      "palabra": "información",
+      "frecuencia": 468
+     },
+     {
+      "palabra": "senadora",
+      "frecuencia": 380
+     },
+     {
+      "palabra": "morena",
+      "frecuencia": 293
+     },
+     {
+      "palabra": "excelente",
+      "frecuencia": 281
+     },
+     {
+      "palabra": "ine",
+      "frecuencia": 255
+     },
+     {
+      "palabra": "pueblo",
+      "frecuencia": 218
+     },
+     {
+      "palabra": "corruptos",
+      "frecuencia": 216
+     },
+     {
+      "palabra": "corrupción",
+      "frecuencia": 212
+     },
+     {
+      "palabra": "verónica",
+      "frecuencia": 185
+     },
+     {
+      "palabra": "méxico",
+      "frecuencia": 179
+     },
+     {
+      "palabra": "saludos",
+      "frecuencia": 155
+     },
+     {
+      "palabra": "claro",
+      "frecuencia": 152
+     },
+     {
+      "palabra": "camino",
+      "frecuencia": 146
+     },
+     {
+      "palabra": "prian",
+      "frecuencia": 134
+     },
+     {
+      "palabra": "cárcel",
+      "frecuencia": 111
+     },
+     {
+      "palabra": "muchas",
+      "frecuencia": 109
+     },
+     {
+      "palabra": "lorenzo",
+      "frecuencia": 108
+     },
+     {
+      "palabra": "buena",
+      "frecuencia": 108
+     },
+     {
+      "palabra": "farjat",
+      "frecuencia": 105
+     },
+     {
+      "palabra": "dinero",
+      "frecuencia": 101
+     },
+     {
+      "palabra": "años",
+      "frecuencia": 99
+     },
+     {
+      "palabra": "tadei",
+      "frecuencia": 97
+     },
+     {
+      "palabra": "prianistas",
+      "frecuencia": 93
+     },
+     {
+      "palabra": "verdad",
+      "frecuencia": 89
+     },
+     {
+      "palabra": "presidenta",
+      "frecuencia": 88
+     },
+     {
+      "palabra": "explicación",
+      "frecuencia": 88
+     },
+     {
+      "palabra": "gente",
+      "frecuencia": 86
+     },
+     {
+      "palabra": "partido",
+      "frecuencia": 84
+     },
+     {
+      "palabra": "poder",
+      "frecuencia": 81
+     },
+     {
+      "palabra": "córdoba",
+      "frecuencia": 74
+     },
+     {
+      "palabra": "pri",
+      "frecuencia": 71
+     },
+     {
+      "palabra": "gobierno",
+      "frecuencia": 69
+     },
+     {
+      "palabra": "viva",
+      "frecuencia": 66
+     },
+     {
+      "palabra": "bueno",
+      "frecuencia": 64
+     },
+     {
+      "palabra": "somos",
+      "frecuencia": 62
+     },
+     {
+      "palabra": "taddei",
+      "frecuencia": 61
+     },
+     {
+      "palabra": "toca",
+      "frecuencia": 60
+     },
+     {
+      "palabra": "siguen",
+      "frecuencia": 60
+     },
+     {
+      "palabra": "debe",
+      "frecuencia": 59
+     },
+     {
+      "palabra": "informar",
+      "frecuencia": 58
+     },
+     {
+      "palabra": "seguir",
+      "frecuencia": 57
+     },
+     {
+      "palabra": "pasado",
+      "frecuencia": 57
+     },
+     {
+      "palabra": "claudia",
+      "frecuencia": 56
+     },
+     {
+      "palabra": "pruebas",
+      "frecuencia": 56
+     }
+    ],
+    "ritmo_primeras_24h": [
+     {
+      "hora_desde_publicacion": 0,
+      "comentarios": 90
+     },
+     {
+      "hora_desde_publicacion": 1,
+      "comentarios": 109
+     },
+     {
+      "hora_desde_publicacion": 2,
+      "comentarios": 130
+     },
+     {
+      "hora_desde_publicacion": 3,
+      "comentarios": 121
+     },
+     {
+      "hora_desde_publicacion": 4,
+      "comentarios": 68
+     },
+     {
+      "hora_desde_publicacion": 5,
+      "comentarios": 54
+     },
+     {
+      "hora_desde_publicacion": 6,
+      "comentarios": 45
+     },
+     {
+      "hora_desde_publicacion": 7,
+      "comentarios": 52
+     },
+     {
+      "hora_desde_publicacion": 8,
+      "comentarios": 63
+     },
+     {
+      "hora_desde_publicacion": 9,
+      "comentarios": 109
+     },
+     {
+      "hora_desde_publicacion": 10,
+      "comentarios": 209
+     },
+     {
+      "hora_desde_publicacion": 11,
+      "comentarios": 267
+     },
+     {
+      "hora_desde_publicacion": 12,
+      "comentarios": 213
+     },
+     {
+      "hora_desde_publicacion": 13,
+      "comentarios": 201
+     },
+     {
+      "hora_desde_publicacion": 14,
+      "comentarios": 147
+     },
+     {
+      "hora_desde_publicacion": 15,
+      "comentarios": 118
+     },
+     {
+      "hora_desde_publicacion": 16,
+      "comentarios": 88
+     },
+     {
+      "hora_desde_publicacion": 17,
+      "comentarios": 72
+     },
+     {
+      "hora_desde_publicacion": 18,
+      "comentarios": 50
+     },
+     {
+      "hora_desde_publicacion": 19,
+      "comentarios": 31
+     },
+     {
+      "hora_desde_publicacion": 20,
+      "comentarios": 36
+     },
+     {
+      "hora_desde_publicacion": 21,
+      "comentarios": 34
+     },
+     {
+      "hora_desde_publicacion": 22,
+      "comentarios": 30
+     },
+     {
+      "hora_desde_publicacion": 23,
+      "comentarios": 20
+     }
+    ],
+    "comentarios_fuera_de_24h": 1168
+   },
+   {
+    "id": "fb2",
+    "emisor": "Claudia Sheinbaum Pardo",
+    "tipo": "Presidenta de México (oficialista)",
+    "red": "Facebook (reel)",
+    "fecha_post": "2026-11-04 20:03",
+    "mensaje": "Dos grupos empresariales acapararon los materiales electorales por más de 20 años; hay que investigar los periodos anteriores (Pacto por México).",
+    "comentarios_reportados": 10520,
+    "interacciones_post": 72364,
+    "comentarios_exportados": 5408,
+    "cobertura_export_pct": 51,
+    "comentarios_unicos_analizados": 5181,
+    "respuestas_entre_usuarios_pct": 29,
+    "concentracion_likes_top3_pct": 40,
+    "postura_pct": {
+     "alineado_con_emisor": 12,
+     "en_contra": 52,
+     "neutral_o_ruido": 36
+    },
+    "narrativas": [
+     {
+      "clave": "e",
+      "narrativa": "Burla, insulto o pleito entre usuarios",
+      "pct_muestra": 36,
+      "tipo": "burla/insulto",
+      "ejemplo": "(insultos entre usuarios, no se reproducen)"
+     },
+     {
+      "clave": "o",
+      "narrativa": "Otros temas, ruido o sin postura",
+      "pct_muestra": 20,
+      "tipo": "—",
+      "ejemplo": ""
+     },
+     {
+      "clave": "h",
+      "narrativa": "\"Deje de culpar al pasado, hágase responsable\"",
+      "pct_muestra": 15,
+      "tipo": "argumento",
+      "ejemplo": "\"El pasado ya fue, hágase responsable de lo que pasa hoy\""
+     },
+     {
+      "clave": "d",
+      "narrativa": "\"Taddei es de Morena / la pusieron ustedes\"",
+      "pct_muestra": 12,
+      "tipo": "argumento",
+      "ejemplo": "\"A Taddei la pusieron ustedes, ya dejen de darle vueltas\""
+     },
+     {
+      "clave": "b",
+      "narrativa": "La culpa es del PRIAN / del pasado",
+      "pct_muestra": 7,
+      "tipo": "argumento",
+      "ejemplo": "\"Si no hay pasado no hay presente… la verdad incomoda\""
+     },
+     {
+      "clave": "a",
+      "narrativa": "Aplauso y agradecimiento al emisor",
+      "pct_muestra": 5,
+      "tipo": "apoyo",
+      "ejemplo": "\"La mejor presidenta\""
+     },
+     {
+      "clave": "f",
+      "narrativa": "\"No va a pasar nada\": impunidad",
+      "pct_muestra": 4,
+      "tipo": "argumento",
+      "ejemplo": "\"¿A quién van a meter al bote?\""
+     },
+     {
+      "clave": "c",
+      "narrativa": "Cárcel y que devuelva lo robado",
+      "pct_muestra": 1,
+      "tipo": "exigencia",
+      "ejemplo": ""
+     }
+    ],
+    "nube_palabras": [
+     {
+      "palabra": "pasado",
+      "frecuencia": 626
+     },
+     {
+      "palabra": "presidenta",
+      "frecuencia": 399
+     },
+     {
+      "palabra": "morena",
+      "frecuencia": 328
+     },
+     {
+      "palabra": "claudia",
+      "frecuencia": 263
+     },
+     {
+      "palabra": "señora",
+      "frecuencia": 254
+     },
+     {
+      "palabra": "presente",
+      "frecuencia": 219
+     },
+     {
+      "palabra": "años",
+      "frecuencia": 207
+     },
+     {
+      "palabra": "culpa",
+      "frecuencia": 179
+     },
+     {
+      "palabra": "méxico",
+      "frecuencia": 177
+     },
+     {
+      "palabra": "país",
+      "frecuencia": 175
+     },
+     {
+      "palabra": "ine",
+      "frecuencia": 173
+     },
+     {
+      "palabra": "gobierno",
+      "frecuencia": 172
+     },
+     {
+      "palabra": "sheinbaum",
+      "frecuencia": 170
+     },
+     {
+      "palabra": "taddei",
+      "frecuencia": 159
+     },
+     {
+      "palabra": "fraude",
+      "frecuencia": 156
+     },
+     {
+      "palabra": "mejor",
+      "frecuencia": 153
+     },
+     {
+      "palabra": "pardo",
+      "frecuencia": 144
+     },
+     {
+      "palabra": "presidente",
+      "frecuencia": 130
+     },
+     {
+      "palabra": "tadei",
+      "frecuencia": 126
+     },
+     {
+      "palabra": "partido",
+      "frecuencia": 125
+     },
+     {
+      "palabra": "corruptos",
+      "frecuencia": 120
+     },
+     {
+      "palabra": "poder",
+      "frecuencia": 119
+     },
+     {
+      "palabra": "trabajar",
+      "frecuencia": 116
+     },
+     {
+      "palabra": "moral",
+      "frecuencia": 111
+     },
+     {
+      "palabra": "verdad",
+      "frecuencia": 110
+     },
+     {
+      "palabra": "amlo",
+      "frecuencia": 107
+     },
+     {
+      "palabra": "peor",
+      "frecuencia": 107
+     },
+     {
+      "palabra": "responsable",
+      "frecuencia": 104
+     },
+     {
+      "palabra": "pueblo",
+      "frecuencia": 103
+     },
+     {
+      "palabra": "historia",
+      "frecuencia": 103
+     },
+     {
+      "palabra": "autoridad",
+      "frecuencia": 103
+     },
+     {
+      "palabra": "entonces",
+      "frecuencia": 99
+     },
+     {
+      "palabra": "pruebas",
+      "frecuencia": 97
+     },
+     {
+      "palabra": "madre",
+      "frecuencia": 97
+     },
+     {
+      "palabra": "gente",
+      "frecuencia": 93
+     },
+     {
+      "palabra": "deje",
+      "frecuencia": 93
+     },
+     {
+      "palabra": "mismo",
+      "frecuencia": 90
+     },
+     {
+      "palabra": "hizo",
+      "frecuencia": 90
+     },
+     {
+      "palabra": "póngase",
+      "frecuencia": 89
+     },
+     {
+      "palabra": "cosas",
+      "frecuencia": 84
+     },
+     {
+      "palabra": "decir",
+      "frecuencia": 84
+     },
+     {
+      "palabra": "mal",
+      "frecuencia": 83
+     },
+     {
+      "palabra": "mexicanos",
+      "frecuencia": 80
+     },
+     {
+      "palabra": "obrador",
+      "frecuencia": 80
+     },
+     {
+      "palabra": "pasa",
+      "frecuencia": 79
+     }
+    ],
+    "ritmo_primeras_24h": [
+     {
+      "hora_desde_publicacion": 0,
+      "comentarios": 212
+     },
+     {
+      "hora_desde_publicacion": 1,
+      "comentarios": 115
+     },
+     {
+      "hora_desde_publicacion": 2,
+      "comentarios": 104
+     },
+     {
+      "hora_desde_publicacion": 3,
+      "comentarios": 72
+     },
+     {
+      "hora_desde_publicacion": 4,
+      "comentarios": 67
+     },
+     {
+      "hora_desde_publicacion": 5,
+      "comentarios": 47
+     },
+     {
+      "hora_desde_publicacion": 6,
+      "comentarios": 24
+     },
+     {
+      "hora_desde_publicacion": 7,
+      "comentarios": 28
+     },
+     {
+      "hora_desde_publicacion": 8,
+      "comentarios": 53
+     },
+     {
+      "hora_desde_publicacion": 9,
+      "comentarios": 81
+     },
+     {
+      "hora_desde_publicacion": 10,
+      "comentarios": 185
+     },
+     {
+      "hora_desde_publicacion": 11,
+      "comentarios": 204
+     },
+     {
+      "hora_desde_publicacion": 12,
+      "comentarios": 252
+     },
+     {
+      "hora_desde_publicacion": 13,
+      "comentarios": 255
+     },
+     {
+      "hora_desde_publicacion": 14,
+      "comentarios": 248
+     },
+     {
+      "hora_desde_publicacion": 15,
+      "comentarios": 204
+     },
+     {
+      "hora_desde_publicacion": 16,
+      "comentarios": 206
+     },
+     {
+      "hora_desde_publicacion": 17,
+      "comentarios": 178
+     },
+     {
+      "hora_desde_publicacion": 18,
+      "comentarios": 160
+     },
+     {
+      "hora_desde_publicacion": 19,
+      "comentarios": 135
+     },
+     {
+      "hora_desde_publicacion": 20,
+      "comentarios": 151
+     },
+     {
+      "hora_desde_publicacion": 21,
+      "comentarios": 123
+     },
+     {
+      "hora_desde_publicacion": 22,
+      "comentarios": 107
+     },
+     {
+      "hora_desde_publicacion": 23,
+      "comentarios": 110
+     }
+    ],
+    "comentarios_fuera_de_24h": 2087
+   },
+   {
+    "id": "ig1",
+    "emisor": "Ricardo Salinas Pliego",
+    "tipo": "Empresario, voz opositora",
+    "red": "Instagram",
+    "fecha_post": "2026-11-09 22:13",
+    "mensaje": "Respuesta a \"Andy\" (Andrés López Beltrán): \"el que nos hace perder el tiempo eres tú\".",
+    "comentarios_reportados": 23767,
+    "interacciones_post": 192150,
+    "comentarios_exportados": 1295,
+    "cobertura_export_pct": 5,
+    "comentarios_unicos_analizados": 941,
+    "respuestas_entre_usuarios_pct": 11,
+    "concentracion_likes_top3_pct": 36,
+    "postura_pct": {
+     "alineado_con_emisor": 76,
+     "en_contra": 11,
+     "neutral_o_ruido": 13
+    },
+    "narrativas": [
+     {
+      "clave": "a",
+      "narrativa": "Aplauso y agradecimiento al emisor",
+      "pct_muestra": 64,
+      "tipo": "apoyo",
+      "ejemplo": "\"Bien dicho 👏👏👏\""
+     },
+     {
+      "clave": "e",
+      "narrativa": "Burla, insulto o pleito entre usuarios",
+      "pct_muestra": 14,
+      "tipo": "burla/insulto",
+      "ejemplo": "(burla contra \"Andy\", no se reproduce)"
+     },
+     {
+      "clave": "p",
+      "narrativa": "\"Para presidente\" / apoyo político al emisor",
+      "pct_muestra": 8,
+      "tipo": "apoyo",
+      "ejemplo": "\"Presidente tío Richie\""
+     },
+     {
+      "clave": "o",
+      "narrativa": "Otros temas, ruido o sin postura",
+      "pct_muestra": 7,
+      "tipo": "—",
+      "ejemplo": ""
+     },
+     {
+      "clave": "h",
+      "narrativa": "\"Deje de culpar al pasado, hágase responsable\"",
+      "pct_muestra": 7,
+      "tipo": "argumento",
+      "ejemplo": "\"¿Y la respuesta a cada pregunta, para cuándo?\""
+     }
+    ],
+    "nube_palabras": [
+     {
+      "palabra": "tío",
+      "frecuencia": 109
+     },
+     {
+      "palabra": "presidente",
+      "frecuencia": 56
+     },
+     {
+      "palabra": "andy",
+      "frecuencia": 48
+     },
+     {
+      "palabra": "richie",
+      "frecuencia": 43
+     },
+     {
+      "palabra": "méxico",
+      "frecuencia": 38
+     },
+     {
+      "palabra": "salinas",
+      "frecuencia": 37
+     },
+     {
+      "palabra": "richi",
+      "frecuencia": 31
+     },
+     {
+      "palabra": "ricardo",
+      "frecuencia": 30
+     },
+     {
+      "palabra": "dicho",
+      "frecuencia": 30
+     },
+     {
+      "palabra": "tio",
+      "frecuencia": 25
+     },
+     {
+      "palabra": "leer",
+      "frecuencia": 24
+     },
+     {
+      "palabra": "mexicanos",
+      "frecuencia": 23
+     },
+     {
+      "palabra": "señor",
+      "frecuencia": 19
+     },
+     {
+      "palabra": "llorar",
+      "frecuencia": 17
+     },
+     {
+      "palabra": "contigo",
+      "frecuencia": 17
+     },
+     {
+      "palabra": "don",
+      "frecuencia": 17
+     },
+     {
+      "palabra": "país",
+      "frecuencia": 16
+     },
+     {
+      "palabra": "grande",
+      "frecuencia": 15
+     },
+     {
+      "palabra": "tienes",
+      "frecuencia": 14
+     },
+     {
+      "palabra": "richy",
+      "frecuencia": 14
+     },
+     {
+      "palabra": "excelente",
+      "frecuencia": 14
+     },
+     {
+      "palabra": "video",
+      "frecuencia": 13
+     },
+     {
+      "palabra": "habla",
+      "frecuencia": 13
+     },
+     {
+      "palabra": "nariz",
+      "frecuencia": 13
+     },
+     {
+      "palabra": "mejor",
+      "frecuencia": 13
+     },
+     {
+      "palabra": "morena",
+      "frecuencia": 12
+     },
+     {
+      "palabra": "clase",
+      "frecuencia": 12
+     },
+     {
+      "palabra": "voto",
+      "frecuencia": 12
+     },
+     {
+      "palabra": "bravo",
+      "frecuencia": 12
+     },
+     {
+      "palabra": "dios",
+      "frecuencia": 11
+     },
+     {
+      "palabra": "claro",
+      "frecuencia": 11
+     },
+     {
+      "palabra": "puede",
+      "frecuencia": 11
+     },
+     {
+      "palabra": "nuestro",
+      "frecuencia": 11
+     },
+     {
+      "palabra": "vamos",
+      "frecuencia": 11
+     },
+     {
+      "palabra": "pliego",
+      "frecuencia": 11
+     },
+     {
+      "palabra": "nadie",
+      "frecuencia": 10
+     },
+     {
+      "palabra": "trump",
+      "frecuencia": 10
+     },
+     {
+      "palabra": "quiere",
+      "frecuencia": 10
+     },
+     {
+      "palabra": "rich",
+      "frecuencia": 10
+     },
+     {
+      "palabra": "apoyo",
+      "frecuencia": 10
+     },
+     {
+      "palabra": "gente",
+      "frecuencia": 9
+     },
+     {
+      "palabra": "puro",
+      "frecuencia": 9
+     },
+     {
+      "palabra": "decir",
+      "frecuencia": 9
+     },
+     {
+      "palabra": "dejen",
+      "frecuencia": 9
+     },
+     {
+      "palabra": "gracias",
+      "frecuencia": 9
+     }
+    ],
+    "ritmo_primeras_24h": [
+     {
+      "hora_desde_publicacion": 0,
+      "comentarios": 274
+     },
+     {
+      "hora_desde_publicacion": 1,
+      "comentarios": 103
+     },
+     {
+      "hora_desde_publicacion": 2,
+      "comentarios": 42
+     },
+     {
+      "hora_desde_publicacion": 3,
+      "comentarios": 38
+     },
+     {
+      "hora_desde_publicacion": 4,
+      "comentarios": 17
+     },
+     {
+      "hora_desde_publicacion": 5,
+      "comentarios": 8
+     },
+     {
+      "hora_desde_publicacion": 6,
+      "comentarios": 19
+     },
+     {
+      "hora_desde_publicacion": 7,
+      "comentarios": 28
+     },
+     {
+      "hora_desde_publicacion": 8,
+      "comentarios": 62
+     },
+     {
+      "hora_desde_publicacion": 9,
+      "comentarios": 77
+     },
+     {
+      "hora_desde_publicacion": 10,
+      "comentarios": 84
+     },
+     {
+      "hora_desde_publicacion": 11,
+      "comentarios": 51
+     },
+     {
+      "hora_desde_publicacion": 12,
+      "comentarios": 50
+     },
+     {
+      "hora_desde_publicacion": 13,
+      "comentarios": 50
+     },
+     {
+      "hora_desde_publicacion": 14,
+      "comentarios": 30
+     },
+     {
+      "hora_desde_publicacion": 15,
+      "comentarios": 21
+     },
+     {
+      "hora_desde_publicacion": 16,
+      "comentarios": 24
+     },
+     {
+      "hora_desde_publicacion": 17,
+      "comentarios": 19
+     },
+     {
+      "hora_desde_publicacion": 18,
+      "comentarios": 9
+     },
+     {
+      "hora_desde_publicacion": 19,
+      "comentarios": 18
+     },
+     {
+      "hora_desde_publicacion": 20,
+      "comentarios": 17
+     },
+     {
+      "hora_desde_publicacion": 21,
+      "comentarios": 13
+     },
+     {
+      "hora_desde_publicacion": 22,
+      "comentarios": 14
+     },
+     {
+      "hora_desde_publicacion": 23,
+      "comentarios": 23
+     }
+    ],
+    "comentarios_fuera_de_24h": 204
+   },
+   {
+    "id": "ig2",
+    "emisor": "Latinus",
+    "tipo": "Medio digital, línea crítica al gobierno",
+    "red": "Instagram",
+    "fecha_post": "2026-10-25 16:40",
+    "mensaje": "Guadalupe Taddei anuncia su renuncia a la presidencia del INE en medio de señalamientos por irregularidades.",
+    "comentarios_reportados": 8932,
+    "interacciones_post": 103288,
+    "comentarios_exportados": 3094,
+    "cobertura_export_pct": 35,
+    "comentarios_unicos_analizados": 2843,
+    "respuestas_entre_usuarios_pct": 6,
+    "concentracion_likes_top3_pct": 31,
+    "postura_pct": {
+     "alineado_con_emisor": 89,
+     "en_contra": 0,
+     "neutral_o_ruido": 11
+    },
+    "narrativas": [
+     {
+      "clave": "c",
+      "narrativa": "Cárcel y que devuelva lo robado",
+      "pct_muestra": 44,
+      "tipo": "exigencia",
+      "ejemplo": "\"Que pague, no solo que renuncie\""
+     },
+     {
+      "clave": "d",
+      "narrativa": "\"Taddei es de Morena / la pusieron ustedes\"",
+      "pct_muestra": 15,
+      "tipo": "argumento",
+      "ejemplo": "\"Que nadie de Morena ocupe ese puesto\""
+     },
+     {
+      "clave": "a",
+      "narrativa": "Aplauso y agradecimiento al emisor",
+      "pct_muestra": 11,
+      "tipo": "apoyo",
+      "ejemplo": "\"👏👏👏 buena noticia\""
+     },
+     {
+      "clave": "o",
+      "narrativa": "Otros temas, ruido o sin postura",
+      "pct_muestra": 11,
+      "tipo": "—",
+      "ejemplo": ""
+     },
+     {
+      "clave": "f",
+      "narrativa": "\"No va a pasar nada\": impunidad",
+      "pct_muestra": 10,
+      "tipo": "argumento",
+      "ejemplo": "\"La van a esconder un rato y después le dan otra institución\""
+     },
+     {
+      "clave": "e",
+      "narrativa": "Burla, insulto o pleito entre usuarios",
+      "pct_muestra": 9,
+      "tipo": "burla/insulto",
+      "ejemplo": "(insultos, no se reproducen)"
+     }
+    ],
+    "nube_palabras": [
+     {
+      "palabra": "cárcel",
+      "frecuencia": 373
+     },
+     {
+      "palabra": "robado",
+      "frecuencia": 191
+     },
+     {
+      "palabra": "morena",
+      "frecuencia": 161
+     },
+     {
+      "palabra": "renuncia",
+      "frecuencia": 153
+     },
+     {
+      "palabra": "regrese",
+      "frecuencia": 139
+     },
+     {
+      "palabra": "vaya",
+      "frecuencia": 133
+     },
+     {
+      "palabra": "dinero",
+      "frecuencia": 131
+     },
+     {
+      "palabra": "robó",
+      "frecuencia": 102
+     },
+     {
+      "palabra": "debe",
+      "frecuencia": 95
+     },
+     {
+      "palabra": "ine",
+      "frecuencia": 81
+     },
+     {
+      "palabra": "pague",
+      "frecuencia": 77
+     },
+     {
+      "palabra": "investigación",
+      "frecuencia": 68
+     },
+     {
+      "palabra": "devuelva",
+      "frecuencia": 65
+     },
+     {
+      "palabra": "corrupción",
+      "frecuencia": 59
+     },
+     {
+      "palabra": "carcel",
+      "frecuencia": 57
+     },
+     {
+      "palabra": "pueblo",
+      "frecuencia": 55
+     },
+     {
+      "palabra": "robo",
+      "frecuencia": 55
+     },
+     {
+      "palabra": "gracias",
+      "frecuencia": 54
+     },
+     {
+      "palabra": "bote",
+      "frecuencia": 53
+     },
+     {
+      "palabra": "consecuencias",
+      "frecuencia": 52
+     },
+     {
+      "palabra": "poner",
+      "frecuencia": 51
+     },
+     {
+      "palabra": "bueno",
+      "frecuencia": 47
+     },
+     {
+      "palabra": "investiguen",
+      "frecuencia": 47
+     },
+     {
+      "palabra": "metan",
+      "frecuencia": 45
+     },
+     {
+      "palabra": "millones",
+      "frecuencia": 44
+     },
+     {
+      "palabra": "tadei",
+      "frecuencia": 43
+     },
+     {
+      "palabra": "ojalá",
+      "frecuencia": 43
+     },
+     {
+      "palabra": "taddei",
+      "frecuencia": 42
+     },
+     {
+      "palabra": "méxico",
+      "frecuencia": 41
+     },
+     {
+      "palabra": "latinus",
+      "frecuencia": 41
+     },
+     {
+      "palabra": "cuentas",
+      "frecuencia": 40
+     },
+     {
+      "palabra": "gobierno",
+      "frecuencia": 39
+     },
+     {
+      "palabra": "renuncie",
+      "frecuencia": 39
+     },
+     {
+      "palabra": "fuera",
+      "frecuencia": 38
+     },
+     {
+      "palabra": "alguien",
+      "frecuencia": 38
+     },
+     {
+      "palabra": "juicio",
+      "frecuencia": 38
+     },
+     {
+      "palabra": "suficiente",
+      "frecuencia": 37
+     },
+     {
+      "palabra": "fácil",
+      "frecuencia": 37
+     },
+     {
+      "palabra": "peor",
+      "frecuencia": 37
+     },
+     {
+      "palabra": "igual",
+      "frecuencia": 37
+     },
+     {
+      "palabra": "renunciar",
+      "frecuencia": 36
+     },
+     {
+      "palabra": "justicia",
+      "frecuencia": 36
+     },
+     {
+      "palabra": "basta",
+      "frecuencia": 36
+     },
+     {
+      "palabra": "embajada",
+      "frecuencia": 35
+     },
+     {
+      "palabra": "mexicanos",
+      "frecuencia": 33
+     }
+    ],
+    "ritmo_primeras_24h": [
+     {
+      "hora_desde_publicacion": 0,
+      "comentarios": 850
+     },
+     {
+      "hora_desde_publicacion": 1,
+      "comentarios": 693
+     },
+     {
+      "hora_desde_publicacion": 2,
+      "comentarios": 493
+     },
+     {
+      "hora_desde_publicacion": 3,
+      "comentarios": 305
+     },
+     {
+      "hora_desde_publicacion": 4,
+      "comentarios": 203
+     },
+     {
+      "hora_desde_publicacion": 5,
+      "comentarios": 141
+     },
+     {
+      "hora_desde_publicacion": 6,
+      "comentarios": 77
+     },
+     {
+      "hora_desde_publicacion": 7,
+      "comentarios": 55
+     },
+     {
+      "hora_desde_publicacion": 8,
+      "comentarios": 25
+     },
+     {
+      "hora_desde_publicacion": 9,
+      "comentarios": 12
+     },
+     {
+      "hora_desde_publicacion": 10,
+      "comentarios": 7
+     },
+     {
+      "hora_desde_publicacion": 11,
+      "comentarios": 6
+     },
+     {
+      "hora_desde_publicacion": 12,
+      "comentarios": 18
+     },
+     {
+      "hora_desde_publicacion": 13,
+      "comentarios": 21
+     },
+     {
+      "hora_desde_publicacion": 14,
+      "comentarios": 26
+     },
+     {
+      "hora_desde_publicacion": 15,
+      "comentarios": 36
+     },
+     {
+      "hora_desde_publicacion": 16,
+      "comentarios": 19
+     },
+     {
+      "hora_desde_publicacion": 17,
+      "comentarios": 18
+     },
+     {
+      "hora_desde_publicacion": 18,
+      "comentarios": 17
+     },
+     {
+      "hora_desde_publicacion": 19,
+      "comentarios": 11
+     },
+     {
+      "hora_desde_publicacion": 20,
+      "comentarios": 10
+     },
+     {
+      "hora_desde_publicacion": 21,
+      "comentarios": 9
+     },
+     {
+      "hora_desde_publicacion": 22,
+      "comentarios": 4
+     },
+     {
+      "hora_desde_publicacion": 23,
+      "comentarios": 9
+     }
+    ],
+    "comentarios_fuera_de_24h": 29
+   }
+  ],
+  "comentario_ambiguo": {
+   "publicacion": "fb2",
+   "likes": 3898,
+   "es_el_mas_votado": true,
+   "texto_resumen": "\"Presidenta, hoy quiero informarle que todos los mexicanos estamos súper bien con Morena… Con AMLO y usted, reina Claudia Sheinbaum, los padres de la patria moderna, México recuperó su grandeza…\"",
+   "reacciones_en_respuestas": [
+    "\"¿Es sarcasmo??? Verdad???\"",
+    "\"Bueno, ni tú te lo creíste\"",
+    "\"¿En qué país vive?\"",
+    "\"Totalmente de acuerdo 💯\""
+   ],
+   "lectura": "Ni los propios usuarios supieron si era elogio o burla: unos lo atacan como fanático, otros preguntan si es sarcasmo. Sus 3,898 \"me gusta\" pueden ser de apoyo o de burla. Ningún análisis automático por palabras clave resuelve esto; por eso la postura se lee a mano."
+  }
+ }
+}

@@ -10,3 +10,5 @@
 - Mixed Observatorio editions contain matched geographic pairs and daily milestones require verified non-reference publication timestamps within 48 hours; this prevents false balance and stale daily claims.
 - Scope public Observatorio queries to the current vertical and expose hub/cross-vertical navigation only through existing authenticated ops roles; public data remains public, but discovery stays internal.
 - Validate each monitored Observatorio association against explicit per-vertical central-topic criteria and a literal source citation before persistence; keyword overlap and creative angles are not evidence of topical fit.- Guanajuato dependency reports treat a scope without an imported export for the window as "no data", never as zero posts, so missing captures are not read as inactivity.
+
+- Centro Fox 2027 deck lives in its own page/components (centro-fox-2027) and reuses the existing public votes table with a `cf27:` key prefix, so it never mixes with earlier sessions.

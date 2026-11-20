@@ -33,3 +33,5 @@
 - [x] Integrar el bloque del sitio, la octava línea, medición y sexto indicador sin alterar cifras previas ni diseño.
 - [x] Cotejar contenido y cifras y revisar visualmente todas las páginas de la nueva versión.
 - [x] Entregar el PDF actualizado y agregarlo a la colección Falcon (archivo guardado; colección registra carga pendiente).
+- [x] Centro Fox 2027: sesión viernes (V01–V24) en vivo
+- [ ] Centro Fox 2027: taller sábado (S01–S16) y hoja imprimible

@@ -39,6 +39,8 @@ import { detectClientPortal } from "./lib/clientPortal";
 import Observatory from "./pages/Observatory";
 import FoxSessionSlides from "./pages/centro-fox/SessionSlides";
 import FoxParticipate from "./pages/centro-fox/Participate";
+import Comprender2027 from "./pages/centro-fox/Comprender2027";
+import Participa2027 from "./pages/centro-fox/Participa2027";
 
 const queryClient = new QueryClient();
 
@@ -97,6 +99,8 @@ const App = () => {
           <Route path="/cfl/participa" element={<CflParticipa />} />
           <Route path="/centro-fox/estrategia-digital" element={<FoxSessionSlides />} />
           <Route path="/centro-fox/participa" element={<FoxParticipate />} />
+          <Route path="/centro-fox/2027/viernes" element={<Comprender2027 />} />
+          <Route path="/centro-fox/2027/participa" element={<Participa2027 />} />
           <Route path="/casos/uaem" element={<AuditoriaUAEM />} />
 
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
