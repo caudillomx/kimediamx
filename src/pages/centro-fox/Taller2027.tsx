@@ -98,9 +98,8 @@ const SLIDES: Slide[] = [
     notes: 'Elige dos pares con los botones. Que voten; marca en /admin los tres criterios y pulsa R. La mejor respuesta muchas veces es más corta de lo que creen, o no existe.', render: c => <FirePairs c={c} /> },
 
   { id: 'S14', title: 'Ejercicio 4 · Acción con embudo', moment: 'Respuesta', notes: 'Metas realistas. La acción lleva fecha anterior al 6 de junio de 2027; el último escalón es el seguimiento hasta la jornada electoral.', render: () => (
-    <div className="grid grid-cols-[1fr_560px_380px] gap-10"><div><Kicker>Ejercicio 4 · De la interacción a la acción · {GOAL}</Kicker><Bridge n={3} /><Title>Una acción concreta, con fecha</Title>
-      <Steps items={['Reunión vecinal, recorrido, consulta o jornada en su municipio o distrito, ligada a su tema.', 'Con fecha anterior al 6 de junio de 2027.', 'El embudo con metas realistas, hasta el seguimiento a la jornada electoral.', 'Dos barreras probables y cómo quitarlas, y qué medirán.']} />
-      <RoutesBox cand="La acción del aspirante: recorrido, consulta o reunión." red="La acción de la red: reunión vecinal, jornada o brigada." /><Legal /></div>
+    <div className="grid grid-cols-[1fr_560px_380px] gap-10"><div><Kicker>Ejercicio 4 · De la interacción a la acción · {GOAL}</Kicker><Bridge n={3} /><Title>Una acción con fecha</Title>
+      <Steps items={['Una acción en su municipio o distrito, con fecha anterior al 6 de junio de 2027.', 'Embudo con metas realistas, hasta la jornada electoral.', 'Dos barreras, cómo quitarlas y qué medirán.']} />      <p className="cf-body mt-4"><b className="cf-accent">{ROUTES[0]}:</b> recorrido, consulta o reunión. <b className="cf-accent">{ROUTES[1]}:</b> reunión vecinal, jornada o brigada.</p><Legal /></div>
       <FunnelGuide /><Timer minutes={15} label="Ejercicio 4" /></div>) },
   { id: 'S15', title: 'Ejercicio 4 · Tablero', moment: 'Respuesta', notes: 'Comenta el embudo más realista y el más optimista.', render: () => (
     <div><Kicker>Embudos</Kicker><Title>¿Cuál es el más realista? ¿Y el más optimista?</Title><div className="mt-8"><Teams render={t => t.ex4.accion ? <><p className="mb-3"><b>{t.ex4.accion}</b>{t.ex4.fecha && <span className="cf-muted"> · {t.ex4.fecha}</span>}</p><FunnelMini metas={t.ex4.metas} /></> : null} /></div></div>) },
