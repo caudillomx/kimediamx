@@ -4,7 +4,7 @@ import foxLogo from '@/assets/centro-fox/logo.png.asset.json';
 import kimediaLogo from '@/assets/kimedia-logo-dark.png';
 import { MOMENTS, type Moment } from '@/data/centroFox2027';
 
-export const participaUrl = (path = 'participa') => `${window.location.origin}/centro-fox/2027/${path}`;
+export const participaUrl = (path = 'participa') => `${/^(localhost|127\.)/.test(window.location.hostname) ? 'https://www.kimedia.mx' : window.location.origin}/centro-fox/2027/${path}`;
 
 export const Kicker = ({ children }: { children: ReactNode }) => <div className="cf-kicker">{children}</div>;
 export const Title = ({ children, lg }: { children: ReactNode; lg?: boolean }) => <h2 className={lg ? 'cf-title-lg' : 'cf-title'}>{children}</h2>;
