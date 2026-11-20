@@ -12,34 +12,30 @@ export function voterId() {
 
 /** Conteos en vivo por pregunta (realtime). */
 export function useCflVotes() {
-  const [rows, setRows] = useState<{ question: string; option: string; voter: string }[]>([]);
+  const [rows, setRows] = useState<{ question: string; option: string; n: number; mine: boolean }[]>([]);
   const load = useCallback(async () => {
-    const { data } = await db.from("cfl_votes").select("question, option, voter").limit(5000);
+    const { data } = await db.rpc("cfl_vote_tally", { p_prefix: "", p_voter: localStorage.getItem("cfl_voter") ?? "" });
     setRows(data ?? []);
   }, []);
   useEffect(() => {
     load();
-    const ch = supabase.channel("cfl_votes_live")
-      .on("postgres_changes", { event: "*", schema: "public", table: "cfl_votes" }, () => load())
-      .subscribe();
-    const t = setInterval(load, 8000);
-    return () => { supabase.removeChannel(ch); clearInterval(t); };
+    const t = setInterval(load, 3000);
+    return () => { clearInterval(t); };
   }, [load]);
   const counts = (q: string) => {
     const m: Record<string, number> = {};
-    rows.filter((r) => r.question === q).forEach((r) => { m[r.option] = (m[r.option] ?? 0) + 1; });
+    rows.filter((r) => r.question === q).forEach((r) => { m[r.option] = (m[r.option] ?? 0) + Number(r.n); });
     return m;
   };
   const mine = (q: string) => {
-    const id = localStorage.getItem("cfl_voter");
-    return rows.find((r) => r.question === q && r.voter === id)?.option ?? null;
+    return rows.find((r) => r.question === q && r.mine)?.option ?? null;
   };
   return { counts, mine, reload: load };
 }
 
 export async function castVote(question: string, option: string) {
   const voter = voterId();
-  const { error } = await db.from("cfl_votes").upsert({ question, option, voter }, { onConflict: "question,voter" });
+  const { error } = await db.rpc("cfl_cast_vote", { p_question: question, p_option: option, p_voter: voter });
   return !error;
 }
 

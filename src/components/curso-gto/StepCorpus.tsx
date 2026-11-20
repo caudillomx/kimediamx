@@ -104,11 +104,12 @@ export const StepCorpus = ({ initial, onSave, onBack, sesionId, participanteId }
   useEffect(() => {
     (async () => {
       const { data } = await supabase.rpc("gto_list_corpus_uploads", {
+        _sesion_id: sesionId,
         _participante_id: participanteId,
       });
       setUploads((data || []) as UploadRow[]);
     })();
-  }, [participanteId]);
+  }, [sesionId, participanteId]);
 
   const toggle = (id: string) =>
     setDocs((d) => (d.includes(id) ? d.filter((x) => x !== id) : [...d, id]));
@@ -150,6 +151,7 @@ export const StepCorpus = ({ initial, onSave, onBack, sesionId, participanteId }
         setUploads((prev) => [row as UploadRow, ...prev]);
       } else {
         const { data: refreshed } = await supabase.rpc("gto_list_corpus_uploads", {
+        _sesion_id: sesionId,
           _participante_id: participanteId,
         });
         setUploads((refreshed || []) as UploadRow[]);

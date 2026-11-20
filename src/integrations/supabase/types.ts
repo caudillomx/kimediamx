@@ -4598,6 +4598,19 @@ export type Database = {
         Args: { p_data: Json; p_ex: number; p_token: string }
         Returns: undefined
       }
+      cfl_cast_vote: {
+        Args: { p_option: string; p_question: string; p_voter: string }
+        Returns: boolean
+      }
+      cfl_vote_tally: {
+        Args: { p_prefix: string; p_voter: string }
+        Returns: {
+          mine: boolean
+          n: number
+          option: string
+          question: string
+        }[]
+      }
       fpk_to_num: { Args: { v: string }; Returns: number }
       get_brand_kit_by_token: {
         Args: { _id: string; _token: string }
@@ -4692,7 +4705,7 @@ export type Database = {
         }
       }
       gto_list_corpus_uploads: {
-        Args: { _participante_id: string }
+        Args: { _participante_id: string; _sesion_id: string }
         Returns: {
           created_at: string
           doc_tipo: string
@@ -4700,8 +4713,6 @@ export type Database = {
           file_size: number
           id: string
           mime_type: string
-          participante_id: string
-          sesion_id: string
           storage_path: string
         }[]
       }

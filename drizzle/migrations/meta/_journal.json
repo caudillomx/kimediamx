@@ -57,6 +57,13 @@
       "when": 1795208349260,
       "tag": "0007_migration",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1795212153283,
+      "tag": "0008_harden_votes_and_gto_rpcs",
+      "breakpoints": true
     }
   ]
 }
