@@ -20,7 +20,7 @@ export type Activity = { id: string; slide: number; kind: 'poll' | 'prediction' 
 export const ACTIVITIES: Activity[] = [
   { id: 'v02', slide: 2, kind: 'poll', q: '¿Dónde te enteras primero de una noticia?', options: ['WhatsApp', 'Redes sociales', 'Medios digitales', 'Radio o televisión'] },
   { id: 'v03', slide: 3, kind: 'poll', q: '¿Sabes qué se dijo esta semana en redes sobre tu municipio?', options: ['Sí, con detalle', 'Más o menos', 'No'] },
-  ...INE.juego_cual_funciono.slice(0, 3).map((r, i) => ({
+  ...INE.juego_cual_funciono.slice(0, 2).map((r, i) => ({
     id: `v${String(9 + i).padStart(2, '0')}`, slide: 9 + i, kind: 'prediction' as const,
     q: `Ronda ${r.ronda}: ¿cuál tuvo más interacción?`, options: ['A', 'B'], context: r.A.perfil,
   })),

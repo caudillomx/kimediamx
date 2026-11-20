@@ -76,7 +76,7 @@ const SLIDES: Slide[] = [
       <FunnelGuide /><Timer minutes={15} label="Ejercicio 4" /></div>) },
   { id: 'S15', title: 'Ejercicio 4 · Tablero', moment: 'Respuesta', notes: 'Comenta el embudo más realista y el más optimista.', render: () => (
     <div><Kicker>Embudos</Kicker><Title>¿Cuál es el más realista? ¿Y el más optimista?</Title><div className="mt-8"><Teams render={t => t.ex4.accion ? <><p className="mb-3"><b>{t.ex4.accion}</b></p><FunnelMini metas={t.ex4.metas} /></> : null} /></div></div>) },
-  { id: 'S16', title: 'Cierre', notes: 'Es la misma pregunta de la vez pasada, para comparar. Pulsa R para pasar a los compromisos. En el teléfono está el botón para descargar la hoja del equipo.', render: c => c.revealed
+  { id: 'S16', title: 'Cierre', notes: 'Pulsa R para pasar a los compromisos. En el teléfono está el botón para descargar la hoja del equipo.', render: c => c.revealed
     ? <div className="grid grid-cols-[1fr_380px] gap-14 h-full items-center"><div><Kicker>Antes de irse</Kicker><Title>Sus 3 compromisos para los próximos 30 días</Title><p className="cf-body-lg mt-8">Escríbanlos al pie de su hoja impresa. En el teléfono pueden descargar la hoja de su equipo.</p><p className="cf-body mt-12">Gracias · Programa de Capacitación Profesional Centro Fox · Jesús Caudillo</p></div><Q size={300} label="Descarga tu hoja" /></div>
     : <div className="grid grid-cols-[1fr_300px] gap-12"><div><Kicker>Cierre</Kicker><Title>¿Qué práctica vas a incorporar esta semana?</Title><div className="mt-10"><LiveBars id="s16" options={PRACTICES} manualMode={c.manual} /></div></div><Q size={240} label="Vota" /></div> },
 ];

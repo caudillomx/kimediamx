@@ -550,3 +550,22 @@ main.cf-body { flex:1; display:flex; flex-direction:column; min-height:0; }
 .cf-funnel { display:flex; flex-direction:column; align-items:center; gap:10px; } .cf-funnel div { background:hsl(var(--primary) / .12); border-radius:16px; padding:16px 24px; font-size:28px; text-align:center; } .cf-funnel b { color:hsl(var(--primary)); margin-right:14px; }
 .cf-quad { display:grid; grid-template-columns:1fr 1fr; gap:20px; } .cf-quad .cf-card { padding:26px 30px; } .cf-quad h4 { font-family:'Space Grotesk',sans-serif; font-size:30px; font-weight:700; color:hsl(var(--primary)); } .cf-quad p { font-size:23px; margin-top:8px; }
 .cf-prompt { font-size:25px; line-height:1.35; padding:22px 28px; }
+
+/* Centro Fox 2027 · fotos y portada */
+.cf-photo { width:100%; height:100%; object-fit:cover; border-radius:32px; display:block; }
+.cf-cover-split { display:grid; grid-template-columns:1fr 820px; height:1080px; }
+.cf-cover-text { display:flex; flex-direction:column; justify-content:space-between; padding:72px 64px 64px 96px; }
+.cf-cover-split .cf-cover-photo { border-radius:0; height:1080px; }
+.cf-cover-split .cf-hero { font-size:118px; }
+.cf-photo-qr { position:relative; height:760px; } .cf-photo-qr .cf-qr { position:absolute; right:24px; bottom:24px; background:hsl(var(--background)); padding:18px; border-radius:24px; }
+.cf-guess { display:grid; grid-template-columns:repeat(3,1fr); gap:22px; margin-top:24px; } .cf-guess .cf-card { display:flex; justify-content:space-between; align-items:center; padding:30px 34px; font-size:30px; font-weight:600; } .cf-guess b { font-family:'Space Grotesk',sans-serif; font-size:56px; color:hsl(var(--primary)); }
+.cf-tiles { display:flex; flex-direction:column; gap:10px; height:720px; }
+.cf-tile { display:flex; align-items:center; gap:24px; padding:0 28px; border-radius:18px; background:hsl(var(--muted)); min-height:54px; overflow:hidden; }
+.cf-tile b { font-family:'Space Grotesk',sans-serif; font-size:34px; min-width:120px; } .cf-tile span { font-size:24px; }
+.cf-tile.top { background:hsl(var(--primary)); color:hsl(var(--primary-foreground)); } .cf-tile.top b { font-size:72px; } .cf-tile.top span { font-size:34px; font-weight:600; }
+.cf-tile.hl { outline:3px solid hsl(var(--primary)); }
+.cf-cover-split { grid-template-columns:1fr 760px; height:100%; margin:-40px -64px; } .cf-cover-split .cf-cover-photo { height:100%; }
+.cf-cover-text { padding:40px 56px 24px 64px; gap:24px; } .cf-cover-split .cf-hero { font-size:100px; }
+.cf-tiles { height:560px; }
+.cf-cover-split { margin:-44px -90px 0 -90px; height:calc(100% + 44px); }
+.cf-num-inline { display:inline; } .cf-num-inline strong { display:inline !important; font-size:56px; }
