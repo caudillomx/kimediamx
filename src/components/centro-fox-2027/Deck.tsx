@@ -135,7 +135,7 @@ export function Deck({ slides: ALL, label, admin = false, late }: { slides: Slid
         <div className="cf-controls">
           <button onClick={() => go(-1)} aria-label="Lámina anterior"><ChevronLeft /></button>
           <button onClick={() => go(1)} aria-label="Lámina siguiente"><ChevronRight /></button>
-          <button onClick={toggleReveal} aria-label="Revelar (R)"><Eye /></button>
+          <button onClick={toggleReveal} aria-label="Revelar (R)" className="flex items-center gap-2 !bg-primary px-4 font-semibold text-primary-foreground"><Eye /> {ctx(slide).revealed ? 'Ocultar' : 'Revelar'}</button>
           <button onClick={() => setNotes(v => !v)} aria-label="Notas del orador (N)"><NotebookPen /></button>
           <button onClick={openAdmin} aria-label="Abrir /admin (A)"><SlidersHorizontal /></button>
           <button onClick={() => document.documentElement.requestFullscreen?.()} aria-label="Pantalla completa (F)"><Maximize2 /></button>

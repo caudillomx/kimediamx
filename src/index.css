@@ -529,7 +529,7 @@ main.cf-body { flex:1; display:flex; flex-direction:column; min-height:0; }
 .cf-line { width:100%; height:auto; } .cf-line .area { fill:hsl(var(--primary) / .12); } .cf-line .stroke { fill:none; stroke:hsl(var(--primary)); stroke-width:5; }
 .cf-line .ann { stroke:hsl(var(--foreground) / .4); stroke-dasharray:6 6; stroke-width:2; } .cf-line .ann-t { font-size:22px; font-weight:600; fill:hsl(var(--foreground)); } .cf-line .axis { font-size:20px; fill:hsl(var(--muted-foreground)); }
 .cf-empty { display:grid; place-items:center; }
-.cf-controls { position:fixed; bottom:12px; left:50%; transform:translateX(-50%); display:flex; gap:4px; opacity:.25; transition:opacity .2s; } .cf-controls:hover { opacity:1; }
+.cf-controls { position:fixed; bottom:12px; left:50%; transform:translateX(-50%); display:flex; gap:4px; opacity:.6; transition:opacity .2s; } .cf-controls:hover { opacity:1; }
 .cf-controls button { padding:8px; border-radius:10px; background:hsl(var(--card)); border:1px solid hsl(var(--border)); } .cf-controls svg { width:16px; height:16px; }
 .cf-notes { width:420px; flex-shrink:0; overflow:auto; padding:28px; border-left:1px solid hsl(var(--border)); background:hsl(var(--card)); font-size:17px; line-height:1.5; }
 .cf-notes h3 { font-size:22px; font-weight:700; margin:6px 0 12px; } .cf-notes-meta { font-size:13px; text-transform:uppercase; letter-spacing:.1em; color:hsl(var(--muted-foreground)); } .cf-notes-keys { margin-top:24px; font-size:13px; color:hsl(var(--muted-foreground)); }
