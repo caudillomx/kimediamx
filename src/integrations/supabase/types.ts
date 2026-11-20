@@ -589,6 +589,51 @@ export type Database = {
         }
         Relationships: []
       }
+      cf27_teams: {
+        Row: {
+          created_at: string
+          estado: string
+          ex1: Json
+          ex2: Json
+          ex3: Json
+          ex4: Json
+          id: string
+          integrantes: number
+          municipio: string
+          nombre: string
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          estado: string
+          ex1?: Json
+          ex2?: Json
+          ex3?: Json
+          ex4?: Json
+          id?: string
+          integrantes?: number
+          municipio: string
+          nombre: string
+          token: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          estado?: string
+          ex1?: Json
+          ex2?: Json
+          ex3?: Json
+          ex4?: Json
+          id?: string
+          integrantes?: number
+          municipio?: string
+          nombre?: string
+          token?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       cfl_votes: {
         Row: {
           created_at: string
@@ -4537,6 +4582,20 @@ export type Database = {
     Functions: {
       brand_kit_apply_patch: {
         Args: { _id: string; _patch: Json; _token: string }
+        Returns: undefined
+      }
+      cf27_register_team: {
+        Args: {
+          p_estado: string
+          p_integrantes: number
+          p_municipio: string
+          p_nombre: string
+          p_token: string
+        }
+        Returns: string
+      }
+      cf27_save_exercise: {
+        Args: { p_data: Json; p_ex: number; p_token: string }
         Returns: undefined
       }
       fpk_to_num: { Args: { v: string }; Returns: number }

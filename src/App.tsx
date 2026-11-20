@@ -41,6 +41,9 @@ import FoxSessionSlides from "./pages/centro-fox/SessionSlides";
 import FoxParticipate from "./pages/centro-fox/Participate";
 import Comprender2027 from "./pages/centro-fox/Comprender2027";
 import Participa2027 from "./pages/centro-fox/Participa2027";
+import Taller2027 from "./pages/centro-fox/Taller2027";
+import TallerParticipa2027 from "./pages/centro-fox/TallerParticipa2027";
+import Hoja2027 from "./pages/centro-fox/Hoja2027";
 
 const queryClient = new QueryClient();
 
@@ -101,6 +104,10 @@ const App = () => {
           <Route path="/centro-fox/participa" element={<FoxParticipate />} />
           <Route path="/centro-fox/2027/viernes" element={<Comprender2027 />} />
           <Route path="/centro-fox/2027/participa" element={<Participa2027 />} />
+          <Route path="/centro-fox/2027/sabado" element={<Taller2027 />} />
+          <Route path="/centro-fox/2027/taller" element={<TallerParticipa2027 />} />
+          <Route path="/centro-fox/2027/hoja" element={<Hoja2027 />} />
+          <Route path="/centro-fox/2027/hoja/:teamId" element={<Hoja2027 />} />
           <Route path="/casos/uaem" element={<AuditoriaUAEM />} />
 
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

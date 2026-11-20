@@ -4,7 +4,7 @@ import foxLogo from '@/assets/centro-fox/logo.png.asset.json';
 import kimediaLogo from '@/assets/kimedia-logo-full.png';
 import { MOMENTS, type Moment } from '@/data/centroFox2027';
 
-export const participaUrl = () => `${window.location.origin}/centro-fox/2027/participa`;
+export const participaUrl = (path = 'participa') => `${window.location.origin}/centro-fox/2027/${path}`;
 
 export const Kicker = ({ children }: { children: ReactNode }) => <div className="cf-kicker">{children}</div>;
 export const Title = ({ children, lg }: { children: ReactNode; lg?: boolean }) => <h2 className={lg ? 'cf-title-lg' : 'cf-title'}>{children}</h2>;
@@ -17,8 +17,8 @@ export function FoxLogo({ size = 76 }: { size?: number }) {
 export function KiLogo({ size = 44 }: { size?: number }) {
   return <img src={kimediaLogo} alt="KiMedia" style={{ height: size }} className="cf-ki-logo w-auto object-contain" />;
 }
-export function QR({ size = 300, label = 'Participa desde tu teléfono' }: { size?: number; label?: string }) {
-  const url = participaUrl();
+export function QR({ size = 300, label = 'Participa desde tu teléfono', path }: { size?: number; label?: string; path?: string }) {
+  const url = participaUrl(path);
   return <div className="cf-qr"><div className="cf-qr-box"><QRCodeSVG value={url} size={size} bgColor="transparent" fgColor="currentColor" /></div><strong>{label}</strong><small>{url.replace(/^https?:\/\//, '')}</small></div>;
 }
 

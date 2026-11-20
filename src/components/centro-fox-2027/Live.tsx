@@ -12,8 +12,8 @@ function useManual(id: string) {
 }
 
 /** Barras con votos en vivo + conteo manual (modo sin red, tecla M). */
-export function LiveBars({ id, manualMode, labels, correct }: { id: string; manualMode: boolean; labels?: Record<string, string>; correct?: string }) {
-  const a = activity(id); const { counts, error } = useCf27Votes(); const c = counts(id); const [manual, bump] = useManual(id);
+export function LiveBars({ id, manualMode, labels, correct, options }: { id: string; manualMode: boolean; labels?: Record<string, string>; correct?: string; options?: string[] }) {
+  const a = options ? { options } : activity(id); const { counts, error } = useCf27Votes(); const c = counts(id); const [manual, bump] = useManual(id);
   const val = (o: string) => (c[o] ?? 0) + (manual[o] ?? 0);
   const total = a.options.reduce((s, o) => s + val(o), 0);
   return <div className="cf-live">
@@ -27,9 +27,9 @@ export function LiveBars({ id, manualMode, labels, correct }: { id: string; manu
   </div>;
 }
 
-export function LiveCloud({ id }: { id: string }) {
+export function LiveCloud({ id, path }: { id: string; path?: string }) {
   const { counts } = useCf27Votes(); const c = counts(id);
   const words = Object.entries(c).map(([palabra, frecuencia]) => ({ palabra: normalizeWord(palabra), frecuencia })).filter(w => isClean(w.palabra));
   const merged = Object.values(words.reduce<Record<string, { palabra: string; frecuencia: number }>>((m, w) => { m[w.palabra] = { palabra: w.palabra, frecuencia: (m[w.palabra]?.frecuencia ?? 0) + w.frecuencia }; return m; }, {}));
-  return merged.length ? <Cloud words={merged} max={50} /> : <div className="cf-empty"><QR size={220} label="Escanea y escribe una palabra" /></div>;
+  return merged.length ? <Cloud words={merged} max={50} /> : <div className="cf-empty"><QR size={220} label="Escanea y escribe una palabra" path={path} /></div>;
 }
