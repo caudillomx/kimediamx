@@ -4584,6 +4584,7 @@ export type Database = {
         Args: { _id: string; _patch: Json; _token: string }
         Returns: undefined
       }
+      cf27_has_registered_team_access: { Args: never; Returns: boolean }
       cf27_register_team: {
         Args: {
           p_estado: string

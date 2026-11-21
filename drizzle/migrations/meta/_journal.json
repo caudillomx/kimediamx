@@ -71,6 +71,20 @@
       "when": 1795237941077,
       "tag": "0009_restrict_gto_bootstrap_to_server",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1795274128401,
+      "tag": "0010_restrict_cf27_team_reads_to_participants",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1795274223965,
+      "tag": "0011_separate_cf27_staff_read_policy",
+      "breakpoints": true
     }
   ]
 }

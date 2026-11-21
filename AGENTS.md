@@ -14,3 +14,4 @@
 
 - Centro Fox 2027 deck lives in its own page/components (centro-fox-2027) and reuses the existing public votes table with a `cf27:` key prefix, so it never mixes with earlier sessions.
 - Configure moment order per deck: Saturday indicators follow exercise order (listening before emission), while Friday retains the message-cycle order, to avoid mixing model numbering with workshop steps.
+- Read shared Centro Fox workshop answers only with a registered team capability in the request header or an existing operations role; keep capability-bearing reads on polling rather than Realtime so anonymous visitors cannot browse answers.

@@ -19,13 +19,14 @@ export function useCf27Teams() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [loaded, setLoaded] = useState(false);
   const reload = useCallback(async () => {
-    const { data, error } = await db.from('cf27_teams').select(COLS).order('created_at').limit(200);
-    if (!error) setTeams(data ?? []); setLoaded(true);
+    const { data, error } = await db.from('cf27_teams').select(COLS).order('created_at').limit(200)
+      .setHeader('x-cf27-team-token', teamToken());
+    setTeams(error ? [] : data ?? []); setLoaded(true);
   }, []);
   useEffect(() => {
     reload(); const t = setInterval(reload, 8000);
-    const ch = supabase.channel(`cf27-teams-${Math.random().toString(36).slice(2)}`).on('postgres_changes', { event: '*', schema: 'public', table: 'cf27_teams' }, reload).subscribe();
-    return () => { clearInterval(t); supabase.removeChannel(ch); };
+    // Realtime cannot carry the per-request team capability; use protected polling.
+    return () => { clearInterval(t); };
   }, [reload]);
   return { teams, loaded, reload };
 }
