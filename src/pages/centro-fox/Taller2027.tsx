@@ -113,7 +113,7 @@ const SLIDES: Slide[] = [
       <p className="cf-body-lg mt-8">Gracias por compartir sus ideas y trabajar juntos.</p>
       <p className="cf-caption cf-muted mt-8">Programa de Capacitación Profesional Centro Fox · Jesús Caudillo</p>
     </div>) },
-  { id: 'S18', title: 'Contacto · Jesús Caudillo', notes: 'Deja esta lámina visible para que puedan tomar una foto o escanear el QR de jesuscaudillo.com. Instagram, Facebook y X (Twitter): @caudillomx. Teléfono: 55 2177 0265. Correo: hola@kimedia.mx.', render: () => (
+  { id: 'S18', title: 'Contacto · Jesús Caudillo', notes: 'Deja esta lámina visible para que puedan tomar una foto o escanear el QR de jesuscaudillo.com. Instagram, Facebook y X (Twitter): @caudillomx. Teléfono: 55 2177 0265. Web de KiMedia: kimedia.mx. Correo: hola@kimedia.mx.', render: () => (
     <div className="grid grid-cols-[1fr_340px] gap-20 items-center h-full">
       <div><Kicker>Sigamos en contacto</Kicker><h2 className="font-display text-[84px] leading-[1.1] font-bold mb-4">Jesús Caudillo</h2>
         <p className="cf-accent font-display text-[64px] font-bold mb-10">@caudillomx</p>
@@ -125,6 +125,7 @@ const SLIDES: Slide[] = [
         <div className="space-y-6 cf-body-lg">
           <a href="tel:+525521770265" className="flex items-center gap-5"><Phone size={38} />55 2177 0265</a>
           <a href="https://jesuscaudillo.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-5"><Globe size={38} />jesuscaudillo.com</a>
+          <a href="https://www.kimedia.mx" target="_blank" rel="noopener noreferrer" className="flex items-center gap-5"><Globe size={38} />kimedia.mx</a>
           <a href="mailto:hola@kimedia.mx" className="flex items-center gap-5"><Mail size={38} />hola@kimedia.mx</a>
         </div>
       </div>
