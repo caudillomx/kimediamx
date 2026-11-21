@@ -27,7 +27,7 @@ function useSynced<T>(key: string, init: T) {
 }
 const clock = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 
-export function Deck({ slides: ALL, label, admin = false, late }: { slides: Slide[]; label: string; admin?: boolean; late?: Late }) {
+export function Deck({ slides: ALL, label, admin = false, late, momentOrder }: { slides: Slide[]; label: string; admin?: boolean; late?: Late; momentOrder?: readonly Moment[] }) {
   const [sp, setSp] = useSearchParams();
   const print = sp.has('print');
   const ns = `cf27:deck:${label}`;
@@ -77,7 +77,7 @@ export function Deck({ slides: ALL, label, admin = false, late }: { slides: Slid
   useEffect(() => { if (!admin) return; const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, [admin]);
   const touch = useRef<number | null>(null);
   const ctx = (s: Slide): Ctx => ({ revealed: print || !!rev[revKey(s)], manual, step: steps[s.id] ?? 0, setStep: n => setSteps(x => ({ ...x, [s.id]: n })), flag: k => flags[k], print });
-  const render = (i: number) => <Shell n={i + 1} total={total} moment={SLIDES[i].moment} source={SLIDES[i].source} bare={SLIDES[i].bare}>{SLIDES[i].render(ctx(SLIDES[i]))}</Shell>;
+  const render = (i: number) => <Shell n={i + 1} total={total} moment={SLIDES[i].moment} momentOrder={momentOrder} source={SLIDES[i].source} bare={SLIDES[i].bare}>{SLIDES[i].render(ctx(SLIDES[i]))}</Shell>;
   const stage = <div className="absolute left-1/2 top-1/2 -ml-[960px] -mt-[540px] origin-center" style={{ transform: `scale(${scale})` }}>{render(idx)}</div>;
 
   if (print) return <div className="cf-theme theme-light"><style>{'@page{size:1920px 1080px;margin:0}html,body{margin:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}.pp{break-after:page}'}</style>{SLIDES.map((_, i) => <div key={i} className="pp">{render(i)}</div>)}</div>;

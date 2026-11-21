@@ -11,6 +11,7 @@ import { QRCodeSVG } from 'qrcode.react';
 const Q = (p: { size?: number; label?: string }) => <QR path={TALLER_PATH} {...p} />;
 const Steps = ({ items }: { items: string[] }) => <ol className="cf-body space-y-3 list-decimal pl-10">{items.map(i => <li key={i}>{i}</li>)}</ol>;
 const GOAL = 'rumbo al 6 de junio de 2027';
+const WORKSHOP_ORDER = ['Circulación', 'Emisión', 'Reinterpretación', 'Respuesta'] as const;
 /** Puente con el viernes: la lección del caso INE que aplica a cada ejercicio. */
 const Bridge = ({ n }: { n: number }) => <p className="cf-body-lg mb-6"><b className="cf-accent">Del viernes · </b>{BRIDGES[n]}</p>;
 /** Las dos rutas de cada ejercicio, también en el teléfono. */
@@ -26,8 +27,8 @@ function Teams({ render, empty }: { render: (t: Team, all: Team[]) => React.Reac
 function Registered() { const { teams } = useCf27Teams(); return <TeamList teams={teams} />; }
 
 const Quad = () => <div className="cf-quad">
-  <Card><h4>2 · Circulación: qué se dice</h4><p>Tema · tono · quién habla · <b>el hueco</b> · una cuenta a seguir</p></Card>
-  <Card><h4>1 · Emisión: qué digo, a quién y dónde</h4><p>3 segmentos con 3 capas o más · voces locales · vainilla · 10 palabras clave · posicionamiento · cuándo publicar</p></Card>
+  <Card><h4>1 · Circulación: qué se dice</h4><p>Tema · tono · quién habla · <b>el hueco</b> · una cuenta a seguir</p></Card>
+  <Card><h4>2 · Emisión: qué digo, a quién y dónde</h4><p>3 segmentos con 3 capas o más · voces locales · vainilla · 10 palabras clave · posicionamiento · cuándo publicar</p></Card>
   <Card><h4>3 · Reinterpretación: qué harán con mi mensaje</h4><p>Ataque probable · tipo de caso · ¿responder, monitorear o corregir? · respuesta de 40 palabras</p></Card>
   <Card><h4>4 · Respuesta: de la interacción a la acción</h4><p>Acción con fecha antes del 6 de junio de 2027 · embudo con 5 metas · 2 barreras · qué voy a medir</p></Card>
 </div>;
@@ -56,7 +57,7 @@ const SLIDES: Slide[] = [
   { id: 'S02', title: 'Autodiagnóstico de hábitos', polls: HABITS.map((h, i) => ({ id: habitKey(i), options: yesNo, label: h })), notes: 'Marquen todas las que hagan de verdad. Pulsa R: lo que tenga menos votos queda como la tarea de hoy.', render: c => (
     <div className="grid grid-cols-[1fr_320px] gap-12"><div><Kicker>Antes de empezar</Kicker><Title>{c.revealed ? 'Lectura: lo menos común es la tarea de hoy' : '¿Cuáles de estas ya hacen? Marquen todas las que apliquen.'}</Title>
       <div className="mt-10"><MultiBars keys={habitKeys} labels={HABITS} revealed={c.revealed} /></div></div>{!c.revealed && <Q size={240} label="Marca tus hábitos" />}</div>) },
-  { id: 'S03', title: 'La hoja del día', notes: 'Empezamos por escuchar, no por publicar. Ese es el cambio. Cada persona tiene la hoja impresa; el capitán captura en el teléfono.', render: () => (
+  { id: 'S03', title: 'La hoja del día', notes: 'El modelo del mensaje empieza con emisión, pero el taller empieza escuchando la conversación que ya existe. Aquí los números indican el orden de los ejercicios: 1 Circulación, 2 Emisión, 3 Reinterpretación, 4 Respuesta. Cada persona tiene la hoja impresa; el capitán captura en el teléfono.', render: () => (
     <div><Kicker>La hoja del día · {GOAL}</Kicker><Title>Cuatro cuadrantes. Hoy empezamos por escuchar.</Title><div className="mt-10"><Quad /></div></div>) },
 
   { id: 'S04', title: 'Ejercicio 1 · Instrucciones', moment: 'Circulación', notes: 'Que sea un tema real y de esta semana. El campo que importa es el hueco. En el teléfono, cada equipo elige su ruta.', render: () => (
@@ -151,4 +152,4 @@ function FirePairs({ c }: { c: Ctx }) {
         : <LiveBars id={key} options={FIRE} manualMode={manual} />}</div></div>;
 }
 
-export default function Taller2027({ admin = false }: { admin?: boolean }) { return <Deck slides={SLIDES} label="Taller Centro Fox" admin={admin} />; }
+export default function Taller2027({ admin = false }: { admin?: boolean }) { return <Deck slides={SLIDES} label="Taller Centro Fox" admin={admin} momentOrder={WORKSHOP_ORDER} />; }

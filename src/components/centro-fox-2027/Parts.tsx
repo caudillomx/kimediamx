@@ -22,15 +22,15 @@ export function QR({ size = 300, label = 'Participa desde tu teléfono', path }:
   return <div className="cf-qr"><div className="cf-qr-box"><QRCodeSVG value={url} size={size} bgColor="transparent" fgColor="currentColor" /></div><strong>{label}</strong><small>{url.replace(/^https?:\/\//, '')}</small></div>;
 }
 
-export function MomentBar({ moment }: { moment?: Moment }) {
+export function MomentBar({ moment, order = MOMENTS }: { moment?: Moment; order?: readonly Moment[] }) {
   if (!moment) return null;
-  return <div className="cf-moments">{MOMENTS.map((m, i) => <span key={m} className={m === moment ? 'on' : ''}>{i + 1} · {m}</span>)}</div>;
+  return <div className="cf-moments">{order.map((m, i) => <span key={m} className={m === moment ? 'on' : ''}>{i + 1} · {m}</span>)}</div>;
 }
 
-export function Shell({ children, n, total, moment, source, bare }: { children: ReactNode; n: number; total: number; moment?: Moment; source?: string; bare?: boolean }) {
+export function Shell({ children, n, total, moment, momentOrder, source, bare }: { children: ReactNode; n: number; total: number; moment?: Moment; momentOrder?: readonly Moment[]; source?: string; bare?: boolean }) {
   return (
     <div className="cf-slide">
-      {!bare && <header className="cf-head"><FoxLogo size={84} /><MomentBar moment={moment} /><div className="cf-speaker">Jesús Caudillo</div></header>}
+      {!bare && <header className="cf-head"><FoxLogo size={84} /><MomentBar moment={moment} order={momentOrder} /><div className="cf-speaker">Jesús Caudillo</div></header>}
       <main className="cf-body">{children}</main>
       <footer className="cf-foot"><span>{source ?? ''}</span><span className="flex items-center gap-6"><KiLogo size={34} /><b>{n} / {total}</b></span></footer>
       <div className="cf-progress" style={{ width: `${(n / total) * 100}%` }} />
