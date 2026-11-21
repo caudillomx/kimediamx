@@ -116,14 +116,14 @@ const CursoIaGobiernoGto = () => {
           setBootLoading(false);
           return;
         }
-        const { sesionId, participanteId } = JSON.parse(stored);
-        if (!sesionId || !participanteId) {
+        const { resumeToken } = JSON.parse(stored);
+        if (!resumeToken) {
+          localStorage.removeItem(STORAGE_KEY);
           setBootLoading(false);
           return;
         }
-        const { data: boot } = await supabase.rpc("gto_bootstrap_session", {
-          _sesion_id: sesionId,
-          _participante_id: participanteId,
+        const { data: boot } = await supabase.functions.invoke("gto-access", {
+          body: { mode: "resume", resume_token: resumeToken },
         });
         const b = boot as any;
         if (!b?.valid) {
@@ -232,7 +232,7 @@ const CursoIaGobiernoGto = () => {
     setHighest(resumedStep);
     localStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify({ sesionId: sess.id, participanteId: createdPart.id }),
+      JSON.stringify({ sesionId: sess.id, participanteId: createdPart.id, resumeToken: data.resume_token }),
     );
     return { ok: true };
   }, []);

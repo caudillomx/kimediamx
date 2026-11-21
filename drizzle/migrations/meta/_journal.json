@@ -64,6 +64,13 @@
       "when": 1795212153283,
       "tag": "0008_harden_votes_and_gto_rpcs",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1795237941077,
+      "tag": "0009_restrict_gto_bootstrap_to_server",
+      "breakpoints": true
     }
   ]
 }

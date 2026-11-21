@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { issueResumeToken, verifyResumeToken } from "./resumeToken.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -58,6 +59,26 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json().catch(() => null);
+    // Restore only with a server-issued capability, never caller-supplied IDs.
+    if (body?.mode === "resume") {
+      const claim = await verifyResumeToken(SERVICE_ROLE, body.resume_token);
+      if (!claim) {
+        return new Response(JSON.stringify({ error: "Vuelve a ingresar con tu código." }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { data: boot, error } = await admin.rpc("gto_bootstrap_session", {
+        _sesion_id: claim.session, _participante_id: claim.participant,
+      });
+      if (error || !boot?.valid) {
+        return new Response(JSON.stringify({ error: "No se pudo retomar la sesión." }), {
+          status: error ? 500 : 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify(boot), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     const code = (body?.code || "").toString().trim().toUpperCase();
     const participant_name = (body?.participant_name || "").toString().trim();
     const participant_cargo = (body?.participant_cargo || "").toString().trim();
@@ -205,6 +226,7 @@ Deno.serve(async (req) => {
       JSON.stringify({
         ok: true,
         sesion: sess,
+        resume_token: await issueResumeToken(SERVICE_ROLE, sess.id, createdPart.id),
         participante: {
           id: createdPart.id,
           nombre: createdPart.nombre,

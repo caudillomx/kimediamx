@@ -1,4 +1,5 @@
 # Architecture rules
+- Restore GTO course sessions through gto-access with an expiring server-signed participant/session capability; keep gto_bootstrap_session server-only so supplied IDs cannot authorize protected reads.
 - Deduplicate benchmark posts by canonical account, network and URL, not URL alone; collaborations must retain each account's imported observation so adding another scope cannot erase titular activity.
 - Guanajuato report comparisons use the same calendar-window selector and capture allowance on both sides; ranks use only eligible snapshots, never display-only borrowed metrics, with stable entity-ID tie breaks to preserve weekly continuity.
 - Regenerate dependency recommendations from the exact export context rather than reusing date-only caches, because cached commentary can contradict corrected ranking inputs.
