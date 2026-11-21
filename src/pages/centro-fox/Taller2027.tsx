@@ -5,6 +5,8 @@ import { FunnelGuide, FunnelMini, MultiBars, TALLER_PATH, TeamBoard, TeamList, T
 import { MATRIX } from '@/data/centroFox2027';
 import { ATTACKS, BRIDGES, CRITERIA, FIRE, HABITS, LEGAL, PRACTICES, PROMPTS, PROTOCOL, ROUTES, attackerOf, closingLine, habitKey, type Team } from '@/data/taller2027';
 import { useCf27Teams } from '@/hooks/useCf27Teams';
+import { Facebook, Globe, Instagram, Mail, Phone } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 
 const Q = (p: { size?: number; label?: string }) => <QR path={TALLER_PATH} {...p} />;
 const Steps = ({ items }: { items: string[] }) => <ol className="cf-body space-y-3 list-decimal pl-10">{items.map(i => <li key={i}>{i}</li>)}</ol>;
@@ -104,6 +106,30 @@ const SLIDES: Slide[] = [
   { id: 'S15', title: 'Ejercicio 4 · Tablero', moment: 'Respuesta', notes: 'Comenta el embudo más realista y el más optimista.', render: () => (
     <div><Kicker>Embudos</Kicker><Title>¿Cuál es el más realista? ¿Y el más optimista?</Title><div className="mt-8"><Teams render={t => t.ex4.accion ? <><p className="mb-3"><b>{t.ex4.accion}</b>{t.ex4.fecha && <span className="cf-muted"> · {t.ex4.fecha}</span>}</p><FunnelMini metas={t.ex4.metas} /></> : null} /></div></div>) },
   { id: 'S16', title: 'Cierre', polls: [{ id: 's16', options: PRACTICES, label: 'Práctica que vas a incorporar' }], notes: 'Que voten y pulsa R: la pantalla contrasta con el autodiagnóstico del inicio. En el teléfono está el botón para descargar la hoja del equipo.', render: c => <Closing c={c} /> },
+  { id: 'S17', title: 'Gracias por participar', notes: 'Cierra con esta idea: escuchar primero, verificar siempre y comunicar con claridad. Agradece al grupo y a Centro Fox. La siguiente lámina tiene tus datos de contacto.', render: () => (
+    <div className="flex flex-col justify-center h-full max-w-[1500px]">
+      <Kicker>Mi plan digital 2027 · Cierre</Kicker>
+      <h2 className="font-display text-[88px] leading-[1.1] font-bold">Escuchar primero.<br />Verificar siempre.<br /><span className="cf-accent">Comunicar con claridad.</span></h2>
+      <p className="cf-body-lg mt-8">Gracias por compartir sus ideas y trabajar juntos.</p>
+      <p className="cf-caption cf-muted mt-8">Programa de Capacitación Profesional Centro Fox · Jesús Caudillo</p>
+    </div>) },
+  { id: 'S18', title: 'Contacto · Jesús Caudillo', notes: 'Deja esta lámina visible para que puedan tomar una foto o escanear el QR de jesuscaudillo.com. Instagram, Facebook y X (Twitter): @caudillomx. Teléfono: 55 2177 0265. Correo: hola@kimedia.mx.', render: () => (
+    <div className="grid grid-cols-[1fr_340px] gap-20 items-center h-full">
+      <div><Kicker>Sigamos en contacto</Kicker><h2 className="font-display text-[84px] leading-[1.1] font-bold mb-4">Jesús Caudillo</h2>
+        <p className="cf-accent font-display text-[64px] font-bold mb-10">@caudillomx</p>
+        <div className="flex gap-10 items-center cf-body mb-10">
+          <a href="https://www.instagram.com/caudillomx/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3"><Instagram size={36} />Instagram</a>
+          <a href="https://www.facebook.com/caudillomx" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3"><Facebook size={36} />Facebook</a>
+          <a href="https://x.com/caudillomx" target="_blank" rel="noopener noreferrer">X (Twitter)</a>
+        </div>
+        <div className="space-y-6 cf-body-lg">
+          <a href="tel:+525521770265" className="flex items-center gap-5"><Phone size={38} />55 2177 0265</a>
+          <a href="https://jesuscaudillo.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-5"><Globe size={38} />jesuscaudillo.com</a>
+          <a href="mailto:hola@kimedia.mx" className="flex items-center gap-5"><Mail size={38} />hola@kimedia.mx</a>
+        </div>
+      </div>
+      <div className="cf-qr"><div className="cf-qr-box"><QRCodeSVG value="https://jesuscaudillo.com" size={280} bgColor="transparent" fgColor="currentColor" /></div><strong>jesuscaudillo.com</strong></div>
+    </div>) },
 ];
 
 function FirePairs({ c }: { c: Ctx }) {
